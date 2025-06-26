@@ -1,0 +1,2326 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>江湖门派 - 水墨风</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 根字体大小响应式设置 */
+        :root {
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                font-size: 12px;
+            }
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "SimSun", serif;
+            background: #f5f5f5;
+            background-image: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 10px,
+                    rgba(0,0,0,.03) 10px,
+                    rgba(0,0,0,.03) 20px
+                );
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: clamp(10px, 2vw, 20px);
+        }
+
+        /* 视窗包装器 */
+        .viewport-wrapper {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* 视窗样式 */
+        .viewport {
+            width: 100%;
+            aspect-ratio: 1.46;
+            background: #fff;
+            border: 3px solid #2c2c2c;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0,0,0,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0,0,0,0.05) 0%, transparent 50%);
+            box-sizing: border-box;
+        }
+
+        /* 场景容器 */
+        .scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background: #f8f8f8;
+        }
+
+        .scene.active {
+            display: block;
+        }
+
+        /* 地图场景 */
+        #map-scene {
+            background-image: url('https://files.catbox.moe/3ij753.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #e8e8e8;
+        }
+
+        /* 状态显示 - 响应式改进 */
+        .status-display {
+            position: absolute;
+            top: clamp(10px, 3%, 30px);
+            left: clamp(10px, 3%, 30px);
+            color: #1a1a1a;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.85);
+            padding: clamp(8px, 2vw, 15px);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: clamp(0.75rem, 2vw, 1rem);
+        }
+
+        .date-display {
+            font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .mood-display,
+        .action-points-display {
+            font-size: clamp(0.8rem, 2.2vw, 1.125rem);
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        /* 刷新NPC按钮 - 响应式改进 */
+        .refresh-npc-btn {
+            position: absolute;
+            top: clamp(10px, 3%, 30px);
+            right: clamp(10px, 3%, 30px);
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+            background: rgba(44, 44, 44, 0.9);
+            color: #fff;
+            border: 2px solid #1a1a1a;
+            cursor: pointer;
+            font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .refresh-npc-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+        }
+
+        /* 中间控制按钮组 - 响应式改进 */
+        .control-buttons {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 30px);
+            background: #2c2c2c;
+            color: #fff;
+            border: 3px solid #2c2c2c;
+            border-top: none;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 480px) {
+            .control-btn {
+                padding: 10px 5px;
+                font-size: 0.75rem;
+            }
+        }
+
+        .control-btn:hover {
+            background: #3c3c3c;
+        }
+
+        .control-btn:first-child {
+            border-right: none;
+        }
+
+        .control-btn:last-child {
+            border-left: none;
+        }
+
+        /* 地点按钮 */
+        .location {
+            position: absolute;
+            width: clamp(12px, 2vw, 16px);
+            height: clamp(12px, 2vw, 16px);
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #2c2c2c;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .location:hover {
+            transform: scale(1.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        /* 用户所在位置 */
+        .location.user-location {
+            background: #4ecdc4;
+            border-color: #2c8c86;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.6);
+        }
+
+        /* 地点位置 */
+        #yanwuchang { top: 50%; left: 50%; }
+        #cangjingge { top: 30%; left: 20%; }
+        #huofang { top: 60%; left: 67%; }
+        #houshan { top: 35%; left: 77%; }
+        #yishiting { top: 15%; left: 59%; }
+        #tiejiangpu { top: 70%; left: 80%; }
+        #nandizi { top: 30%; left: 67%; }
+        #nvdizi { top: 30%; left: 40%; }
+        #shanmen { top: 80%; left: 37%; }
+
+        /* 悬浮提示框 - 响应式改进 */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 0;
+            border-radius: 5px;
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            min-width: clamp(100px, 20vw, 150px);
+            max-width: 90vw;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip-item {
+            padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2vw, 15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .tooltip-item:last-child {
+            border-bottom: none;
+        }
+
+        .tooltip-location {
+            font-weight: bold;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #4ecdc4;
+        }
+
+        /* 地点信息弹窗 - 新增 */
+        .location-info-popup {
+            position: fixed;  /* 保持fixed定位 */
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: clamp(15px, 3vw, 20px);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 2000;
+            min-width: clamp(180px, 35vw, 250px);
+            max-width: 90vw;
+            text-align: center;
+            display: none;
+        }
+
+        .location-info-popup.show {
+            display: block;
+        }
+
+        .location-info-name {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            font-weight: bold;
+            margin-bottom: clamp(8px, 2vw, 10px);
+            color: #4ecdc4;
+        }
+
+        .location-info-npcs {
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            color: #ccc;
+            margin-bottom: clamp(12px, 3vw, 15px);
+            line-height: 1.4;
+        }
+
+        .location-info-npc-item {
+            margin: 5px 0;
+        }
+
+        .location-go-btn {
+            padding: clamp(8px, 2vw, 10px) clamp(25px, 5vw, 35px);
+            background: #4ecdc4;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .location-go-btn:hover {
+            background: #3dbbb3;
+            transform: scale(1.05);
+        }
+
+        /* 返回按钮 - 响应式改进 */
+        .back-btn {
+            position: absolute;
+            top: clamp(10px, 2vw, 20px);
+            left: clamp(10px, 2vw, 20px);
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+            background: #2c2c2c;
+            color: #fff;
+            border: 2px solid #1a1a1a;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+        }
+
+        /* 场景标题 - 响应式改进 */
+        .scene-title {
+            position: absolute;
+            top: clamp(20px, 3vw, 30px);
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(1.5rem, 4vw, 2.25rem);
+            font-weight: bold;
+            color: #2c2c2c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.2);
+            letter-spacing: clamp(5px, 1vw, 10px);
+            opacity: 0.8;
+        }
+
+        /* NPC立绘容器 */
+        .npc-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* NPC立绘 - 修改为70%大小 */
+        .npc-portrait {
+            position: absolute;
+            bottom: 0;
+            width: 70%;  /* 从60%改为70% */
+            height: 70%; /* 从60%改为70% */
+            cursor: pointer;
+            pointer-events: auto;
+            transition: filter 0.3s ease;
+        }
+
+        .npc-portrait:hover {
+            filter: brightness(1.1);
+        }
+
+        .npc-portrait img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: bottom center;
+        }
+
+        /* 单个NPC时的位置 */
+        .npc-portrait.single {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* 两个NPC时的位置 - 修改为30%和70% */
+        .npc-portrait.double-left {
+            left: 30%;  /* 从33%改为30% */
+            transform: translateX(-50%);
+        }
+
+        .npc-portrait.double-right {
+            left: 70%;  /* 从66%改为70% */
+            transform: translateX(-50%);
+        }
+
+        /* NPC信息弹窗 - 修复响应式问题 */
+        .npc-info-popup {
+            position: fixed;  /* 改为fixed定位 */
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: clamp(12px, 3vw, 20px);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 2000;  /* 提高z-index */
+            min-width: clamp(150px, 30vw, 200px);
+            max-width: 90vw;
+            text-align: center;
+            display: none;
+        }
+
+        .npc-info-popup.show {
+            display: block;
+        }
+
+        .npc-info-name {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            font-weight: bold;
+            margin-bottom: clamp(8px, 2vw, 10px);
+        }
+
+        .npc-info-desc {
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            color: #ccc;
+            margin-bottom: clamp(10px, 2.5vw, 15px);
+            line-height: 1.4;
+        }
+
+        .npc-info-actions {
+            display: flex;
+            gap: clamp(8px, 2vw, 10px);
+            justify-content: center;
+        }
+
+        .npc-info-btn {
+            padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 15px);
+            background: #fff;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .npc-info-btn:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
+        /* 场景交互按钮容器 - 响应式改进 */
+        .scene-actions {
+            position: absolute;
+            bottom: clamp(20px, 3vw, 30px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: clamp(10px, 2vw, 15px);
+            z-index: 100;
+        }
+
+        /* 场景交互按钮 - 响应式改进 */
+        .scene-btn {
+            padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+            background: #2c2c2c;
+            color: #fff;
+            border: 2px solid #1a1a1a;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        .scene-btn:hover:not(:disabled) {
+            background: #fff;
+            color: #2c2c2c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        }
+
+        .scene-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 属性展示容器 */
+        .stats-container {
+            position: absolute;
+            top: clamp(60px, 10vw, 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 600px;
+            max-height: calc(100% - clamp(80px, 15vw, 100px));
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* 属性分组 */
+        .stats-group {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #2c2c2c;
+            border-radius: 10px;
+            padding: clamp(15px, 3vw, 25px);
+            margin-bottom: clamp(15px, 3vw, 20px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stats-group h3 {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            color: #2c2c2c;
+            margin-bottom: clamp(15px, 3vw, 20px);
+            text-align: center;
+            letter-spacing: 3px;
+        }
+
+        /* 属性项 */
+        .stat-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: clamp(10px, 2vw, 15px);
+        }
+
+        .stat-name {
+            width: clamp(60px, 15vw, 100px);
+            font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+            font-weight: bold;
+            color: #2c2c2c;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: clamp(20px, 4vw, 25px);
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            margin: 0 clamp(10px, 2vw, 15px);
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(to right, #4a4a4a, #2c2c2c);
+            transition: width 0.5s ease;
+        }
+
+        .stat-value {
+            font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+            font-weight: bold;
+            color: #2c2c2c;
+            width: clamp(40px, 8vw, 50px);
+            text-align: right;
+        }
+
+        /* 下方数值分组容器 */
+        .bottom-stats-row {
+            display: flex;
+            gap: clamp(15px, 3vw, 20px);
+        }
+
+        @media (max-width: 600px) {
+            .bottom-stats-row {
+                flex-direction: column;
+            }
+        }
+
+        .bottom-stats-row .stats-group {
+            flex: 1;
+        }
+
+        /* 简单数值项 */
+        .simple-stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(10px, 2vw, 15px);
+            font-size: clamp(0.8rem, 2vw, 1rem);
+        }
+
+        .simple-stat-name {
+            font-weight: bold;
+            color: #2c2c2c;
+        }
+
+        .simple-stat-value {
+            font-weight: bold;
+            color: #4a4a4a;
+        }
+
+        /* 加点按钮 */
+        .point-control {
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 2vw, 10px);
+        }
+
+        .add-point-btn {
+            padding: clamp(3px, 0.8vw, 4px) clamp(8px, 2vw, 12px);
+            background: #4ecdc4;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .add-point-btn:hover:not(:disabled) {
+            background: #3dbbb3;
+            transform: scale(1.05);
+        }
+
+        .add-point-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 武功列表 */
+        .skill-list {
+            margin-top: clamp(10px, 2vw, 15px);
+        }
+
+        .skill-item {
+            padding: 5px 0;
+            color: #4a4a4a;
+            font-size: clamp(0.8rem, 1.9vw, 0.9375rem);
+        }
+
+        /* 关系卡片容器 - 响应式改进 */
+        .relationships-container {
+            position: absolute;
+            top: clamp(60px, 10vw, 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-height: calc(100% - clamp(80px, 15vw, 100px));
+            overflow-y: auto;
+            padding: clamp(10px, 2vw, 20px);
+        }
+
+        /* 关系卡片网格 - 固定3列2行 */
+        .relationship-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: clamp(10px, 2vw, 20px);
+            max-height: calc(100% - 20px);
+        }
+
+        /* 只显示前6个，其余通过滚动查看 */
+        .relationship-grid > :nth-child(n+7) {
+            display: block;
+        }
+
+        .relationship-card {
+            background: #fff;
+            border: 2px solid #2c2c2c;
+            border-radius: 10px;
+            padding: clamp(10px, 2vw, 20px);
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .relationship-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .relationship-avatar {
+            width: clamp(40px, 8vw, 60px);
+            height: clamp(40px, 8vw, 60px);
+            background: #2c2c2c;
+            color: #fff;
+            border-radius: 50%;
+            margin: 0 auto clamp(8px, 1.5vw, 10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+        }
+
+        .relationship-name {
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+            margin-bottom: clamp(8px, 1.5vw, 10px);
+            color: #2c2c2c;
+        }
+
+        .relationship-bar {
+            width: 100%;
+            height: clamp(15px, 3vw, 20px);
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .relationship-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff6b6b, #4ecdc4);
+            transition: width 0.5s ease;
+        }
+
+        .relationship-value {
+            font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+            color: #666;
+        }
+
+        /* 弹窗 - 响应式改进 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: clamp(20px, 4vw, 30px);
+            border: 3px solid #2c2c2c;
+            width: min(400px, 100%);
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .modal-text {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            color: #2c2c2c;
+            margin-bottom: clamp(15px, 3vw, 20px);
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: clamp(10px, 2vw, 15px);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .modal-btn {
+            padding: clamp(8px, 2vw, 10px) clamp(20px, 4vw, 30px);
+            background: #2c2c2c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+        }
+
+        .modal-btn:hover {
+            background: #3c3c3c;
+        }
+
+        .modal-btn.cancel {
+            background: #666;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #555;
+        }
+
+        /* 输入框样式 */
+        .input-area {
+            margin: clamp(15px, 3vw, 20px) 0;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: clamp(8px, 2vw, 10px);
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            border: 2px solid #2c2c2c;
+            border-radius: 5px;
+            resize: vertical;
+            min-height: clamp(80px, 15vw, 100px);
+            max-height: 200px;
+            font-family: "Microsoft YaHei", "SimSun", serif;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4ecdc4;
+        }
+
+        /* 互动内容自动换行样式 */
+        .interaction-content {
+            word-wrap: break-word;
+            word-break: break-all;
+            white-space: pre-wrap;
+            text-align: left;
+            max-width: 100%;
+            display: inline-block;
+        }
+
+        /* 故事区域 */
+        .story-area {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border: 3px solid #2c2c2c;
+            border-top: none;
+            padding: clamp(15px, 3vw, 25px);
+            min-height: clamp(120px, 20vw, 180px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+
+        /* 故事文本 */
+        .story-text {
+            font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+            line-height: 1.8;
+            color: #2c2c2c;
+            text-indent: 2em;
+            font-family: "Microsoft YaHei", "SimSun", serif;
+        }
+
+        /* 水墨效果装饰 */
+        .ink-decoration {
+            position: absolute;
+            width: clamp(60px, 12vw, 100px);
+            height: clamp(60px, 12vw, 100px);
+            background: radial-gradient(circle, rgba(0,0,0,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .ink1 { top: 10%; right: 10%; }
+        .ink2 { bottom: 10%; left: 5%; }
+
+        /* 滚动条样式 */
+        .stats-container::-webkit-scrollbar,
+        .relationships-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .stats-container::-webkit-scrollbar-track,
+        .relationships-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .stats-container::-webkit-scrollbar-thumb,
+        .relationships-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .stats-container::-webkit-scrollbar-thumb:hover,
+        .relationships-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 840px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .viewport-wrapper {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            /* 移动端关系卡片网格调整 */
+            .relationship-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .relationship-card {
+                padding: 8px;
+            }
+            
+            .relationship-name {
+                font-size: 0.7rem;
+            }
+            
+            .relationship-avatar {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 视窗区域增加包装器 -->
+        <div class="viewport-wrapper">
+            <div class="viewport" id="main-viewport">
+                <!-- 悬浮提示框 -->
+                <div class="tooltip" id="tooltip"></div>
+
+                <!-- NPC信息弹窗 -->
+                <div class="npc-info-popup" id="npc-info-popup"></div>
+
+                <!-- 地点信息弹窗 - 新增 -->
+                <div class="location-info-popup" id="location-info-popup"></div>
+
+                <!-- 地图场景 -->
+                <div id="map-scene" class="scene active">
+                    <div class="status-display">
+                        <div class="date-display" id="date-display">第1年第1月第1周</div>
+                        <div class="mood-display" id="mood-display">心情: 100</div>
+                        <div class="action-points-display" id="action-points-display">行动点: 3</div>
+                    </div>
+                    <button class="refresh-npc-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
+                    <div class="location" id="yanwuchang"></div>
+                    <div class="location" id="cangjingge"></div>
+                    <div class="location" id="huofang"></div>
+                    <div class="location" id="houshan"></div>
+                    <div class="location" id="yishiting"></div>
+                    <div class="location" id="tiejiangpu"></div>
+                    <div class="location user-location" id="nandizi"></div>
+                    <div class="location" id="nvdizi"></div>
+                    <div class="location" id="shanmen"></div>
+                    <div class="ink-decoration ink1"></div>
+                    <div class="ink-decoration ink2"></div>
+                </div>
+
+                <!-- 后续场景保持不变 -->
+                <!-- 角色属性场景 -->
+                <div id="player-stats-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="stats-container">
+                        <div class="stats-group">
+                            <h3>天赋属性</h3>
+                            <div class="stat-item">
+                                <span class="stat-name">根骨</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-gengu" style="width: 75%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-gengu-value">75</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">悟性</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-wuxing" style="width: 82%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-wuxing-value">82</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">心性</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-xinxing" style="width: 68%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-xinxing-value">68</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">魅力</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-meili" style="width: 70%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-meili-value">70</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-stats-row">
+                            <div class="stats-group">
+                                <h3>人物数值</h3>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">武学</span>
+                                    <span class="simple-stat-value" id="stat-wuxue-value">50</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">学识</span>
+                                    <span class="simple-stat-value" id="stat-xueshi-value">35</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">声望</span>
+                                    <span class="simple-stat-value" id="stat-shengwang-value">20</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">金钱</span>
+                                    <span class="simple-stat-value" id="stat-jinqian-value">100</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-group">
+                                <h3>战斗数值</h3>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">攻击力</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-attack-value">20</span>
+                                        <button class="add-point-btn" id="add-attack-btn" onclick="addAttack()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">生命值</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-hp-value">50</span>
+                                        <button class="add-point-btn" id="add-hp-btn" onclick="addHP()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">剩余点数</span>
+                                    <span class="simple-stat-value" id="remaining-points-value">0</span>
+                                </div>
+                                <div class="skill-list">
+                                    <div class="simple-stat-name" style="margin-bottom: 10px;">已学武功</div>
+                                    <div id="learned-skills"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 人际关系场景 -->
+                <div id="relationships-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="relationships-container">
+                        <div class="relationship-grid" id="relationship-grid">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 各个场景 -->
+                <div id="yanwuchang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">演武场</div>
+                    <div class="npc-container" id="yanwuchang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('练武', 'yanwuchang')">练武</button>
+                    </div>
+                </div>
+
+                <div id="cangjingge-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">藏经阁</div>
+                    <div class="npc-container" id="cangjingge-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('学习', 'cangjingge')">学习</button>
+                    </div>
+                </div>
+
+                <div id="huofang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">伙房</div>
+                    <div class="npc-container" id="huofang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('打杂', 'huofang')">打杂</button>
+                    </div>
+                </div>
+
+                <div id="houshan-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">后山</div>
+                    <div class="npc-container" id="houshan-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('秘密赌场', 'houshan')">秘密赌场</button>
+                        <button class="scene-btn" onclick="performAction('探索', 'houshan')">探索</button>
+                    </div>
+                </div>
+
+                <div id="yishiting-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">议事厅</div>
+                    <div class="npc-container" id="yishiting-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('汇报', 'yishiting')">汇报</button>
+                    </div>
+                </div>
+
+                <div id="tiejiangpu-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">铁匠铺</div>
+                    <div class="npc-container" id="tiejiangpu-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('打铁', 'tiejiangpu')">打铁</button>
+                    </div>
+                </div>
+
+                <div id="nandizi-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">男弟子房</div>
+                    <div class="npc-container" id="nandizi-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('休息', 'nandizi')">休息</button>
+                    </div>
+                </div>
+
+                <div id="nvdizi-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">女弟子房</div>
+                    <div class="npc-container" id="nvdizi-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('拜访', 'nvdizi')">拜访</button>
+                    </div>
+                </div>
+
+                <div id="shanmen-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">山门</div>
+                    <div class="npc-container" id="shanmen-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 中间控制按钮 -->
+        <div class="control-buttons">
+            <button class="control-btn" onclick="showPlayerStats()">角色属性</button>
+            <button class="control-btn" onclick="showRelationships()">人际关系</button>
+            <button class="control-btn" onclick="skipWeek()">跳过这一周</button>
+        </div>
+
+        <!-- 故事展示区域 -->
+        <div class="story-area">
+            <div class="story-text" id="story-text">
+                江湖路远，故事未始...
+            </div>
+        </div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-text" id="modal-text">新的一周开始了</div>
+            <div class="modal-buttons" id="modal-buttons">
+                <button class="modal-btn" onclick="closeModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 用户当前所在位置
+        let userLocation = 'nandizi';
+
+        // 当前互动的NPC和地点（临时存储）
+        let currentInteractionNpc = null;
+        let currentInteractionLocation = null;
+
+        // 地点名称映射
+        const locationNames = {
+            yanwuchang: '演武场',
+            cangjingge: '藏经阁',
+            huofang: '伙房',
+            houshan: '后山',
+            yishiting: '议事厅',
+            tiejiangpu: '铁匠铺',
+            nandizi: '男弟子房',
+            nvdizi: '女弟子房',
+            shanmen: '山门'
+        };
+
+        // NPC立绘URL映射（目前全部使用占位图片）
+        const npcPortraits = {
+            A: 'https://files.catbox.moe/u1d2cx.png',
+            B: 'https://files.catbox.moe/u1d2cx.png',
+            C: 'https://files.catbox.moe/u1d2cx.png',
+            D: 'https://files.catbox.moe/u1d2cx.png',
+            E: 'https://files.catbox.moe/u1d2cx.png',
+            F: 'https://files.catbox.moe/u1d2cx.png'
+        };
+
+        // 主角天赋属性（1-100）
+        let playerTalents = {
+            根骨: 75,    // 影响体力和内力
+            悟性: 82,    // 影响学习速度
+            心性: 68,    // 影响心理素质
+            魅力: 70     // 影响社交能力
+        };
+
+        // 主角数值属性
+        let playerStats = {
+            武学: 50,    // 武功修为
+            学识: 35,    // 知识水平
+            声望: 20,    // 江湖声望
+            金钱: 100    // 银两
+        };
+
+        // 战斗数值
+        let combatStats = {
+            攻击力: 20,
+            生命值: 50
+        };
+
+        // 主角心情 (0-100)
+        let playerMood = 100;
+
+        // 武功学习情况 - 使用对象方式存储
+        let martialArts = {
+            太白仙迹: 1,      // 已学习
+            岱宗如何: 0,      // 未学习
+            掠风窃尘: 1,      // 已学习
+            流云飞袖: 0,      // 未学习
+            惊鸿照影: 1,      // 已学习
+            踏雪无痕: 0,      // 未学习
+            醉卧沙场: 0,      // 未学习
+            万剑归宗: 0       // 未学习
+        };
+
+        // NPC好感度（1-100）
+        let npcFavorability = {
+            A: 50,    // 破阵子
+            B: 60,    // 洞庭君
+            C: 40,    // 钱塘君
+            D: 55,    // 萧白瑚
+            E: 65,    // 姬姒
+            F: 30     // 木青鸾
+        };
+
+        // 当前行动点（1-5）
+        let actionPoints = 3;
+
+        // 当前周数（1-9999）
+        let currentWeek = 1;
+
+        // 每个NPC当前所在的位置
+        let npcLocationA = 'none';
+        let npcLocationB = 'none';
+        let npcLocationC = 'none';
+        let npcLocationD = 'none';
+        let npcLocationE = 'none';
+        let npcLocationF = 'none';
+
+        // 当前NPC位置的集合
+        const currentNpcLocations = {
+            A: npcLocationA,
+            B: npcLocationB,
+            C: npcLocationC,
+            D: npcLocationD,
+            E: npcLocationE,
+            F: npcLocationF
+        };
+
+        // 互动配置
+        const actionConfigs = {
+            练武: { talentBonus: '根骨', affects: '武学' },
+            学习: { talentBonus: '悟性', affects: '学识' },
+            打杂: { talentBonus: '根骨', affects: '金钱' },
+            秘密赌场: { talentBonus: '魅力', affects: '金钱' },
+            探索: { talentBonus: '心性', affects: '学识' },
+            汇报: { talentBonus: '魅力', affects: '声望' },
+            打铁: { talentBonus: '根骨', affects: '武学' },
+            休息: { talentBonus: '心性', affects: '心情' },
+            拜访: { talentBonus: '魅力', affects: '声望' },
+            下山: { talentBonus: '心性', affects: '声望' }
+        };
+
+        // LLM返回的示例数据 - 修改主要NPC和好感变化
+        const llmResponse = {
+            "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
+            "主要NPC": "姬姒",
+            "好感变化": "大幅上升",
+            "其他NPC": "无"
+        };
+
+        // 保存当前故事正文
+        let currentStoryText = "";
+
+        // NPC定义
+        const npcs = {
+            A: {
+                name: "破阵子",
+                description: "天山派长老，组织义军反抗吐蕃",
+                avatar: "A"
+            },
+            B: {
+                name: "洞庭君",
+                description: "天山派长老，身段外貌宛如幼女",
+                avatar: "B"
+            },
+            C: {
+                name: "钱塘君",
+                description: "天山派弟子，天生神力，性格豪放",
+                avatar: "C"
+            },
+            D: {
+                name: "萧白瑚",
+                description: "天山派弟子，豆蔻年华，性格活泼",
+                avatar: "D"
+            },
+            E: {
+                name: "姬姒",
+                description: "天山派弟子，仗剑任侠，嫉恶如仇",
+                avatar: "E"
+            },
+            F: {
+                name: "木青鸾",
+                description: "天山派弟子，学识卓绝，文采斐然",
+                avatar: "F"
+            }
+        };
+
+        // NPC名字到ID的映射
+        const npcNameToId = {
+            "破阵子": "A",
+            "洞庭君": "B",
+            "钱塘君": "C",
+            "萧白瑚": "D",
+            "姬姒": "E",
+            "木青鸾": "F"
+        };
+
+        // NPC在各地点的出现概率（概率总和为1）
+        const npcLocationProbability = {
+            A: {
+                yanwuchang: 0.30,
+                cangjingge: 0.10,
+                huofang: 0.05,
+                houshan: 0.25,
+                yishiting: 0.10,
+                tiejiangpu: 0.05,
+                nandizi: 0.05,
+                nvdizi: 0.00,
+                shanmen: 0.05,
+                none: 0.05
+            },
+            B: {
+                yanwuchang: 0.10,
+                cangjingge: 0.05,
+                huofang: 0.35,
+                houshan: 0.15,
+                yishiting: 0.05,
+                tiejiangpu: 0.05,
+                nandizi: 0.10,
+                nvdizi: 0.05,
+                shanmen: 0.05,
+                none: 0.05
+            },
+            C: {
+                yanwuchang: 0.05,
+                cangjingge: 0.25,
+                huofang: 0.05,
+                houshan: 0.20,
+                yishiting: 0.10,
+                tiejiangpu: 0.05,
+                nandizi: 0.00,
+                nvdizi: 0.25,
+                shanmen: 0.05,
+                none: 0.00
+            },
+            D: {
+                yanwuchang: 0.35,
+                cangjingge: 0.00,
+                huofang: 0.10,
+                houshan: 0.05,
+                yishiting: 0.15,
+                tiejiangpu: 0.20,
+                nandizi: 0.10,
+                nvdizi: 0.00,
+                shanmen: 0.05,
+                none: 0.00
+            },
+            E: {
+                yanwuchang: 0.05,
+                cangjingge: 0.40,
+                huofang: 0.05,
+                houshan: 0.10,
+                yishiting: 0.25,
+                tiejiangpu: 0.00,
+                nandizi: 0.05,
+                nvdizi: 0.05,
+                shanmen: 0.05,
+                none: 0.00
+            },
+            F: {
+                yanwuchang: 0.20,
+                cangjingge: 0.05,
+                huofang: 0.00,
+                houshan: 0.15,
+                yishiting: 0.40,
+                tiejiangpu: 0.00,
+                nandizi: 0.00,
+                nvdizi: 0.00,
+                shanmen: 0.15,
+                none: 0.05
+            }
+        };
+
+        // 计算剩余分配点数 - 修改为永不为负
+        function calculateRemainingPoints() {
+            const rawPoints = Math.floor(playerStats.武学 / 10) - (combatStats.攻击力 - 20) / 10 - (combatStats.生命值 - 50) / 25;
+            return Math.max(0, rawPoints);
+        }
+
+        // 执行互动 - 修改数值变化逻辑，特别是声望的变化范围
+        function performAction(action, location) {
+            // 检查行动点
+            if (actionPoints < 1) {
+                showModal('行动点不足，无法进行此操作！');
+                return;
+            }
+
+            // 获取配置
+            const config = actionConfigs[action];
+            const talentBonus = playerTalents[config.talentBonus] / 2;
+            
+            // 计算最终数值
+            const randomRoll = Math.random() * 100;
+            const finalValue = (randomRoll + talentBonus) * playerMood / 100;
+
+            // 判断成功等级
+            let successLevel, successText, moodCost;
+            let statChange = {};
+            
+            if (finalValue >= 80) {
+                successLevel = '大成功';
+                successText = '成果斐然！';
+                moodCost = 0;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 60);
+                    statChange.心情 = '+60';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 1000;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 5;  // 声望最大+5
+                } else {
+                    statChange[config.affects] = 5;
+                }
+            } else if (finalValue >= 60) {
+                successLevel = '成功';
+                successText = '收获颇丰。';
+                moodCost = 5;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 45);
+                    statChange.心情 = '+45';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 500;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 3;  // 声望+3
+                } else {
+                    statChange[config.affects] = 3;
+                }
+            } else if (finalValue >= 40) {
+                successLevel = '一般';
+                successText = '平平无奇。';
+                moodCost = 10;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 100;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 1;  // 声望+1
+                } else {
+                    statChange[config.affects] = 1;
+                }
+            } else if (finalValue >= 20) {
+                successLevel = '失败';
+                successText = '事与愿违...';
+                moodCost = 15;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = -500;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = -2;  // 声望-2
+                } else {
+                    statChange[config.affects] = 0;  // 武学和学识不扣除
+                }
+            } else {
+                successLevel = '大失败';
+                successText = '惨不忍睹！';
+                moodCost = 20;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = -1000;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = -5;  // 声望最多-5
+                } else {
+                    statChange[config.affects] = 0;  // 武学和学识不扣除
+                }
+            }
+
+            // 应用属性变化，确保不为负数
+            if (config.affects !== '心情') {
+                playerStats[config.affects] = Math.max(0, playerStats[config.affects] + statChange[config.affects]);
+                if (action !== '休息') {
+                    playerMood = Math.max(0, playerMood - moodCost);
+                }
+            }
+
+            // 消耗行动点
+            actionPoints--;
+
+            // 获取在场NPC
+            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+
+            // 构建属性变化文本
+            let changeText = '';
+            Object.entries(statChange).forEach(([key, value]) => {
+                changeText += `<br>${key}: ${value > 0 ? '+' : ''}${value}`;
+            });
+            if (action !== '休息') {
+                changeText += `<br>心情: -${moodCost}`;
+            }
+            changeText += '<br>行动点: -1';
+
+            // 构建简化的结果信息
+            const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `地点：${locationNames[location]}<br>` +
+                `行动：${action}<br>` +
+                `在场NPC：${npcsPresent}<br>` +
+                `结果：${successLevel} - ${successText}<br><br>` +
+                `属性变化：${changeText}`;
+
+            // 更新显示
+            updateAllDisplays();
+            
+            // 刷新NPC位置
+            refreshNpcLocations();
+            
+            // 显示结果
+            showModal(resultMessage);
+        }
+
+        // 显示互动输入弹窗
+        function showInteractionInput(npcId, location) {
+            currentInteractionNpc = npcId;
+            currentInteractionLocation = location;
+            
+            const npc = npcs[npcId];
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+            
+            modalText.innerHTML = `
+                <div style="font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: clamp(15px, 3vw, 20px);">与 ${npc.name} 互动</div>
+                <div class="input-area">
+                    <textarea class="input-field" id="interaction-input" placeholder="请输入你想对${npc.name}说的话或做的事..."></textarea>
+                </div>
+            `;
+            
+            modalButtons.innerHTML = `
+                <button class="modal-btn" onclick="sendInteraction()">发送</button>
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+            `;
+            
+            modal.style.display = 'block';
+            
+            // 自动聚焦到输入框
+            setTimeout(() => {
+                document.getElementById('interaction-input').focus();
+            }, 100);
+        }
+
+        // 发送互动内容
+        function sendInteraction() {
+            const interactionContent = document.getElementById('interaction-input').value.trim();
+            
+            if (!interactionContent) {
+                alert('请输入互动内容！');
+                return;
+            }
+            
+            // 获取当前地点
+            const activeScene = document.querySelector('.scene.active');
+            const location = activeScene.id.replace('-scene', '');
+            
+            // 获取NPC信息
+            const npc = npcs[currentInteractionNpc];
+            
+            // 获取在场NPC
+            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+            
+            // 构建结果信息，使用自动换行样式
+            const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `地点：${locationNames[location]}<br>` +
+                `行动：互动<br>` +
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
+                `在场NPC：${npcsPresent}`;
+            
+            // 关闭当前弹窗
+            closeModal();
+            
+            // 延迟显示结果，避免弹窗冲突
+            setTimeout(() => {
+                showModal(resultMessage);
+            }, 100);
+            
+            // 清空临时存储
+            currentInteractionNpc = null;
+            currentInteractionLocation = null;
+        }
+
+        // 计算并更新日期显示
+        function updateDateDisplay() {
+            const year = Math.floor((currentWeek - 1) / 48) + 1;
+            const remainingWeeks = (currentWeek - 1) % 48;
+            const month = Math.floor(remainingWeeks / 4) + 1;
+            const week = remainingWeeks % 4 + 1;
+            
+            document.getElementById('date-display').textContent = `第${year}年第${month}月第${week}周`;
+        }
+
+        // 更新心情显示
+        function updateMoodDisplay() {
+            document.getElementById('mood-display').textContent = `心情: ${playerMood}`;
+        }
+
+        // 更新行动点显示
+        function updateActionPointsDisplay() {
+            document.getElementById('action-points-display').textContent = `行动点: ${actionPoints}`;
+            
+            // 更新所有场景按钮状态
+            const allSceneBtns = document.querySelectorAll('.scene-btn');
+            allSceneBtns.forEach(btn => {
+                btn.disabled = actionPoints < 1;
+            });
+        }
+
+        // 更新所有显示
+        function updateAllDisplays() {
+            updateDateDisplay();
+            updateMoodDisplay();
+            updateActionPointsDisplay();
+            updateStatsDisplay();
+        }
+
+        // 显示角色属性
+        function showPlayerStats() {
+            switchScene('player-stats');
+            updateStatsDisplay();
+        }
+
+        // 更新属性显示
+        function updateStatsDisplay() {
+            // 更新天赋
+            document.getElementById('talent-gengu').style.width = playerTalents.根骨 + '%';
+            document.getElementById('talent-gengu-value').textContent = playerTalents.根骨;
+            
+            document.getElementById('talent-wuxing').style.width = playerTalents.悟性 + '%';
+            document.getElementById('talent-wuxing-value').textContent = playerTalents.悟性;
+            
+            document.getElementById('talent-xinxing').style.width = playerTalents.心性 + '%';
+            document.getElementById('talent-xinxing-value').textContent = playerTalents.心性;
+            
+            document.getElementById('talent-meili').style.width = playerTalents.魅力 + '%';
+            document.getElementById('talent-meili-value').textContent = playerTalents.魅力;
+            
+            // 更新人物数值
+            document.getElementById('stat-wuxue-value').textContent = playerStats.武学;
+            document.getElementById('stat-xueshi-value').textContent = playerStats.学识;
+            document.getElementById('stat-shengwang-value').textContent = playerStats.声望;
+            document.getElementById('stat-jinqian-value').textContent = playerStats.金钱;
+            
+            // 更新战斗数值
+            document.getElementById('combat-attack-value').textContent = combatStats.攻击力;
+            document.getElementById('combat-hp-value').textContent = combatStats.生命值;
+            
+            // 更新剩余点数
+            const remainingPoints = calculateRemainingPoints();
+            document.getElementById('remaining-points-value').textContent = remainingPoints;
+            
+            // 更新加点按钮状态
+            document.getElementById('add-attack-btn').disabled = remainingPoints <= 0;
+            document.getElementById('add-hp-btn').disabled = remainingPoints <= 0;
+            
+            // 更新已学武功列表
+            const skillsContainer = document.getElementById('learned-skills');
+            skillsContainer.innerHTML = '';
+            Object.keys(martialArts).forEach(skill => {
+                if (martialArts[skill] === 1) {
+                    const skillDiv = document.createElement('div');
+                    skillDiv.className = 'skill-item';
+                    skillDiv.textContent = '• ' + skill;
+                    skillsContainer.appendChild(skillDiv);
+                }
+            });
+        }
+
+        // 增加攻击力
+        function addAttack() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加10点攻击力？',
+                    () => {
+                        combatStats.攻击力 += 10;
+                        updateStatsDisplay();
+                        // 延迟显示结果，避免弹窗冲突
+                        setTimeout(() => {
+                            showModal(`攻击力提升至 ${combatStats.攻击力}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        // 增加生命值
+        function addHP() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加25点生命值？',
+                    () => {
+                        combatStats.生命值 += 25;
+                        updateStatsDisplay();
+                        // 延迟显示结果，避免弹窗冲突
+                        setTimeout(() => {
+                            showModal(`生命值提升至 ${combatStats.生命值}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        // 显示确认弹窗
+        function showConfirmModal(title, message, onConfirm) {
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+            
+            modalText.innerHTML = `<div style="font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: 10px;">${title}</div>${message}`;
+            modalButtons.innerHTML = `
+                <button class="modal-btn" onclick="confirmAction()">确定</button>
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+            `;
+            
+            window.confirmAction = () => {
+                closeModal();
+                onConfirm();
+            };
+            
+            modal.style.display = 'block';
+        }
+
+        // 显示人际关系
+        function showRelationships() {
+            switchScene('relationships');
+            updateRelationshipsDisplay();
+        }
+
+        // 更新关系显示
+        function updateRelationshipsDisplay() {
+            const grid = document.getElementById('relationship-grid');
+            grid.innerHTML = '';
+            
+            Object.keys(npcs).forEach(npcId => {
+                const npc = npcs[npcId];
+                const favorability = npcFavorability[npcId];
+                
+                const card = document.createElement('div');
+                card.className = 'relationship-card';
+                card.innerHTML = `
+                    <div class="relationship-avatar">${npc.avatar}</div>
+                    <div class="relationship-name">${npc.name}</div>
+                    <div class="relationship-bar">
+                        <div class="relationship-fill" style="width: ${favorability}%"></div>
+                    </div>
+                    <div class="relationship-value">好感度: ${favorability}</div>
+                `;
+                
+                // 添加悬停事件
+                card.addEventListener('mouseenter', function(e) {
+                    showTooltip(e, npc.description);
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    hideTooltip();
+                });
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // 显示悬停提示 - 添加边界检测
+        function showTooltip(event, text) {
+            const tooltip = document.getElementById('tooltip');
+            const card = event.currentTarget;
+            const rect = card.getBoundingClientRect();
+            const viewportRect = document.querySelector('.viewport').getBoundingClientRect();
+            
+            tooltip.innerHTML = `<div class="tooltip-item">${text}</div>`;
+            tooltip.classList.add('show');
+            
+            // 计算初始位置
+            let left = rect.left - viewportRect.left + rect.width / 2;
+            let top = rect.top - viewportRect.top - 10;
+            
+            // 设置初始位置以获取tooltip的尺寸
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.transform = 'translateX(-50%) translateY(-100%)';
+            
+            // 获取tooltip的实际尺寸
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            // 检查是否超出视窗边界并调整位置
+            if (tooltipRect.left < viewportRect.left) {
+                tooltip.style.transform = 'translateX(0) translateY(-100%)';
+                tooltip.style.left = '10px';
+            } else if (tooltipRect.right > viewportRect.right) {
+                tooltip.style.transform = 'translateX(-100%) translateY(-100%)';
+                tooltip.style.left = (viewportRect.width - 10) + 'px';
+            }
+            
+            if (tooltipRect.top < viewportRect.top) {
+                tooltip.style.transform = 'translateX(-50%)';
+                tooltip.style.top = (rect.bottom - viewportRect.top + 10) + 'px';
+            }
+        }
+
+        // 隐藏悬停提示
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        // 跳过这一周 - 添加确认弹窗
+        function skipWeek() {
+            showConfirmModal(
+                '确认跳过',
+                '确定要跳过这一周吗？',
+                () => {
+                    currentWeek++;
+                    actionPoints = 3; // 重置行动点
+                    updateAllDisplays();
+                    refreshNpcLocations();
+                    // 延迟显示结果，避免弹窗冲突
+                    setTimeout(() => {
+                        showModal('新的一周开始了<br>当前第' + currentWeek + '周<br>行动点已重置为3');
+                    }, 100);
+                }
+            );
+        }
+
+        // 显示弹窗
+        function showModal(text) {
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+            
+            modalText.innerHTML = text;
+            modalButtons.innerHTML = '<button class="modal-btn" onclick="closeModal()">确定</button>';
+            modal.style.display = 'block';
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // 解析LLM返回的数据 - 添加好感度变化处理
+        function parseLLMResponse(response) {
+            if (response.正文) {
+                currentStoryText = response.正文;
+                updateStoryText(currentStoryText);
+            }
+            
+            // 处理好感度变化
+            if (response.主要NPC && response.好感变化) {
+                const npcName = response.主要NPC;
+                const npcId = npcNameToId[npcName];
+                
+                if (npcId) {
+                    let changeValue = 0;
+                    switch (response.好感变化) {
+                        case '大幅下降':
+                            changeValue = -3;
+                            break;
+                        case '下降':
+                            changeValue = -1;
+                            break;
+                        case '不变':
+                            changeValue = 0;
+                            break;
+                        case '上升':
+                            changeValue = 1;
+                            break;
+                        case '大幅上升':
+                            changeValue = 3;
+                            break;
+                    }
+                    
+                    // 更新好感度，确保在0-100范围内
+                    npcFavorability[npcId] = Math.max(0, Math.min(100, npcFavorability[npcId] + changeValue));
+                    
+                    // 如果在人际关系界面，更新显示
+                    const activeScene = document.querySelector('.scene.active');
+                    if (activeScene && activeScene.id === 'relationships-scene') {
+                        updateRelationshipsDisplay();
+                    }
+                }
+            }
+        }
+
+        // 更新故事文本（保持原有正文不被覆盖）
+        function updateStoryText(text) {
+            const storyElement = document.getElementById('story-text');
+            storyElement.textContent = text;
+            
+            // 添加淡入动画效果
+            storyElement.style.opacity = '0';
+            setTimeout(() => {
+                storyElement.style.transition = 'opacity 0.5s ease';
+                storyElement.style.opacity = '1';
+            }, 100);
+        }
+
+        // 刷新NPC位置（限制每个地点最多2个NPC）
+        function refreshNpcLocations() {
+            // 记录每个地点的NPC数量
+            const locationCount = {
+                yanwuchang: 0,
+                cangjingge: 0,
+                huofang: 0,
+                houshan: 0,
+                yishiting: 0,
+                tiejiangpu: 0,
+                nandizi: 0,
+                nvdizi: 0,
+                shanmen: 0
+            };
+
+            // 为每个NPC重新分配位置
+            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F'].sort(() => Math.random() - 0.5);
+
+            npcOrder.forEach(npcId => {
+                let assigned = false;
+                let attempts = 0;
+                const maxAttempts = 20;
+
+                while (!assigned && attempts < maxAttempts) {
+                    const location = getRandomLocation(npcId);
+                    
+                    if (location === 'none') {
+                        currentNpcLocations[npcId] = location;
+                        assigned = true;
+                    } else if (locationCount[location] < 2) {  // 修改为最多2个NPC
+                        currentNpcLocations[npcId] = location;
+                        locationCount[location]++;
+                        assigned = true;
+                    }
+                    
+                    attempts++;
+                }
+
+                if (!assigned) {
+                    currentNpcLocations[npcId] = 'none';
+                }
+            });
+
+            // 更新各个NPC的位置变量
+            npcLocationA = currentNpcLocations.A;
+            npcLocationB = currentNpcLocations.B;
+            npcLocationC = currentNpcLocations.C;
+            npcLocationD = currentNpcLocations.D;
+            npcLocationE = currentNpcLocations.E;
+            npcLocationF = currentNpcLocations.F;
+
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && activeScene.id !== 'map-scene') {
+                const locationName = activeScene.id.replace('-scene', '');
+                displayNpcs(locationName);
+            }
+        }
+
+        // 根据概率获取NPC的随机位置
+        function getRandomLocation(npcId) {
+            const probabilities = npcLocationProbability[npcId];
+            const random = Math.random();
+            let cumulative = 0;
+
+            for (const location in probabilities) {
+                cumulative += probabilities[location];
+                if (random <= cumulative) {
+                    return location;
+                }
+            }
+
+            return 'none';
+        }
+
+        // 获取某个地点的NPC列表
+        function getNpcsAtLocation(location) {
+            const npcsAtLocation = [];
+            
+            Object.keys(currentNpcLocations).forEach(npcId => {
+                if (currentNpcLocations[npcId] === location) {
+                    npcsAtLocation.push({ id: npcId, ...npcs[npcId] });
+                }
+            });
+
+            return npcsAtLocation;
+        }
+
+        // 显示NPC立绘（替换原来的卡片显示）
+        function displayNpcs(location) {
+            const container = document.getElementById(location + '-npcs');
+            if (!container) return;
+
+            const npcsAtLocation = getNpcsAtLocation(location);
+            container.innerHTML = '';
+
+            if (npcsAtLocation.length === 0) {
+                // 不显示"此处暂无人物"的提示，保持场景干净
+                return;
+            }
+
+            npcsAtLocation.forEach((npc, index) => {
+                const portrait = document.createElement('div');
+                portrait.className = 'npc-portrait';
+                
+                // 根据NPC数量设置位置类
+                if (npcsAtLocation.length === 1) {
+                    portrait.classList.add('single');
+                } else if (npcsAtLocation.length === 2) {
+                    portrait.classList.add(index === 0 ? 'double-left' : 'double-right');
+                }
+                
+                portrait.innerHTML = `<img src="${npcPortraits[npc.id]}" alt="${npc.name}">`;
+                
+                // 添加点击事件
+                portrait.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    showNpcInfo(npc.id, location, e);
+                });
+                
+                container.appendChild(portrait);
+            });
+        }
+
+        // 显示NPC信息弹窗 - 修复位置计算问题
+        function showNpcInfo(npcId, location, event) {
+            const npc = npcs[npcId];
+            const popup = document.getElementById('npc-info-popup');
+            
+            popup.innerHTML = `
+                <div class="npc-info-name">${npc.name}</div>
+                <div class="npc-info-desc">${npc.description}</div>
+                <div class="npc-info-actions">
+                    <button class="npc-info-btn" onclick="npcAction('${npcId}', '切磋')">切磋</button>
+                    <button class="npc-info-btn" onclick="npcAction('${npcId}', '互动')">互动</button>
+                </div>
+            `;
+            
+            // 先显示弹窗以获取其尺寸
+            popup.classList.add('show');
+            
+            // 获取点击的立绘元素
+            const portrait = event.currentTarget;
+            const portraitRect = portrait.getBoundingClientRect();
+            
+            // 获取弹窗的实际尺寸
+            const popupRect = popup.getBoundingClientRect();
+            
+            // 计算立绘中心位置
+            const portraitCenterX = portraitRect.left + portraitRect.width / 2;
+            const portraitCenterY = portraitRect.top + portraitRect.height / 2;
+            
+            // 将弹窗定位在立绘中心
+            let left = portraitCenterX - popupRect.width / 2;
+            let top = portraitCenterY - popupRect.height / 2;
+            
+            // 边界检测，确保弹窗不超出窗口
+            const margin = 10;
+            if (left < margin) {
+                left = margin;
+            } else if (left + popupRect.width > window.innerWidth - margin) {
+                left = window.innerWidth - popupRect.width - margin;
+            }
+            
+            if (top < margin) {
+                top = margin;
+            } else if (top + popupRect.height > window.innerHeight - margin) {
+                top = window.innerHeight - popupRect.height - margin;
+            }
+            
+            // 设置最终位置
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            popup.style.transform = 'none';
+            
+            // 点击其他地方关闭弹窗
+            setTimeout(() => {
+                document.addEventListener('click', closeNpcInfo);
+            }, 100);
+        }
+
+        // 关闭NPC信息弹窗
+        function closeNpcInfo(e) {
+            const popup = document.getElementById('npc-info-popup');
+            if (!popup.contains(e.target)) {
+                popup.classList.remove('show');
+                document.removeEventListener('click', closeNpcInfo);
+            }
+        }
+
+        // NPC互动（修改后）
+        function npcAction(npcId, action) {
+            // 先关闭信息弹窗
+            const popup = document.getElementById('npc-info-popup');
+            popup.classList.remove('show');
+            document.removeEventListener('click', closeNpcInfo);
+            
+            if (action === '互动') {
+                const activeScene = document.querySelector('.scene.active');
+                const location = activeScene.id.replace('-scene', '');
+                showInteractionInput(npcId, location);
+            } else if (action === '切磋') {
+                const npc = npcs[npcId];
+                // 显示战斗信息
+                const battleMessage = `<battle><br>` +
+                    `发起战斗，敌方信息如下<br>` +
+                    `name: ${npc.name}<br>` +
+                    `&nbsp;&nbsp;maxHealth: 中<br>` +
+                    `&nbsp;&nbsp;basicDamage: 中<br>` +
+                    `<battle>`;
+                
+                showModal(battleMessage);
+            }
+        }
+
+        // 切换到指定场景
+        function switchScene(sceneName) {
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => {
+                scene.classList.remove('active');
+            });
+
+            const targetScene = document.getElementById(sceneName + '-scene');
+            if (targetScene) {
+                targetScene.classList.add('active');
+                if (sceneName !== 'player-stats' && sceneName !== 'relationships') {
+                    displayNpcs(sceneName);
+                }
+            }
+            // 不再更新故事文本，保持LLM返回的正文内容
+        }
+
+        // 返回地图
+        function backToMap() {
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => {
+                scene.classList.remove('active');
+            });
+
+            document.getElementById('map-scene').classList.add('active');
+            // 不再更新故事文本，保持LLM返回的正文内容
+        }
+
+        // 显示地点信息弹窗 - 修复位置计算，确保在viewport内显示
+        function showLocationInfo(locationId, event) {
+            const popup = document.getElementById('location-info-popup');
+            const locationName = locationNames[locationId];
+            const npcsAtLocation = getNpcsAtLocation(locationId);
+            
+            let npcsHtml = '';
+            if (npcsAtLocation.length > 0) {
+                npcsHtml = '<div class="location-info-npcs">在场NPC：';
+                npcsAtLocation.forEach(npc => {
+                    npcsHtml += `<div class="location-info-npc-item">• ${npc.name}</div>`;
+                });
+                npcsHtml += '</div>';
+            } else {
+                npcsHtml = '<div class="location-info-npcs">此处暂无人物</div>';
+            }
+            
+            popup.innerHTML = `
+                <div class="location-info-name">${locationName}</div>
+                ${npcsHtml}
+                <button class="location-go-btn" onclick="goToLocation('${locationId}')">前往</button>
+            `;
+            
+            // 先显示弹窗以获取其尺寸
+            popup.classList.add('show');
+            
+            // 获取点击元素和viewport的位置
+            const locationElement = event.currentTarget;
+            const locationRect = locationElement.getBoundingClientRect();
+            const viewportRect = document.querySelector('.viewport').getBoundingClientRect();
+            
+            // 获取弹窗的实际尺寸
+            const popupRect = popup.getBoundingClientRect();
+            
+            // 计算光点中心相对于viewport的位置
+            const locationCenterX = locationRect.left + locationRect.width / 2;
+            const locationCenterY = locationRect.top + locationRect.height / 2;
+            
+            // 计算弹窗位置（居中于光点）
+            let left = locationCenterX - popupRect.width / 2;
+            let top = locationRect.top - popupRect.height - 10; // 默认显示在上方
+            
+            // 边界检测 - 基于viewport边界
+            const margin = 10;
+            
+            // 水平边界检测
+            if (left < viewportRect.left + margin) {
+                left = viewportRect.left + margin;
+            } else if (left + popupRect.width > viewportRect.right - margin) {
+                left = viewportRect.right - popupRect.width - margin;
+            }
+            
+            // 垂直边界检测 - 优先显示在上方，空间不足时显示在下方
+            if (top < viewportRect.top + margin) {
+                // 上方空间不足，改为显示在下方
+                top = locationRect.bottom + 10;
+                
+                // 检查下方是否也超出边界
+                if (top + popupRect.height > viewportRect.bottom - margin) {
+                    // 如果下方也超出，则显示在viewport内能容纳的最佳位置
+                    if (locationCenterY < viewportRect.top + viewportRect.height / 2) {
+                        // 光点在上半部分，弹窗显示在下方
+                        top = Math.min(locationRect.bottom + 10, viewportRect.bottom - popupRect.height - margin);
+                    } else {
+                        // 光点在下半部分，弹窗显示在上方
+                        top = Math.max(locationRect.top - popupRect.height - 10, viewportRect.top + margin);
+                    }
+                }
+            }
+            
+            // 设置最终位置
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            
+            // 点击其他地方关闭弹窗
+            setTimeout(() => {
+                document.addEventListener('click', closeLocationInfo);
+            }, 100);
+        }
+
+        // 关闭地点信息弹窗 - 新增
+        function closeLocationInfo(e) {
+            const popup = document.getElementById('location-info-popup');
+            if (!popup.contains(e.target)) {
+                popup.classList.remove('show');
+                document.removeEventListener('click', closeLocationInfo);
+            }
+        }
+
+        // 前往地点 - 新增
+        function goToLocation(locationId) {
+            // 关闭弹窗
+            const popup = document.getElementById('location-info-popup');
+            popup.classList.remove('show');
+            document.removeEventListener('click', closeLocationInfo);
+            
+            // 切换场景
+            switchScene(locationId);
+        }
+
+        // 设置地点悬停和点击事件 - 修改
+        function setupLocationEvents() {
+            const locations = document.querySelectorAll('.location');
+
+            locations.forEach(location => {
+                let touchTimer = null;
+                
+                // PC端鼠标事件
+                location.addEventListener('mouseenter', function(e) {
+                    if (!('ontouchstart' in window)) {
+                        showLocationInfo(this.id, e);
+                    }
+                });
+
+                location.addEventListener('mouseleave', function() {
+                    if (!('ontouchstart' in window)) {
+                        // PC端不自动关闭，让用户可以点击前往按钮
+                    }
+                });
+
+                // 移动端触摸事件
+                location.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 清除之前的定时器
+                    if (touchTimer) {
+                        clearTimeout(touchTimer);
+                    }
+                    
+                    // 显示地点信息
+                    showLocationInfo(this.id, e);
+                });
+
+                // PC端点击事件
+                location.addEventListener('click', function(e) {
+                    if (!('ontouchstart' in window)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showLocationInfo(this.id, e);
+                    }
+                });
+            });
+        }
+
+        // 初始化
+        window.onload = function() {
+            updateAllDisplays();
+            setupLocationEvents();
+            refreshNpcLocations();
+            // 解析示例LLM响应
+            parseLLMResponse(llmResponse);
+        };
+    </script>
+</body>
+</html>
