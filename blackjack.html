@@ -2,10 +2,10 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>21点</title>
+    <title>21点游戏</title>
     <style>
         body {
-            font-family: 'Roboto', Arial, sans-serif;
+            font-family: 'Microsoft YaHei', Arial, sans-serif;
             background: #1a1a1a;
             color: #e0e0e0;
             margin: 0;
@@ -13,18 +13,16 @@
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 800px;
             margin: 0 auto;
         }
 
         .game-area {
             background: linear-gradient(135deg, #1f2937 0%, #2d3748 100%);
-            border-radius: 6px;
+            border-radius: 10px;
             padding: 20px;
             border: 1px solid #4b5563;
             box-shadow: 0 0 20px rgba(75, 85, 99, 0.2);
-            opacity: 0.95;
-            margin-bottom: 20px;
         }
 
         .dealer-section, .player-section {
@@ -33,8 +31,6 @@
             border-radius: 6px;
             text-align: center;
             border: 1px solid #632a35;
-            box-shadow: 0 0 15px rgba(99, 42, 53, 0.2);
-            opacity: 0.95;
             margin: 10px 0;
         }
 
@@ -54,7 +50,6 @@
             padding: 10px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
             border: 1px solid #9ca3af;
-            opacity: 0.9;
             font-size: 24px;
             color: #1f2937;
             display: inline-flex;
@@ -82,23 +77,17 @@
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
-            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-            opacity: 0.95;
+            font-size: 16px;
         }
 
         button:hover {
             background: linear-gradient(135deg, #ff6b87 0%, #d84860 100%);
             transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
-            opacity: 1;
         }
 
         button:disabled {
             background: #4a5568;
             cursor: not-allowed;
-            transform: none;
-            box-shadow: none;
             opacity: 0.7;
         }
 
@@ -108,8 +97,8 @@
             border-radius: 4px;
             margin: 10px 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #e0e0e0;
             font-size: 18px;
+            text-align: center;
         }
 
         .score {
@@ -124,7 +113,6 @@
             border-radius: 4px;
             margin: 10px 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            color: #e0e0e0;
             display: flex;
             justify-content: space-around;
             align-items: center;
@@ -156,10 +144,26 @@
             margin-top: 5px;
             display: none;
         }
+
+        .exit-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: #ff4d6d;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .exit-btn:hover {
+            background: #ff6b87;
+        }
     </style>
 </head>
 
 <body>
+    <button class="exit-btn" onclick="exitGame()">退出游戏</button>
     <div class="container">
         <div class="game-area">
             <div class="money-info">
@@ -198,6 +202,25 @@
         let dealerHand = [];
         let totalMoney = 10000;
         let currentBet = 0;
+        
+        // 获取URL参数中的初始金钱
+        const urlParams = new URLSearchParams(window.location.search);
+        const initialMoney = urlParams.get('money');
+        if (initialMoney && !isNaN(initialMoney)) {
+            totalMoney = parseInt(initialMoney);
+            updateMoneyDisplay();
+        }
+        
+        // 退出游戏
+        function exitGame() {
+            // 向父窗口发送金钱数据
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'blackjack-exit',
+                    money: totalMoney
+                }, '*');
+            }
+        }
         
         // 创建牌组
         function createDeck() {
@@ -340,9 +363,8 @@
             // 检查是否破产
             if (totalMoney <= 0) {
                 setTimeout(() => {
-                    alert('游戏结束！你破产了！');
-                    totalMoney = 10000; // 重置金额
-                    updateMoneyDisplay();
+                    alert('你破产了！');
+                    exitGame();
                 }, 500);
             }
         }
