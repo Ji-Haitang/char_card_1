@@ -3,1821 +3,3161 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>对战系统</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <title>江湖门派 - 水墨风</title>
     <style>
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-    user-select: none;
-}
-
-body {
-    font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
-    background-color: #000;
-    color: #fff;
-    overflow: hidden;
-    /* 移除min-height，改为通过JS动态设置 */
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    width: 100vw;
-    height: 100vh;
-}
-
-.game-container {
-    /* 通过JS动态设置宽高，保持4:3比例 */
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-}
-
-/* //回合制系统集成更新 - 添加退出按钮样式 */
-.exit-battle-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 8px 15px;
-    background: #ff4d6d;
-    color: white;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: 14px;
-    z-index: 100;
-}
-
-.exit-battle-btn:hover {
-    background: #ff6b87;
-}
-
-.battle-scene {
-    flex: 1;
-    position: relative;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    padding-bottom: clamp(60px, 12vw, 120px);
-}
-
-/* 状态区样式 - 进一步缩小手机端显示 */
-.player-status-area {
-    position: absolute;
-    top: clamp(6px, 1.5vw, 15px);
-    left: clamp(6px, 1.5vw, 15px);
-    background-color: rgba(0, 0, 0, 0.85);
-    border-radius: clamp(3px, 0.8vw, 6px);
-    padding: clamp(4px, 1vw, 10px);
-    z-index: 5;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
-    min-width: clamp(120px, 20vw, 200px);
-    max-width: clamp(160px, 25vw, 250px);
-}
-
-.character-name {
-    font-size: clamp(11px, 2.2vw, 16px);
-    font-weight: bold;
-    color: #ffcc00;
-    margin-bottom: clamp(3px, 0.8vw, 6px);
-    text-align: center;
-    font-family: 'Ma Shan Zheng', cursive;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-    border-bottom: 1px solid rgba(255, 204, 0, 0.3);
-    padding-bottom: clamp(2px, 0.5vw, 4px);
-}
-
-.enemy-status-area {
-    position: absolute;
-    top: clamp(6px, 1.5vw, 15px);
-    right: clamp(6px, 1.5vw, 15px);
-    background-color: rgba(0, 0, 0, 0.85);
-    border-radius: clamp(3px, 0.8vw, 6px);
-    padding: clamp(4px, 1vw, 10px);
-    z-index: 5;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
-    min-width: clamp(120px, 20vw, 200px);
-    max-width: clamp(160px, 25vw, 250px);
-}
-
-.health-container {
-    display: flex;
-    align-items: center;
-    min-width: clamp(110px, 18vw, 180px);
-    margin-bottom: clamp(2px, 0.5vw, 5px);
-    position: relative;
-}
-
-.health-bar {
-    flex: 1;
-    height: clamp(12px, 2.5vw, 20px);
-    background-color: #333;
-    border-radius: clamp(2px, 0.4vw, 3px);
-    overflow: hidden;
-    margin-right: clamp(30px, 6vw, 60px);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.health-fill {
-    height: 100%;
-    background: linear-gradient(to right, #ff0043, #ff6a00);
-    width: 100%;
-    transition: width 0.5s cubic-bezier(.4,2,.6,1);
-}
-
-.health-text {
-    position: absolute;
-    right: 0;
-    font-size: clamp(10px, 2vw, 14px);
-    color: #fff;
-    min-width: clamp(30px, 6vw, 60px);
-    text-align: right;
-    font-weight: bold;
-}
-
-.energy-display {
-    display: flex;
-    justify-content: flex-end;
-    align-items: center;
-}
-
-.energy-value {
-    font-size: clamp(10px, 2vw, 14px);
-    color: #ffcc00;
-    margin-right: clamp(2px, 0.5vw, 5px);
-    font-weight: bold;
-}
-
-.energy-icon {
-    color: #ffcc00;
-    font-size: clamp(12px, 2.5vw, 16px);
-}
-
-/* 回合指示器 - 优化位置避免被遮挡 */
-.turn-indicator {
-    position: absolute;
-    top: clamp(45px, 8vw, 80px);
-    left: 50%;
-    transform: translateX(-50%);
-    background-color: rgba(0, 0, 0, 0.85);
-    padding: clamp(4px, 1vw, 8px) clamp(10px, 2.5vw, 20px);
-    border-radius: clamp(12px, 3vw, 20px);
-    z-index: 6; /* 提高层级，确保不被状态区遮挡 */
-    font-size: clamp(12px, 2.8vw, 18px);
-    font-weight: bold;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
-    font-family: 'Ma Shan Zheng', cursive;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-    white-space: nowrap;
-}
-
-/* 命令区域 - 水墨风格 */
-.command-area {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 90%;
-    max-width: 800px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-radius: 10px;
-    padding: 15px;
-    z-index: 10;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
-}
-
-.command-label {
-    margin-bottom: 10px;
-    font-size: 24px;
-    color: #eee;
-    text-align: center;
-    font-family: 'Ma Shan Zheng', cursive;
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
-}
-
-.command-buttons {
-    display: flex;
-    justify-content: space-around;
-    gap: 10px;
-}
-
-/* 指令按钮浮动样式 - 优化版本：始终紧贴左边缘 */
-.command-buttons-floating {
-    position: absolute;
-    left: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: row;
-    gap: clamp(2px, 1vw, 12px);
-    padding: clamp(2px, 0.5vw, 8px) 0 0 clamp(2px, 0.5vw, 8px);
-    z-index: 10;
-    width: 50vw;
-    min-width: 280px;
-    max-width: 50vw;
-    justify-content: space-between;
-}
-
-.command-btn {
-    flex: 1 1 0;
-    margin: 0;
-    padding: clamp(0.5vw, 1.2vw, 1.5vw) clamp(0.3vw, 0.8vw, 1vw);
-    height: clamp(60px, 8vw, 120px);
-    border-radius: clamp(4px, 0.8vw, 8px);
-    background: #111 !important;
-    color: #fff !important;
-    border: 1px solid #333;
-    box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    min-width: 0;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-    overflow: hidden;
-}
-
-.command-btn::before {
-    content: '';
-    position: absolute;
-    top: -2px;
-    left: -2px;
-    right: -2px;
-    bottom: -2px;
-    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-    z-index: -1;
-    border-radius: clamp(4px, 0.8vw, 8px);
-}
-
-.command-btn:hover:not(.disabled) {
-    background: #222 !important;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
-    border-color: #666;
-}
-
-.command-btn:active:not(.disabled) {
-    background: #333 !important;
-    transform: translateY(0);
-}
-
-.command-btn.selected {
-    background: linear-gradient(135deg, #1a3a75, #0c1f3e) !important;
-    border-color: #3a6cbf;
-    box-shadow: 0 0 15px rgba(58, 108, 191, 0.6);
-}
-
-.command-btn.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-/* 键位提示自适应 */
-.command-btn .key-hint {
-    position: absolute;
-    top: clamp(2px, 0.5vw, 6px);
-    left: clamp(2px, 0.5vw, 6px);
-    background-color: rgba(0, 0, 0, 0.7);
-    color: #fff;
-    font-size: clamp(0.7rem, 1.5vw, 1rem);
-    padding: clamp(1px, 0.3vw, 4px) clamp(3px, 0.6vw, 8px);
-    border-radius: clamp(2px, 0.4vw, 4px);
-    line-height: 1;
-}
-
-/* 按钮名称自适应 */
-.command-btn .btn-name {
-    font-size: clamp(0.9rem, 2.2vw, 1.8rem);
-    font-weight: bold;
-    font-family: 'Ma Shan Zheng', cursive;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    text-align: center;
-    line-height: 1.1;
-    margin-top: clamp(2px, 0.5vw, 8px);
-}
-
-/* 战斗日志 - 自适应优化 */
-.battle-log {
-    height: clamp(50px, 10vw, 80px);
-    background-color: rgba(0, 0, 0, 0.85);
-    border-top: 1px solid #444;
-    padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
-    overflow-y: auto;
-    font-size: clamp(12px, 2.5vw, 16px);
-    line-height: 1.4;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    position: relative;
-    z-index: 10;
-}
-
-.battle-log p {
-    margin-bottom: clamp(1px, 0.3vw, 4px);
-    word-wrap: break-word;
-}
-
-/* 确认弹窗 - 手机优化 */
-.modal {
-    display: none;
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.7);
-    z-index: 100;
-    align-items: center;
-    justify-content: center;
-    padding: 15px;
-}
-
-.modal-content {
-    width: clamp(240px, 60vw, 320px);
-    max-width: 85vw;
-    border-radius: clamp(4px, 1vw, 8px);
-    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
-    color: #fff;
-    position: relative;
-    border: 2px solid #553c28;
-    overflow: hidden;
-}
-
-.modal-header {
-    padding: clamp(6px, 2vw, 12px);
-    background-color: rgba(0, 0, 0, 0.6);
-    font-size: clamp(14px, 3.2vw, 20px);
-    font-weight: bold;
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    font-family: 'Ma Shan Zheng', cursive;
-}
-
-.modal-body {
-    padding: clamp(8px, 2.5vw, 15px);
-    font-size: clamp(12px, 2.8vw, 16px);
-    text-align: center;
-    line-height: 1.4;
-}
-
-.modal-footer {
-    padding: clamp(6px, 2vw, 12px);
-    display: flex;
-    justify-content: space-around;
-    border-top: 1px solid rgba(255, 255, 255, 0.2);
-    gap: clamp(6px, 1.5vw, 12px);
-}
-
-.modal-footer button {
-    padding: clamp(4px, 1.5vw, 8px) clamp(10px, 3vw, 16px);
-    border: none;
-    border-radius: clamp(3px, 0.8vw, 6px);
-    cursor: pointer;
-    font-size: clamp(11px, 2.5vw, 14px);
-    font-family: 'ZCOOL XiaoWei', sans-serif;
-    transition: all 0.3s;
-    flex: 1;
-    min-height: clamp(24px, 5vw, 36px);
-}
-
-#confirm-action {
-    background: linear-gradient(to bottom, #5c3b1c, #34210f);
-    color: white;
-    border: 1px solid #7c5a3d;
-}
-
-#confirm-action:hover {
-    background: linear-gradient(to bottom, #6c4a2b, #3e2914);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-#cancel-action {
-    background: linear-gradient(to bottom, #444, #222);
-    color: #ddd;
-    border: 1px solid #666;
-}
-
-#cancel-action:hover {
-    background: linear-gradient(to bottom, #555, #333);
-    transform: translateY(-2px);
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
-}
-
-/* 动画效果 */
-@keyframes attack {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(40px); }
-    50% { transform: translateX(0); }
-    100% { transform: translateX(0); }
-}
-
-@keyframes enemy-attack {
-    0% { transform: translateX(0); }
-    25% { transform: translateX(-40px); }
-    50% { transform: translateX(0); }
-    100% { transform: translateX(0); }
-}
-
-@keyframes hit {
-    0% { filter: brightness(1); }
-    25% { filter: brightness(3) saturate(2); }
-    50% { filter: brightness(1); }
-    100% { filter: brightness(1); }
-}
-
-@keyframes defend {
-    0% { filter: brightness(1); }
-    50% { filter: brightness(1.5) hue-rotate(120deg); }
-    100% { filter: brightness(1); }
-}
-
-@keyframes special {
-    0% { filter: brightness(1); }
-    25% { filter: brightness(2) saturate(2) hue-rotate(270deg); }
-    50% { filter: brightness(1.5) saturate(1.5) hue-rotate(180deg); }
-    75% { filter: brightness(2) saturate(2) hue-rotate(90deg); }
-    100% { filter: brightness(1); }
-}
-
-.player-attack {
-    animation: attack 0.6s ease;
-}
-
-.enemy-attack {
-    animation: enemy-attack 0.6s ease;
-}
-
-.player-hit {
-    animation: hit 0.6s ease;
-}
-
-.enemy-hit {
-    animation: hit 0.6s ease;
-}
-
-.player-defend {
-    animation: defend 1s ease;
-}
-
-.enemy-defend {
-    animation: defend 1s ease;
-}
-
-.player-special {
-    animation: special 1s ease;
-}
-
-.enemy-special {
-    animation: special 1s ease;
-}
-
-/* 画面晃动动画 */
-@keyframes shake {
-  0% { transform: translate(0, 0); }
-  20% { transform: translate(-10px, 0); }
-  40% { transform: translate(10px, 0); }
-  60% { transform: translate(-10px, 0); }
-  80% { transform: translate(10px, 0); }
-  100% { transform: translate(0, 0); }
-}
-.shake {
-  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-}
-
-/* 受击红色边缘高亮动画 */
-@keyframes damage-flash {
-  0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }
-  30% { box-shadow: 0 0 0 20px rgba(255,0,0,0.5); }
-  60% { box-shadow: 0 0 0 40px rgba(255,0,0,0.2); }
-  100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
-}
-.damage-flash {
-  animation: damage-flash 0.5s;
-}
-
-.npc-portrait-layer {
-    position: absolute;
-    left: 0; top: 0; right: 0; bottom: 0;
-    width: 100%;
-    height: 100%;
-    pointer-events: none;
-    z-index: 3;
-    background: none;
-    background-position: center center;
-    background-repeat: no-repeat;
-    background-size: cover;
-    transition: background-image 0.3s;
-}
-
-.npc-portrait-layer.shake {
-    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
-}
-
-.screen-flash {
-    position: fixed;
-    left: 0; top: 0; right: 0; bottom: 0;
-    width: 100vw;
-    height: 100vh;
-    pointer-events: none;
-    z-index: 1000;
-    opacity: 0;
-    background: rgba(255,0,0,0.3);
-    box-shadow: 0 0 0 20px rgba(255,0,0,0.5), 0 0 60px 40px rgba(255,0,0,0.2) inset;
-    transition: opacity 0.2s;
-}
-
-.screen-flash.active {
-    opacity: 1;
-    transition: opacity 0.1s;
-}
-
-#restart-game {
-    background: linear-gradient(to bottom, #5c3b1c, #34210f);
-    color: white;
-    border: 1px solid #7c5a3d;
-    padding: clamp(6px, 2vw, 12px) clamp(20px, 4vw, 32px);
-    border-radius: clamp(3px, 0.8vw, 6px);
-    cursor: pointer;
-    font-size: clamp(12px, 2.8vw, 16px);
-    font-family: 'Ma Shan Zheng', cursive;
-    transition: all 0.3s;
-    width: 100%;
-    min-height: clamp(28px, 6vw, 40px);
-}
-
-#restart-game:hover {
-    background: linear-gradient(to bottom, #6c4a2b, #3e2914);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-}
-
-/* 移动端优化 */
-@media (max-width: 900px) {
-    .command-buttons-floating {
-        width: 70vw;
-        min-width: 260px;
-        gap: clamp(2px, 0.8vw, 6px);
-        padding: clamp(2px, 0.4vw, 6px) 0 0 clamp(2px, 0.4vw, 6px);
-    }
-    
-    .command-btn {
-        height: clamp(45px, 9vw, 70px);
-    }
-    
-    .command-btn .btn-name {
-        font-size: clamp(0.8rem, 2.8vw, 1.1rem);
-    }
-    
-    .command-btn .key-hint {
-        font-size: clamp(0.6rem, 1.8vw, 0.9rem);
-    }
-}
-
-@media (max-width: 600px) {
-    .command-buttons-floating {
-        width: 85vw;
-        min-width: 240px;
-        gap: clamp(1px, 0.5vw, 4px);
-        padding: clamp(1px, 0.3vw, 4px) 0 0 clamp(1px, 0.3vw, 4px);
-        flex-direction: row;
-    }
-    
-    .command-btn {
-        height: clamp(35px, 10vw, 55px);
-    }
-    
-    .command-btn .btn-name {
-        font-size: clamp(0.7rem, 3vw, 1rem);
-    }
-    
-    .command-btn .key-hint {
-        font-size: clamp(0.5rem, 2vw, 0.8rem);
-    }
-}
-
-/* 超大屏幕优化 */
-@media (min-width: 1400px) {
-    .command-buttons-floating {
-        width: 45vw;
-        max-width: 700px;
-    }
-    
-    .command-btn {
-        height: clamp(80px, 6vw, 100px);
-    }
-    
-    .command-btn .btn-name {
-        font-size: clamp(1.2rem, 1.8vw, 1.6rem);
-    }
-}
-
-/* 超小屏幕优化 */
-@media (max-width: 480px) {
-    .command-buttons-floating {
-        width: 95vw;
-        min-width: 200px;
-        gap: clamp(1px, 0.2vw, 2px);
-        padding: 2px 0 0 2px;
-        flex-direction: row;
-    }
-    
-    .command-btn {
-        height: clamp(30px, 11vw, 45px);
-        padding: clamp(0.2vw, 0.8vw, 1vw) clamp(0.1vw, 0.4vw, 0.6vw);
-    }
-    
-    .command-btn .btn-name {
-        font-size: clamp(0.6rem, 3.5vw, 0.9rem);
-    }
-    
-    .command-btn .key-hint {
-        font-size: clamp(0.4rem, 2.8vw, 0.7rem);
-        padding: clamp(0.5px, 0.1vw, 2px) clamp(2px, 0.3vw, 4px);
-    }
-}
-
-/* 横屏手机优化 */
-@media (max-width: 900px) and (orientation: landscape) {
-    .battle-scene {
-        padding-bottom: clamp(60px, 10vw, 100px);
-    }
-    
-    .command-btn {
-        height: clamp(30px, 6vw, 50px);
-    }
-    
-    .turn-indicator {
-        top: clamp(25px, 5vw, 40px);
-    }
-}
-</style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* 根字体大小响应式设置 */
+        :root {
+            font-size: 16px;
+        }
+
+        @media (max-width: 768px) {
+            :root {
+                font-size: 14px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            :root {
+                font-size: 12px;
+            }
+        }
+
+        body {
+            font-family: "Microsoft YaHei", "SimSun", serif;
+            background: #f5f5f5;
+            background-image: 
+                repeating-linear-gradient(
+                    45deg,
+                    transparent,
+                    transparent 10px,
+                    rgba(0,0,0,.03) 10px,
+                    rgba(0,0,0,.03) 20px
+                );
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: clamp(10px, 2vw, 20px);
+        }
+
+        /* 视窗包装器 */
+        .viewport-wrapper {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* 视窗样式 */
+        .viewport {
+            width: 100%;
+            aspect-ratio: 1.46;
+            background: #fff;
+            border: 3px solid #2c2c2c;
+            box-shadow: 0 0 30px rgba(0,0,0,0.3);
+            position: relative;
+            overflow: hidden;
+            background-image: 
+                radial-gradient(circle at 20% 80%, rgba(0,0,0,0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0,0,0,0.05) 0%, transparent 50%);
+            box-sizing: border-box;
+        }
+
+        /* 场景容器 */
+        .scene {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: none;
+            background: #f8f8f8;
+        }
+
+        .scene.active {
+            display: block;
+        }
+
+        /* 地图场景 */
+        #map-scene {
+            background-image: url('https://files.catbox.moe/3ij753.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #e8e8e8;
+        }
+
+        /* 状态显示 - 响应式改进 */
+        .status-display {
+            position: absolute;
+            top: clamp(10px, 3%, 30px);
+            left: clamp(10px, 3%, 30px);
+            color: #1a1a1a;
+            text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.85);
+            padding: clamp(8px, 2vw, 15px);
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+            font-size: clamp(0.75rem, 2vw, 1rem);
+        }
+
+        .date-display {
+            font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .mood-display,
+        .action-points-display {
+            font-size: clamp(0.8rem, 2.2vw, 1.125rem);
+            font-weight: bold;
+            margin-top: 3px;
+        }
+
+        /* 刷新NPC按钮 - 响应式改进 */
+        .refresh-npc-btn {
+            position: absolute;
+            top: clamp(10px, 3%, 30px);
+            right: clamp(10px, 3%, 30px);
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+            background: rgba(44, 44, 44, 0.9);
+            color: #fff;
+            border: 2px solid #1a1a1a;
+            cursor: pointer;
+            font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        .refresh-npc-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+        }
+
+        /* 中间控制按钮组 - 响应式改进 */
+        .control-buttons {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            display: flex;
+            box-sizing: border-box;
+        }
+
+        .control-btn {
+            flex: 1;
+            padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 30px);
+            background: #2c2c2c;
+            color: #fff;
+            border: 3px solid #2c2c2c;
+            border-top: none;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        @media (max-width: 480px) {
+            .control-btn {
+                padding: 10px 5px;
+                font-size: 0.75rem;
+            }
+        }
+
+        .control-btn:hover {
+            background: #3c3c3c;
+        }
+
+        .control-btn:first-child {
+            border-right: none;
+        }
+
+        .control-btn:last-child {
+            border-left: none;
+        }
+
+        /* 地点按钮 */
+        .location {
+            position: absolute;
+            width: clamp(12px, 2vw, 16px);
+            height: clamp(12px, 2vw, 16px);
+            border-radius: 50%;
+            background: #fff;
+            border: 2px solid #2c2c2c;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+        }
+
+        .location:hover {
+            transform: scale(1.5);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+        }
+
+        /* 用户所在位置 */
+        .location.user-location {
+            background: #4ecdc4;
+            border-color: #2c8c86;
+            box-shadow: 0 0 10px rgba(78, 205, 196, 0.6);
+        }
+
+        /* 地点位置 */
+        #yanwuchang { top: 50%; left: 50%; }
+        #cangjingge { top: 30%; left: 20%; }
+        #huofang { top: 60%; left: 67%; }
+        #houshan { top: 35%; left: 77%; }
+        #yishiting { top: 15%; left: 59%; }
+        #tiejiangpu { top: 70%; left: 80%; }
+        #nandizi { top: 30%; left: 67%; }
+        #nvdizi { top: 30%; left: 40%; }
+        #shanmen { top: 80%; left: 37%; }
+
+        /* 悬浮提示框 - 响应式改进 */
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: 0;
+            border-radius: 5px;
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            min-width: clamp(100px, 20vw, 150px);
+            max-width: 90vw;
+        }
+
+        .tooltip.show {
+            opacity: 1;
+        }
+
+        .tooltip-item {
+            padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2vw, 15px);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+            white-space: nowrap;
+        }
+
+        .tooltip-item:last-child {
+            border-bottom: none;
+        }
+
+        .tooltip-location {
+            font-weight: bold;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #4ecdc4;
+        }
+
+        /* 地点信息弹窗 - 新增 */
+        .location-info-popup {
+            position: fixed;
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: clamp(15px, 3vw, 20px);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 2000;
+            min-width: clamp(180px, 35vw, 250px);
+            text-align: center;
+            display: none;
+        }
+
+        .location-info-popup.show {
+            display: block;
+        }
+
+        .location-info-name {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            font-weight: bold;
+            margin-bottom: clamp(8px, 2vw, 10px);
+            color: #4ecdc4;
+        }
+
+        .location-info-npcs {
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            color: #ccc;
+            margin-bottom: clamp(12px, 3vw, 15px);
+            line-height: 1.4;
+        }
+
+        .location-info-npc-item {
+            margin: 5px 0;
+        }
+
+        .location-go-btn {
+            padding: clamp(8px, 2vw, 10px) clamp(25px, 5vw, 35px);
+            background: #4ecdc4;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .location-go-btn:hover {
+            background: #3dbbb3;
+            transform: scale(1.05);
+        }
+
+        /* 返回按钮 - 响应式改进 */
+        .back-btn {
+            position: absolute;
+            top: clamp(10px, 2vw, 20px);
+            left: clamp(10px, 2vw, 20px);
+            padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+            background: #2c2c2c;
+            color: #fff;
+            border: 2px solid #1a1a1a;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 100;
+        }
+
+        .back-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+        }
+
+        /* 场景标题 - 响应式改进 */
+        .scene-title {
+            position: absolute;
+            top: clamp(20px, 3vw, 30px);
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: clamp(1.5rem, 4vw, 2.25rem);
+            font-weight: bold;
+            color: #2c2c2c;
+            text-shadow: 3px 3px 6px rgba(0,0,0,0.2);
+            letter-spacing: clamp(5px, 1vw, 10px);
+            opacity: 0.8;
+        }
+
+        /* NPC立绘容器 */
+        .npc-container {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+        }
+
+        /* NPC立绘 - 修改为70%大小 */
+        .npc-portrait {
+            position: absolute;
+            bottom: 0;
+            width: 70%;  /* 从60%改为70% */
+            height: 70%; /* 从60%改为70% */
+            cursor: pointer;
+            pointer-events: auto;
+            transition: filter 0.3s ease;
+        }
+
+        .npc-portrait:hover {
+            filter: brightness(1.1);
+        }
+
+        .npc-portrait img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            object-position: bottom center;
+        }
+
+        /* 单个NPC时的位置 */
+        .npc-portrait.single {
+            left: 50%;
+            transform: translateX(-50%);
+        }
+
+        /* 两个NPC时的位置 - 修改为30%和70% */
+        .npc-portrait.double-left {
+            left: 30%;  /* 从33%改为30% */
+            transform: translateX(-50%);
+        }
+
+        .npc-portrait.double-right {
+            left: 70%;  /* 从66%改为70% */
+            transform: translateX(-50%);
+        }
+
+        /* NPC信息弹窗 - 修复响应式问题 */
+        .npc-info-popup {
+            position: fixed;  /* 改为fixed定位 */
+            background: rgba(0, 0, 0, 0.9);
+            color: #fff;
+            padding: clamp(12px, 3vw, 20px);
+            border-radius: 10px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+            z-index: 2000;  /* 提高z-index */
+            min-width: clamp(150px, 30vw, 200px);
+            max-width: 90vw;
+            text-align: center;
+            display: none;
+        }
+
+        .npc-info-popup.show {
+            display: block;
+        }
+
+        .npc-info-name {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            font-weight: bold;
+            margin-bottom: clamp(8px, 2vw, 10px);
+        }
+
+        .npc-info-desc {
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            color: #ccc;
+            margin-bottom: clamp(10px, 2.5vw, 15px);
+            line-height: 1.4;
+        }
+
+        .npc-info-actions {
+            display: flex;
+            gap: clamp(8px, 2vw, 10px);
+            justify-content: center;
+        }
+
+        .npc-info-btn {
+            padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 15px);
+            background: #fff;
+            color: #1a1a1a;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .npc-info-btn:hover {
+            background: #f0f0f0;
+            transform: scale(1.05);
+        }
+
+        /* 场景交互按钮容器 - 响应式改进 */
+        .scene-actions {
+            position: absolute;
+            bottom: clamp(20px, 3vw, 30px);
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: clamp(10px, 2vw, 15px);
+            z-index: 100;
+        }
+
+        /* 场景交互按钮 - 响应式改进 */
+        .scene-btn {
+            padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+            background: #2c2c2c;
+            color: #fff;
+            border: 2px solid #1a1a1a;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            white-space: nowrap;
+        }
+
+        .scene-btn:hover:not(:disabled) {
+            background: #fff;
+            color: #2c2c2c;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+        }
+
+        .scene-btn:disabled {
+            background: #666;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 属性展示容器 */
+        .stats-container {
+            position: absolute;
+            top: clamp(60px, 10vw, 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 85%;
+            max-width: 600px;
+            max-height: calc(100% - clamp(80px, 15vw, 100px));
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        /* 属性分组 */
+        .stats-group {
+            background: rgba(255, 255, 255, 0.9);
+            border: 2px solid #2c2c2c;
+            border-radius: 10px;
+            padding: clamp(15px, 3vw, 25px);
+            margin-bottom: clamp(15px, 3vw, 20px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .stats-group h3 {
+            font-size: clamp(1.2rem, 3vw, 1.5rem);
+            color: #2c2c2c;
+            margin-bottom: clamp(15px, 3vw, 20px);
+            text-align: center;
+            letter-spacing: 3px;
+        }
+
+        /* 属性项 */
+        .stat-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: clamp(10px, 2vw, 15px);
+        }
+
+        .stat-name {
+            width: clamp(60px, 15vw, 100px);
+            font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+            font-weight: bold;
+            color: #2c2c2c;
+        }
+
+        .stat-bar {
+            flex: 1;
+            height: clamp(20px, 4vw, 25px);
+            background: #e0e0e0;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+            margin: 0 clamp(10px, 2vw, 15px);
+        }
+
+        .stat-fill {
+            height: 100%;
+            background: linear-gradient(to right, #4a4a4a, #2c2c2c);
+            transition: width 0.5s ease;
+        }
+
+        .stat-value {
+            font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+            font-weight: bold;
+            color: #2c2c2c;
+            width: clamp(40px, 8vw, 50px);
+            text-align: right;
+        }
+
+        /* 下方数值分组容器 */
+        .bottom-stats-row {
+            display: flex;
+            gap: clamp(15px, 3vw, 20px);
+        }
+
+        @media (max-width: 600px) {
+            .bottom-stats-row {
+                flex-direction: column;
+            }
+        }
+
+        .bottom-stats-row .stats-group {
+            flex: 1;
+        }
+
+        /* 简单数值项 */
+        .simple-stat-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: clamp(10px, 2vw, 15px);
+            font-size: clamp(0.8rem, 2vw, 1rem);
+        }
+
+        .simple-stat-name {
+            font-weight: bold;
+            color: #2c2c2c;
+        }
+
+        .simple-stat-value {
+            font-weight: bold;
+            color: #4a4a4a;
+        }
+
+        /* 加点按钮 */
+        .point-control {
+            display: flex;
+            align-items: center;
+            gap: clamp(8px, 2vw, 10px);
+        }
+
+        .add-point-btn {
+            padding: clamp(3px, 0.8vw, 4px) clamp(8px, 2vw, 12px);
+            background: #4ecdc4;
+            color: #fff;
+            border: none;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .add-point-btn:hover:not(:disabled) {
+            background: #3dbbb3;
+            transform: scale(1.05);
+        }
+
+        .add-point-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+
+        /* 武功列表 */
+        .skill-list {
+            margin-top: clamp(10px, 2vw, 15px);
+        }
+
+        .skill-item {
+            padding: 5px 0;
+            color: #4a4a4a;
+            font-size: clamp(0.8rem, 1.9vw, 0.9375rem);
+        }
+
+        /* 关系卡片容器 - 响应式改进 */
+        .relationships-container {
+            position: absolute;
+            top: clamp(60px, 10vw, 80px);
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-height: calc(100% - clamp(80px, 15vw, 100px));
+            overflow-y: auto;
+            padding: clamp(10px, 2vw, 20px);
+        }
+
+        /* 关系卡片网格 - 固定3列2行 */
+        .relationship-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: clamp(10px, 2vw, 20px);
+            max-height: calc(100% - 20px);
+        }
+
+        /* 只显示前6个，其余通过滚动查看 */
+        .relationship-grid > :nth-child(n+7) {
+            display: block;
+        }
+
+        .relationship-card {
+            background: #fff;
+            border: 2px solid #2c2c2c;
+            border-radius: 10px;
+            padding: clamp(10px, 2vw, 20px);
+            text-align: center;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .relationship-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+        }
+
+        .relationship-avatar {
+            width: clamp(40px, 8vw, 60px);
+            height: clamp(40px, 8vw, 60px);
+            background: #2c2c2c;
+            color: #fff;
+            border-radius: 50%;
+            margin: 0 auto clamp(8px, 1.5vw, 10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: bold;
+        }
+
+        .relationship-name {
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+            margin-bottom: clamp(8px, 1.5vw, 10px);
+            color: #2c2c2c;
+        }
+
+        .relationship-bar {
+            width: 100%;
+            height: clamp(15px, 3vw, 20px);
+            background: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 5px;
+        }
+
+        .relationship-fill {
+            height: 100%;
+            background: linear-gradient(to right, #ff6b6b, #4ecdc4);
+            transition: width 0.5s ease;
+        }
+
+        .relationship-value {
+            font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+            color: #666;
+        }
+
+        /* 弹窗 - 响应式改进 */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.5);
+            padding: 20px;
+        }
+
+        .modal-content {
+            background-color: #fff;
+            margin: auto;
+            padding: clamp(20px, 4vw, 30px);
+            border: 3px solid #2c2c2c;
+            width: min(400px, 100%);
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            text-align: center;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+            top: 50%;
+            transform: translateY(-50%);
+        }
+
+        .modal-text {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            color: #2c2c2c;
+            margin-bottom: clamp(15px, 3vw, 20px);
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: clamp(10px, 2vw, 15px);
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .modal-btn {
+            padding: clamp(8px, 2vw, 10px) clamp(20px, 4vw, 30px);
+            background: #2c2c2c;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            font-weight: bold;
+        }
+
+        .modal-btn:hover {
+            background: #3c3c3c;
+        }
+
+        .modal-btn.cancel {
+            background: #666;
+        }
+
+        .modal-btn.cancel:hover {
+            background: #555;
+        }
+
+        /* 输入框样式 */
+        .input-area {
+            margin: clamp(15px, 3vw, 20px) 0;
+        }
+
+        .input-field {
+            width: 100%;
+            padding: clamp(8px, 2vw, 10px);
+            font-size: clamp(0.8rem, 2vw, 1rem);
+            border: 2px solid #2c2c2c;
+            border-radius: 5px;
+            resize: vertical;
+            min-height: clamp(80px, 15vw, 100px);
+            max-height: 200px;
+            font-family: "Microsoft YaHei", "SimSun", serif;
+        }
+
+        .input-field:focus {
+            outline: none;
+            border-color: #4ecdc4;
+        }
+
+        /* 互动内容自动换行样式 */
+        .interaction-content {
+            word-wrap: break-word;
+            word-break: break-all;
+            white-space: pre-wrap;
+            text-align: left;
+            max-width: 100%;
+            display: inline-block;
+        }
+
+        /* 故事区域 */
+        .story-area {
+            width: 100%;
+            max-width: 800px;
+            margin: 0 auto;
+            background: #fff;
+            border: 3px solid #2c2c2c;
+            border-top: none;
+            padding: clamp(15px, 3vw, 25px);
+            min-height: clamp(120px, 20vw, 180px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            box-sizing: border-box;
+        }
+
+        /* 故事文本 */
+        .story-text {
+            font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+            line-height: 1.8;
+            color: #2c2c2c;
+            text-indent: 2em;
+            font-family: "Microsoft YaHei", "SimSun", serif;
+        }
+
+        /* 水墨效果装饰 */
+        .ink-decoration {
+            position: absolute;
+            width: clamp(60px, 12vw, 100px);
+            height: clamp(60px, 12vw, 100px);
+            background: radial-gradient(circle, rgba(0,0,0,0.1) 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .ink1 { top: 10%; right: 10%; }
+        .ink2 { bottom: 10%; left: 5%; }
+
+        /* 滚动条样式 */
+        .stats-container::-webkit-scrollbar,
+        .relationships-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .stats-container::-webkit-scrollbar-track,
+        .relationships-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .stats-container::-webkit-scrollbar-thumb,
+        .relationships-container::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .stats-container::-webkit-scrollbar-thumb:hover,
+        .relationships-container::-webkit-scrollbar-thumb:hover {
+            background: #555;
+        }
+
+        /* 21点游戏iframe弹窗 - 新增 */
+        .blackjack-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .blackjack-container {
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            margin: 5% auto;
+            position: relative;
+        }
+
+        .blackjack-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 840px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .viewport-wrapper {
+                max-width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            /* 移动端关系卡片网格调整 */
+            .relationship-grid {
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+            
+            .relationship-card {
+                padding: 8px;
+            }
+            
+            .relationship-name {
+                font-size: 0.7rem;
+            }
+            
+            .relationship-avatar {
+                width: 35px;
+                height: 35px;
+                font-size: 0.9rem;
+            }
+        }
+
+        /* 随机事件框样式 - 响应式优化 */
+        .random-event-container {
+            background: rgba(44, 44, 44, 0.95);
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            padding: clamp(12px, 3vw, 20px);
+            margin-top: clamp(12px, 3vw, 20px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .random-event-container.show {
+            display: block;
+        }
+
+        .event-title {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: clamp(6px, 1.5vw, 10px);
+            text-align: center;
+        }
+
+        .event-description {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #fff;
+            margin-bottom: clamp(12px, 3vw, 20px);
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .event-options {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 2vw, 15px);
+        }
+
+        .event-option-btn {
+            background: #2c2c2c;
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: clamp(10px, 2.5vw, 15px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .event-option-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .option-desc {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #fff;
+            margin-bottom: clamp(5px, 1vw, 8px);
+            line-height: 1.4;
+        }
+
+        .option-reward {
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            color: #4ecdc4;
+            margin-bottom: clamp(3px, 0.8vw, 5px);
+        }
+
+        .option-success-rate {
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            color: #aaa;
+        }
+
+        /* 小屏幕优化 */
+        @media (max-width: 600px) {
+            .random-event-container {
+                margin-top: 10px;
+                padding: 10px;
+            }
+            
+            .event-options {
+                gap: 6px;
+            }
+            
+            .event-option-btn {
+                padding: 8px 10px;
+                border-radius: 6px;
+            }
+            
+            /* 在非常小的屏幕上，减少行间距 */
+            .option-desc {
+                margin-bottom: 3px;
+            }
+            
+            .option-reward {
+                margin-bottom: 2px;
+            }
+        }
+
+        /* 横屏手机优化 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .random-event-container {
+                padding: 8px 12px;
+                margin-top: 8px;
+            }
+            
+            .event-title {
+                margin-bottom: 5px;
+            }
+            
+            .event-description {
+                margin-bottom: 8px;
+            }
+            
+            .event-options {
+                gap: 5px;
+            }
+            
+            .event-option-btn {
+                padding: 6px 10px;
+            }
+        }
+
+        /* 平板和小窗口优化 */
+        @media (min-width: 600px) and (max-width: 840px) {
+            .random-event-container {
+                padding: 15px;
+                margin-top: 15px;
+            }
+            
+            .event-options {
+                gap: 10px;
+            }
+            
+            .event-option-btn {
+                padding: 12px;
+            }
+        }
+
+        .event-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .event-description {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .event-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .event-option-btn {
+            background: #2c2c2c;
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .event-option-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .option-desc {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .option-reward {
+            font-size: 14px;
+            color: #4ecdc4;
+            margin-bottom: 5px;
+        }
+
+        .option-success-rate {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 600px) {
+            .event-option-btn {
+                padding: 12px;
+            }
+            
+            .option-desc {
+                font-size: 14px;
+            }
+            
+            .option-reward,
+            .option-success-rate {
+                font-size: 12px;
+            }
+        }
+
+        /* //回合制系统集成更新 - 战斗iframe弹窗 */
+        .battle-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .battle-container {
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            margin: 5% auto;
+            position: relative;
+        }
+
+        .battle-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+        /* 战斗信息框样式 */
+        .battle-event-container {
+            background: rgba(44, 44, 44, 0.95);
+            border: 2px solid #ff4d6d;
+            border-radius: 10px;
+            padding: clamp(12px, 3vw, 20px);
+            margin-top: clamp(12px, 3vw, 20px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .battle-event-container.show {
+            display: block;
+        }
+
+        .battle-event-title {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            color: #ff4d6d;
+            margin-bottom: clamp(6px, 1.5vw, 10px);
+            text-align: center;
+        }
+
+        .battle-event-description {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #fff;
+            margin-bottom: clamp(12px, 3vw, 20px);
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .battle-enemy-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: clamp(10px, 2vw, 15px);
+            border-radius: 8px;
+            margin-bottom: clamp(10px, 2vw, 15px);
+        }
+
+        .enemy-info-item {
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+            color: #ccc;
+            margin: clamp(3px, 0.8vw, 5px) 0;
+        }
+
+        .enemy-info-label {
+            color: #ff4d6d;
+            font-weight: bold;
+        }
+
+        .battle-reward {
+            background: rgba(78, 205, 196, 0.2);
+            padding: clamp(8px, 2vw, 12px);
+            border-radius: 6px;
+            margin-bottom: clamp(12px, 3vw, 20px);
+            text-align: center;
+        }
+
+        .battle-reward-text {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #4ecdc4;
+        }
+
+        .battle-actions {
+            display: flex;
+            gap: clamp(10px, 2vw, 15px);
+            justify-content: center;
+        }
+
+        .battle-action-btn {
+            flex: 1;
+            padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+            border: 2px solid #ff4d6d;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .battle-action-btn.fight {
+            background: #ff4d6d;
+            color: #fff;
+        }
+
+        .battle-action-btn.fight:hover {
+            background: #ff6b87;
+            transform: translateY(-2px);
+        }
+
+        .battle-action-btn.flee {
+            background: #2c2c2c;
+            color: #fff;
+            border-color: #666;
+        }
+
+        .battle-action-btn.flee:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+        }
+
+        /* 战斗iframe弹窗 */
+        .battle-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .battle-container {
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            margin: 5% auto;
+            position: relative;
+        }
+
+        .battle-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+
+    </style>
 </head>
 <body>
-    <div class="game-container">
-        <!-- //回合制系统集成更新 - 添加手动退出按钮 -->
-        <button class="exit-battle-btn" onclick="confirmExitBattle()">退出战斗</button>
-        
-        <div class="npc-portrait-layer"></div>
-        <div class="screen-flash"></div>
-        <!-- 战斗场景 -->
-        <div class="battle-scene">
- 
-            <!-- 玩家状态区 -->
-            <div class="player-status-area">
-                <div class="character-name" id="player-name">user</div>
-                <div class="health-container">
-                    <div class="health-bar">
-                        <div class="health-fill" id="player-health"></div>
+    <div class="container">
+        <!-- 视窗区域增加包装器 -->
+        <div class="viewport-wrapper">
+            <div class="viewport" id="main-viewport">
+                <!-- 悬浮提示框 -->
+                <div class="tooltip" id="tooltip"></div>
+
+                <!-- NPC信息弹窗 -->
+                <div class="npc-info-popup" id="npc-info-popup"></div>
+
+                <!-- 地点信息弹窗 - 新增 -->
+                <div class="location-info-popup" id="location-info-popup"></div>
+
+                <!-- 地图场景 -->
+                <div id="map-scene" class="scene active">
+                    <div class="status-display">
+                        <div class="date-display" id="date-display">第1年第1月第1周</div>
+                        <div class="mood-display" id="mood-display">心情: 100</div>
+                        <div class="action-points-display" id="action-points-display">行动点: 3</div>
                     </div>
-                    <div class="health-text">
-                        <span id="player-health-value">50</span>/<span id="player-max-health">50</span>
+                    <button class="refresh-npc-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
+                    <div class="location" id="yanwuchang"></div>
+                    <div class="location" id="cangjingge"></div>
+                    <div class="location" id="huofang"></div>
+                    <div class="location" id="houshan"></div>
+                    <div class="location" id="yishiting"></div>
+                    <div class="location" id="tiejiangpu"></div>
+                    <div class="location user-location" id="nandizi"></div>
+                    <div class="location" id="nvdizi"></div>
+                    <div class="location" id="shanmen"></div>
+                    <div class="ink-decoration ink1"></div>
+                    <div class="ink-decoration ink2"></div>
+                </div>
+
+                <!-- 后续场景保持不变 -->
+                <!-- 角色属性场景 -->
+                <div id="player-stats-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="stats-container">
+                        <div class="stats-group">
+                            <h3>天赋属性</h3>
+                            <div class="stat-item">
+                                <span class="stat-name">根骨</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-gengu" style="width: 75%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-gengu-value">75</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">悟性</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-wuxing" style="width: 82%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-wuxing-value">82</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">心性</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-xinxing" style="width: 68%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-xinxing-value">68</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">魅力</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-meili" style="width: 70%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-meili-value">70</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-stats-row">
+                            <div class="stats-group">
+                                <h3>人物数值</h3>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">武学</span>
+                                    <span class="simple-stat-value" id="stat-wuxue-value">50</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">学识</span>
+                                    <span class="simple-stat-value" id="stat-xueshi-value">35</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">声望</span>
+                                    <span class="simple-stat-value" id="stat-shengwang-value">20</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">金钱</span>
+                                    <span class="simple-stat-value" id="stat-jinqian-value">100</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-group">
+                                <h3>战斗数值</h3>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">攻击力</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-attack-value">20</span>
+                                        <button class="add-point-btn" id="add-attack-btn" onclick="addAttack()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">生命值</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-hp-value">50</span>
+                                        <button class="add-point-btn" id="add-hp-btn" onclick="addHP()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">剩余点数</span>
+                                    <span class="simple-stat-value" id="remaining-points-value">0</span>
+                                </div>
+                                <div class="skill-list">
+                                    <div class="simple-stat-name" style="margin-bottom: 10px;">已学武功</div>
+                                    <div id="learned-skills"></div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <div class="energy-display">
-                    <div class="energy-value"><span id="player-energy">0</span>/10</div>
-                    <div class="energy-icon">⚡</div>
-                </div>
-            </div>
 
-            <!-- 敌人状态区 -->
-            <div class="enemy-status-area">
-                <div class="character-name" id="enemy-name">北条</div>
-                <div class="health-container">
-                    <div class="health-bar">
-                        <div class="health-fill" id="enemy-health"></div>
-                    </div>
-                    <div class="health-text">
-                        <span id="enemy-health-value">50</span>/<span id="enemy-max-health">50</span>
+                <!-- 人际关系场景 -->
+                <div id="relationships-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="relationships-container">
+                        <div class="relationship-grid" id="relationship-grid">
+                            <!-- 动态生成 -->
+                        </div>
                     </div>
                 </div>
-                <div class="energy-display">
-                    <div class="energy-value"><span id="enemy-energy">0</span>/10</div>
-                    <div class="energy-icon">⚡</div>
-                </div>
-            </div>
 
-            <!-- 回合指示器 -->
-            <div class="turn-indicator">
-                <div id="turn-text">第1回合</div>
-            </div>
+                <!-- 各个场景 -->
+                <div id="yanwuchang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">演武场</div>
+                    <div class="npc-container" id="yanwuchang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('练武', 'yanwuchang')">练武</button>
+                    </div>
+                </div>
 
-            <!-- 左侧玩家角色 -->
-            <div class="character player-character"></div>
+                <div id="cangjingge-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">藏经阁</div>
+                    <div class="npc-container" id="cangjingge-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('学习', 'cangjingge')">学习</button>
+                    </div>
+                </div>
 
-            <!-- 右侧敌方角色 -->
-            <div class="character enemy-character"></div>
+                <div id="huofang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">伙房</div>
+                    <div class="npc-container" id="huofang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('打杂', 'huofang')">打杂</button>
+                    </div>
+                </div>
 
-            <!-- 战斗命令区域 -->
-            <div class="command-buttons-floating">
-                <div class="command-btn" id="gather" data-key="Q">
-                    <div class="key-hint">Q</div>
-                    <div class="btn-name">集气</div>
+                <div id="houshan-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">后山</div>
+                    <div class="npc-container" id="houshan-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('秘密赌场', 'houshan')">秘密赌场</button>
+                        <button class="scene-btn" onclick="performAction('探索', 'houshan')">探索</button>
+                    </div>
                 </div>
-                <div class="command-btn" id="defend" data-key="W">
-                    <div class="key-hint">W</div>
-                    <div class="btn-name">防御</div>
+
+                <div id="yishiting-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">议事厅</div>
+                    <div class="npc-container" id="yishiting-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('汇报', 'yishiting')">汇报</button>
+                    </div>
                 </div>
-                <div class="command-btn" id="light-attack" data-key="E">
-                    <div class="key-hint">E</div>
-                    <div class="btn-name">轻攻击</div>
+
+                <div id="tiejiangpu-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">铁匠铺</div>
+                    <div class="npc-container" id="tiejiangpu-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('打铁', 'tiejiangpu')">打铁</button>
+                    </div>
                 </div>
-                <div class="command-btn" id="heavy-attack" data-key="R">
-                    <div class="key-hint">R</div>
-                    <div class="btn-name">重攻击</div>
+
+                <div id="nandizi-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">男弟子房</div>
+                    <div class="npc-container" id="nandizi-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('休息', 'nandizi')">休息</button>
+                    </div>
                 </div>
-                <div class="command-btn" id="special" data-key="F">
-                    <div class="key-hint">T</div>
-                    <div class="btn-name">绝招</div>
+
+                <div id="nvdizi-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">女弟子房</div>
+                    <div class="npc-container" id="nvdizi-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('拜访', 'nvdizi')">拜访</button>
+                    </div>
                 </div>
-                <div class="command-btn" id="taunt" data-key="C">
-                    <div class="key-hint">Y</div>
-                    <div class="btn-name">嘴炮</div>
+
+                <div id="shanmen-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">山门</div>
+                    <div class="npc-container" id="shanmen-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- 战斗日志 -->
-        <div class="battle-log" id="battle-log">
-            <p>战斗开始，请选择行动...</p>
-        </div>
-        
-        <!-- 确认弹窗 -->
-        <div id="confirm-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header">确认行动</div>
-                <div class="modal-body">
-                    已选择: <span id="selected-action">无</span>
-                </div>
-                <div class="modal-footer">
-                    <button id="confirm-action">确认</button>
-                    <button id="cancel-action">取消</button>
-                </div>
-            </div>
+        <!-- 中间控制按钮 -->
+        <div class="control-buttons">
+            <button class="control-btn" onclick="showPlayerStats()">角色属性</button>
+            <button class="control-btn" onclick="showRelationships()">人际关系</button>
+            <button class="control-btn" onclick="skipWeek()">跳过这一周</button>
         </div>
 
-        <!-- 游戏结束弹窗 -->
-        <div id="game-over-modal" class="modal">
-            <div class="modal-content">
-                <div class="modal-header" id="game-over-title">游戏结束</div>
-                <div class="modal-body" id="game-over-message">
-                    游戏结束信息
+        <!-- 故事区域 -->
+        <div class="story-area">
+            <div class="story-text" id="story-text">
+                江湖路远，故事未始...
+            </div>
+            <!-- 随机事件容器 - 新增 -->
+            <div class="random-event-container" id="random-event-container">
+                <div class="event-title">随机事件</div>
+                <div class="event-description" id="event-description"></div>
+                <div class="event-options" id="event-options"></div>
+            </div>
+            <!-- 在random-event-container后添加战斗事件容器 -->
+            <div class="battle-event-container" id="battle-event-container">
+                <div class="battle-event-title">战斗事件</div>
+                <div class="battle-event-description" id="battle-event-description"></div>
+                <div class="battle-enemy-info">
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">敌人：</span>
+                        <span id="enemy-name-display"></span>
+                    </div>
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">攻击力：</span>
+                        <span id="enemy-attack-display"></span>
+                    </div>
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">生命力：</span>
+                        <span id="enemy-health-display"></span>
+                    </div>
                 </div>
-                <div class="modal-footer">
-                    <button id="restart-game">重新开始</button>
+                <div class="battle-reward">
+                    <div class="battle-reward-text" id="battle-reward-text"></div>
+                </div>
+                <div class="battle-actions">
+                    <button class="battle-action-btn fight" onclick="startBattle()">发起战斗</button>
+                    <button class="battle-action-btn flee" onclick="fleeBattle()">放弃战斗</button>
                 </div>
             </div>
         </div>
     </div>
+
+    <!-- 弹窗 -->
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-text" id="modal-text">新的一周开始了</div>
+            <div class="modal-buttons" id="modal-buttons">
+                <button class="modal-btn" onclick="closeModal()">确定</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 21点游戏iframe弹窗 - 新增 -->
+    <div id="blackjack-modal" class="blackjack-modal">
+        <div class="blackjack-container">
+            <iframe id="blackjack-iframe" class="blackjack-iframe"></iframe>
+        </div>
+    </div>
+
+    <!-- //回合制系统集成更新 - 战斗iframe弹窗 -->
+    <div id="battle-modal" class="battle-modal">
+        <div class="battle-container">
+            <iframe id="battle-iframe" class="battle-iframe"></iframe>
+        </div>
+    </div>
+
     <script>
-// //回合制系统集成更新 - 获取URL参数
-const urlParams = new URLSearchParams(window.location.search);
+        // 用户当前所在位置
+        let userLocation = 'nandizi';
 
-// //回合制系统集成更新 - 玩家信息从URL参数获取
-const PLAYER_INFO = {
-    name: urlParams.get('playerName') || '小虾米',
-    maxHealth: parseInt(urlParams.get('playerHealth')) || 50,
-    currentHealth: parseInt(urlParams.get('playerHealth')) || 50,
-    energy: 0,
-    maxEnergy: 10,
-    selectedAction: null,
-    basicDamage: parseInt(urlParams.get('playerAttack')) || 20
-};
+        // 当前互动的NPC和地点（临时存储）
+        let currentInteractionNpc = null;
+        let currentInteractionLocation = null;
 
-// //回合制系统集成更新 - 构建敌方信息文本
-const enemyInfoText = `
-发起战斗，敌方信息如下
-name: ${urlParams.get('enemyName') || '姬姒'}
-  maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
-  basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
-`;
-
-// 游戏主背景和弹窗背景图片链接
-const GAME_BG_URL = 'https://files.catbox.moe/4qg2k3.png';
-const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
-
-// 生命值和伤害等级映射
-const healthMap = { '极低': 25,'低': 50, '中': 80, '高': 100, '极高': 150 };
-const damageMap = { '极低': 10,'低': 20, '中': 30, '高': 40, '极高': 50 };
-const styles = ['风', '火', '林', '山'];
-
-// 特殊NPC信息
-const commonNPCs = {
-    '姬姒': {
-        name: '姬姒', // 名称
-        maxHealth: 100, // 最大生命值
-        basicDamage: 30, // 轻攻击基础伤害
-        style: '风', // 风格
-        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
-    },
-    '萧白瑚': {
-        name: '萧白瑚',
-        maxHealth: 80,
-        basicDamage: 50,
-        style: '火',
-        portrait: 'https://files.catbox.moe/u1d2cx.png'
-    },
-    '洞庭君': {
-        name: '洞庭君', // 名称
-        maxHealth: 100, // 最大生命值
-        basicDamage: 30, // 轻攻击基础伤害
-        style: '风', // 风格
-        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
-    },
-    '钱塘君': {
-        name: '钱塘君',
-        maxHealth: 80,
-        basicDamage: 50,
-        style: '火',
-        portrait: 'https://files.catbox.moe/u1d2cx.png'
-    },
-    '破阵子': {
-        name: '破阵子', // 名称
-        maxHealth: 100, // 最大生命值
-        basicDamage: 30, // 轻攻击基础伤害
-        style: '风', // 风格
-        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
-    },
-    '木青鸾': {
-        name: '木青鸾',
-        maxHealth: 80,
-        basicDamage: 50,
-        style: '火',
-        portrait: 'https://files.catbox.moe/u1d2cx.png'
-    },
-    // 可继续添加更多NPC
-};
-
-// 解析敌方信息的函数
-function parseEnemyInfo(text) {
-    // 提取
-    const nameMatch = text.match(/name:\s*([^\n]+)/);
-    const npcName = nameMatch ? nameMatch[1].trim() : '';
-    clearEnemyPortrait();
-    // 优先查找常见NPC
-    if (npcName && commonNPCs[npcName]) {
-        const npc = commonNPCs[npcName];
-        // 更新敌人立绘
-        updateEnemyPortrait(npc.portrait);
-        return {
-            name: npc.name,
-            maxHealth: npc.maxHealth,
-            currentHealth: npc.maxHealth,
-            energy: 0,
-            maxEnergy: 10,
-            selectedAction: null,
-            basicDamage: npc.basicDamage,
-            style: npc.style
+        // 地点名称映射
+        const locationNames = {
+            yanwuchang: '演武场',
+            cangjingge: '藏经阁',
+            huofang: '伙房',
+            houshan: '后山',
+            yishiting: '议事厅',
+            tiejiangpu: '铁匠铺',
+            nandizi: '男弟子房',
+            nvdizi: '女弟子房',
+            shanmen: '山门'
         };
-    }
 
-    // 没有匹配到常见NPC，走原有解析逻辑，风格随机
-    const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
-    const basicDamageMatch = text.match(/basicDamage:\s*([^\n]+)/);
-    // 清除敌人立绘
-    clearEnemyPortrait();
-    return {
-        name: npcName,
-        maxHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
-        currentHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
-        energy: 0,
-        maxEnergy: 10,
-        selectedAction: null,
-        basicDamage: basicDamageMatch ? damageMap[basicDamageMatch[1].trim()] || 30 : 30,
-        style: styles[Math.floor(Math.random() * styles.length)]
-    };
-}
+        // NPC立绘URL映射（目前全部使用占位图片）
+        const npcPortraits = {
+            A: 'https://files.catbox.moe/u1d2cx.png',
+            B: 'https://files.catbox.moe/u1d2cx.png',
+            C: 'https://files.catbox.moe/u1d2cx.png',
+            D: 'https://files.catbox.moe/u1d2cx.png',
+            E: 'https://files.catbox.moe/u1d2cx.png',
+            F: 'https://files.catbox.moe/u1d2cx.png'
+        };
 
-// 更新敌人立绘
-function updateEnemyPortrait(portraitUrl) {
-    const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
-    npcPortraitLayer.style.backgroundImage = `url('${portraitUrl}')`;
-}
+        // 主角天赋属性（1-100）
+        let playerTalents = {
+            根骨: 75,    // 影响体力和内力
+            悟性: 82,    // 影响学习速度
+            心性: 68,    // 影响心理素质
+            魅力: 70     // 影响社交能力
+        };
 
-// 清除敌人立绘
-function clearEnemyPortrait() {
-    const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
-    npcPortraitLayer.style.backgroundImage = '';
-}
+        // 主角数值属性
+        let playerStats = {
+            武学: 50,    // 武功修为
+            学识: 35,    // 知识水平
+            声望: 20,    // 江湖声望
+            金钱: 100    // 银两
+        };
 
-// //回合制系统集成更新 - 退出战斗
-function exitBattle(result) {
-    // 向父窗口发送战斗结果
-    if (window.parent !== window) {
-        window.parent.postMessage({
-            type: 'battle-exit',
-            result: result // 'victory' 或 'defeat' 或 'quit'
-        }, '*');
-    }
-}
+        // 战斗数值
+        let combatStats = {
+            攻击力: 20,
+            生命值: 50
+        };
 
-// //回合制系统集成更新 - 确认退出战斗
-function confirmExitBattle() {
-    if (confirm('确定要退出战斗吗？')) {
-        exitBattle('quit');
-    }
-}
+        // 主角心情 (0-100)
+        let playerMood = 100;
 
-const playerNameDisplay = document.getElementById('player-name');
-const enemyNameDisplay = document.getElementById('enemy-name');
-// 游戏状态对象
-const gameState = {
-    currentTurn: 'player',
-    turnNumber: 1, // 添加回合计数器
-    waitingForConfirmation: false,
-    player: { ...PLAYER_INFO },
-    enemy: parseEnemyInfo(enemyInfoText)
-};
+        // 武功学习情况 - 使用对象方式存储
+        let martialArts = {
+            太白仙迹: 1,      // 已学习
+            岱宗如何: 0,      // 未学习
+            掠风窃尘: 1,      // 已学习
+            流云飞袖: 0,      // 未学习
+            惊鸿照影: 1,      // 已学习
+            踏雪无痕: 0,      // 未学习
+            醉卧沙场: 0,      // 未学习
+            万剑归宗: 0       // 未学习
+        };
 
-// 获取DOM元素
-const playerHealthBar = document.getElementById('player-health');
-const enemyHealthBar = document.getElementById('enemy-health');
-const playerHealthValue = document.getElementById('player-health-value');
-const enemyHealthValue = document.getElementById('enemy-health-value');
-const playerMaxHealth = document.getElementById('player-max-health'); // 新增
-const enemyMaxHealth = document.getElementById('enemy-max-health'); // 新增
-const playerEnergyDisplay = document.getElementById('player-energy');
-const enemyEnergyDisplay = document.getElementById('enemy-energy');
-const battleLog = document.getElementById('battle-log');
-const turnText = document.getElementById('turn-text');
-const selectedActionText = document.getElementById('selected-action');
-const confirmActionButton = document.getElementById('confirm-action');
-const cancelActionButton = document.getElementById('cancel-action');
-const commandButtons = document.querySelectorAll('.command-btn');
-const confirmModal = document.getElementById('confirm-modal');
-const gameOverModal = document.getElementById('game-over-modal');
-const gameOverTitle = document.getElementById('game-over-title');
-const gameOverMessage = document.getElementById('game-over-message');
-const restartGameButton = document.getElementById('restart-game');
+        // NPC好感度（1-100）
+        let npcFavorability = {
+            A: 50,    // 破阵子
+            B: 60,    // 洞庭君
+            C: 40,    // 钱塘君
+            D: 55,    // 萧白瑚
+            E: 65,    // 姬姒
+            F: 30     // 木青鸾
+        };
 
-// 角色元素
-const playerCharacter = document.querySelector('.player-character');
-const enemyCharacter = document.querySelector('.enemy-character');
+        // 当前行动点（1-5）
+        let actionPoints = 3;
 
-// 初始化游戏
-function initGame() {
-    updateDisplay();
-    addLog('战斗开始，请选择行动...');
-    
-    // 添加按钮点击事件 - 支持触屏和鼠标
-    setupButtonEvents();
-    
-    // 键盘控制
-    document.addEventListener('keydown', handleKeyPress);
-}
+        // 当前周数（1-9999）
+        let currentWeek = 1;
 
-// 设置按钮事件
-function setupButtonEvents() {
-    document.getElementById('gather').addEventListener('click', () => selectAction('gather'));
-    document.getElementById('defend').addEventListener('click', () => selectAction('defend'));
-    document.getElementById('light-attack').addEventListener('click', () => selectAction('light-attack'));
-    document.getElementById('heavy-attack').addEventListener('click', () => selectAction('heavy-attack'));
-    document.getElementById('special').addEventListener('click', () => selectAction('special'));
-    document.getElementById('taunt').addEventListener('click', () => selectAction('taunt'));
-    
-    // 确认按钮事件
-    confirmActionButton.addEventListener('click', () => {
-        confirmModal.style.display = 'none';
-        confirmAction();
-    });
-    
-    // 取消按钮事件
-    cancelActionButton.addEventListener('click', () => {
-        confirmModal.style.display = 'none';
-        gameState.player.selectedAction = null;
-        updateDisplay();
-    });
+        // 每个NPC当前所在的位置
+        let npcLocationA = 'none';
+        let npcLocationB = 'none';
+        let npcLocationC = 'none';
+        let npcLocationD = 'none';
+        let npcLocationE = 'none';
+        let npcLocationF = 'none';
 
-    // //回合制系统集成更新 - 修改重新开始按钮的处理
-    restartGameButton.addEventListener('click', () => {
-        // 如果在iframe中，退出到父窗口
-        if (window.parent !== window) {
-            exitBattle('restart');
-        } else {
-            window.location.reload();
+        // 当前NPC位置的集合
+        const currentNpcLocations = {
+            A: npcLocationA,
+            B: npcLocationB,
+            C: npcLocationC,
+            D: npcLocationD,
+            E: npcLocationE,
+            F: npcLocationF
+        };
+
+        // 互动配置
+        const actionConfigs = {
+            练武: { talentBonus: '根骨', affects: '武学' },
+            学习: { talentBonus: '悟性', affects: '学识' },
+            打杂: { talentBonus: '根骨', affects: '金钱' },
+            秘密赌场: { talentBonus: '魅力', affects: '金钱' },
+            探索: { talentBonus: '心性', affects: '学识' },
+            汇报: { talentBonus: '魅力', affects: '声望' },
+            打铁: { talentBonus: '根骨', affects: '武学' },
+            休息: { talentBonus: '心性', affects: '心情' },
+            拜访: { talentBonus: '魅力', affects: '声望' },
+            下山: { talentBonus: '心性', affects: '声望' }
+        };
+
+        // LLM返回的示例数据 - 修改主要NPC和好感变化
+        const llmResponse = {
+            "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
+            "剩余行动点": 3,
+            "当前地点": "男弟子房",
+            "主要NPC": "F",
+            "好感变化": "不变",
+            "其他NPC": "无",
+            "随机事件": {
+                "事件类型": "战斗事件",
+                "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+                "敌方信息": {
+                "名称": "吐蕃探子",
+                "属性": {
+                    "攻击力": "低",
+                    "生命力": "中"
+                },
+                "战斗报酬": {
+                    "类型": "金钱",
+                    "数值": 500
+                }
+                }
+            }
+        };
+
+        // 保存当前故事正文
+        let currentStoryText = "";
+
+        // NPC定义
+        const npcs = {
+            A: {
+                name: "破阵子",
+                description: "天山派长老，组织义军反抗吐蕃",
+                avatar: "A"
+            },
+            B: {
+                name: "洞庭君",
+                description: "天山派长老，身段外貌宛如幼女",
+                avatar: "B"
+            },
+            C: {
+                name: "钱塘君",
+                description: "天山派弟子，天生神力，性格豪放",
+                avatar: "C"
+            },
+            D: {
+                name: "萧白瑚",
+                description: "天山派弟子，豆蔻年华，性格活泼",
+                avatar: "D"
+            },
+            E: {
+                name: "姬姒",
+                description: "天山派弟子，仗剑任侠，嫉恶如仇",
+                avatar: "E"
+            },
+            F: {
+                name: "木青鸾",
+                description: "天山派弟子，学识卓绝，文采斐然",
+                avatar: "F"
+            }
+        };
+
+        // NPC名字到ID的映射
+        const npcNameToId = {
+            "破阵子": "A",
+            "洞庭君": "B",
+            "钱塘君": "C",
+            "萧白瑚": "D",
+            "姬姒": "E",
+            "木青鸾": "F"
+        };
+
+        // NPC在各地点的出现概率（概率总和为1）
+        const npcLocationProbability = {
+            A: {
+                yanwuchang: 0.30,
+                cangjingge: 0.10,
+                huofang: 0.05,
+                houshan: 0.25,
+                yishiting: 0.10,
+                tiejiangpu: 0.05,
+                nandizi: 0.05,
+                nvdizi: 0.00,
+                shanmen: 0.05,
+                none: 0.05
+            },
+            B: {
+                yanwuchang: 0.10,
+                cangjingge: 0.05,
+                huofang: 0.35,
+                houshan: 0.15,
+                yishiting: 0.05,
+                tiejiangpu: 0.05,
+                nandizi: 0.10,
+                nvdizi: 0.05,
+                shanmen: 0.05,
+                none: 0.05
+            },
+            C: {
+                yanwuchang: 0.05,
+                cangjingge: 0.25,
+                huofang: 0.05,
+                houshan: 0.20,
+                yishiting: 0.10,
+                tiejiangpu: 0.05,
+                nandizi: 0.00,
+                nvdizi: 0.25,
+                shanmen: 0.05,
+                none: 0.00
+            },
+            D: {
+                yanwuchang: 0.35,
+                cangjingge: 0.00,
+                huofang: 0.10,
+                houshan: 0.05,
+                yishiting: 0.15,
+                tiejiangpu: 0.20,
+                nandizi: 0.10,
+                nvdizi: 0.00,
+                shanmen: 0.05,
+                none: 0.00
+            },
+            E: {
+                yanwuchang: 0.05,
+                cangjingge: 0.40,
+                huofang: 0.05,
+                houshan: 0.10,
+                yishiting: 0.25,
+                tiejiangpu: 0.00,
+                nandizi: 0.05,
+                nvdizi: 0.05,
+                shanmen: 0.05,
+                none: 0.00
+            },
+            F: {
+                yanwuchang: 0.20,
+                cangjingge: 0.05,
+                huofang: 0.00,
+                houshan: 0.15,
+                yishiting: 0.40,
+                tiejiangpu: 0.00,
+                nandizi: 0.00,
+                nvdizi: 0.00,
+                shanmen: 0.15,
+                none: 0.05
+            }
+        };
+
+        let currentRandomEvent = null;
+        let currentBattleEvent = null;  // 保存当前战斗事件信息
+        let currentBattleType = null;  // 'npc' 或 'event' 标识战斗类型
+        let currentBattleReward = null;  // 保存战斗奖励信息
+
+        // 计算剩余分配点数 - 修改为永不为负
+        function calculateRemainingPoints() {
+            const rawPoints = Math.floor(playerStats.武学 / 10) - (combatStats.攻击力 - 20) / 10 - (combatStats.生命值 - 50) / 25;
+            return Math.max(0, rawPoints);
         }
-    });
-}
 
-// 更新显示
-function updateDisplay() {
-    // 更新生命值显示
-    playerHealthBar.style.width = `${(gameState.player.currentHealth / gameState.player.maxHealth) * 100}%`;
-    enemyHealthBar.style.width = `${(gameState.enemy.currentHealth / gameState.enemy.maxHealth) * 100}%`;
-    
-    // 更新生命值文本
-    playerHealthValue.textContent = gameState.player.currentHealth;
-    enemyHealthValue.textContent = gameState.enemy.currentHealth;
-    
-    // 更新最大生命值文本
-    playerMaxHealth.textContent = gameState.player.maxHealth;
-    enemyMaxHealth.textContent = gameState.enemy.maxHealth;
-    
-    // 更新能量值
-    playerEnergyDisplay.textContent = gameState.player.energy;
-    enemyEnergyDisplay.textContent = gameState.enemy.energy;
-    
-    // 更新角色名字显示
-    playerNameDisplay.textContent = gameState.player.name;
-    enemyNameDisplay.textContent = gameState.enemy.name;
-    
-    // 更新回合数显示
-    turnText.textContent = `第${gameState.turnNumber}回合`;
-    
-    // 根据能量值启用/禁用按钮
-    checkButtonAvailability();
-}
+        // 执行互动 - 修改数值变化逻辑，特别是声望的变化范围
+        function performAction(action, location) {
+            // 特殊处理秘密赌场
+            if (action === '秘密赌场') {
+                // 检查行动点
+                if (actionPoints < 1) {
+                    showModal('行动点不足，无法进行此操作！');
+                    return;
+                }
+                
+                // 消耗行动点
+                actionPoints--;
+                updateAllDisplays();
+                
+                // 显示21点游戏iframe弹窗
+                showBlackjackGame();
+                return;
+            }
 
-// 检查按钮可用性
-function checkButtonAvailability() {
-    // 如果不是玩家回合或正在等待确认，禁用所有按钮
-    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) {
-        commandButtons.forEach(btn => {
-            btn.classList.add('disabled');
+            // 检查行动点
+            if (actionPoints < 1) {
+                showModal('行动点不足，无法进行此操作！');
+                return;
+            }
+
+            // 获取配置
+            const config = actionConfigs[action];
+            const talentBonus = playerTalents[config.talentBonus] / 2;
+            
+            // 计算最终数值
+            const randomRoll = Math.random() * 100;
+            const finalValue = (randomRoll + talentBonus) * playerMood / 100;
+
+            // 判断成功等级
+            let successLevel, successText, moodCost;
+            let statChange = {};
+            
+            if (finalValue >= 80) {
+                successLevel = '大成功';
+                successText = '成果斐然！';
+                moodCost = 0;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 60);
+                    statChange.心情 = '+60';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 1000;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 5;  // 声望最大+5
+                } else {
+                    statChange[config.affects] = 5;
+                }
+            } else if (finalValue >= 60) {
+                successLevel = '成功';
+                successText = '收获颇丰。';
+                moodCost = 5;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 45);
+                    statChange.心情 = '+45';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 500;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 3;  // 声望+3
+                } else {
+                    statChange[config.affects] = 3;
+                }
+            } else if (finalValue >= 40) {
+                successLevel = '一般';
+                successText = '平平无奇。';
+                moodCost = 10;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 100;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 1;  // 声望+1
+                } else {
+                    statChange[config.affects] = 1;
+                }
+            } else if (finalValue >= 20) {
+                successLevel = '失败';
+                successText = '事与愿违...';
+                moodCost = 15;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = -500;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = -2;  // 声望-2
+                } else {
+                    statChange[config.affects] = 0;  // 武学和学识不扣除
+                }
+            } else {
+                successLevel = '大失败';
+                successText = '惨不忍睹！';
+                moodCost = 20;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = -1000;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = -5;  // 声望最多-5
+                } else {
+                    statChange[config.affects] = 0;  // 武学和学识不扣除
+                }
+            }
+
+            // 应用属性变化，确保不为负数
+            if (config.affects !== '心情') {
+                playerStats[config.affects] = Math.max(0, playerStats[config.affects] + statChange[config.affects]);
+                if (action !== '休息') {
+                    playerMood = Math.max(0, playerMood - moodCost);
+                }
+            }
+
+            // 消耗行动点
+            actionPoints--;
+
+            // 获取在场NPC
+            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+
+            // 构建属性变化文本
+            let changeText = '';
+            Object.entries(statChange).forEach(([key, value]) => {
+                changeText += `<br>${key}: ${value > 0 ? '+' : ''}${value}`;
+            });
+            if (action !== '休息') {
+                changeText += `<br>心情: -${moodCost}`;
+            }
+            changeText += '<br>行动点: -1';
+
+            // 构建简化的结果信息
+            const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `地点：${locationNames[location]}<br>` +
+                `行动：${action}<br>` +
+                `在场NPC：${npcsPresent}<br>` +
+                `结果：${successLevel} - ${successText}<br><br>` +
+                `属性变化：${changeText}`;
+
+            // 更新显示
+            updateAllDisplays();
+            
+            // 刷新NPC位置
+            refreshNpcLocations();
+            
+            // 显示结果
+            showModal(resultMessage);
+        }
+
+        // 显示21点游戏 - 新增
+        function showBlackjackGame() {
+            const modal = document.getElementById('blackjack-modal');
+            const iframe = document.getElementById('blackjack-iframe');
+            
+            // 设置iframe的src，传递当前金钱作为参数
+            // 注意：这里使用GitHub Pages的URL格式
+            const gameUrl = `https://Ji-Haitang.github.io/char_card_1/blackjack.html?money=${playerStats.金钱}`;
+            iframe.src = gameUrl;
+            
+            modal.style.display = 'block';
+        }
+
+        // // //回合制系统集成更新 - 显示战斗游戏
+        // function showBattleGame(battleData) {
+        //     const modal = document.getElementById('battle-modal');
+        //     const iframe = document.getElementById('battle-iframe');
+            
+        //     // 构建URL参数
+        //     const params = new URLSearchParams({
+        //         playerName: battleData.player.name,
+        //         playerAttack: battleData.player.attack,
+        //         playerHealth: battleData.player.health,
+        //         enemyName: battleData.enemy.name,
+        //         enemyMaxHealth: battleData.enemy.maxHealth,
+        //         enemyBasicDamage: battleData.enemy.basicDamage
+        //     });
+            
+        //     // 设置iframe的src
+
+        //     const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
+        //     iframe.src = gameUrl;
+            
+        //     modal.style.display = 'block';
+        // }
+
+        // 修改window.addEventListener部分，添加战斗系统的消息处理
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'blackjack-exit') {
+                // 21点游戏的处理...
+            }
+            else if (event.data.type === 'battle-exit') {
+                // 关闭战斗弹窗
+                document.getElementById('battle-modal').style.display = 'none';
+                document.getElementById('battle-iframe').src = '';
+                
+                // 获取战斗结果
+                const result = event.data.result; // 'victory', 'defeat', 'quit'
+                
+                if (currentBattleType === 'npc') {
+                    // NPC切磋结果
+                    const resultText = result === 'victory' ? '获得胜利了' : '不幸失败了';
+                    showModal(`你和对手切磋，${resultText}`);
+                    
+                    // 如果胜利，增加声望
+                    if (result === 'victory') {
+                        playerStats.声望 += 1;
+                        updateStatsDisplay();
+                    }
+                } else if (currentBattleType === 'event') {
+                    // 战斗事件结果
+                    if (result === 'victory') {
+                        let rewardMessage = '';
+                        // 应用战斗奖励
+                        if (currentBattleReward) {
+                            applyBattleReward(currentBattleReward);
+                            rewardMessage = `<br>获得奖励：${currentBattleReward.类型}+${currentBattleReward.数值}`;
+                        }
+                        showModal(currentBattleEvent.事件描述 + 
+                            `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！` + 
+                            rewardMessage);
+                    } else if (result === 'defeat') {
+                        showModal(currentBattleEvent.事件描述 + 
+                            `<br><br>你迎战${currentBattleEvent.敌方信息.名称}但是不幸败北。`);
+                    }
+                    
+                    // 隐藏战斗事件容器
+                    hideBattleEvent();
+                }
+                
+                // 重置战斗类型
+                currentBattleType = null;
+                currentBattleReward = null;
+            }
         });
-        return;
-    }
-    
-    // 重置按钮状态
-    commandButtons.forEach(btn => {
-        btn.classList.remove('disabled');
-        btn.classList.remove('selected');
-    });
-    
-    // 根据能量值启用/禁用按钮
-    if (gameState.player.energy < 1) {
-        document.getElementById('light-attack').classList.add('disabled');
-    }
-    
-    if (gameState.player.energy < 2) {
-        document.getElementById('heavy-attack').classList.add('disabled');
-    }
-    
-    if (gameState.player.energy < 5) {
-        document.getElementById('special').classList.add('disabled');
-    }
-    
-    // 如果有选中的动作，高亮显示
-    if (gameState.player.selectedAction) {
-        document.getElementById(gameState.player.selectedAction).classList.add('selected');
-    }
-}
 
-// 添加战斗日志
-function addLog(message) {
-    const logEntry = document.createElement('p');
-    logEntry.textContent = message;
-    battleLog.appendChild(logEntry);
-    battleLog.scrollTop = battleLog.scrollHeight;
-}
+        // 应用战斗奖励
+        function applyBattleReward(reward) {
+            if (!reward) return;
+            
+            switch (reward.类型) {
+                case '金钱':
+                    playerStats.金钱 += reward.数值;
+                    break;
+                case '声望':
+                    playerStats.声望 += reward.数值;
+                    break;
+                case '武学':
+                    playerStats.武学 += reward.数值;
+                    break;
+                case '学识':
+                    playerStats.学识 += reward.数值;
+                    break;
+            }
+            
+            updateStatsDisplay();
+        }
 
-// 选择动作
-function selectAction(action) {
-    // 如果不是玩家回合或正在等待确认，返回
-    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) return;
-    
-    // 检查按钮是否被禁用
-    if (document.getElementById(action).classList.contains('disabled')) {
-        return;
-    }
-    
-    // 清除之前的选择
-    commandButtons.forEach(btn => btn.classList.remove('selected'));
-    
-    // 检查是否有足够的能量
-    if ((action === 'light-attack' && gameState.player.energy < 1) ||
-        (action === 'heavy-attack' && gameState.player.energy < 2) ||
-        (action === 'special' && gameState.player.energy < 5)) {
-        addLog('能量不足，无法执行此动作！');
-        return;
-    }
-    
-    // 设置选中状态
-    document.getElementById(action).classList.add('selected');
-    gameState.player.selectedAction = action;
-    
-    // 更新选择显示
-    const actionNames = {
-        'gather': '集气',
-        'defend': '防御',
-        'light-attack': '轻攻击',
-        'heavy-attack': '重攻击',
-        'special': '绝招',
-        'taunt': '嘴炮'
-    };
-    selectedActionText.textContent = actionNames[action];
-    
-    // 显示确认弹窗
-    confirmModal.style.display = 'flex';
-}
+        // 点击弹窗背景关闭（可选）- 新增
+        document.getElementById('blackjack-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                const iframe = document.getElementById('blackjack-iframe');
+                // 尝试通知iframe关闭游戏
+                try {
+                    iframe.contentWindow.postMessage({ type: 'close-game' }, '*');
+                } catch(e) {
+                    // 如果跨域无法访问，直接关闭
+                    this.style.display = 'none';
+                    iframe.src = '';
+                }
+            }
+        });
 
-// 确认动作
-function confirmAction() {
-    if (!gameState.player.selectedAction) return;
-    
-    // 设置为等待确认状态
-    gameState.waitingForConfirmation = true;
-    
-    // 禁用按钮
-    commandButtons.forEach(btn => {
-        btn.classList.add('disabled');
-    });
-    
-    addLog(`${gameState.player.name}准备行动...`);
-    
-    // 敌人AI选择动作
-    selectEnemyAction();
-    
-    // 执行回合结算
-    setTimeout(executeTurn, 1000);
-}
+        // 点击战斗弹窗背景关闭
+        document.getElementById('battle-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要退出战斗吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('battle-iframe').src = '';
+                    
+                    // 如果是战斗事件，隐藏容器
+                    if (currentBattleType === 'event') {
+                        hideBattleEvent();
+                    }
+                    
+                    currentBattleType = null;
+                    currentBattleReward = null;
+                }
+            }
+        });
 
-// 敌人AI选择动作
-function selectEnemyAction() {
-    const enemy = gameState.enemy;
-    const player = gameState.player;
-    const style = enemy.style || '风'; // 默认风格
+        // 显示互动输入弹窗
+        function showInteractionInput(npcId, location) {
+            currentInteractionNpc = npcId;
+            currentInteractionLocation = location;
+            
+            const npc = npcs[npcId];
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+            
+            modalText.innerHTML = `
+                <div style="font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: clamp(15px, 3vw, 20px);">与 ${npc.name} 互动</div>
+                <div class="input-area">
+                    <textarea class="input-field" id="interaction-input" placeholder="请输入你想对${npc.name}说的话或做的事..."></textarea>
+                </div>
+            `;
+            
+            modalButtons.innerHTML = `
+                <button class="modal-btn" onclick="sendInteraction()">发送</button>
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+            `;
+            
+            modal.style.display = 'block';
+            
+            // 自动聚焦到输入框
+            setTimeout(() => {
+                document.getElementById('interaction-input').focus();
+            }, 100);
+        }
 
-    // 玩家气的威胁等级
-    const playerEnergy = player.energy;
+        // 发送互动内容
+        function sendInteraction() {
+            const interactionContent = document.getElementById('interaction-input').value.trim();
+            
+            if (!interactionContent) {
+                alert('请输入互动内容！');
+                return;
+            }
+            
+            // 获取当前地点
+            const activeScene = document.querySelector('.scene.active');
+            const location = activeScene.id.replace('-scene', '');
+            
+            // 获取NPC信息
+            const npc = npcs[currentInteractionNpc];
+            
+            // 获取在场NPC
+            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+            
+            // 构建结果信息，使用自动换行样式
+            const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `地点：${locationNames[location]}<br>` +
+                `行动：互动<br>` +
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
+                `在场NPC：${npcsPresent}`;
+            
+            // 关闭当前弹窗
+            closeModal();
+            
+            // 延迟显示结果，避免弹窗冲突
+            setTimeout(() => {
+                showModal(resultMessage);
+            }, 100);
+            
+            // 清空临时存储
+            currentInteractionNpc = null;
+            currentInteractionLocation = null;
+        }
 
-    // 嘴炮判定：玩家气满5时，敌人有较高概率嘴炮
-    if (playerEnergy >= 5) {
-        if (style === '山' && Math.random() < 0.5) {
-            enemy.selectedAction = 'taunt';
-            return;
+        // 计算并更新日期显示
+        function updateDateDisplay() {
+            const year = Math.floor((currentWeek - 1) / 48) + 1;
+            const remainingWeeks = (currentWeek - 1) % 48;
+            const month = Math.floor(remainingWeeks / 4) + 1;
+            const week = remainingWeeks % 4 + 1;
+            
+            document.getElementById('date-display').textContent = `第${year}年第${month}月第${week}周`;
         }
-        if (style === '林' && Math.random() < 0.4) {
-            enemy.selectedAction = 'taunt';
-            return;
-        }
-        if (style === '火' && Math.random() < 0.25) {
-            enemy.selectedAction = 'taunt';
-            return;
-        }
-        if (style === '风' && Math.random() < 0.2) {
-            enemy.selectedAction = 'taunt';
-            return;
-        }
-    }
 
-    // 防御判定：玩家气较高时，敌人有概率防御
-    if (playerEnergy >= 1) {
-        if (style === '山' && Math.random() < 0.5) {
-            enemy.selectedAction = 'defend';
-            return;
+        // 更新心情显示
+        function updateMoodDisplay() {
+            document.getElementById('mood-display').textContent = `心情: ${playerMood}`;
         }
-        if (style === '林' && Math.random() < 0.3) {
-            enemy.selectedAction = 'defend';
-            return;
-        }
-        if (style === '火' && Math.random() < 0.2) {
-            enemy.selectedAction = 'defend';
-            return;
-        }
-        if (style === '风' && Math.random() < 0.15) {
-            enemy.selectedAction = 'defend';
-            return;
-        }
-    }
 
-    // 风格主策略
-    if (style === '风') {
-        // 风：更倾向于轻攻击
-        if (enemy.energy >= 1 && Math.random() < 0.7) {
-            enemy.selectedAction = 'light-attack';
-            return;
+        // 更新行动点显示
+        function updateActionPointsDisplay() {
+            document.getElementById('action-points-display').textContent = `行动点: ${actionPoints}`;
+            
+            // 更新所有场景按钮状态
+            const allSceneBtns = document.querySelectorAll('.scene-btn');
+            allSceneBtns.forEach(btn => {
+                btn.disabled = actionPoints < 1;
+            });
         }
-        if (enemy.energy < 10 && Math.random() < 0.6) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 2 && Math.random() < 0.3) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 5 && Math.random() < 0.2) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
 
-    if (style === '火') {
-        // 火：更倾向于重攻击
-        if (enemy.energy >= 2 && Math.random() < 0.7) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
+        // 更新所有显示
+        function updateAllDisplays() {
+            updateDateDisplay();
+            updateMoodDisplay();
+            updateActionPointsDisplay();
+            updateStatsDisplay();
         }
-        if (enemy.energy >= 1 && Math.random() < 0.4) {
-            enemy.selectedAction = 'light-attack';
-            return;
-        }
-        if (enemy.energy < 10 && Math.random() < 0.5) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 5 && Math.random() < 0.2) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
 
-    if (style === '林') {
-        // 林：更倾向于攒气用绝招
-        if (enemy.energy >= 5 && Math.random() < 0.7) {
-            enemy.selectedAction = 'special';
-            return;
+        // 显示角色属性
+        function showPlayerStats() {
+            switchScene('player-stats');
+            updateStatsDisplay();
         }
-        if (enemy.energy < 10 && Math.random() < 0.7) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 2 && Math.random() < 0.2) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 1 && Math.random() < 0.2) {
-            enemy.selectedAction = 'light-attack';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
 
-    if (style === '山') {
-        // 山：注重防守
-        if (enemy.currentHealth < enemy.maxHealth * 0.5 && playerEnergy >= 1 && Math.random() < 0.5) {
-            enemy.selectedAction = 'defend';
-            return;
+        // 更新属性显示
+        function updateStatsDisplay() {
+            // 更新天赋
+            document.getElementById('talent-gengu').style.width = playerTalents.根骨 + '%';
+            document.getElementById('talent-gengu-value').textContent = playerTalents.根骨;
+            
+            document.getElementById('talent-wuxing').style.width = playerTalents.悟性 + '%';
+            document.getElementById('talent-wuxing-value').textContent = playerTalents.悟性;
+            
+            document.getElementById('talent-xinxing').style.width = playerTalents.心性 + '%';
+            document.getElementById('talent-xinxing-value').textContent = playerTalents.心性;
+            
+            document.getElementById('talent-meili').style.width = playerTalents.魅力 + '%';
+            document.getElementById('talent-meili-value').textContent = playerTalents.魅力;
+            
+            // 更新人物数值
+            document.getElementById('stat-wuxue-value').textContent = playerStats.武学;
+            document.getElementById('stat-xueshi-value').textContent = playerStats.学识;
+            document.getElementById('stat-shengwang-value').textContent = playerStats.声望;
+            document.getElementById('stat-jinqian-value').textContent = playerStats.金钱;
+            
+            // 更新战斗数值
+            document.getElementById('combat-attack-value').textContent = combatStats.攻击力;
+            document.getElementById('combat-hp-value').textContent = combatStats.生命值;
+            
+            // 更新剩余点数
+            const remainingPoints = calculateRemainingPoints();
+            document.getElementById('remaining-points-value').textContent = remainingPoints;
+            
+            // 更新加点按钮状态
+            document.getElementById('add-attack-btn').disabled = remainingPoints <= 0;
+            document.getElementById('add-hp-btn').disabled = remainingPoints <= 0;
+            
+            // 更新已学武功列表
+            const skillsContainer = document.getElementById('learned-skills');
+            skillsContainer.innerHTML = '';
+            Object.keys(martialArts).forEach(skill => {
+                if (martialArts[skill] === 1) {
+                    const skillDiv = document.createElement('div');
+                    skillDiv.className = 'skill-item';
+                    skillDiv.textContent = '• ' + skill;
+                    skillsContainer.appendChild(skillDiv);
+                }
+            });
         }
-        if (enemy.energy < 10 && Math.random() < 0.6) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 1 && Math.random() < 0.4) {
-            enemy.selectedAction = 'light-attack';
-            return;
-        }
-        if (enemy.energy >= 2 && Math.random() < 0.3) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 5 && Math.random() < 0.1) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
 
-    // 默认行为
-    enemy.selectedAction = 'gather';
-}
+        // 增加攻击力
+        function addAttack() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加10点攻击力？',
+                    () => {
+                        combatStats.攻击力 += 10;
+                        updateStatsDisplay();
+                        // 延迟显示结果，避免弹窗冲突
+                        setTimeout(() => {
+                            showModal(`攻击力提升至 ${combatStats.攻击力}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
 
-// 执行回合
-function executeTurn() {
-    const player = gameState.player;
-    const enemy = gameState.enemy;
-    
-    // 获取双方行动
-    const playerAction = player.selectedAction;
-    const enemyAction = enemy.selectedAction;
-    
-    addLog(`${enemy.name}选择了行动...`);
-    
-    // 根据行动类型执行特效和结算
-    setTimeout(() => {
-        // 显示双方选择的动作
-        const actionNames = {
-            'gather': '集气',
-            'defend': '防御',
-            'light-attack': '轻攻击',
-            'heavy-attack': '重攻击',
-            'special': '绝招',
-            'taunt': '嘴炮'
+        // 增加生命值
+        function addHP() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加25点生命值？',
+                    () => {
+                        combatStats.生命值 += 25;
+                        updateStatsDisplay();
+                        // 延迟显示结果，避免弹窗冲突
+                        setTimeout(() => {
+                            showModal(`生命值提升至 ${combatStats.生命值}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        // 显示确认弹窗
+        function showConfirmModal(title, message, onConfirm) {
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+            
+            modalText.innerHTML = `<div style="font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: 10px;">${title}</div>${message}`;
+            modalButtons.innerHTML = `
+                <button class="modal-btn" onclick="confirmAction()">确定</button>
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+            `;
+            
+            window.confirmAction = () => {
+                closeModal();
+                onConfirm();
+            };
+            
+            modal.style.display = 'block';
+        }
+
+        // 显示人际关系
+        function showRelationships() {
+            switchScene('relationships');
+            updateRelationshipsDisplay();
+        }
+
+        // 更新关系显示
+        function updateRelationshipsDisplay() {
+            const grid = document.getElementById('relationship-grid');
+            grid.innerHTML = '';
+            
+            Object.keys(npcs).forEach(npcId => {
+                const npc = npcs[npcId];
+                const favorability = npcFavorability[npcId];
+                
+                const card = document.createElement('div');
+                card.className = 'relationship-card';
+                card.innerHTML = `
+                    <div class="relationship-avatar">${npc.avatar}</div>
+                    <div class="relationship-name">${npc.name}</div>
+                    <div class="relationship-bar">
+                        <div class="relationship-fill" style="width: ${favorability}%"></div>
+                    </div>
+                    <div class="relationship-value">好感度: ${favorability}</div>
+                `;
+                
+                // 添加悬停事件
+                card.addEventListener('mouseenter', function(e) {
+                    showTooltip(e, npc.description);
+                });
+                
+                card.addEventListener('mouseleave', function() {
+                    hideTooltip();
+                });
+                
+                grid.appendChild(card);
+            });
+        }
+
+        // 显示悬停提示 - 添加边界检测
+        function showTooltip(event, text) {
+            const tooltip = document.getElementById('tooltip');
+            const card = event.currentTarget;
+            const rect = card.getBoundingClientRect();
+            const viewportRect = document.querySelector('.viewport').getBoundingClientRect();
+            
+            tooltip.innerHTML = `<div class="tooltip-item">${text}</div>`;
+            tooltip.classList.add('show');
+            
+            // 计算初始位置
+            let left = rect.left - viewportRect.left + rect.width / 2;
+            let top = rect.top - viewportRect.top - 10;
+            
+            // 设置初始位置以获取tooltip的尺寸
+            tooltip.style.left = left + 'px';
+            tooltip.style.top = top + 'px';
+            tooltip.style.transform = 'translateX(-50%) translateY(-100%)';
+            
+            // 获取tooltip的实际尺寸
+            const tooltipRect = tooltip.getBoundingClientRect();
+            
+            // 检查是否超出视窗边界并调整位置
+            if (tooltipRect.left < viewportRect.left) {
+                tooltip.style.transform = 'translateX(0) translateY(-100%)';
+                tooltip.style.left = '10px';
+            } else if (tooltipRect.right > viewportRect.right) {
+                tooltip.style.transform = 'translateX(-100%) translateY(-100%)';
+                tooltip.style.left = (viewportRect.width - 10) + 'px';
+            }
+            
+            if (tooltipRect.top < viewportRect.top) {
+                tooltip.style.transform = 'translateX(-50%)';
+                tooltip.style.top = (rect.bottom - viewportRect.top + 10) + 'px';
+            }
+        }
+
+        // 隐藏悬停提示
+        function hideTooltip() {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.classList.remove('show');
+        }
+
+        // 跳过这一周 - 添加确认弹窗
+        function skipWeek() {
+            showConfirmModal(
+                '确认跳过',
+                '确定要跳过这一周吗？',
+                () => {
+                    currentWeek++;
+                    actionPoints = 3; // 重置行动点
+                    updateAllDisplays();
+                    refreshNpcLocations();
+                    // 延迟显示结果，避免弹窗冲突
+                    setTimeout(() => {
+                        showModal('新的一周开始了<br>当前第' + currentWeek + '周<br>行动点已重置为3');
+                    }, 100);
+                }
+            );
+        }
+
+        // 显示弹窗
+        function showModal(text) {
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+            
+            modalText.innerHTML = text;
+            modalButtons.innerHTML = '<button class="modal-btn" onclick="closeModal()">确定</button>';
+            modal.style.display = 'block';
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // 修改parseLLMResponse函数，处理战斗事件
+        function parseLLMResponse(response) {
+            if (response.正文) {
+                currentStoryText = response.正文;
+                updateStoryText(currentStoryText);
+            }
+            
+            // 处理好感度变化
+            if (response.主要NPC && response.好感变化) {
+                const npcName = response.主要NPC;
+                const npcId = npcNameToId[npcName];
+                
+                if (npcId) {
+                    let changeValue = 0;
+                    switch (response.好感变化) {
+                        case '大幅下降':
+                            changeValue = -3;
+                            break;
+                        case '下降':
+                            changeValue = -1;
+                            break;
+                        case '不变':
+                            changeValue = 0;
+                            break;
+                        case '上升':
+                            changeValue = 1;
+                            break;
+                        case '大幅上升':
+                            changeValue = 3;
+                            break;
+                    }
+                    
+                    // 更新好感度，确保在0-100范围内
+                    npcFavorability[npcId] = Math.max(0, Math.min(100, npcFavorability[npcId] + changeValue));
+                    
+                    // 如果在人际关系界面，更新显示
+                    const activeScene = document.querySelector('.scene.active');
+                    if (activeScene && activeScene.id === 'relationships-scene') {
+                        updateRelationshipsDisplay();
+                    }
+                }
+            }
+            
+            // 处理随机事件
+            if (response.随机事件) {
+                currentRandomEvent = response.随机事件;
+                
+                // 判断事件类型
+                if (currentRandomEvent.事件类型 === '战斗事件') {
+                    // 处理战斗事件
+                    displayBattleEvent(currentRandomEvent);
+                    hideRandomEvent();  // 隐藏普通随机事件容器
+                } else {
+                    // 处理普通随机事件
+                    displayRandomEvent(currentRandomEvent);
+                    hideBattleEvent();  // 隐藏战斗事件容器
+                }
+            } else {
+                hideRandomEvent();
+                hideBattleEvent();
+            }
+        }
+
+        // 显示战斗事件
+        function displayBattleEvent(event) {
+            const container = document.getElementById('battle-event-container');
+            const description = document.getElementById('battle-event-description');
+            const enemyName = document.getElementById('enemy-name-display');
+            const enemyAttack = document.getElementById('enemy-attack-display');
+            const enemyHealth = document.getElementById('enemy-health-display');
+            const rewardText = document.getElementById('battle-reward-text');
+            
+            // 保存当前战斗事件
+            currentBattleEvent = event;
+            
+            // 设置事件描述
+            description.textContent = event.事件描述;
+            
+            // 设置敌人信息
+            if (event.敌方信息) {
+                enemyName.textContent = event.敌方信息.名称 || '未知敌人';
+                enemyAttack.textContent = event.敌方信息.属性?.攻击力 || '中';
+                enemyHealth.textContent = event.敌方信息.属性?.生命力 || '中';
+                
+                // 设置奖励信息
+                if (event.敌方信息.战斗报酬) {
+                    const reward = event.敌方信息.战斗报酬;
+                    rewardText.textContent = `战斗胜利奖励：${reward.类型}+${reward.数值}`;
+                    currentBattleReward = reward;
+                }
+            }
+            
+            // 显示容器
+            container.classList.add('show');
+        }
+
+        // 隐藏战斗事件
+        function hideBattleEvent() {
+            const container = document.getElementById('battle-event-container');
+            container.classList.remove('show');
+            currentBattleEvent = null;
+        }
+
+        // 发起战斗
+        function startBattle() {
+            if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
+            
+            const enemyInfo = currentBattleEvent.敌方信息;
+            currentBattleType = 'event';
+            
+            // 准备战斗数据
+            const battleData = {
+                player: {
+                    name: '小虾米',
+                    attack: combatStats.攻击力,
+                    health: combatStats.生命值
+                },
+                enemy: {
+                    name: enemyInfo.名称,
+                    maxHealth: enemyInfo.属性?.生命力 || '中',
+                    basicDamage: enemyInfo.属性?.攻击力 || '中'
+                }
+            };
+            
+            // 显示战斗iframe
+            showBattleGame(battleData);
+        }
+
+        // 放弃战斗
+        function fleeBattle() {
+            if (!currentBattleEvent) return;
+            
+            const resultMessage = currentBattleEvent.事件描述 + '<br><br>你选择避开了战斗';
+            
+            // 隐藏战斗事件
+            hideBattleEvent();
+            
+            // 显示结果
+            showModal(resultMessage);
+        }
+
+        // 显示战斗游戏（统一的战斗接口）
+        function showBattleGame(battleData) {
+            const modal = document.getElementById('battle-modal');
+            const iframe = document.getElementById('battle-iframe');
+            
+            // 构建URL参数
+            const params = new URLSearchParams({
+                playerName: battleData.player.name,
+                playerAttack: battleData.player.attack,
+                playerHealth: battleData.player.health,
+                enemyName: battleData.enemy.name,
+                enemyMaxHealth: battleData.enemy.maxHealth,
+                enemyBasicDamage: battleData.enemy.basicDamage
+            });
+            
+            // 设置iframe的src
+            const gameUrl = `turn-based-battle.html?${params.toString()}`;
+            iframe.src = gameUrl;
+            
+            modal.style.display = 'block';
+        }
+
+        // 显示随机事件 - 新增
+        function displayRandomEvent(event) {
+            const container = document.getElementById('random-event-container');
+            const description = document.getElementById('event-description');
+            const options = document.getElementById('event-options');
+            
+            // 设置事件描述
+            description.textContent = event.事件描述;
+            
+            // 清空选项容器
+            options.innerHTML = '';
+            
+            // 创建选项按钮
+            const optionKeys = ['选项一', '选项二', '选项三'];
+            optionKeys.forEach((key, index) => {
+                if (event[key]) {
+                    const option = event[key];
+                    const btn = document.createElement('button');
+                    btn.className = 'event-option-btn';
+                    btn.innerHTML = `
+                        <div class="option-desc">${option.描述}</div>
+                        <div class="option-reward">奖励: ${option.奖励}</div>
+                        <div class="option-success-rate">成功率: ${option.成功率}</div>
+                    `;
+                    btn.onclick = () => handleEventOption(index + 1, option);
+                    options.appendChild(btn);
+                }
+            });
+            
+            // 显示容器
+            container.classList.add('show');
+        }
+
+        // 隐藏随机事件 - 新增
+        function hideRandomEvent() {
+            const container = document.getElementById('random-event-container');
+            container.classList.remove('show');
+            currentRandomEvent = null;
+        }
+
+        // 处理事件选项 - 新增
+        function handleEventOption(optionIndex, option) {
+            if (!currentRandomEvent) return;
+            
+            // 计算成功率
+            const successRate = parseInt(option.成功率) / 100;
+            const isSuccess = Math.random() < successRate;
+            
+            // 如果成功，应用奖励
+            if (isSuccess && option.奖励) {
+                applyEventReward(option.奖励);
+            }
+            
+            // 构建结果信息
+            const resultMessage = `事件描述: ${currentRandomEvent.事件描述}<br>` +
+                `行动选择: ${option.描述}<br>` +
+                `选择结果: ${isSuccess ? '成功' : '失败'}`;
+            
+            // 隐藏随机事件
+            hideRandomEvent();
+            
+            // 显示结果弹窗
+            showModal(resultMessage);
+        }
+
+        // 应用事件奖励 - 新增
+        function applyEventReward(reward) {
+            // 解析奖励字符串，例如 "悟性+3"
+            const rewardMatch = reward.match(/(.+?)([+-])(\d+)/);
+            if (rewardMatch) {
+                const attribute = rewardMatch[1];
+                const operation = rewardMatch[2];
+                const value = parseInt(rewardMatch[3]);
+                
+                // 检查是否是天赋属性
+                if (playerTalents.hasOwnProperty(attribute)) {
+                    if (operation === '+') {
+                        playerTalents[attribute] = Math.min(100, playerTalents[attribute] + value);
+                    } else {
+                        playerTalents[attribute] = Math.max(0, playerTalents[attribute] - value);
+                    }
+                    updateStatsDisplay();
+                }
+                // 检查是否是其他属性
+                else if (playerStats.hasOwnProperty(attribute)) {
+                    if (operation === '+') {
+                        playerStats[attribute] = playerStats[attribute] + value;
+                    } else {
+                        playerStats[attribute] = Math.max(0, playerStats[attribute] - value);
+                    }
+                    updateStatsDisplay();
+                }
+            }
+        }
+
+        // 更新故事文本（保持原有正文不被覆盖）
+        function updateStoryText(text) {
+            const storyElement = document.getElementById('story-text');
+            storyElement.textContent = text;
+            
+            // 添加淡入动画效果
+            storyElement.style.opacity = '0';
+            setTimeout(() => {
+                storyElement.style.transition = 'opacity 0.5s ease';
+                storyElement.style.opacity = '1';
+            }, 100);
+        }
+
+        // 刷新NPC位置（限制每个地点最多2个NPC）
+        function refreshNpcLocations() {
+            // 记录每个地点的NPC数量
+            const locationCount = {
+                yanwuchang: 0,
+                cangjingge: 0,
+                huofang: 0,
+                houshan: 0,
+                yishiting: 0,
+                tiejiangpu: 0,
+                nandizi: 0,
+                nvdizi: 0,
+                shanmen: 0
+            };
+
+            // 为每个NPC重新分配位置
+            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F'].sort(() => Math.random() - 0.5);
+
+            npcOrder.forEach(npcId => {
+                let assigned = false;
+                let attempts = 0;
+                const maxAttempts = 20;
+
+                while (!assigned && attempts < maxAttempts) {
+                    const location = getRandomLocation(npcId);
+                    
+                    if (location === 'none') {
+                        currentNpcLocations[npcId] = location;
+                        assigned = true;
+                    } else if (locationCount[location] < 2) {  // 修改为最多2个NPC
+                        currentNpcLocations[npcId] = location;
+                        locationCount[location]++;
+                        assigned = true;
+                    }
+                    
+                    attempts++;
+                }
+
+                if (!assigned) {
+                    currentNpcLocations[npcId] = 'none';
+                }
+            });
+
+            // 更新各个NPC的位置变量
+            npcLocationA = currentNpcLocations.A;
+            npcLocationB = currentNpcLocations.B;
+            npcLocationC = currentNpcLocations.C;
+            npcLocationD = currentNpcLocations.D;
+            npcLocationE = currentNpcLocations.E;
+            npcLocationF = currentNpcLocations.F;
+
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && activeScene.id !== 'map-scene') {
+                const locationName = activeScene.id.replace('-scene', '');
+                displayNpcs(locationName);
+            }
+        }
+
+        // 根据概率获取NPC的随机位置
+        function getRandomLocation(npcId) {
+            const probabilities = npcLocationProbability[npcId];
+            const random = Math.random();
+            let cumulative = 0;
+
+            for (const location in probabilities) {
+                cumulative += probabilities[location];
+                if (random <= cumulative) {
+                    return location;
+                }
+            }
+
+            return 'none';
+        }
+
+        // 获取某个地点的NPC列表
+        function getNpcsAtLocation(location) {
+            const npcsAtLocation = [];
+            
+            Object.keys(currentNpcLocations).forEach(npcId => {
+                if (currentNpcLocations[npcId] === location) {
+                    npcsAtLocation.push({ id: npcId, ...npcs[npcId] });
+                }
+            });
+
+            return npcsAtLocation;
+        }
+
+        // 显示NPC立绘（替换原来的卡片显示）
+        function displayNpcs(location) {
+            const container = document.getElementById(location + '-npcs');
+            if (!container) return;
+
+            const npcsAtLocation = getNpcsAtLocation(location);
+            container.innerHTML = '';
+
+            if (npcsAtLocation.length === 0) {
+                // 不显示"此处暂无人物"的提示，保持场景干净
+                return;
+            }
+
+            npcsAtLocation.forEach((npc, index) => {
+                const portrait = document.createElement('div');
+                portrait.className = 'npc-portrait';
+                
+                // 根据NPC数量设置位置类
+                if (npcsAtLocation.length === 1) {
+                    portrait.classList.add('single');
+                } else if (npcsAtLocation.length === 2) {
+                    portrait.classList.add(index === 0 ? 'double-left' : 'double-right');
+                }
+                
+                portrait.innerHTML = `<img src="${npcPortraits[npc.id]}" alt="${npc.name}">`;
+                
+                // 添加点击事件
+                portrait.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    showNpcInfo(npc.id, location, e);
+                });
+                
+                container.appendChild(portrait);
+            });
+        }
+
+        // 显示NPC信息弹窗 - 修复位置计算问题
+        function showNpcInfo(npcId, location, event) {
+            const npc = npcs[npcId];
+            const popup = document.getElementById('npc-info-popup');
+            
+            popup.innerHTML = `
+                <div class="npc-info-name">${npc.name}</div>
+                <div class="npc-info-desc">${npc.description}</div>
+                <div class="npc-info-actions">
+                    <button class="npc-info-btn" onclick="npcAction('${npcId}', '切磋')">切磋</button>
+                    <button class="npc-info-btn" onclick="npcAction('${npcId}', '互动')">互动</button>
+                </div>
+            `;
+            
+            // 先显示弹窗以获取其尺寸
+            popup.classList.add('show');
+            
+            // 获取点击的立绘元素
+            const portrait = event.currentTarget;
+            const portraitRect = portrait.getBoundingClientRect();
+            
+            // 获取弹窗的实际尺寸
+            const popupRect = popup.getBoundingClientRect();
+            
+            // 计算立绘中心位置
+            const portraitCenterX = portraitRect.left + portraitRect.width / 2;
+            const portraitCenterY = portraitRect.top + portraitRect.height / 2;
+            
+            // 将弹窗定位在立绘中心
+            let left = portraitCenterX - popupRect.width / 2;
+            let top = portraitCenterY - popupRect.height / 2;
+            
+            // 边界检测，确保弹窗不超出窗口
+            const margin = 10;
+            if (left < margin) {
+                left = margin;
+            } else if (left + popupRect.width > window.innerWidth - margin) {
+                left = window.innerWidth - popupRect.width - margin;
+            }
+            
+            if (top < margin) {
+                top = margin;
+            } else if (top + popupRect.height > window.innerHeight - margin) {
+                top = window.innerHeight - popupRect.height - margin;
+            }
+            
+            // 设置最终位置
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            popup.style.transform = 'none';
+            
+            // 点击其他地方关闭弹窗
+            setTimeout(() => {
+                document.addEventListener('click', closeNpcInfo);
+            }, 100);
+        }
+
+        // 关闭NPC信息弹窗
+        function closeNpcInfo(e) {
+            const popup = document.getElementById('npc-info-popup');
+            if (!popup.contains(e.target)) {
+                popup.classList.remove('show');
+                document.removeEventListener('click', closeNpcInfo);
+            }
+        }
+
+        // 修改npcAction函数
+        function npcAction(npcId, action) {
+            // 先关闭信息弹窗
+            const popup = document.getElementById('npc-info-popup');
+            popup.classList.remove('show');
+            document.removeEventListener('click', closeNpcInfo);
+            
+            if (action === '互动') {
+                const activeScene = document.querySelector('.scene.active');
+                const location = activeScene.id.replace('-scene', '');
+                showInteractionInput(npcId, location);
+            } else if (action === '切磋') {
+                const npc = npcs[npcId];
+                currentBattleType = 'npc';
+                
+                // 准备战斗数据
+                const battleData = {
+                    player: {
+                        name: '小虾米',
+                        attack: combatStats.攻击力,
+                        health: combatStats.生命值
+                    },
+                    enemy: {
+                        name: npc.name,
+                        maxHealth: '中',  // NPC统一设置为中等难度
+                        basicDamage: '中'
+                    }
+                };
+                
+                // 显示战斗iframe
+                showBattleGame(battleData);
+            }
+        }
+
+        // 切换到指定场景
+        function switchScene(sceneName) {
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => {
+                scene.classList.remove('active');
+            });
+
+            const targetScene = document.getElementById(sceneName + '-scene');
+            if (targetScene) {
+                targetScene.classList.add('active');
+                if (sceneName !== 'player-stats' && sceneName !== 'relationships') {
+                    displayNpcs(sceneName);
+                }
+            }
+            // 不再更新故事文本，保持LLM返回的正文内容
+        }
+
+        // 返回地图
+        function backToMap() {
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => {
+                scene.classList.remove('active');
+            });
+
+            document.getElementById('map-scene').classList.add('active');
+            // 不再更新故事文本，保持LLM返回的正文内容
+        }
+
+        // 显示地点信息弹窗 - 修复位置计算，确保在viewport内显示
+        function showLocationInfo(locationId, event) {
+            const popup = document.getElementById('location-info-popup');
+            const locationName = locationNames[locationId];
+            const npcsAtLocation = getNpcsAtLocation(locationId);
+            
+            let npcsHtml = '';
+            if (npcsAtLocation.length > 0) {
+                npcsHtml = '<div class="location-info-npcs">在场NPC：';
+                npcsAtLocation.forEach(npc => {
+                    npcsHtml += `<div class="location-info-npc-item">• ${npc.name}</div>`;
+                });
+                npcsHtml += '</div>';
+            } else {
+                npcsHtml = '<div class="location-info-npcs">此处暂无人物</div>';
+            }
+            
+            popup.innerHTML = `
+                <div class="location-info-name">${locationName}</div>
+                ${npcsHtml}
+                <button class="location-go-btn" onclick="goToLocation('${locationId}')">前往</button>
+            `;
+            
+            // 先显示弹窗以获取其尺寸
+            popup.classList.add('show');
+            
+            // 获取点击元素和viewport的位置
+            const locationElement = event.currentTarget;
+            const locationRect = locationElement.getBoundingClientRect();
+            const viewportRect = document.querySelector('.viewport').getBoundingClientRect();
+            
+            // 获取弹窗的实际尺寸
+            const popupRect = popup.getBoundingClientRect();
+            
+            // 计算光点中心相对于viewport的位置
+            const locationCenterX = locationRect.left + locationRect.width / 2;
+            const locationCenterY = locationRect.top + locationRect.height / 2;
+            
+            // 计算弹窗位置（居中于光点）
+            let left = locationCenterX - popupRect.width / 2;
+            let top = locationRect.top - popupRect.height - 10; // 默认显示在上方
+            
+            // 边界检测 - 基于viewport边界
+            const margin = 10;
+            
+            // 水平边界检测
+            if (left < viewportRect.left + margin) {
+                left = viewportRect.left + margin;
+            } else if (left + popupRect.width > viewportRect.right - margin) {
+                left = viewportRect.right - popupRect.width - margin;
+            }
+            
+            // 垂直边界检测 - 优先显示在上方，空间不足时显示在下方
+            if (top < viewportRect.top + margin) {
+                // 上方空间不足，改为显示在下方
+                top = locationRect.bottom + 10;
+                
+                // 检查下方是否也超出边界
+                if (top + popupRect.height > viewportRect.bottom - margin) {
+                    // 如果下方也超出，则显示在viewport内能容纳的最佳位置
+                    if (locationCenterY < viewportRect.top + viewportRect.height / 2) {
+                        // 光点在上半部分，弹窗显示在下方
+                        top = Math.min(locationRect.bottom + 10, viewportRect.bottom - popupRect.height - margin);
+                    } else {
+                        // 光点在下半部分，弹窗显示在上方
+                        top = Math.max(locationRect.top - popupRect.height - 10, viewportRect.top + margin);
+                    }
+                }
+            }
+            
+            // 设置最终位置
+            popup.style.left = left + 'px';
+            popup.style.top = top + 'px';
+            
+            // 点击其他地方关闭弹窗
+            setTimeout(() => {
+                document.addEventListener('click', closeLocationInfo);
+            }, 100);
+        }
+
+        // 关闭地点信息弹窗 - 新增
+        function closeLocationInfo(e) {
+            const popup = document.getElementById('location-info-popup');
+            if (!popup.contains(e.target)) {
+                popup.classList.remove('show');
+                document.removeEventListener('click', closeLocationInfo);
+            }
+        }
+
+        // 前往地点 - 新增
+        function goToLocation(locationId) {
+            // 关闭弹窗
+            const popup = document.getElementById('location-info-popup');
+            popup.classList.remove('show');
+            document.removeEventListener('click', closeLocationInfo);
+            
+            // 切换场景
+            switchScene(locationId);
+        }
+
+        // 设置地点悬停和点击事件 - 修改
+        function setupLocationEvents() {
+            const locations = document.querySelectorAll('.location');
+
+            locations.forEach(location => {
+                let touchTimer = null;
+                
+                // PC端鼠标事件
+                location.addEventListener('mouseenter', function(e) {
+                    if (!('ontouchstart' in window)) {
+                        showLocationInfo(this.id, e);
+                    }
+                });
+
+                location.addEventListener('mouseleave', function() {
+                    if (!('ontouchstart' in window)) {
+                        // PC端不自动关闭，让用户可以点击前往按钮
+                    }
+                });
+
+                // 移动端触摸事件
+                location.addEventListener('touchstart', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    
+                    // 清除之前的定时器
+                    if (touchTimer) {
+                        clearTimeout(touchTimer);
+                    }
+                    
+                    // 显示地点信息
+                    showLocationInfo(this.id, e);
+                });
+
+                // PC端点击事件
+                location.addEventListener('click', function(e) {
+                    if (!('ontouchstart' in window)) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        showLocationInfo(this.id, e);
+                    }
+                });
+            });
+        }
+
+        // 初始化
+        window.onload = function() {
+            updateAllDisplays();
+            setupLocationEvents();
+            refreshNpcLocations();
+            // 解析示例LLM响应
+            parseLLMResponse(llmResponse);
         };
-        
-        addLog(`${player.name}使用了${actionNames[playerAction]}！${enemy.name}使用了${actionNames[enemyAction]}！`);
-        
-        // 处理行动结果
-        processActions(playerAction, enemyAction);
-        
-        // 检查游戏是否结束
-        if (checkGameOver()) {
-            return;
-        }
-        
-        // 继续下一回合
-        continueGame();
-    }, 1000);
-}
-
-// 处理双方行动的结果
-function processActions(playerAction, enemyAction) {
-    const player = gameState.player;
-    const enemy = gameState.enemy;
-    const gameContainer = document.querySelector('.game-container');
-    const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
-    const screenFlash = document.querySelector('.screen-flash');
-    let playerWasHit = false;
-    let enemyWasHit = false;
-    
-    // 处理集气
-    if (playerAction === 'gather') {
-        if (player.energy < player.maxEnergy) {
-            player.energy += 1;
-            addLog(`${player.name}集气成功，能量+1！`);
-        } else {
-            addLog(`${player.name}的能量已满！`);
-        }
-    }
-    
-    if (enemyAction === 'gather') {
-        if (enemy.energy < enemy.maxEnergy) {
-            enemy.energy += 1;
-            addLog(`${enemy.name}集气成功，能量+1！`);
-        } else {
-            addLog(`${enemy.name}的能量已满！`);
-        }
-    }
-    
-    // 处理防御状态
-    const playerDefending = playerAction === 'defend';
-    const enemyDefending = enemyAction === 'defend';
-    
-    if (playerDefending) {
-        playerCharacter.classList.add('player-defend');
-        setTimeout(() => {
-            playerCharacter.classList.remove('player-defend');
-        }, 1000);
-        addLog(`${player.name}进入防御状态！`);
-    }
-    
-    if (enemyDefending) {
-        enemyCharacter.classList.add('enemy-defend');
-        setTimeout(() => {
-            enemyCharacter.classList.remove('enemy-defend');
-        }, 1000);
-        addLog(`${enemy.name}进入防御状态！`);
-    }
-    
-    // 嘴炮只能无效化绝招的伤害
-    let playerTauntSuccess = false;
-    let enemyTauntSuccess = false;
-    
-    if (playerAction === 'taunt' && enemyAction === 'special') {
-        playerTauntSuccess = true;
-        addLog(`${player.name}的嘴炮成功无效化了${enemy.name}的绝招伤害！`);
-        // 注意：不在这里扣除敌人的能量，而是统一在特殊技能处理部分扣除
-    }
-    
-    if (enemyAction === 'taunt' && playerAction === 'special') {
-        enemyTauntSuccess = true;
-        addLog(`${enemy.name}的嘴炮成功无效化了${player.name}的绝招伤害！`);
-        // 注意：不在这里扣除玩家的能量，而是统一在特殊技能处理部分扣除
-    }
-    
-    // 处理绝招（无视防御）
-    if (playerAction === 'special') {
-        // 无论绝招是否被嘴炮无效化，都消耗能量
-        player.energy -= 5;
-        playerCharacter.classList.add('player-special');
-        
-        if (!enemyTauntSuccess) {
-            enemyCharacter.classList.add('enemy-hit');
-            
-            setTimeout(() => {
-                enemyCharacter.classList.remove('enemy-hit');
-            }, 1000);
-            
-            const damage = player.basicDamage * 3;
-            enemy.currentHealth -= damage;
-            addLog(`${player.name}使用绝招，对${enemy.name}造成${damage}点伤害！`);
-            enemyWasHit = true;
-        } else {
-            addLog(`${player.name}使用绝招，但伤害被${enemy.name}的嘴炮无效化了！`);
-        }
-        
-        setTimeout(() => {
-            playerCharacter.classList.remove('player-special');
-        }, 1000);
-        
-        // 无效化敌人的普通攻击
-        if (enemyAction === 'light-attack' || enemyAction === 'heavy-attack') {
-            addLog(`${enemy.name}的攻击被${player.name}的绝招无效化了！`);
-            // 敌人消耗的能量不返还
-            if (enemyAction === 'light-attack') enemy.energy -= 1;
-            if (enemyAction === 'heavy-attack') enemy.energy -= 2;
-        }
-    }
-    
-    if (enemyAction === 'special') {
-        // 无论绝招是否被嘴炮无效化，都消耗能量
-        enemy.energy -= 5;
-        enemyCharacter.classList.add('enemy-special');
-        
-        if (!playerTauntSuccess) {
-            playerCharacter.classList.add('player-hit');
-            
-            setTimeout(() => {
-                playerCharacter.classList.remove('player-hit');
-            }, 1000);
-            
-            const damage = enemy.basicDamage * 3;
-            player.currentHealth -= damage;
-            addLog(`${enemy.name}使用绝招，对${player.name}造成${damage}点伤害！`);
-            playerWasHit = true;
-        } else {
-            addLog(`${enemy.name}使用绝招，但伤害被${player.name}的嘴炮无效化了！`);
-        }
-        
-        setTimeout(() => {
-            enemyCharacter.classList.remove('enemy-special');
-        }, 1000);
-        
-        // 无效化玩家的普通攻击
-        if (playerAction === 'light-attack' || playerAction === 'heavy-attack') {
-            addLog(`${player.name}的攻击被${enemy.name}的绝招无效化了！`);
-            // 玩家消耗的能量不返还
-            if (playerAction === 'light-attack') player.energy -= 1;
-            if (playerAction === 'heavy-attack') player.energy -= 2;
-        }
-    }
-    
-    // 如果没有被绝招无效，处理重攻击
-    if (playerAction === 'heavy-attack' && 
-        enemyAction !== 'special' && 
-        playerAction !== 'special') {
-        player.energy -= 2;
-        
-        // 检查是否被防御或是否无效对方轻攻击
-        if (enemyDefending) {
-            playerCharacter.classList.add('player-attack');
-            
-            setTimeout(() => {
-                playerCharacter.classList.remove('player-attack');
-            }, 600);
-            
-            addLog(`${player.name}的重攻击被${enemy.name}防御了！`);
-        } else if (enemyAction === 'light-attack') {
-            // 重攻击克制轻攻击
-            playerCharacter.classList.add('player-attack');
-            enemyCharacter.classList.add('enemy-hit');
-            
-            setTimeout(() => {
-                playerCharacter.classList.remove('player-attack');
-                enemyCharacter.classList.remove('enemy-hit');
-            }, 600);
-            
-            const damage = player.basicDamage * 1.5;
-            enemy.currentHealth -= damage;
-            enemy.energy -= 1; // 消耗敌人的能量
-            addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${damage}点伤害！`);
-            enemyWasHit = true;
-        } else {
-            playerCharacter.classList.add('player-attack');
-            enemyCharacter.classList.add('enemy-hit');
-            
-            setTimeout(() => {
-                playerCharacter.classList.remove('player-attack');
-                enemyCharacter.classList.remove('enemy-hit');
-            }, 600);
-            
-            const damage = player.basicDamage * 1.5;
-            enemy.currentHealth -= damage;
-            addLog(`${player.name}的重攻击对${enemy.name}造成${damage}点伤害！`);
-            enemyWasHit = true;
-        }
-    }
-    
-    if (enemyAction === 'heavy-attack' && 
-        playerAction !== 'special' && 
-        enemyAction !== 'special') {
-        enemy.energy -= 2;
-        
-        // 检查是否被防御或是否无效对方轻攻击
-        if (playerDefending) {
-            enemyCharacter.classList.add('enemy-attack');
-            
-            setTimeout(() => {
-                enemyCharacter.classList.remove('enemy-attack');
-            }, 600);
-            
-            addLog(`${enemy.name}的重攻击被${player.name}防御了！`);
-        } else if (playerAction === 'light-attack') {
-            // 重攻击克制轻攻击
-            enemyCharacter.classList.add('enemy-attack');
-            playerCharacter.classList.add('player-hit');
-            
-            setTimeout(() => {
-                enemyCharacter.classList.remove('enemy-attack');
-                playerCharacter.classList.remove('player-hit');
-            }, 600);
-            
-            const damage = enemy.basicDamage * 1.5;
-            player.currentHealth -= damage;
-            player.energy -= 1; // 消耗玩家的能量
-            addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${damage}点伤害！`);
-            playerWasHit = true;
-        } else {
-            enemyCharacter.classList.add('enemy-attack');
-            playerCharacter.classList.add('player-hit');
-            
-            setTimeout(() => {
-                enemyCharacter.classList.remove('enemy-attack');
-                playerCharacter.classList.remove('player-hit');
-            }, 600);
-            
-            const damage = enemy.basicDamage * 1.5;
-            player.currentHealth -= damage;
-            addLog(`${enemy.name}的重攻击对${player.name}造成${damage}点伤害！`);
-            playerWasHit = true;
-        }
-    }
-    
-    // 如果没有被重攻击或绝招无效，处理轻攻击
-    if (playerAction === 'light-attack' && 
-        enemyAction !== 'heavy-attack' && 
-        enemyAction !== 'special') {
-        player.energy -= 1;
-        
-        // 检查是否被防御
-        if (enemyDefending) {
-            playerCharacter.classList.add('player-attack');
-            
-            setTimeout(() => {
-                playerCharacter.classList.remove('player-attack');
-            }, 600);
-            
-            addLog(`${player.name}的轻攻击被${enemy.name}防御了！`);
-        } else {
-            playerCharacter.classList.add('player-attack');
-            enemyCharacter.classList.add('enemy-hit');
-            
-            setTimeout(() => {
-                playerCharacter.classList.remove('player-attack');
-                enemyCharacter.classList.remove('enemy-hit');
-            }, 600);
-            
-            const damage = player.basicDamage;
-            enemy.currentHealth -= damage;
-            addLog(`${player.name}的轻攻击对${enemy.name}造成${damage}点伤害！`);
-            enemyWasHit = true;
-        }
-    }
-    
-    if (enemyAction === 'light-attack' && 
-        playerAction !== 'heavy-attack' && 
-        playerAction !== 'special') {
-        enemy.energy -= 1;
-        
-        // 检查是否被防御
-        if (playerDefending) {
-            enemyCharacter.classList.add('enemy-attack');
-            
-            setTimeout(() => {
-                enemyCharacter.classList.remove('enemy-attack');
-            }, 600);
-            
-            addLog(`${enemy.name}的轻攻击被${player.name}防御了！`);
-        } else {
-            enemyCharacter.classList.add('enemy-attack');
-            playerCharacter.classList.add('player-hit');
-            
-            setTimeout(() => {
-                enemyCharacter.classList.remove('enemy-attack');
-                playerCharacter.classList.remove('player-hit');
-            }, 600);
-            
-            const damage = enemy.basicDamage;
-            player.currentHealth -= damage;
-            addLog(`${enemy.name}的轻攻击对${player.name}造成${damage}点伤害！`);
-            playerWasHit = true;
-        }
-    }
-    
-    // 确保生命值不为负数
-    if (player.currentHealth < 0) player.currentHealth = 0;
-    if (enemy.currentHealth < 0) enemy.currentHealth = 0;
-    
-    // 受击反馈动画
-    if (playerWasHit) {
-        gameContainer.classList.add('shake');
-        screenFlash.classList.add('active');
-        setTimeout(() => {
-            gameContainer.classList.remove('shake');
-            screenFlash.classList.remove('active');
-        }, 400);
-    }
-    if (enemyWasHit) {
-        npcPortraitLayer.classList.add('shake');
-        setTimeout(() => {
-            npcPortraitLayer.classList.remove('shake');
-        }, 400);
-    }
-    
-    // 更新显示
-    updateDisplay();
-}
-
-// 继续游戏
-function continueGame() {
-    // 重置选择状态
-    gameState.player.selectedAction = null;
-    gameState.enemy.selectedAction = null;
-    gameState.waitingForConfirmation = false;
-    selectedActionText.textContent = '无';
-    
-    // 增加回合数
-    gameState.turnNumber++;
-    
-    // 更新显示
-    updateDisplay();
-    
-    // 继续游戏
-    addLog('准备下一回合...');
-    
-    // 更新回合指示
-    setTimeout(() => {
-        addLog('请选择你的行动...');
-    }, 1000);
-}
-
-// 检查游戏是否结束
-function checkGameOver() {
-    if (gameState.player.currentHealth <= 0) {
-        addLog(`${gameState.player.name}被击败了！游戏结束。`);
-        gameEnd(false);
-        return true;
-    } else if (gameState.enemy.currentHealth <= 0) {
-        addLog(`${gameState.enemy.name}被击败了！胜利！`);
-        gameEnd(true);
-        return true;
-    }
-    return false;
-}
-
-// //回合制系统集成更新 - 游戏结束
-function gameEnd(isVictory) {
-    // 禁用所有按钮
-    commandButtons.forEach(btn => {
-        btn.classList.add('disabled');
-    });
-    
-    // 获取角色名字
-    const playerName = gameState.player.name;
-    const enemyName = gameState.enemy.name;
-    
-    // 设置弹窗内容
-    if (isVictory) {
-        gameOverTitle.textContent = '战斗胜利';
-        gameOverMessage.textContent = `${playerName}战胜了${enemyName}！`;
-        addLog('恭喜你取得胜利！');
-    } else {
-        gameOverTitle.textContent = '战斗失败';
-        gameOverMessage.textContent = `${playerName}败给了${enemyName}！`;
-        addLog('游戏结束，再接再厉！');
-    }
-    
-    // 显示游戏结束弹窗
-    gameOverModal.style.display = 'flex';
-    
-    // 2秒后自动退出（如果是在iframe中）
-    if (window.parent !== window) {
-        setTimeout(() => {
-            exitBattle(isVictory ? 'victory' : 'defeat');
-        }, 2000);
-    }
-}
-
-// 键盘事件处理
-function handleKeyPress(event) { 
-    // 如果弹窗显示中，按ESC关闭 
-    if (confirmModal.style.display === 'flex' && event.key === 'Escape') { 
-        confirmModal.style.display = 'none'; gameState.player.selectedAction = null; 
-        updateDisplay(); return; 
-    }
-
-
-    // 如果弹窗显示中，按Enter确认
-    if (confirmModal.style.display === 'flex' && event.key === 'Enter') {
-        confirmModal.style.display = 'none';
-        confirmAction();
-        return;
-    }
-
-    // 如果不是玩家回合或正在等待确认，返回
-    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) return;
-
-    const key = event.key.toUpperCase();
-
-    switch (key) {
-        case 'Q':
-            selectAction('gather');
-            break;
-        case 'W':
-            selectAction('defend');
-            break;
-        case 'E':
-            selectAction('light-attack');
-            break;
-        case 'R':
-            selectAction('heavy-attack');
-            break;
-        case 'T':
-            selectAction('special');
-            break;
-        case 'Y':
-            selectAction('taunt');
-            break;
-    }
-}
-
-// 初始化游戏 
-// 动态设置4:3比例的函数 
-function setAspectRatio() { 
-
-    const gameContainer = document.querySelector('.game-container'); 
-    if (!gameContainer) return;
-
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // 计算4:3比例的尺寸
-    const aspectRatio = 4 / 3;
-    let gameWidth, gameHeight;
-
-    // 根据视口宽度计算高度（宽度的75%）
-    gameHeight = viewportWidth * 0.75;
-    gameWidth = viewportWidth;
-
-    // 如果计算出的高度超过视口高度，则根据高度反推宽度
-    if (gameHeight > viewportHeight) {
-        gameHeight = viewportHeight;
-        gameWidth = viewportHeight * aspectRatio;
-    }
-
-    // 确保不会超出边界
-    gameWidth = Math.min(gameWidth, viewportWidth);
-    gameHeight = Math.min(gameHeight, viewportHeight);
-
-    // 应用尺寸
-    gameContainer.style.width = `${gameWidth}px`;
-    gameContainer.style.height = `${gameHeight}px`;
-
-    console.log(`游戏容器尺寸: ${gameWidth}x${gameHeight}, 比例: ${(gameWidth/gameHeight).toFixed(2)}`);
-}
-
-// 窗口大小变化时重新设置比例 
-function handleResize() { 
-    setAspectRatio(); 
-}
-
-// 初始化尺寸设置 
-function initAspectRatio() { 
-    setAspectRatio();
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', () => {
-        // 延迟执行，等待方向变化完成
-        setTimeout(setAspectRatio, 100);
-    });
-}
-
-// 修改原有的DOMContentLoaded事件监听 
-document.addEventListener('DOMContentLoaded', () => { 
-    // 首先设置4:3比例 
-    initAspectRatio();
-
-    // 设置主背景
-    const gameContainer = document.querySelector('.game-container');
-    if (gameContainer) {
-        gameContainer.style.backgroundImage = `url('${GAME_BG_URL}')`;
-    }
-
-    // 设置弹窗背景
-    const modalContents = document.querySelectorAll('.modal-content');
-    modalContents.forEach(modal => {
-        modal.style.background = `url('${MODAL_BG_URL}') center center / cover`;
-    });
-
-    // 初始化游戏
-    initGame();
-});
-
-    </script> 
-</body> 
+    </script>
+</body>
 </html>
