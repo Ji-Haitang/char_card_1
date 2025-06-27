@@ -259,7 +259,7 @@
 
         /* 地点信息弹窗 - 新增 */
         .location-info-popup {
-            position: fixed;  /* 保持fixed定位 */
+            position: fixed;
             background: rgba(0, 0, 0, 0.9);
             color: #fff;
             padding: clamp(15px, 3vw, 20px);
@@ -267,7 +267,6 @@
             box-shadow: 0 5px 20px rgba(0,0,0,0.5);
             z-index: 2000;
             min-width: clamp(180px, 35vw, 250px);
-            max-width: 90vw;
             text-align: center;
             display: none;
         }
@@ -876,6 +875,33 @@
             background: #555;
         }
 
+        /* 21点游戏iframe弹窗 - 新增 */
+        .blackjack-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .blackjack-container {
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            margin: 5% auto;
+            position: relative;
+        }
+
+        .blackjack-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+
         /* 响应式调整 */
         @media (max-width: 840px) {
             .container {
@@ -908,6 +934,242 @@
                 font-size: 0.9rem;
             }
         }
+
+        /* 随机事件框样式 - 响应式优化 */
+        .random-event-container {
+            background: rgba(44, 44, 44, 0.95);
+            border: 2px solid #4ecdc4;
+            border-radius: 10px;
+            padding: clamp(12px, 3vw, 20px);
+            margin-top: clamp(12px, 3vw, 20px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .random-event-container.show {
+            display: block;
+        }
+
+        .event-title {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: clamp(6px, 1.5vw, 10px);
+            text-align: center;
+        }
+
+        .event-description {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #fff;
+            margin-bottom: clamp(12px, 3vw, 20px);
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .event-options {
+            display: flex;
+            flex-direction: column;
+            gap: clamp(8px, 2vw, 15px);
+        }
+
+        .event-option-btn {
+            background: #2c2c2c;
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: clamp(10px, 2.5vw, 15px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .event-option-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .option-desc {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #fff;
+            margin-bottom: clamp(5px, 1vw, 8px);
+            line-height: 1.4;
+        }
+
+        .option-reward {
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            color: #4ecdc4;
+            margin-bottom: clamp(3px, 0.8vw, 5px);
+        }
+
+        .option-success-rate {
+            font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+            color: #aaa;
+        }
+
+        /* 小屏幕优化 */
+        @media (max-width: 600px) {
+            .random-event-container {
+                margin-top: 10px;
+                padding: 10px;
+            }
+            
+            .event-options {
+                gap: 6px;
+            }
+            
+            .event-option-btn {
+                padding: 8px 10px;
+                border-radius: 6px;
+            }
+            
+            /* 在非常小的屏幕上，减少行间距 */
+            .option-desc {
+                margin-bottom: 3px;
+            }
+            
+            .option-reward {
+                margin-bottom: 2px;
+            }
+        }
+
+        /* 横屏手机优化 */
+        @media (max-height: 500px) and (orientation: landscape) {
+            .random-event-container {
+                padding: 8px 12px;
+                margin-top: 8px;
+            }
+            
+            .event-title {
+                margin-bottom: 5px;
+            }
+            
+            .event-description {
+                margin-bottom: 8px;
+            }
+            
+            .event-options {
+                gap: 5px;
+            }
+            
+            .event-option-btn {
+                padding: 6px 10px;
+            }
+        }
+
+        /* 平板和小窗口优化 */
+        @media (min-width: 600px) and (max-width: 840px) {
+            .random-event-container {
+                padding: 15px;
+                margin-top: 15px;
+            }
+            
+            .event-options {
+                gap: 10px;
+            }
+            
+            .event-option-btn {
+                padding: 12px;
+            }
+        }
+
+        .event-title {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4ecdc4;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .event-description {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 20px;
+            line-height: 1.6;
+            text-align: center;
+        }
+
+        .event-options {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+
+        .event-option-btn {
+            background: #2c2c2c;
+            border: 2px solid #4ecdc4;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: left;
+        }
+
+        .event-option-btn:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+        }
+
+        .option-desc {
+            font-size: 16px;
+            color: #fff;
+            margin-bottom: 8px;
+        }
+
+        .option-reward {
+            font-size: 14px;
+            color: #4ecdc4;
+            margin-bottom: 5px;
+        }
+
+        .option-success-rate {
+            font-size: 14px;
+            color: #aaa;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 600px) {
+            .event-option-btn {
+                padding: 12px;
+            }
+            
+            .option-desc {
+                font-size: 14px;
+            }
+            
+            .option-reward,
+            .option-success-rate {
+                font-size: 12px;
+            }
+        }
+
+        /* //回合制系统集成更新 - 战斗iframe弹窗 */
+        .battle-modal {
+            display: none;
+            position: fixed;
+            z-index: 3000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.7);
+        }
+
+        .battle-container {
+            width: 90%;
+            max-width: 900px;
+            height: 90%;
+            margin: 5% auto;
+            position: relative;
+        }
+
+        .battle-iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 10px;
+        }
+
     </style>
 </head>
 <body>
@@ -1134,10 +1396,16 @@
             <button class="control-btn" onclick="skipWeek()">跳过这一周</button>
         </div>
 
-        <!-- 故事展示区域 -->
+        <!-- 故事区域 -->
         <div class="story-area">
             <div class="story-text" id="story-text">
                 江湖路远，故事未始...
+            </div>
+            <!-- 随机事件容器 - 新增 -->
+            <div class="random-event-container" id="random-event-container">
+                <div class="event-title">随机事件</div>
+                <div class="event-description" id="event-description"></div>
+                <div class="event-options" id="event-options"></div>
             </div>
         </div>
     </div>
@@ -1149,6 +1417,20 @@
             <div class="modal-buttons" id="modal-buttons">
                 <button class="modal-btn" onclick="closeModal()">确定</button>
             </div>
+        </div>
+    </div>
+
+    <!-- 21点游戏iframe弹窗 - 新增 -->
+    <div id="blackjack-modal" class="blackjack-modal">
+        <div class="blackjack-container">
+            <iframe id="blackjack-iframe" class="blackjack-iframe"></iframe>
+        </div>
+    </div>
+
+    <!-- //回合制系统集成更新 - 战斗iframe弹窗 -->
+    <div id="battle-modal" class="battle-modal">
+        <div class="battle-container">
+            <iframe id="battle-iframe" class="battle-iframe"></iframe>
         </div>
     </div>
 
@@ -1273,7 +1555,26 @@
             "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
             "主要NPC": "姬姒",
             "好感变化": "大幅上升",
-            "其他NPC": "无"
+            "其他NPC": "无",
+            "随机事件": {
+                "事件类型": "选项事件",
+                "事件描述": "姬姒想要和你探讨昨天练武的心得",
+                "选项一": {
+                    "描述": "你欣然接受邀请，和姬姒一起讨论",
+                    "奖励": "悟性+3",
+                    "成功率": "25%"
+                },
+                "选项二": {
+                    "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
+                    "奖励": "根骨+1",
+                    "成功率": "60%"
+                },
+                "选项三": {
+                    "描述": "你婉拒姬姒，专注于眼前的工作",
+                    "奖励": "心性+2",
+                    "成功率": "40%"
+                }
+            }
         };
 
         // 保存当前故事正文
@@ -1399,6 +1700,8 @@
             }
         };
 
+        let currentRandomEvent = null;
+
         // 计算剩余分配点数 - 修改为永不为负
         function calculateRemainingPoints() {
             const rawPoints = Math.floor(playerStats.武学 / 10) - (combatStats.攻击力 - 20) / 10 - (combatStats.生命值 - 50) / 25;
@@ -1407,6 +1710,23 @@
 
         // 执行互动 - 修改数值变化逻辑，特别是声望的变化范围
         function performAction(action, location) {
+            // 特殊处理秘密赌场
+            if (action === '秘密赌场') {
+                // 检查行动点
+                if (actionPoints < 1) {
+                    showModal('行动点不足，无法进行此操作！');
+                    return;
+                }
+                
+                // 消耗行动点
+                actionPoints--;
+                updateAllDisplays();
+                
+                // 显示21点游戏iframe弹窗
+                showBlackjackGame();
+                return;
+            }
+
             // 检查行动点
             if (actionPoints < 1) {
                 showModal('行动点不足，无法进行此操作！');
@@ -1538,6 +1858,104 @@
             // 显示结果
             showModal(resultMessage);
         }
+
+        // 显示21点游戏 - 新增
+        function showBlackjackGame() {
+            const modal = document.getElementById('blackjack-modal');
+            const iframe = document.getElementById('blackjack-iframe');
+            
+            // 设置iframe的src，传递当前金钱作为参数
+            // 注意：这里使用GitHub Pages的URL格式
+            const gameUrl = `https://Ji-Haitang.github.io/char_card_1/blackjack.html?money=${playerStats.金钱}`;
+            iframe.src = gameUrl;
+            
+            modal.style.display = 'block';
+        }
+
+        // //回合制系统集成更新 - 显示战斗游戏
+        function showBattleGame(battleData) {
+            const modal = document.getElementById('battle-modal');
+            const iframe = document.getElementById('battle-iframe');
+            
+            // 构建URL参数
+            const params = new URLSearchParams({
+                playerName: battleData.player.name,
+                playerAttack: battleData.player.attack,
+                playerHealth: battleData.player.health,
+                enemyName: battleData.enemy.name,
+                enemyMaxHealth: battleData.enemy.maxHealth,
+                enemyBasicDamage: battleData.enemy.basicDamage
+            });
+            
+            // 设置iframe的src
+
+            const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
+            iframe.src = gameUrl;
+            
+            modal.style.display = 'block';
+        }
+
+        // 监听来自iframe的消息 - 新增
+        window.addEventListener('message', function(event) {
+            // 检查消息来源，确保安全
+            if (event.data.type === 'blackjack-exit') {
+                // 更新金钱
+                playerStats.金钱 = event.data.money;
+                updateStatsDisplay();
+                
+                // 关闭弹窗
+                document.getElementById('blackjack-modal').style.display = 'none';
+                document.getElementById('blackjack-iframe').src = '';
+                
+                // 显示结果
+                showModal(`赌场游戏结束<br>当前金钱：${playerStats.金钱}`);
+            }
+            // //回合制系统集成更新 - 检查是否是战斗系统的消息
+            else if (event.data.type === 'battle-exit') {
+                // 关闭战斗弹窗
+                document.getElementById('battle-modal').style.display = 'none';
+                document.getElementById('battle-iframe').src = '';
+                
+                // 显示战斗结果
+                const result = event.data.result; // 'victory' 或 'defeat'
+                const resultText = result === 'victory' ? '战斗胜利！' : '战斗失败！';
+                
+                showModal(`战斗结束<br>${resultText}`);
+                
+                // 可以根据结果更新其他数据，如好感度、属性等
+                if (result === 'victory') {
+                    // 例如：增加武学经验、声望等
+                    playerStats.武学 += 1;
+                    playerStats.声望 += 1;
+                    updateStatsDisplay();
+                }
+            }
+        });
+
+        // 点击弹窗背景关闭（可选）- 新增
+        document.getElementById('blackjack-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                const iframe = document.getElementById('blackjack-iframe');
+                // 尝试通知iframe关闭游戏
+                try {
+                    iframe.contentWindow.postMessage({ type: 'close-game' }, '*');
+                } catch(e) {
+                    // 如果跨域无法访问，直接关闭
+                    this.style.display = 'none';
+                    iframe.src = '';
+                }
+            }
+        });
+
+        // //回合制系统集成更新 - 点击战斗弹窗背景关闭
+        document.getElementById('battle-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要退出战斗吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('battle-iframe').src = '';
+                }
+            }
+        });
 
         // 显示互动输入弹窗
         function showInteractionInput(npcId, location) {
@@ -1869,7 +2287,7 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // 解析LLM返回的数据 - 添加好感度变化处理
+        // 修改parseLLMResponse函数，添加随机事件的解析
         function parseLLMResponse(response) {
             if (response.正文) {
                 currentStoryText = response.正文;
@@ -1909,6 +2327,109 @@
                     if (activeScene && activeScene.id === 'relationships-scene') {
                         updateRelationshipsDisplay();
                     }
+                }
+            }
+            
+            // 处理随机事件 - 新增
+            if (response.随机事件) {
+                currentRandomEvent = response.随机事件;
+                displayRandomEvent(currentRandomEvent);
+            } else {
+                hideRandomEvent();
+            }
+        }
+
+        // 显示随机事件 - 新增
+        function displayRandomEvent(event) {
+            const container = document.getElementById('random-event-container');
+            const description = document.getElementById('event-description');
+            const options = document.getElementById('event-options');
+            
+            // 设置事件描述
+            description.textContent = event.事件描述;
+            
+            // 清空选项容器
+            options.innerHTML = '';
+            
+            // 创建选项按钮
+            const optionKeys = ['选项一', '选项二', '选项三'];
+            optionKeys.forEach((key, index) => {
+                if (event[key]) {
+                    const option = event[key];
+                    const btn = document.createElement('button');
+                    btn.className = 'event-option-btn';
+                    btn.innerHTML = `
+                        <div class="option-desc">${option.描述}</div>
+                        <div class="option-reward">奖励: ${option.奖励}</div>
+                        <div class="option-success-rate">成功率: ${option.成功率}</div>
+                    `;
+                    btn.onclick = () => handleEventOption(index + 1, option);
+                    options.appendChild(btn);
+                }
+            });
+            
+            // 显示容器
+            container.classList.add('show');
+        }
+
+        // 隐藏随机事件 - 新增
+        function hideRandomEvent() {
+            const container = document.getElementById('random-event-container');
+            container.classList.remove('show');
+            currentRandomEvent = null;
+        }
+
+        // 处理事件选项 - 新增
+        function handleEventOption(optionIndex, option) {
+            if (!currentRandomEvent) return;
+            
+            // 计算成功率
+            const successRate = parseInt(option.成功率) / 100;
+            const isSuccess = Math.random() < successRate;
+            
+            // 如果成功，应用奖励
+            if (isSuccess && option.奖励) {
+                applyEventReward(option.奖励);
+            }
+            
+            // 构建结果信息
+            const resultMessage = `事件描述: ${currentRandomEvent.事件描述}<br>` +
+                `行动选择: ${option.描述}<br>` +
+                `选择结果: ${isSuccess ? '成功' : '失败'}`;
+            
+            // 隐藏随机事件
+            hideRandomEvent();
+            
+            // 显示结果弹窗
+            showModal(resultMessage);
+        }
+
+        // 应用事件奖励 - 新增
+        function applyEventReward(reward) {
+            // 解析奖励字符串，例如 "悟性+3"
+            const rewardMatch = reward.match(/(.+?)([+-])(\d+)/);
+            if (rewardMatch) {
+                const attribute = rewardMatch[1];
+                const operation = rewardMatch[2];
+                const value = parseInt(rewardMatch[3]);
+                
+                // 检查是否是天赋属性
+                if (playerTalents.hasOwnProperty(attribute)) {
+                    if (operation === '+') {
+                        playerTalents[attribute] = Math.min(100, playerTalents[attribute] + value);
+                    } else {
+                        playerTalents[attribute] = Math.max(0, playerTalents[attribute] - value);
+                    }
+                    updateStatsDisplay();
+                }
+                // 检查是否是其他属性
+                else if (playerStats.hasOwnProperty(attribute)) {
+                    if (operation === '+') {
+                        playerStats[attribute] = playerStats[attribute] + value;
+                    } else {
+                        playerStats[attribute] = Math.max(0, playerStats[attribute] - value);
+                    }
+                    updateStatsDisplay();
                 }
             }
         }
@@ -2115,7 +2636,7 @@
             }
         }
 
-        // NPC互动（修改后）
+        // //回合制系统集成更新 - NPC互动（修改后）
         function npcAction(npcId, action) {
             // 先关闭信息弹窗
             const popup = document.getElementById('npc-info-popup');
@@ -2128,15 +2649,23 @@
                 showInteractionInput(npcId, location);
             } else if (action === '切磋') {
                 const npc = npcs[npcId];
-                // 显示战斗信息
-                const battleMessage = `<battle><br>` +
-                    `发起战斗，敌方信息如下<br>` +
-                    `name: ${npc.name}<br>` +
-                    `&nbsp;&nbsp;maxHealth: 中<br>` +
-                    `&nbsp;&nbsp;basicDamage: 中<br>` +
-                    `<battle>`;
                 
-                showModal(battleMessage);
+                // 准备战斗数据
+                const battleData = {
+                    player: {
+                        name: '小虾米', // 可以从变量获取主角名字
+                        attack: combatStats.攻击力,
+                        health: combatStats.生命值
+                    },
+                    enemy: {
+                        name: npc.name,
+                        maxHealth: '中', // 可以根据不同NPC设置不同难度
+                        basicDamage: '中'
+                    }
+                };
+                
+                // 显示战斗iframe
+                showBattleGame(battleData);
             }
         }
 
