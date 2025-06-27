@@ -795,7 +795,7 @@ const PLAYER_INFO = {
 // //回合制系统集成更新 - 构建敌方信息文本
 const enemyInfoText = `
 发起战斗，敌方信息如下
-name: ${urlParams.get('enemyName') || '寒泽'}
+name: ${urlParams.get('enemyName') || '姬姒'}
   maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
   basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
 `;
@@ -816,14 +816,42 @@ const commonNPCs = {
         maxHealth: 100, // 最大生命值
         basicDamage: 30, // 轻攻击基础伤害
         style: '风', // 风格
-        portrait: 'https://files.catbox.moe/3sfu4i.png' // 立绘链接
+        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
     },
-    '寒泽': {
-        name: '寒泽',
+    '萧白瑚': {
+        name: '萧白瑚',
         maxHealth: 80,
         basicDamage: 50,
         style: '火',
-        portrait: 'https://files.catbox.moe/07djrh.png'
+        portrait: 'https://files.catbox.moe/u1d2cx.png'
+    },
+    '洞庭君': {
+        name: '洞庭君', // 名称
+        maxHealth: 100, // 最大生命值
+        basicDamage: 30, // 轻攻击基础伤害
+        style: '风', // 风格
+        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
+    },
+    '钱塘君': {
+        name: '钱塘君',
+        maxHealth: 80,
+        basicDamage: 50,
+        style: '火',
+        portrait: 'https://files.catbox.moe/u1d2cx.png'
+    },
+    '破阵子': {
+        name: '破阵子', // 名称
+        maxHealth: 100, // 最大生命值
+        basicDamage: 30, // 轻攻击基础伤害
+        style: '风', // 风格
+        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
+    },
+    '木青鸾': {
+        name: '木青鸾',
+        maxHealth: 80,
+        basicDamage: 50,
+        style: '火',
+        portrait: 'https://files.catbox.moe/u1d2cx.png'
     },
     // 可继续添加更多NPC
 };
