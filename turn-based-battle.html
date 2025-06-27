@@ -1,0 +1,1795 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>对战系统</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <style>
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    user-select: none;
+}
+
+body {
+    font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+    background-color: #000;
+    color: #fff;
+    overflow: hidden;
+    /* 移除min-height，改为通过JS动态设置 */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100vw;
+    height: 100vh;
+}
+
+.game-container {
+    /* 通过JS动态设置宽高，保持4:3比例 */
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+}
+
+/* //回合制系统集成更新 - 添加退出按钮样式 */
+.exit-battle-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    padding: 8px 15px;
+    background: #ff4d6d;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 14px;
+    z-index: 100;
+}
+
+.exit-battle-btn:hover {
+    background: #ff6b87;
+}
+
+.battle-scene {
+    flex: 1;
+    position: relative;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    padding-bottom: clamp(60px, 12vw, 120px);
+}
+
+/* 状态区样式 - 进一步缩小手机端显示 */
+.player-status-area {
+    position: absolute;
+    top: clamp(6px, 1.5vw, 15px);
+    left: clamp(6px, 1.5vw, 15px);
+    background-color: rgba(0, 0, 0, 0.85);
+    border-radius: clamp(3px, 0.8vw, 6px);
+    padding: clamp(4px, 1vw, 10px);
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    min-width: clamp(120px, 20vw, 200px);
+    max-width: clamp(160px, 25vw, 250px);
+}
+
+.character-name {
+    font-size: clamp(11px, 2.2vw, 16px);
+    font-weight: bold;
+    color: #ffcc00;
+    margin-bottom: clamp(3px, 0.8vw, 6px);
+    text-align: center;
+    font-family: 'Ma Shan Zheng', cursive;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    border-bottom: 1px solid rgba(255, 204, 0, 0.3);
+    padding-bottom: clamp(2px, 0.5vw, 4px);
+}
+
+.enemy-status-area {
+    position: absolute;
+    top: clamp(6px, 1.5vw, 15px);
+    right: clamp(6px, 1.5vw, 15px);
+    background-color: rgba(0, 0, 0, 0.85);
+    border-radius: clamp(3px, 0.8vw, 6px);
+    padding: clamp(4px, 1vw, 10px);
+    z-index: 5;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    min-width: clamp(120px, 20vw, 200px);
+    max-width: clamp(160px, 25vw, 250px);
+}
+
+.health-container {
+    display: flex;
+    align-items: center;
+    min-width: clamp(110px, 18vw, 180px);
+    margin-bottom: clamp(2px, 0.5vw, 5px);
+    position: relative;
+}
+
+.health-bar {
+    flex: 1;
+    height: clamp(12px, 2.5vw, 20px);
+    background-color: #333;
+    border-radius: clamp(2px, 0.4vw, 3px);
+    overflow: hidden;
+    margin-right: clamp(30px, 6vw, 60px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.health-fill {
+    height: 100%;
+    background: linear-gradient(to right, #ff0043, #ff6a00);
+    width: 100%;
+    transition: width 0.5s cubic-bezier(.4,2,.6,1);
+}
+
+.health-text {
+    position: absolute;
+    right: 0;
+    font-size: clamp(10px, 2vw, 14px);
+    color: #fff;
+    min-width: clamp(30px, 6vw, 60px);
+    text-align: right;
+    font-weight: bold;
+}
+
+.energy-display {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+}
+
+.energy-value {
+    font-size: clamp(10px, 2vw, 14px);
+    color: #ffcc00;
+    margin-right: clamp(2px, 0.5vw, 5px);
+    font-weight: bold;
+}
+
+.energy-icon {
+    color: #ffcc00;
+    font-size: clamp(12px, 2.5vw, 16px);
+}
+
+/* 回合指示器 - 优化位置避免被遮挡 */
+.turn-indicator {
+    position: absolute;
+    top: clamp(45px, 8vw, 80px);
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: rgba(0, 0, 0, 0.85);
+    padding: clamp(4px, 1vw, 8px) clamp(10px, 2.5vw, 20px);
+    border-radius: clamp(12px, 3vw, 20px);
+    z-index: 6; /* 提高层级，确保不被状态区遮挡 */
+    font-size: clamp(12px, 2.8vw, 18px);
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    font-family: 'Ma Shan Zheng', cursive;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+}
+
+/* 命令区域 - 水墨风格 */
+.command-area {
+    position: absolute;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-width: 800px;
+    background-color: rgba(0, 0, 0, 0.7);
+    border-radius: 10px;
+    padding: 15px;
+    z-index: 10;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.6);
+}
+
+.command-label {
+    margin-bottom: 10px;
+    font-size: 24px;
+    color: #eee;
+    text-align: center;
+    font-family: 'Ma Shan Zheng', cursive;
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+}
+
+.command-buttons {
+    display: flex;
+    justify-content: space-around;
+    gap: 10px;
+}
+
+/* 指令按钮浮动样式 - 优化版本：始终紧贴左边缘 */
+.command-buttons-floating {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    display: flex;
+    flex-direction: row;
+    gap: clamp(2px, 1vw, 12px);
+    padding: clamp(2px, 0.5vw, 8px) 0 0 clamp(2px, 0.5vw, 8px);
+    z-index: 10;
+    width: 50vw;
+    min-width: 280px;
+    max-width: 50vw;
+    justify-content: space-between;
+}
+
+.command-btn {
+    flex: 1 1 0;
+    margin: 0;
+    padding: clamp(0.5vw, 1.2vw, 1.5vw) clamp(0.3vw, 0.8vw, 1vw);
+    height: clamp(60px, 8vw, 120px);
+    border-radius: clamp(4px, 0.8vw, 8px);
+    background: #111 !important;
+    color: #fff !important;
+    border: 1px solid #333;
+    box-shadow: 1px 1px 4px rgba(0,0,0,0.15);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-width: 0;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+}
+
+.command-btn::before {
+    content: '';
+    position: absolute;
+    top: -2px;
+    left: -2px;
+    right: -2px;
+    bottom: -2px;
+    background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+    z-index: -1;
+    border-radius: clamp(4px, 0.8vw, 8px);
+}
+
+.command-btn:hover:not(.disabled) {
+    background: #222 !important;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+    border-color: #666;
+}
+
+.command-btn:active:not(.disabled) {
+    background: #333 !important;
+    transform: translateY(0);
+}
+
+.command-btn.selected {
+    background: linear-gradient(135deg, #1a3a75, #0c1f3e) !important;
+    border-color: #3a6cbf;
+    box-shadow: 0 0 15px rgba(58, 108, 191, 0.6);
+}
+
+.command-btn.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* 键位提示自适应 */
+.command-btn .key-hint {
+    position: absolute;
+    top: clamp(2px, 0.5vw, 6px);
+    left: clamp(2px, 0.5vw, 6px);
+    background-color: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    font-size: clamp(0.7rem, 1.5vw, 1rem);
+    padding: clamp(1px, 0.3vw, 4px) clamp(3px, 0.6vw, 8px);
+    border-radius: clamp(2px, 0.4vw, 4px);
+    line-height: 1;
+}
+
+/* 按钮名称自适应 */
+.command-btn .btn-name {
+    font-size: clamp(0.9rem, 2.2vw, 1.8rem);
+    font-weight: bold;
+    font-family: 'Ma Shan Zheng', cursive;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+    text-align: center;
+    line-height: 1.1;
+    margin-top: clamp(2px, 0.5vw, 8px);
+}
+
+/* 战斗日志 - 自适应优化 */
+.battle-log {
+    height: clamp(50px, 10vw, 80px);
+    background-color: rgba(0, 0, 0, 0.85);
+    border-top: 1px solid #444;
+    padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+    overflow-y: auto;
+    font-size: clamp(12px, 2.5vw, 16px);
+    line-height: 1.4;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    z-index: 10;
+}
+
+.battle-log p {
+    margin-bottom: clamp(1px, 0.3vw, 4px);
+    word-wrap: break-word;
+}
+
+/* 确认弹窗 - 手机优化 */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.7);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 15px;
+}
+
+.modal-content {
+    width: clamp(240px, 60vw, 320px);
+    max-width: 85vw;
+    border-radius: clamp(4px, 1vw, 8px);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+    color: #fff;
+    position: relative;
+    border: 2px solid #553c28;
+    overflow: hidden;
+}
+
+.modal-header {
+    padding: clamp(6px, 2vw, 12px);
+    background-color: rgba(0, 0, 0, 0.6);
+    font-size: clamp(14px, 3.2vw, 20px);
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    font-family: 'Ma Shan Zheng', cursive;
+}
+
+.modal-body {
+    padding: clamp(8px, 2.5vw, 15px);
+    font-size: clamp(12px, 2.8vw, 16px);
+    text-align: center;
+    line-height: 1.4;
+}
+
+.modal-footer {
+    padding: clamp(6px, 2vw, 12px);
+    display: flex;
+    justify-content: space-around;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    gap: clamp(6px, 1.5vw, 12px);
+}
+
+.modal-footer button {
+    padding: clamp(4px, 1.5vw, 8px) clamp(10px, 3vw, 16px);
+    border: none;
+    border-radius: clamp(3px, 0.8vw, 6px);
+    cursor: pointer;
+    font-size: clamp(11px, 2.5vw, 14px);
+    font-family: 'ZCOOL XiaoWei', sans-serif;
+    transition: all 0.3s;
+    flex: 1;
+    min-height: clamp(24px, 5vw, 36px);
+}
+
+#confirm-action {
+    background: linear-gradient(to bottom, #5c3b1c, #34210f);
+    color: white;
+    border: 1px solid #7c5a3d;
+}
+
+#confirm-action:hover {
+    background: linear-gradient(to bottom, #6c4a2b, #3e2914);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+#cancel-action {
+    background: linear-gradient(to bottom, #444, #222);
+    color: #ddd;
+    border: 1px solid #666;
+}
+
+#cancel-action:hover {
+    background: linear-gradient(to bottom, #555, #333);
+    transform: translateY(-2px);
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+}
+
+/* 动画效果 */
+@keyframes attack {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(40px); }
+    50% { transform: translateX(0); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes enemy-attack {
+    0% { transform: translateX(0); }
+    25% { transform: translateX(-40px); }
+    50% { transform: translateX(0); }
+    100% { transform: translateX(0); }
+}
+
+@keyframes hit {
+    0% { filter: brightness(1); }
+    25% { filter: brightness(3) saturate(2); }
+    50% { filter: brightness(1); }
+    100% { filter: brightness(1); }
+}
+
+@keyframes defend {
+    0% { filter: brightness(1); }
+    50% { filter: brightness(1.5) hue-rotate(120deg); }
+    100% { filter: brightness(1); }
+}
+
+@keyframes special {
+    0% { filter: brightness(1); }
+    25% { filter: brightness(2) saturate(2) hue-rotate(270deg); }
+    50% { filter: brightness(1.5) saturate(1.5) hue-rotate(180deg); }
+    75% { filter: brightness(2) saturate(2) hue-rotate(90deg); }
+    100% { filter: brightness(1); }
+}
+
+.player-attack {
+    animation: attack 0.6s ease;
+}
+
+.enemy-attack {
+    animation: enemy-attack 0.6s ease;
+}
+
+.player-hit {
+    animation: hit 0.6s ease;
+}
+
+.enemy-hit {
+    animation: hit 0.6s ease;
+}
+
+.player-defend {
+    animation: defend 1s ease;
+}
+
+.enemy-defend {
+    animation: defend 1s ease;
+}
+
+.player-special {
+    animation: special 1s ease;
+}
+
+.enemy-special {
+    animation: special 1s ease;
+}
+
+/* 画面晃动动画 */
+@keyframes shake {
+  0% { transform: translate(0, 0); }
+  20% { transform: translate(-10px, 0); }
+  40% { transform: translate(10px, 0); }
+  60% { transform: translate(-10px, 0); }
+  80% { transform: translate(10px, 0); }
+  100% { transform: translate(0, 0); }
+}
+.shake {
+  animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* 受击红色边缘高亮动画 */
+@keyframes damage-flash {
+  0% { box-shadow: 0 0 0 0 rgba(255,0,0,0.7); }
+  30% { box-shadow: 0 0 0 20px rgba(255,0,0,0.5); }
+  60% { box-shadow: 0 0 0 40px rgba(255,0,0,0.2); }
+  100% { box-shadow: 0 0 0 0 rgba(255,0,0,0); }
+}
+.damage-flash {
+  animation: damage-flash 0.5s;
+}
+
+.npc-portrait-layer {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+    background: none;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-size: cover;
+    transition: background-image 0.3s;
+}
+
+.npc-portrait-layer.shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+.screen-flash {
+    position: fixed;
+    left: 0; top: 0; right: 0; bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 1000;
+    opacity: 0;
+    background: rgba(255,0,0,0.3);
+    box-shadow: 0 0 0 20px rgba(255,0,0,0.5), 0 0 60px 40px rgba(255,0,0,0.2) inset;
+    transition: opacity 0.2s;
+}
+
+.screen-flash.active {
+    opacity: 1;
+    transition: opacity 0.1s;
+}
+
+#restart-game {
+    background: linear-gradient(to bottom, #5c3b1c, #34210f);
+    color: white;
+    border: 1px solid #7c5a3d;
+    padding: clamp(6px, 2vw, 12px) clamp(20px, 4vw, 32px);
+    border-radius: clamp(3px, 0.8vw, 6px);
+    cursor: pointer;
+    font-size: clamp(12px, 2.8vw, 16px);
+    font-family: 'Ma Shan Zheng', cursive;
+    transition: all 0.3s;
+    width: 100%;
+    min-height: clamp(28px, 6vw, 40px);
+}
+
+#restart-game:hover {
+    background: linear-gradient(to bottom, #6c4a2b, #3e2914);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+/* 移动端优化 */
+@media (max-width: 900px) {
+    .command-buttons-floating {
+        width: 70vw;
+        min-width: 260px;
+        gap: clamp(2px, 0.8vw, 6px);
+        padding: clamp(2px, 0.4vw, 6px) 0 0 clamp(2px, 0.4vw, 6px);
+    }
+    
+    .command-btn {
+        height: clamp(45px, 9vw, 70px);
+    }
+    
+    .command-btn .btn-name {
+        font-size: clamp(0.8rem, 2.8vw, 1.1rem);
+    }
+    
+    .command-btn .key-hint {
+        font-size: clamp(0.6rem, 1.8vw, 0.9rem);
+    }
+}
+
+@media (max-width: 600px) {
+    .command-buttons-floating {
+        width: 85vw;
+        min-width: 240px;
+        gap: clamp(1px, 0.5vw, 4px);
+        padding: clamp(1px, 0.3vw, 4px) 0 0 clamp(1px, 0.3vw, 4px);
+        flex-direction: row;
+    }
+    
+    .command-btn {
+        height: clamp(35px, 10vw, 55px);
+    }
+    
+    .command-btn .btn-name {
+        font-size: clamp(0.7rem, 3vw, 1rem);
+    }
+    
+    .command-btn .key-hint {
+        font-size: clamp(0.5rem, 2vw, 0.8rem);
+    }
+}
+
+/* 超大屏幕优化 */
+@media (min-width: 1400px) {
+    .command-buttons-floating {
+        width: 45vw;
+        max-width: 700px;
+    }
+    
+    .command-btn {
+        height: clamp(80px, 6vw, 100px);
+    }
+    
+    .command-btn .btn-name {
+        font-size: clamp(1.2rem, 1.8vw, 1.6rem);
+    }
+}
+
+/* 超小屏幕优化 */
+@media (max-width: 480px) {
+    .command-buttons-floating {
+        width: 95vw;
+        min-width: 200px;
+        gap: clamp(1px, 0.2vw, 2px);
+        padding: 2px 0 0 2px;
+        flex-direction: row;
+    }
+    
+    .command-btn {
+        height: clamp(30px, 11vw, 45px);
+        padding: clamp(0.2vw, 0.8vw, 1vw) clamp(0.1vw, 0.4vw, 0.6vw);
+    }
+    
+    .command-btn .btn-name {
+        font-size: clamp(0.6rem, 3.5vw, 0.9rem);
+    }
+    
+    .command-btn .key-hint {
+        font-size: clamp(0.4rem, 2.8vw, 0.7rem);
+        padding: clamp(0.5px, 0.1vw, 2px) clamp(2px, 0.3vw, 4px);
+    }
+}
+
+/* 横屏手机优化 */
+@media (max-width: 900px) and (orientation: landscape) {
+    .battle-scene {
+        padding-bottom: clamp(60px, 10vw, 100px);
+    }
+    
+    .command-btn {
+        height: clamp(30px, 6vw, 50px);
+    }
+    
+    .turn-indicator {
+        top: clamp(25px, 5vw, 40px);
+    }
+}
+</style>
+</head>
+<body>
+    <div class="game-container">
+        <!-- //回合制系统集成更新 - 添加手动退出按钮 -->
+        <button class="exit-battle-btn" onclick="confirmExitBattle()">退出战斗</button>
+        
+        <div class="npc-portrait-layer"></div>
+        <div class="screen-flash"></div>
+        <!-- 战斗场景 -->
+        <div class="battle-scene">
+ 
+            <!-- 玩家状态区 -->
+            <div class="player-status-area">
+                <div class="character-name" id="player-name">user</div>
+                <div class="health-container">
+                    <div class="health-bar">
+                        <div class="health-fill" id="player-health"></div>
+                    </div>
+                    <div class="health-text">
+                        <span id="player-health-value">50</span>/<span id="player-max-health">50</span>
+                    </div>
+                </div>
+                <div class="energy-display">
+                    <div class="energy-value"><span id="player-energy">0</span>/10</div>
+                    <div class="energy-icon">⚡</div>
+                </div>
+            </div>
+
+            <!-- 敌人状态区 -->
+            <div class="enemy-status-area">
+                <div class="character-name" id="enemy-name">北条</div>
+                <div class="health-container">
+                    <div class="health-bar">
+                        <div class="health-fill" id="enemy-health"></div>
+                    </div>
+                    <div class="health-text">
+                        <span id="enemy-health-value">50</span>/<span id="enemy-max-health">50</span>
+                    </div>
+                </div>
+                <div class="energy-display">
+                    <div class="energy-value"><span id="enemy-energy">0</span>/10</div>
+                    <div class="energy-icon">⚡</div>
+                </div>
+            </div>
+
+            <!-- 回合指示器 -->
+            <div class="turn-indicator">
+                <div id="turn-text">第1回合</div>
+            </div>
+
+            <!-- 左侧玩家角色 -->
+            <div class="character player-character"></div>
+
+            <!-- 右侧敌方角色 -->
+            <div class="character enemy-character"></div>
+
+            <!-- 战斗命令区域 -->
+            <div class="command-buttons-floating">
+                <div class="command-btn" id="gather" data-key="Q">
+                    <div class="key-hint">Q</div>
+                    <div class="btn-name">集气</div>
+                </div>
+                <div class="command-btn" id="defend" data-key="W">
+                    <div class="key-hint">W</div>
+                    <div class="btn-name">防御</div>
+                </div>
+                <div class="command-btn" id="light-attack" data-key="E">
+                    <div class="key-hint">E</div>
+                    <div class="btn-name">轻攻击</div>
+                </div>
+                <div class="command-btn" id="heavy-attack" data-key="R">
+                    <div class="key-hint">R</div>
+                    <div class="btn-name">重攻击</div>
+                </div>
+                <div class="command-btn" id="special" data-key="F">
+                    <div class="key-hint">T</div>
+                    <div class="btn-name">绝招</div>
+                </div>
+                <div class="command-btn" id="taunt" data-key="C">
+                    <div class="key-hint">Y</div>
+                    <div class="btn-name">嘴炮</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 战斗日志 -->
+        <div class="battle-log" id="battle-log">
+            <p>战斗开始，请选择行动...</p>
+        </div>
+        
+        <!-- 确认弹窗 -->
+        <div id="confirm-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">确认行动</div>
+                <div class="modal-body">
+                    已选择: <span id="selected-action">无</span>
+                </div>
+                <div class="modal-footer">
+                    <button id="confirm-action">确认</button>
+                    <button id="cancel-action">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏结束弹窗 -->
+        <div id="game-over-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header" id="game-over-title">游戏结束</div>
+                <div class="modal-body" id="game-over-message">
+                    游戏结束信息
+                </div>
+                <div class="modal-footer">
+                    <button id="restart-game">重新开始</button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+// //回合制系统集成更新 - 获取URL参数
+const urlParams = new URLSearchParams(window.location.search);
+
+// //回合制系统集成更新 - 玩家信息从URL参数获取
+const PLAYER_INFO = {
+    name: urlParams.get('playerName') || '小虾米',
+    maxHealth: parseInt(urlParams.get('playerHealth')) || 50,
+    currentHealth: parseInt(urlParams.get('playerHealth')) || 50,
+    energy: 0,
+    maxEnergy: 10,
+    selectedAction: null,
+    basicDamage: parseInt(urlParams.get('playerAttack')) || 20
+};
+
+// //回合制系统集成更新 - 构建敌方信息文本
+const enemyInfoText = `
+发起战斗，敌方信息如下
+name: ${urlParams.get('enemyName') || '寒泽'}
+  maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
+  basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
+`;
+
+// 游戏主背景和弹窗背景图片链接
+const GAME_BG_URL = 'https://files.catbox.moe/4qg2k3.png';
+const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
+
+// 生命值和伤害等级映射
+const healthMap = { '极低': 25,'低': 50, '中': 80, '高': 100, '极高': 150 };
+const damageMap = { '极低': 10,'低': 20, '中': 30, '高': 40, '极高': 50 };
+const styles = ['风', '火', '林', '山'];
+
+// 特殊NPC信息
+const commonNPCs = {
+    '姬姒': {
+        name: '姬姒', // 名称
+        maxHealth: 100, // 最大生命值
+        basicDamage: 30, // 轻攻击基础伤害
+        style: '风', // 风格
+        portrait: 'https://files.catbox.moe/3sfu4i.png' // 立绘链接
+    },
+    '寒泽': {
+        name: '寒泽',
+        maxHealth: 80,
+        basicDamage: 50,
+        style: '火',
+        portrait: 'https://files.catbox.moe/07djrh.png'
+    },
+    // 可继续添加更多NPC
+};
+
+// 解析敌方信息的函数
+function parseEnemyInfo(text) {
+    // 提取
+    const nameMatch = text.match(/name:\s*([^\n]+)/);
+    const npcName = nameMatch ? nameMatch[1].trim() : '';
+    clearEnemyPortrait();
+    // 优先查找常见NPC
+    if (npcName && commonNPCs[npcName]) {
+        const npc = commonNPCs[npcName];
+        // 更新敌人立绘
+        updateEnemyPortrait(npc.portrait);
+        return {
+            name: npc.name,
+            maxHealth: npc.maxHealth,
+            currentHealth: npc.maxHealth,
+            energy: 0,
+            maxEnergy: 10,
+            selectedAction: null,
+            basicDamage: npc.basicDamage,
+            style: npc.style
+        };
+    }
+
+    // 没有匹配到常见NPC，走原有解析逻辑，风格随机
+    const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
+    const basicDamageMatch = text.match(/basicDamage:\s*([^\n]+)/);
+    // 清除敌人立绘
+    clearEnemyPortrait();
+    return {
+        name: npcName,
+        maxHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
+        currentHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
+        energy: 0,
+        maxEnergy: 10,
+        selectedAction: null,
+        basicDamage: basicDamageMatch ? damageMap[basicDamageMatch[1].trim()] || 30 : 30,
+        style: styles[Math.floor(Math.random() * styles.length)]
+    };
+}
+
+// 更新敌人立绘
+function updateEnemyPortrait(portraitUrl) {
+    const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
+    npcPortraitLayer.style.backgroundImage = `url('${portraitUrl}')`;
+}
+
+// 清除敌人立绘
+function clearEnemyPortrait() {
+    const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
+    npcPortraitLayer.style.backgroundImage = '';
+}
+
+// //回合制系统集成更新 - 退出战斗
+function exitBattle(result) {
+    // 向父窗口发送战斗结果
+    if (window.parent !== window) {
+        window.parent.postMessage({
+            type: 'battle-exit',
+            result: result // 'victory' 或 'defeat' 或 'quit'
+        }, '*');
+    }
+}
+
+// //回合制系统集成更新 - 确认退出战斗
+function confirmExitBattle() {
+    if (confirm('确定要退出战斗吗？')) {
+        exitBattle('quit');
+    }
+}
+
+const playerNameDisplay = document.getElementById('player-name');
+const enemyNameDisplay = document.getElementById('enemy-name');
+// 游戏状态对象
+const gameState = {
+    currentTurn: 'player',
+    turnNumber: 1, // 添加回合计数器
+    waitingForConfirmation: false,
+    player: { ...PLAYER_INFO },
+    enemy: parseEnemyInfo(enemyInfoText)
+};
+
+// 获取DOM元素
+const playerHealthBar = document.getElementById('player-health');
+const enemyHealthBar = document.getElementById('enemy-health');
+const playerHealthValue = document.getElementById('player-health-value');
+const enemyHealthValue = document.getElementById('enemy-health-value');
+const playerMaxHealth = document.getElementById('player-max-health'); // 新增
+const enemyMaxHealth = document.getElementById('enemy-max-health'); // 新增
+const playerEnergyDisplay = document.getElementById('player-energy');
+const enemyEnergyDisplay = document.getElementById('enemy-energy');
+const battleLog = document.getElementById('battle-log');
+const turnText = document.getElementById('turn-text');
+const selectedActionText = document.getElementById('selected-action');
+const confirmActionButton = document.getElementById('confirm-action');
+const cancelActionButton = document.getElementById('cancel-action');
+const commandButtons = document.querySelectorAll('.command-btn');
+const confirmModal = document.getElementById('confirm-modal');
+const gameOverModal = document.getElementById('game-over-modal');
+const gameOverTitle = document.getElementById('game-over-title');
+const gameOverMessage = document.getElementById('game-over-message');
+const restartGameButton = document.getElementById('restart-game');
+
+// 角色元素
+const playerCharacter = document.querySelector('.player-character');
+const enemyCharacter = document.querySelector('.enemy-character');
+
+// 初始化游戏
+function initGame() {
+    updateDisplay();
+    addLog('战斗开始，请选择行动...');
+    
+    // 添加按钮点击事件 - 支持触屏和鼠标
+    setupButtonEvents();
+    
+    // 键盘控制
+    document.addEventListener('keydown', handleKeyPress);
+}
+
+// 设置按钮事件
+function setupButtonEvents() {
+    document.getElementById('gather').addEventListener('click', () => selectAction('gather'));
+    document.getElementById('defend').addEventListener('click', () => selectAction('defend'));
+    document.getElementById('light-attack').addEventListener('click', () => selectAction('light-attack'));
+    document.getElementById('heavy-attack').addEventListener('click', () => selectAction('heavy-attack'));
+    document.getElementById('special').addEventListener('click', () => selectAction('special'));
+    document.getElementById('taunt').addEventListener('click', () => selectAction('taunt'));
+    
+    // 确认按钮事件
+    confirmActionButton.addEventListener('click', () => {
+        confirmModal.style.display = 'none';
+        confirmAction();
+    });
+    
+    // 取消按钮事件
+    cancelActionButton.addEventListener('click', () => {
+        confirmModal.style.display = 'none';
+        gameState.player.selectedAction = null;
+        updateDisplay();
+    });
+
+    // //回合制系统集成更新 - 修改重新开始按钮的处理
+    restartGameButton.addEventListener('click', () => {
+        // 如果在iframe中，退出到父窗口
+        if (window.parent !== window) {
+            exitBattle('restart');
+        } else {
+            window.location.reload();
+        }
+    });
+}
+
+// 更新显示
+function updateDisplay() {
+    // 更新生命值显示
+    playerHealthBar.style.width = `${(gameState.player.currentHealth / gameState.player.maxHealth) * 100}%`;
+    enemyHealthBar.style.width = `${(gameState.enemy.currentHealth / gameState.enemy.maxHealth) * 100}%`;
+    
+    // 更新生命值文本
+    playerHealthValue.textContent = gameState.player.currentHealth;
+    enemyHealthValue.textContent = gameState.enemy.currentHealth;
+    
+    // 更新最大生命值文本
+    playerMaxHealth.textContent = gameState.player.maxHealth;
+    enemyMaxHealth.textContent = gameState.enemy.maxHealth;
+    
+    // 更新能量值
+    playerEnergyDisplay.textContent = gameState.player.energy;
+    enemyEnergyDisplay.textContent = gameState.enemy.energy;
+    
+    // 更新角色名字显示
+    playerNameDisplay.textContent = gameState.player.name;
+    enemyNameDisplay.textContent = gameState.enemy.name;
+    
+    // 更新回合数显示
+    turnText.textContent = `第${gameState.turnNumber}回合`;
+    
+    // 根据能量值启用/禁用按钮
+    checkButtonAvailability();
+}
+
+// 检查按钮可用性
+function checkButtonAvailability() {
+    // 如果不是玩家回合或正在等待确认，禁用所有按钮
+    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) {
+        commandButtons.forEach(btn => {
+            btn.classList.add('disabled');
+        });
+        return;
+    }
+    
+    // 重置按钮状态
+    commandButtons.forEach(btn => {
+        btn.classList.remove('disabled');
+        btn.classList.remove('selected');
+    });
+    
+    // 根据能量值启用/禁用按钮
+    if (gameState.player.energy < 1) {
+        document.getElementById('light-attack').classList.add('disabled');
+    }
+    
+    if (gameState.player.energy < 2) {
+        document.getElementById('heavy-attack').classList.add('disabled');
+    }
+    
+    if (gameState.player.energy < 5) {
+        document.getElementById('special').classList.add('disabled');
+    }
+    
+    // 如果有选中的动作，高亮显示
+    if (gameState.player.selectedAction) {
+        document.getElementById(gameState.player.selectedAction).classList.add('selected');
+    }
+}
+
+// 添加战斗日志
+function addLog(message) {
+    const logEntry = document.createElement('p');
+    logEntry.textContent = message;
+    battleLog.appendChild(logEntry);
+    battleLog.scrollTop = battleLog.scrollHeight;
+}
+
+// 选择动作
+function selectAction(action) {
+    // 如果不是玩家回合或正在等待确认，返回
+    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) return;
+    
+    // 检查按钮是否被禁用
+    if (document.getElementById(action).classList.contains('disabled')) {
+        return;
+    }
+    
+    // 清除之前的选择
+    commandButtons.forEach(btn => btn.classList.remove('selected'));
+    
+    // 检查是否有足够的能量
+    if ((action === 'light-attack' && gameState.player.energy < 1) ||
+        (action === 'heavy-attack' && gameState.player.energy < 2) ||
+        (action === 'special' && gameState.player.energy < 5)) {
+        addLog('能量不足，无法执行此动作！');
+        return;
+    }
+    
+    // 设置选中状态
+    document.getElementById(action).classList.add('selected');
+    gameState.player.selectedAction = action;
+    
+    // 更新选择显示
+    const actionNames = {
+        'gather': '集气',
+        'defend': '防御',
+        'light-attack': '轻攻击',
+        'heavy-attack': '重攻击',
+        'special': '绝招',
+        'taunt': '嘴炮'
+    };
+    selectedActionText.textContent = actionNames[action];
+    
+    // 显示确认弹窗
+    confirmModal.style.display = 'flex';
+}
+
+// 确认动作
+function confirmAction() {
+    if (!gameState.player.selectedAction) return;
+    
+    // 设置为等待确认状态
+    gameState.waitingForConfirmation = true;
+    
+    // 禁用按钮
+    commandButtons.forEach(btn => {
+        btn.classList.add('disabled');
+    });
+    
+    addLog(`${gameState.player.name}准备行动...`);
+    
+    // 敌人AI选择动作
+    selectEnemyAction();
+    
+    // 执行回合结算
+    setTimeout(executeTurn, 1000);
+}
+
+// 敌人AI选择动作
+function selectEnemyAction() {
+    const enemy = gameState.enemy;
+    const player = gameState.player;
+    const style = enemy.style || '风'; // 默认风格
+
+    // 玩家气的威胁等级
+    const playerEnergy = player.energy;
+
+    // 嘴炮判定：玩家气满5时，敌人有较高概率嘴炮
+    if (playerEnergy >= 5) {
+        if (style === '山' && Math.random() < 0.5) {
+            enemy.selectedAction = 'taunt';
+            return;
+        }
+        if (style === '林' && Math.random() < 0.4) {
+            enemy.selectedAction = 'taunt';
+            return;
+        }
+        if (style === '火' && Math.random() < 0.25) {
+            enemy.selectedAction = 'taunt';
+            return;
+        }
+        if (style === '风' && Math.random() < 0.2) {
+            enemy.selectedAction = 'taunt';
+            return;
+        }
+    }
+
+    // 防御判定：玩家气较高时，敌人有概率防御
+    if (playerEnergy >= 1) {
+        if (style === '山' && Math.random() < 0.5) {
+            enemy.selectedAction = 'defend';
+            return;
+        }
+        if (style === '林' && Math.random() < 0.3) {
+            enemy.selectedAction = 'defend';
+            return;
+        }
+        if (style === '火' && Math.random() < 0.2) {
+            enemy.selectedAction = 'defend';
+            return;
+        }
+        if (style === '风' && Math.random() < 0.15) {
+            enemy.selectedAction = 'defend';
+            return;
+        }
+    }
+
+    // 风格主策略
+    if (style === '风') {
+        // 风：更倾向于轻攻击
+        if (enemy.energy >= 1 && Math.random() < 0.7) {
+            enemy.selectedAction = 'light-attack';
+            return;
+        }
+        if (enemy.energy < 10 && Math.random() < 0.6) {
+            enemy.selectedAction = 'gather';
+            return;
+        }
+        if (enemy.energy >= 2 && Math.random() < 0.3) {
+            enemy.selectedAction = 'heavy-attack';
+            return;
+        }
+        if (enemy.energy >= 5 && Math.random() < 0.2) {
+            enemy.selectedAction = 'special';
+            return;
+        }
+        enemy.selectedAction = 'gather';
+        return;
+    }
+
+    if (style === '火') {
+        // 火：更倾向于重攻击
+        if (enemy.energy >= 2 && Math.random() < 0.7) {
+            enemy.selectedAction = 'heavy-attack';
+            return;
+        }
+        if (enemy.energy >= 1 && Math.random() < 0.4) {
+            enemy.selectedAction = 'light-attack';
+            return;
+        }
+        if (enemy.energy < 10 && Math.random() < 0.5) {
+            enemy.selectedAction = 'gather';
+            return;
+        }
+        if (enemy.energy >= 5 && Math.random() < 0.2) {
+            enemy.selectedAction = 'special';
+            return;
+        }
+        enemy.selectedAction = 'gather';
+        return;
+    }
+
+    if (style === '林') {
+        // 林：更倾向于攒气用绝招
+        if (enemy.energy >= 5 && Math.random() < 0.7) {
+            enemy.selectedAction = 'special';
+            return;
+        }
+        if (enemy.energy < 10 && Math.random() < 0.7) {
+            enemy.selectedAction = 'gather';
+            return;
+        }
+        if (enemy.energy >= 2 && Math.random() < 0.2) {
+            enemy.selectedAction = 'heavy-attack';
+            return;
+        }
+        if (enemy.energy >= 1 && Math.random() < 0.2) {
+            enemy.selectedAction = 'light-attack';
+            return;
+        }
+        enemy.selectedAction = 'gather';
+        return;
+    }
+
+    if (style === '山') {
+        // 山：注重防守
+        if (enemy.currentHealth < enemy.maxHealth * 0.5 && playerEnergy >= 1 && Math.random() < 0.5) {
+            enemy.selectedAction = 'defend';
+            return;
+        }
+        if (enemy.energy < 10 && Math.random() < 0.6) {
+            enemy.selectedAction = 'gather';
+            return;
+        }
+        if (enemy.energy >= 1 && Math.random() < 0.4) {
+            enemy.selectedAction = 'light-attack';
+            return;
+        }
+        if (enemy.energy >= 2 && Math.random() < 0.3) {
+            enemy.selectedAction = 'heavy-attack';
+            return;
+        }
+        if (enemy.energy >= 5 && Math.random() < 0.1) {
+            enemy.selectedAction = 'special';
+            return;
+        }
+        enemy.selectedAction = 'gather';
+        return;
+    }
+
+    // 默认行为
+    enemy.selectedAction = 'gather';
+}
+
+// 执行回合
+function executeTurn() {
+    const player = gameState.player;
+    const enemy = gameState.enemy;
+    
+    // 获取双方行动
+    const playerAction = player.selectedAction;
+    const enemyAction = enemy.selectedAction;
+    
+    addLog(`${enemy.name}选择了行动...`);
+    
+    // 根据行动类型执行特效和结算
+    setTimeout(() => {
+        // 显示双方选择的动作
+        const actionNames = {
+            'gather': '集气',
+            'defend': '防御',
+            'light-attack': '轻攻击',
+            'heavy-attack': '重攻击',
+            'special': '绝招',
+            'taunt': '嘴炮'
+        };
+        
+        addLog(`${player.name}使用了${actionNames[playerAction]}！${enemy.name}使用了${actionNames[enemyAction]}！`);
+        
+        // 处理行动结果
+        processActions(playerAction, enemyAction);
+        
+        // 检查游戏是否结束
+        if (checkGameOver()) {
+            return;
+        }
+        
+        // 继续下一回合
+        continueGame();
+    }, 1000);
+}
+
+// 处理双方行动的结果
+function processActions(playerAction, enemyAction) {
+    const player = gameState.player;
+    const enemy = gameState.enemy;
+    const gameContainer = document.querySelector('.game-container');
+    const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
+    const screenFlash = document.querySelector('.screen-flash');
+    let playerWasHit = false;
+    let enemyWasHit = false;
+    
+    // 处理集气
+    if (playerAction === 'gather') {
+        if (player.energy < player.maxEnergy) {
+            player.energy += 1;
+            addLog(`${player.name}集气成功，能量+1！`);
+        } else {
+            addLog(`${player.name}的能量已满！`);
+        }
+    }
+    
+    if (enemyAction === 'gather') {
+        if (enemy.energy < enemy.maxEnergy) {
+            enemy.energy += 1;
+            addLog(`${enemy.name}集气成功，能量+1！`);
+        } else {
+            addLog(`${enemy.name}的能量已满！`);
+        }
+    }
+    
+    // 处理防御状态
+    const playerDefending = playerAction === 'defend';
+    const enemyDefending = enemyAction === 'defend';
+    
+    if (playerDefending) {
+        playerCharacter.classList.add('player-defend');
+        setTimeout(() => {
+            playerCharacter.classList.remove('player-defend');
+        }, 1000);
+        addLog(`${player.name}进入防御状态！`);
+    }
+    
+    if (enemyDefending) {
+        enemyCharacter.classList.add('enemy-defend');
+        setTimeout(() => {
+            enemyCharacter.classList.remove('enemy-defend');
+        }, 1000);
+        addLog(`${enemy.name}进入防御状态！`);
+    }
+    
+    // 嘴炮只能无效化绝招的伤害
+    let playerTauntSuccess = false;
+    let enemyTauntSuccess = false;
+    
+    if (playerAction === 'taunt' && enemyAction === 'special') {
+        playerTauntSuccess = true;
+        addLog(`${player.name}的嘴炮成功无效化了${enemy.name}的绝招伤害！`);
+        // 注意：不在这里扣除敌人的能量，而是统一在特殊技能处理部分扣除
+    }
+    
+    if (enemyAction === 'taunt' && playerAction === 'special') {
+        enemyTauntSuccess = true;
+        addLog(`${enemy.name}的嘴炮成功无效化了${player.name}的绝招伤害！`);
+        // 注意：不在这里扣除玩家的能量，而是统一在特殊技能处理部分扣除
+    }
+    
+    // 处理绝招（无视防御）
+    if (playerAction === 'special') {
+        // 无论绝招是否被嘴炮无效化，都消耗能量
+        player.energy -= 5;
+        playerCharacter.classList.add('player-special');
+        
+        if (!enemyTauntSuccess) {
+            enemyCharacter.classList.add('enemy-hit');
+            
+            setTimeout(() => {
+                enemyCharacter.classList.remove('enemy-hit');
+            }, 1000);
+            
+            const damage = player.basicDamage * 3;
+            enemy.currentHealth -= damage;
+            addLog(`${player.name}使用绝招，对${enemy.name}造成${damage}点伤害！`);
+            enemyWasHit = true;
+        } else {
+            addLog(`${player.name}使用绝招，但伤害被${enemy.name}的嘴炮无效化了！`);
+        }
+        
+        setTimeout(() => {
+            playerCharacter.classList.remove('player-special');
+        }, 1000);
+        
+        // 无效化敌人的普通攻击
+        if (enemyAction === 'light-attack' || enemyAction === 'heavy-attack') {
+            addLog(`${enemy.name}的攻击被${player.name}的绝招无效化了！`);
+            // 敌人消耗的能量不返还
+            if (enemyAction === 'light-attack') enemy.energy -= 1;
+            if (enemyAction === 'heavy-attack') enemy.energy -= 2;
+        }
+    }
+    
+    if (enemyAction === 'special') {
+        // 无论绝招是否被嘴炮无效化，都消耗能量
+        enemy.energy -= 5;
+        enemyCharacter.classList.add('enemy-special');
+        
+        if (!playerTauntSuccess) {
+            playerCharacter.classList.add('player-hit');
+            
+            setTimeout(() => {
+                playerCharacter.classList.remove('player-hit');
+            }, 1000);
+            
+            const damage = enemy.basicDamage * 3;
+            player.currentHealth -= damage;
+            addLog(`${enemy.name}使用绝招，对${player.name}造成${damage}点伤害！`);
+            playerWasHit = true;
+        } else {
+            addLog(`${enemy.name}使用绝招，但伤害被${player.name}的嘴炮无效化了！`);
+        }
+        
+        setTimeout(() => {
+            enemyCharacter.classList.remove('enemy-special');
+        }, 1000);
+        
+        // 无效化玩家的普通攻击
+        if (playerAction === 'light-attack' || playerAction === 'heavy-attack') {
+            addLog(`${player.name}的攻击被${enemy.name}的绝招无效化了！`);
+            // 玩家消耗的能量不返还
+            if (playerAction === 'light-attack') player.energy -= 1;
+            if (playerAction === 'heavy-attack') player.energy -= 2;
+        }
+    }
+    
+    // 如果没有被绝招无效，处理重攻击
+    if (playerAction === 'heavy-attack' && 
+        enemyAction !== 'special' && 
+        playerAction !== 'special') {
+        player.energy -= 2;
+        
+        // 检查是否被防御或是否无效对方轻攻击
+        if (enemyDefending) {
+            playerCharacter.classList.add('player-attack');
+            
+            setTimeout(() => {
+                playerCharacter.classList.remove('player-attack');
+            }, 600);
+            
+            addLog(`${player.name}的重攻击被${enemy.name}防御了！`);
+        } else if (enemyAction === 'light-attack') {
+            // 重攻击克制轻攻击
+            playerCharacter.classList.add('player-attack');
+            enemyCharacter.classList.add('enemy-hit');
+            
+            setTimeout(() => {
+                playerCharacter.classList.remove('player-attack');
+                enemyCharacter.classList.remove('enemy-hit');
+            }, 600);
+            
+            const damage = player.basicDamage * 1.5;
+            enemy.currentHealth -= damage;
+            enemy.energy -= 1; // 消耗敌人的能量
+            addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${damage}点伤害！`);
+            enemyWasHit = true;
+        } else {
+            playerCharacter.classList.add('player-attack');
+            enemyCharacter.classList.add('enemy-hit');
+            
+            setTimeout(() => {
+                playerCharacter.classList.remove('player-attack');
+                enemyCharacter.classList.remove('enemy-hit');
+            }, 600);
+            
+            const damage = player.basicDamage * 1.5;
+            enemy.currentHealth -= damage;
+            addLog(`${player.name}的重攻击对${enemy.name}造成${damage}点伤害！`);
+            enemyWasHit = true;
+        }
+    }
+    
+    if (enemyAction === 'heavy-attack' && 
+        playerAction !== 'special' && 
+        enemyAction !== 'special') {
+        enemy.energy -= 2;
+        
+        // 检查是否被防御或是否无效对方轻攻击
+        if (playerDefending) {
+            enemyCharacter.classList.add('enemy-attack');
+            
+            setTimeout(() => {
+                enemyCharacter.classList.remove('enemy-attack');
+            }, 600);
+            
+            addLog(`${enemy.name}的重攻击被${player.name}防御了！`);
+        } else if (playerAction === 'light-attack') {
+            // 重攻击克制轻攻击
+            enemyCharacter.classList.add('enemy-attack');
+            playerCharacter.classList.add('player-hit');
+            
+            setTimeout(() => {
+                enemyCharacter.classList.remove('enemy-attack');
+                playerCharacter.classList.remove('player-hit');
+            }, 600);
+            
+            const damage = enemy.basicDamage * 1.5;
+            player.currentHealth -= damage;
+            player.energy -= 1; // 消耗玩家的能量
+            addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${damage}点伤害！`);
+            playerWasHit = true;
+        } else {
+            enemyCharacter.classList.add('enemy-attack');
+            playerCharacter.classList.add('player-hit');
+            
+            setTimeout(() => {
+                enemyCharacter.classList.remove('enemy-attack');
+                playerCharacter.classList.remove('player-hit');
+            }, 600);
+            
+            const damage = enemy.basicDamage * 1.5;
+            player.currentHealth -= damage;
+            addLog(`${enemy.name}的重攻击对${player.name}造成${damage}点伤害！`);
+            playerWasHit = true;
+        }
+    }
+    
+    // 如果没有被重攻击或绝招无效，处理轻攻击
+    if (playerAction === 'light-attack' && 
+        enemyAction !== 'heavy-attack' && 
+        enemyAction !== 'special') {
+        player.energy -= 1;
+        
+        // 检查是否被防御
+        if (enemyDefending) {
+            playerCharacter.classList.add('player-attack');
+            
+            setTimeout(() => {
+                playerCharacter.classList.remove('player-attack');
+            }, 600);
+            
+            addLog(`${player.name}的轻攻击被${enemy.name}防御了！`);
+        } else {
+            playerCharacter.classList.add('player-attack');
+            enemyCharacter.classList.add('enemy-hit');
+            
+            setTimeout(() => {
+                playerCharacter.classList.remove('player-attack');
+                enemyCharacter.classList.remove('enemy-hit');
+            }, 600);
+            
+            const damage = player.basicDamage;
+            enemy.currentHealth -= damage;
+            addLog(`${player.name}的轻攻击对${enemy.name}造成${damage}点伤害！`);
+            enemyWasHit = true;
+        }
+    }
+    
+    if (enemyAction === 'light-attack' && 
+        playerAction !== 'heavy-attack' && 
+        playerAction !== 'special') {
+        enemy.energy -= 1;
+        
+        // 检查是否被防御
+        if (playerDefending) {
+            enemyCharacter.classList.add('enemy-attack');
+            
+            setTimeout(() => {
+                enemyCharacter.classList.remove('enemy-attack');
+            }, 600);
+            
+            addLog(`${enemy.name}的轻攻击被${player.name}防御了！`);
+        } else {
+            enemyCharacter.classList.add('enemy-attack');
+            playerCharacter.classList.add('player-hit');
+            
+            setTimeout(() => {
+                enemyCharacter.classList.remove('enemy-attack');
+                playerCharacter.classList.remove('player-hit');
+            }, 600);
+            
+            const damage = enemy.basicDamage;
+            player.currentHealth -= damage;
+            addLog(`${enemy.name}的轻攻击对${player.name}造成${damage}点伤害！`);
+            playerWasHit = true;
+        }
+    }
+    
+    // 确保生命值不为负数
+    if (player.currentHealth < 0) player.currentHealth = 0;
+    if (enemy.currentHealth < 0) enemy.currentHealth = 0;
+    
+    // 受击反馈动画
+    if (playerWasHit) {
+        gameContainer.classList.add('shake');
+        screenFlash.classList.add('active');
+        setTimeout(() => {
+            gameContainer.classList.remove('shake');
+            screenFlash.classList.remove('active');
+        }, 400);
+    }
+    if (enemyWasHit) {
+        npcPortraitLayer.classList.add('shake');
+        setTimeout(() => {
+            npcPortraitLayer.classList.remove('shake');
+        }, 400);
+    }
+    
+    // 更新显示
+    updateDisplay();
+}
+
+// 继续游戏
+function continueGame() {
+    // 重置选择状态
+    gameState.player.selectedAction = null;
+    gameState.enemy.selectedAction = null;
+    gameState.waitingForConfirmation = false;
+    selectedActionText.textContent = '无';
+    
+    // 增加回合数
+    gameState.turnNumber++;
+    
+    // 更新显示
+    updateDisplay();
+    
+    // 继续游戏
+    addLog('准备下一回合...');
+    
+    // 更新回合指示
+    setTimeout(() => {
+        addLog('请选择你的行动...');
+    }, 1000);
+}
+
+// 检查游戏是否结束
+function checkGameOver() {
+    if (gameState.player.currentHealth <= 0) {
+        addLog(`${gameState.player.name}被击败了！游戏结束。`);
+        gameEnd(false);
+        return true;
+    } else if (gameState.enemy.currentHealth <= 0) {
+        addLog(`${gameState.enemy.name}被击败了！胜利！`);
+        gameEnd(true);
+        return true;
+    }
+    return false;
+}
+
+// //回合制系统集成更新 - 游戏结束
+function gameEnd(isVictory) {
+    // 禁用所有按钮
+    commandButtons.forEach(btn => {
+        btn.classList.add('disabled');
+    });
+    
+    // 获取角色名字
+    const playerName = gameState.player.name;
+    const enemyName = gameState.enemy.name;
+    
+    // 设置弹窗内容
+    if (isVictory) {
+        gameOverTitle.textContent = '战斗胜利';
+        gameOverMessage.textContent = `${playerName}战胜了${enemyName}！`;
+        addLog('恭喜你取得胜利！');
+    } else {
+        gameOverTitle.textContent = '战斗失败';
+        gameOverMessage.textContent = `${playerName}败给了${enemyName}！`;
+        addLog('游戏结束，再接再厉！');
+    }
+    
+    // 显示游戏结束弹窗
+    gameOverModal.style.display = 'flex';
+    
+    // 2秒后自动退出（如果是在iframe中）
+    if (window.parent !== window) {
+        setTimeout(() => {
+            exitBattle(isVictory ? 'victory' : 'defeat');
+        }, 2000);
+    }
+}
+
+// 键盘事件处理
+function handleKeyPress(event) { 
+    // 如果弹窗显示中，按ESC关闭 
+    if (confirmModal.style.display === 'flex' && event.key === 'Escape') { 
+        confirmModal.style.display = 'none'; gameState.player.selectedAction = null; 
+        updateDisplay(); return; 
+    }
+
+
+    // 如果弹窗显示中，按Enter确认
+    if (confirmModal.style.display === 'flex' && event.key === 'Enter') {
+        confirmModal.style.display = 'none';
+        confirmAction();
+        return;
+    }
+
+    // 如果不是玩家回合或正在等待确认，返回
+    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) return;
+
+    const key = event.key.toUpperCase();
+
+    switch (key) {
+        case 'Q':
+            selectAction('gather');
+            break;
+        case 'W':
+            selectAction('defend');
+            break;
+        case 'E':
+            selectAction('light-attack');
+            break;
+        case 'R':
+            selectAction('heavy-attack');
+            break;
+        case 'T':
+            selectAction('special');
+            break;
+        case 'Y':
+            selectAction('taunt');
+            break;
+    }
+}
+
+// 初始化游戏 
+// 动态设置4:3比例的函数 
+function setAspectRatio() { 
+
+    const gameContainer = document.querySelector('.game-container'); 
+    if (!gameContainer) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    // 计算4:3比例的尺寸
+    const aspectRatio = 4 / 3;
+    let gameWidth, gameHeight;
+
+    // 根据视口宽度计算高度（宽度的75%）
+    gameHeight = viewportWidth * 0.75;
+    gameWidth = viewportWidth;
+
+    // 如果计算出的高度超过视口高度，则根据高度反推宽度
+    if (gameHeight > viewportHeight) {
+        gameHeight = viewportHeight;
+        gameWidth = viewportHeight * aspectRatio;
+    }
+
+    // 确保不会超出边界
+    gameWidth = Math.min(gameWidth, viewportWidth);
+    gameHeight = Math.min(gameHeight, viewportHeight);
+
+    // 应用尺寸
+    gameContainer.style.width = `${gameWidth}px`;
+    gameContainer.style.height = `${gameHeight}px`;
+
+    console.log(`游戏容器尺寸: ${gameWidth}x${gameHeight}, 比例: ${(gameWidth/gameHeight).toFixed(2)}`);
+}
+
+// 窗口大小变化时重新设置比例 
+function handleResize() { 
+    setAspectRatio(); 
+}
+
+// 初始化尺寸设置 
+function initAspectRatio() { 
+    setAspectRatio();
+
+    // 监听窗口大小变化
+    window.addEventListener('resize', handleResize);
+    window.addEventListener('orientationchange', () => {
+        // 延迟执行，等待方向变化完成
+        setTimeout(setAspectRatio, 100);
+    });
+}
+
+// 修改原有的DOMContentLoaded事件监听 
+document.addEventListener('DOMContentLoaded', () => { 
+    // 首先设置4:3比例 
+    initAspectRatio();
+
+    // 设置主背景
+    const gameContainer = document.querySelector('.game-container');
+    if (gameContainer) {
+        gameContainer.style.backgroundImage = `url('${GAME_BG_URL}')`;
+    }
+
+    // 设置弹窗背景
+    const modalContents = document.querySelectorAll('.modal-content');
+    modalContents.forEach(modal => {
+        modal.style.background = `url('${MODAL_BG_URL}') center center / cover`;
+    });
+
+    // 初始化游戏
+    initGame();
+});
+
+    </script> 
+</body> 
+</html>
