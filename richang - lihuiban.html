@@ -1828,6 +1828,7 @@
         let currentBattleEvent = null;  // 保存当前战斗事件信息
         let currentBattleType = null;  // 'npc' 或 'event' 标识战斗类型
         let currentBattleReward = null;  // 保存战斗奖励信息
+        let currentBattleNpcName = null;  // 保存当前切磋的NPC名称
 
         // 计算剩余分配点数 - 修改为永不为负
         function calculateRemainingPoints() {
@@ -2045,14 +2046,21 @@
                 
                 if (currentBattleType === 'npc') {
                     // NPC切磋结果
-                    const resultText = result === 'victory' ? '获得胜利了' : '不幸失败了';
-                    showModal(`你和对手切磋，${resultText}`);
-                    
-                    // 如果胜利，增加声望
                     if (result === 'victory') {
+                        showModal(`你和${currentBattleNpcName}切磋，获得胜利了`);
+                        // 增加声望
                         playerStats.声望 += 1;
                         updateStatsDisplay();
+                    } else if (result === 'defeat') {
+                        showModal(`你和${currentBattleNpcName}切磋，不幸失败了`);
+                    } else if (result === 'quit') {
+                        // 退出按钮视为败北
+                        showModal(`你和${currentBattleNpcName}切磋，不幸失败了`);
                     }
+                    
+                    // 清空NPC名称
+                    currentBattleNpcName = null;
+                    
                 } else if (currentBattleType === 'event') {
                     // 战斗事件结果
                     if (result === 'victory') {
@@ -2065,7 +2073,8 @@
                         showModal(currentBattleEvent.事件描述 + 
                             `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！` + 
                             rewardMessage);
-                    } else if (result === 'defeat') {
+                    } else if (result === 'defeat' || result === 'quit') {
+                        // 退出按钮也视为败北
                         showModal(currentBattleEvent.事件描述 + 
                             `<br><br>你迎战${currentBattleEvent.敌方信息.名称}但是不幸败北。`);
                     }
@@ -2917,6 +2926,7 @@
             } else if (action === '切磋') {
                 const npc = npcs[npcId];
                 currentBattleType = 'npc';
+                currentBattleNpcName = npc.name;  // 保存NPC名称
                 
                 // 准备战斗数据
                 const battleData = {
