@@ -1143,7 +1143,107 @@
             }
         }
 
-        /* //回合制系统集成更新 - 战斗iframe弹窗 */
+        /* 战斗信息框样式 */
+        .battle-event-container {
+            background: rgba(44, 44, 44, 0.95);
+            border: 2px solid #ff4d6d;
+            border-radius: 10px;
+            padding: clamp(12px, 3vw, 20px);
+            margin-top: clamp(12px, 3vw, 20px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+            display: none;
+        }
+
+        .battle-event-container.show {
+            display: block;
+        }
+
+        .battle-event-title {
+            font-size: clamp(1rem, 2.5vw, 1.25rem);
+            font-weight: bold;
+            color: #ff4d6d;
+            margin-bottom: clamp(6px, 1.5vw, 10px);
+            text-align: center;
+        }
+
+        .battle-event-description {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #fff;
+            margin-bottom: clamp(12px, 3vw, 20px);
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        .battle-enemy-info {
+            background: rgba(0, 0, 0, 0.5);
+            padding: clamp(10px, 2vw, 15px);
+            border-radius: 8px;
+            margin-bottom: clamp(10px, 2vw, 15px);
+        }
+
+        .enemy-info-item {
+            font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+            color: #ccc;
+            margin: clamp(3px, 0.8vw, 5px) 0;
+        }
+
+        .enemy-info-label {
+            color: #ff4d6d;
+            font-weight: bold;
+        }
+
+        .battle-reward {
+            background: rgba(78, 205, 196, 0.2);
+            padding: clamp(8px, 2vw, 12px);
+            border-radius: 6px;
+            margin-bottom: clamp(12px, 3vw, 20px);
+            text-align: center;
+        }
+
+        .battle-reward-text {
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            color: #4ecdc4;
+        }
+
+        .battle-actions {
+            display: flex;
+            gap: clamp(10px, 2vw, 15px);
+            justify-content: center;
+        }
+
+        .battle-action-btn {
+            flex: 1;
+            padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+            border: 2px solid #ff4d6d;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: clamp(0.875rem, 2vw, 1rem);
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+
+        .battle-action-btn.fight {
+            background: #ff4d6d;
+            color: #fff;
+        }
+
+        .battle-action-btn.fight:hover {
+            background: #ff6b87;
+            transform: translateY(-2px);
+        }
+
+        .battle-action-btn.flee {
+            background: #2c2c2c;
+            color: #fff;
+            border-color: #666;
+        }
+
+        .battle-action-btn.flee:hover {
+            background: #3c3c3c;
+            transform: translateY(-2px);
+        }
+
+        /* 战斗iframe弹窗 */
         .battle-modal {
             display: none;
             position: fixed;
@@ -1407,6 +1507,32 @@
                 <div class="event-description" id="event-description"></div>
                 <div class="event-options" id="event-options"></div>
             </div>
+            <!-- 战斗事件容器 -->
+            <div class="battle-event-container" id="battle-event-container">
+                <div class="battle-event-title">战斗事件</div>
+                <div class="battle-event-description" id="battle-event-description"></div>
+                <div class="battle-enemy-info">
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">敌人：</span>
+                        <span id="enemy-name-display"></span>
+                    </div>
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">攻击力：</span>
+                        <span id="enemy-attack-display"></span>
+                    </div>
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">生命力：</span>
+                        <span id="enemy-health-display"></span>
+                    </div>
+                </div>
+                <div class="battle-reward">
+                    <div class="battle-reward-text" id="battle-reward-text"></div>
+                </div>
+                <div class="battle-actions">
+                    <button class="battle-action-btn fight" onclick="startBattle()">发起战斗</button>
+                    <button class="battle-action-btn flee" onclick="fleeBattle()">放弃战斗</button>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1427,7 +1553,7 @@
         </div>
     </div>
 
-    <!-- //回合制系统集成更新 - 战斗iframe弹窗 -->
+    <!-- 战斗iframe弹窗 -->
     <div id="battle-modal" class="battle-modal">
         <div class="battle-container">
             <iframe id="battle-iframe" class="battle-iframe"></iframe>
@@ -1552,29 +1678,27 @@
 
         // LLM返回的示例数据 - 修改主要NPC和好感变化
         const llmResponse = {
-            "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
-            "主要NPC": "姬姒",
-            "好感变化": "大幅上升",
-            "其他NPC": "无",
-            "随机事件": {
-                "事件类型": "选项事件",
-                "事件描述": "姬姒想要和你探讨昨天练武的心得",
-                "选项一": {
-                    "描述": "你欣然接受邀请，和姬姒一起讨论",
-                    "奖励": "悟性+3",
-                    "成功率": "25%"
-                },
-                "选项二": {
-                    "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
-                    "奖励": "根骨+1",
-                    "成功率": "60%"
-                },
-                "选项三": {
-                    "描述": "你婉拒姬姒，专注于眼前的工作",
-                    "奖励": "心性+2",
-                    "成功率": "40%"
-                }
+        "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
+        "剩余行动点": 3,
+        "当前地点": "男弟子房",
+        "主要NPC": "F",
+        "好感变化": "不变",
+        "其他NPC": "无",
+        "随机事件": {
+            "事件类型": "战斗事件",
+            "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+            "敌方信息": {
+            "名称": "吐蕃探子",
+            "属性": {
+                "攻击力": "低",
+                "生命力": "中"
+            },
+            "战斗报酬": {
+                "类型": "金钱",
+                "数值": 500
             }
+            }
+        }
         };
 
         // 保存当前故事正文
@@ -1701,6 +1825,9 @@
         };
 
         let currentRandomEvent = null;
+        let currentBattleEvent = null;  // 保存当前战斗事件信息
+        let currentBattleType = null;  // 'npc' 或 'event' 标识战斗类型
+        let currentBattleReward = null;  // 保存战斗奖励信息
 
         // 计算剩余分配点数 - 修改为永不为负
         function calculateRemainingPoints() {
@@ -1872,7 +1999,7 @@
             modal.style.display = 'block';
         }
 
-        // //回合制系统集成更新 - 显示战斗游戏
+        // 显示战斗游戏（统一的战斗接口）
         function showBattleGame(battleData) {
             const modal = document.getElementById('battle-modal');
             const iframe = document.getElementById('battle-iframe');
@@ -1888,16 +2015,14 @@
             });
             
             // 设置iframe的src
-
             const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
             iframe.src = gameUrl;
             
             modal.style.display = 'block';
         }
 
-        // 监听来自iframe的消息 - 新增
+        // 监听来自iframe的消息
         window.addEventListener('message', function(event) {
-            // 检查消息来源，确保安全
             if (event.data.type === 'blackjack-exit') {
                 // 更新金钱
                 playerStats.金钱 = event.data.money;
@@ -1910,25 +2035,48 @@
                 // 显示结果
                 showModal(`赌场游戏结束<br>当前金钱：${playerStats.金钱}`);
             }
-            // //回合制系统集成更新 - 检查是否是战斗系统的消息
             else if (event.data.type === 'battle-exit') {
                 // 关闭战斗弹窗
                 document.getElementById('battle-modal').style.display = 'none';
                 document.getElementById('battle-iframe').src = '';
                 
-                // 显示战斗结果
-                const result = event.data.result; // 'victory' 或 'defeat'
-                const resultText = result === 'victory' ? '战斗胜利！' : '战斗失败！';
+                // 获取战斗结果
+                const result = event.data.result; // 'victory', 'defeat', 'quit'
                 
-                showModal(`战斗结束<br>${resultText}`);
-                
-                // 可以根据结果更新其他数据，如好感度、属性等
-                if (result === 'victory') {
-                    // 例如：增加武学经验、声望等
-                    playerStats.武学 += 1;
-                    playerStats.声望 += 1;
-                    updateStatsDisplay();
+                if (currentBattleType === 'npc') {
+                    // NPC切磋结果
+                    const resultText = result === 'victory' ? '获得胜利了' : '不幸失败了';
+                    showModal(`你和对手切磋，${resultText}`);
+                    
+                    // 如果胜利，增加声望
+                    if (result === 'victory') {
+                        playerStats.声望 += 1;
+                        updateStatsDisplay();
+                    }
+                } else if (currentBattleType === 'event') {
+                    // 战斗事件结果
+                    if (result === 'victory') {
+                        let rewardMessage = '';
+                        // 应用战斗奖励
+                        if (currentBattleReward) {
+                            applyBattleReward(currentBattleReward);
+                            rewardMessage = `<br>获得奖励：${currentBattleReward.类型}+${currentBattleReward.数值}`;
+                        }
+                        showModal(currentBattleEvent.事件描述 + 
+                            `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！` + 
+                            rewardMessage);
+                    } else if (result === 'defeat') {
+                        showModal(currentBattleEvent.事件描述 + 
+                            `<br><br>你迎战${currentBattleEvent.敌方信息.名称}但是不幸败北。`);
+                    }
+                    
+                    // 隐藏战斗事件容器
+                    hideBattleEvent();
                 }
+                
+                // 重置战斗类型
+                currentBattleType = null;
+                currentBattleReward = null;
             }
         });
 
@@ -1947,12 +2095,20 @@
             }
         });
 
-        // //回合制系统集成更新 - 点击战斗弹窗背景关闭
+        // 点击战斗弹窗背景关闭
         document.getElementById('battle-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 if (confirm('确定要退出战斗吗？')) {
                     this.style.display = 'none';
                     document.getElementById('battle-iframe').src = '';
+                    
+                    // 如果是战斗事件，隐藏容器
+                    if (currentBattleType === 'event') {
+                        hideBattleEvent();
+                    }
+                    
+                    currentBattleType = null;
+                    currentBattleReward = null;
                 }
             }
         });
@@ -2287,7 +2443,7 @@
             document.getElementById('modal').style.display = 'none';
         }
 
-        // 修改parseLLMResponse函数，添加随机事件的解析
+        // 修改parseLLMResponse函数，处理战斗事件
         function parseLLMResponse(response) {
             if (response.正文) {
                 currentStoryText = response.正文;
@@ -2330,12 +2486,23 @@
                 }
             }
             
-            // 处理随机事件 - 新增
+            // 处理随机事件
             if (response.随机事件) {
                 currentRandomEvent = response.随机事件;
-                displayRandomEvent(currentRandomEvent);
+                
+                // 判断事件类型
+                if (currentRandomEvent.事件类型 === '战斗事件') {
+                    // 处理战斗事件
+                    displayBattleEvent(currentRandomEvent);
+                    hideRandomEvent();  // 隐藏普通随机事件容器
+                } else {
+                    // 处理普通随机事件
+                    displayRandomEvent(currentRandomEvent);
+                    hideBattleEvent();  // 隐藏战斗事件容器
+                }
             } else {
                 hideRandomEvent();
+                hideBattleEvent();
             }
         }
 
@@ -2432,6 +2599,106 @@
                     updateStatsDisplay();
                 }
             }
+        }
+
+        // 显示战斗事件
+        function displayBattleEvent(event) {
+            const container = document.getElementById('battle-event-container');
+            const description = document.getElementById('battle-event-description');
+            const enemyName = document.getElementById('enemy-name-display');
+            const enemyAttack = document.getElementById('enemy-attack-display');
+            const enemyHealth = document.getElementById('enemy-health-display');
+            const rewardText = document.getElementById('battle-reward-text');
+            
+            // 保存当前战斗事件
+            currentBattleEvent = event;
+            
+            // 设置事件描述
+            description.textContent = event.事件描述;
+            
+            // 设置敌人信息
+            if (event.敌方信息) {
+                enemyName.textContent = event.敌方信息.名称 || '未知敌人';
+                enemyAttack.textContent = event.敌方信息.属性?.攻击力 || '中';
+                enemyHealth.textContent = event.敌方信息.属性?.生命力 || '中';
+                
+                // 设置奖励信息
+                if (event.敌方信息.战斗报酬) {
+                    const reward = event.敌方信息.战斗报酬;
+                    rewardText.textContent = `战斗胜利奖励：${reward.类型}+${reward.数值}`;
+                    currentBattleReward = reward;
+                }
+            }
+            
+            // 显示容器
+            container.classList.add('show');
+        }
+
+        // 隐藏战斗事件
+        function hideBattleEvent() {
+            const container = document.getElementById('battle-event-container');
+            container.classList.remove('show');
+            currentBattleEvent = null;
+        }
+
+        // 发起战斗
+        function startBattle() {
+            if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
+            
+            const enemyInfo = currentBattleEvent.敌方信息;
+            currentBattleType = 'event';
+            
+            // 准备战斗数据
+            const battleData = {
+                player: {
+                    name: '小虾米',
+                    attack: combatStats.攻击力,
+                    health: combatStats.生命值
+                },
+                enemy: {
+                    name: enemyInfo.名称,
+                    maxHealth: enemyInfo.属性?.生命力 || '中',
+                    basicDamage: enemyInfo.属性?.攻击力 || '中'
+                }
+            };
+            
+            // 显示战斗iframe
+            showBattleGame(battleData);
+        }
+
+        // 放弃战斗
+        function fleeBattle() {
+            if (!currentBattleEvent) return;
+            
+            const resultMessage = currentBattleEvent.事件描述 + '<br><br>你选择避开了战斗';
+            
+            // 隐藏战斗事件
+            hideBattleEvent();
+            
+            // 显示结果
+            showModal(resultMessage);
+        }
+
+        // 应用战斗奖励
+        function applyBattleReward(reward) {
+            if (!reward) return;
+            
+            switch (reward.类型) {
+                case '金钱':
+                    playerStats.金钱 += reward.数值;
+                    break;
+                case '声望':
+                    playerStats.声望 += reward.数值;
+                    break;
+                case '武学':
+                    playerStats.武学 += reward.数值;
+                    break;
+                case '学识':
+                    playerStats.学识 += reward.数值;
+                    break;
+            }
+            
+            updateStatsDisplay();
         }
 
         // 更新故事文本（保持原有正文不被覆盖）
@@ -2636,7 +2903,7 @@
             }
         }
 
-        // //回合制系统集成更新 - NPC互动（修改后）
+        // 修改npcAction函数
         function npcAction(npcId, action) {
             // 先关闭信息弹窗
             const popup = document.getElementById('npc-info-popup');
@@ -2649,17 +2916,18 @@
                 showInteractionInput(npcId, location);
             } else if (action === '切磋') {
                 const npc = npcs[npcId];
+                currentBattleType = 'npc';
                 
                 // 准备战斗数据
                 const battleData = {
                     player: {
-                        name: '小虾米', // 可以从变量获取主角名字
+                        name: '小虾米',
                         attack: combatStats.攻击力,
                         health: combatStats.生命值
                     },
                     enemy: {
                         name: npc.name,
-                        maxHealth: '中', // 可以根据不同NPC设置不同难度
+                        maxHealth: '中',  // NPC统一设置为中等难度
                         basicDamage: '中'
                     }
                 };
@@ -2708,6 +2976,7 @@
                 npcsHtml = '<div class="location-info-npcs">在场NPC：';
                 npcsAtLocation.forEach(npc => {
                     npcsHtml += `<div class="location-info-npc-item">• ${npc.name}</div>`;
+                
                 });
                 npcsHtml += '</div>';
             } else {
