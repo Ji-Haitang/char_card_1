@@ -771,7 +771,7 @@ body {
                 <div class="modal-body" id="game-over-message">
                     游戏结束信息
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer" id="game-over-footer">
                     <button id="restart-game">重新开始</button>
                 </div>
             </div>
@@ -1691,16 +1691,29 @@ function gameEnd(isVictory) {
         addLog('游戏结束，再接再厉！');
     }
     
-    // 显示游戏结束弹窗
-    gameOverModal.style.display = 'flex';
+    // 检查是否在iframe中运行
+    const isInIframe = window.parent !== window;
     
-    // 2秒后自动退出（如果是在iframe中）
-    if (window.parent !== window) {
+    if (isInIframe) {
+        // 在iframe中，隐藏重新开始按钮和整个footer
+        document.getElementById('game-over-footer').style.display = 'none';
+        
+        // 显示游戏结束弹窗
+        gameOverModal.style.display = 'flex';
+        
+        // 3秒后自动退出（稍微延长一点时间让玩家看到结果）
         setTimeout(() => {
             exitBattle(isVictory ? 'victory' : 'defeat');
-        }, 2000);
+        }, 3000);
+    } else {
+        // 不在iframe中，显示重新开始按钮
+        document.getElementById('game-over-footer').style.display = 'flex';
+        
+        // 显示游戏结束弹窗
+        gameOverModal.style.display = 'flex';
     }
 }
+
 
 // 键盘事件处理
 function handleKeyPress(event) { 
