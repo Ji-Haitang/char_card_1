@@ -38,23 +38,29 @@ body {
     background-repeat: no-repeat;
 }
 
-/* //回合制系统集成更新 - 添加退出按钮样式 */
+/* //回合制系统集成更新 - 修改退出按钮样式到右下角 */
 .exit-battle-btn {
     position: absolute;
-    top: 10px;
-    right: 10px;
-    padding: 8px 15px;
-    background: #ff4d6d;
-    color: white;
-    border: none;
+    bottom: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background: #1a1a1a;
+    color: #ffffff;
+    border: 2px solid #333;
     border-radius: 5px;
     cursor: pointer;
     font-size: 14px;
     z-index: 100;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
 .exit-battle-btn:hover {
-    background: #ff6b87;
+    background: #2a2a2a;
+    border-color: #555;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
 .battle-scene {
