@@ -745,11 +745,12 @@
             background: #fff;
             border: 2px solid #2c2c2c;
             border-radius: 10px;
-            padding: clamp(10px, 2vw, 20px);
+            padding: 0; /* 改为0，因为立绘需要紧贴上边缘 */
             text-align: center;
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
             transition: all 0.3s ease;
             position: relative;
+            overflow: hidden;
         }
 
         .relationship-card:hover {
@@ -757,18 +758,24 @@
             box-shadow: 0 8px 20px rgba(0,0,0,0.3);
         }
 
-        .relationship-avatar {
-            width: clamp(40px, 8vw, 60px);
-            height: clamp(40px, 8vw, 60px);
-            background: #2c2c2c;
-            color: #fff;
-            border-radius: 50%;
-            margin: 0 auto clamp(8px, 1.5vw, 10px);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: clamp(1rem, 2.5vw, 1.5rem);
-            font-weight: bold;
+        .relationship-info {
+            padding: clamp(10px, 2vw, 15px);
+        }
+
+        .relationship-portrait {
+            width: 100%;
+            height: auto;
+            position: relative;
+            overflow: hidden;
+            margin-bottom: clamp(5px, 1vw, 8px);
+        }
+
+        .relationship-portrait img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+            object-position: top center;
         }
 
         .relationship-name {
@@ -1003,18 +1010,17 @@
             }
             
             .relationship-card {
-                padding: 8px;
+                padding: 0; /* 确保为0 */
+            }
+            
+            .relationship-info {
+                padding: 5px;
             }
             
             .relationship-name {
                 font-size: 0.7rem;
             }
             
-            .relationship-avatar {
-                width: 35px;
-                height: 35px;
-                font-size: 0.9rem;
-            }
         }
 
         /* 随机事件框样式 - 响应式优化 */
@@ -2506,12 +2512,16 @@
                 const card = document.createElement('div');
                 card.className = 'relationship-card';
                 card.innerHTML = `
-                    <div class="relationship-avatar">${npc.avatar}</div>
-                    <div class="relationship-name">${npc.name}</div>
-                    <div class="relationship-bar">
-                        <div class="relationship-fill" style="width: ${favorability}%"></div>
+                    <div class="relationship-portrait">
+                        <img src="${npcPortraits[npcId]}" alt="${npc.name}">
                     </div>
-                    <div class="relationship-value">好感度: ${favorability}</div>
+                    <div class="relationship-info">
+                        <div class="relationship-name">${npc.name}</div>
+                        <div class="relationship-bar">
+                            <div class="relationship-fill" style="width: ${favorability}%"></div>
+                        </div>
+                        <div class="relationship-value">好感度: ${favorability}</div>
+                    </div>
                 `;
                 
                 // 添加悬停事件
