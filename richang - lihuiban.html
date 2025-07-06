@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>江湖门派 - 水墨风</title>
+    <title>类脑群侠传</title>
     <style>
         * {
             margin: 0;
@@ -85,12 +85,94 @@
 
         /* 地图场景 */
         #map-scene {
-            background-image: url('https://files.catbox.moe/3ij753.png');
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.png');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
             background-color: #e8e8e8;
         }
+
+        /* 演武场场景 */
+        #yanwuchang-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 藏经阁场景 */
+        #cangjingge-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 伙房场景 */
+        #huofang-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 后山场景 */
+        #houshan-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 议事厅场景 */
+        #yishiting-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 铁匠铺场景 */
+        #tiejiangpu-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 男弟子房场景 */
+        #nandizi-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 女弟子房场景 */
+        #nvdizi-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
+        /* 山门场景 */
+        #shanmen-scene {
+            background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.png');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-color: #f8f8f8;
+        }
+
 
         /* 状态显示 - 响应式改进 */
         .status-display {
@@ -333,10 +415,17 @@
             transform: translateX(-50%);
             font-size: clamp(1.5rem, 4vw, 2.25rem);
             font-weight: bold;
-            color: #2c2c2c;
-            text-shadow: 3px 3px 6px rgba(0,0,0,0.2);
+            color: #000000;
+            text-shadow: 
+                -2px -2px 0 #fff,
+                2px -2px 0 #fff,
+                -2px 2px 0 #fff,
+                2px 2px 0 #fff,
+                -1px -1px 0 #fff,
+                1px -1px 0 #fff,
+                -1px 1px 0 #fff,
+                1px 1px 0 #fff;
             letter-spacing: clamp(5px, 1vw, 10px);
-            opacity: 0.8;
         }
 
         /* NPC立绘容器 */
@@ -1596,13 +1685,13 @@
 
         // NPC立绘URL映射（目前全部使用占位图片）
         const npcPortraits = {
-            A: 'https://files.catbox.moe/u1d2cx.png',
-            B: 'https://files.catbox.moe/u1d2cx.png',
-            C: 'https://files.catbox.moe/u1d2cx.png',
-            D: 'https://files.catbox.moe/u1d2cx.png',
-            E: 'https://files.catbox.moe/u1d2cx.png',
-            F: 'https://files.catbox.moe/u1d2cx.png',
-            G: 'https://files.catbox.moe/u1d2cx.png'
+            A: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.png',
+            B: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.png',
+            C: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.png',
+            D: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.png',
+            E: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png',
+            F: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施菖蒲.png',
+            G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png'
         };
 
         // 主角天赋属性（1-100）
@@ -1649,7 +1738,7 @@
             C: 40,    // 钱塘君
             D: 55,    // 萧白瑚
             E: 65,    // 姬姒
-            F: 30,     // 木青鸾
+            F: 30,     // 施菖蒲
             G: 45      // 呼延显
         };
 
@@ -1694,30 +1783,54 @@
         };
 
         // LLM返回的示例数据 - 修改主要NPC和好感变化
+        // const llmResponse = {
+        //     "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
+        //     "剩余行动点": 3,
+        //     "当前地点": "男弟子房",
+        //     "主要NPC": "姬姒",
+        //     "好感变化": "大幅上升",
+        //     "其他NPC": "无",
+        //     "随机事件": {
+        //         "事件类型": "选项事件",
+        //         "事件描述": "姬姒想要和你探讨昨天练武的心得",
+        //         "选项一": {
+        //             "描述": "你欣然接受邀请，和姬姒一起讨论",
+        //             "奖励": "悟性+3",
+        //             "成功率": "25%"
+        //         },
+        //         "选项二": {
+        //             "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
+        //             "奖励": "根骨+1",
+        //             "成功率": "60%"
+        //         },
+        //         "选项三": {
+        //             "描述": "你婉拒姬姒，专注于眼前的工作",
+        //             "奖励": "心性+2",
+        //             "成功率": "40%"
+        //         }
+        //     }
+        // };
+
         const llmResponse = {
             "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
             "剩余行动点": 3,
             "当前地点": "男弟子房",
-            "主要NPC": "姬姒",
-            "好感变化": "大幅上升",
+            "主要NPC": "F",
+            "好感变化": "不变",
             "其他NPC": "无",
             "随机事件": {
-                "事件类型": "选项事件",
-                "事件描述": "姬姒想要和你探讨昨天练武的心得",
-                "选项一": {
-                    "描述": "你欣然接受邀请，和姬姒一起讨论",
-                    "奖励": "悟性+3",
-                    "成功率": "25%"
+                "事件类型": "战斗事件",
+                "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+                "敌方信息": {
+                "名称": "吐蕃探子",
+                "属性": {
+                    "攻击力": "低",
+                    "生命力": "中"
                 },
-                "选项二": {
-                    "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
-                    "奖励": "根骨+1",
-                    "成功率": "60%"
-                },
-                "选项三": {
-                    "描述": "你婉拒姬姒，专注于眼前的工作",
-                    "奖励": "心性+2",
-                    "成功率": "40%"
+                "战斗报酬": {
+                    "类型": "金钱",
+                    "数值": 500
+                }
                 }
             }
         };
@@ -1753,7 +1866,7 @@
                 avatar: "E"
             },
             F: {
-                name: "木青鸾",
+                name: "施菖蒲",
                 description: "天山派弟子，学识卓绝，文采斐然",
                 avatar: "F"
             },
@@ -1771,7 +1884,7 @@
             "钱塘君": "C",
             "萧白瑚": "D",
             "姬姒": "E",
-            "木青鸾": "F",
+            "施菖蒲": "F",
             "呼延显": "G"
         };
 
