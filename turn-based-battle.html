@@ -807,59 +807,66 @@ name: ${urlParams.get('enemyName') || '姬姒'}
 `;
 
 // 游戏主背景和弹窗背景图片链接
-const GAME_BG_URL = 'https://files.catbox.moe/4qg2k3.png';
+const GAME_BG_URL = urlParams.get('backgroundUrl') || 'https://files.catbox.moe/4qg2k3.png';
 const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
 
+
 // 生命值和伤害等级映射
-const healthMap = { '极低': 25,'低': 50, '中': 80, '高': 100, '极高': 150 };
-const damageMap = { '极低': 10,'低': 20, '中': 30, '高': 40, '极高': 50 };
+const healthMap = { '极低': 25,'低': 50, '中':100, '高': 175, '极高': 275 };
+const damageMap = { '极低': 10,'低': 20, '中': 40, '高': 70, '极高': 110 };
 const styles = ['风', '火', '林', '山'];
 
 // 特殊NPC信息
 const commonNPCs = {
-    '姬姒': {
-        name: '姬姒', // 名称
-        maxHealth: 100, // 最大生命值
-        basicDamage: 30, // 轻攻击基础伤害
-        style: '风', // 风格
-        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
-    },
-    '萧白瑚': {
-        name: '萧白瑚',
-        maxHealth: 80,
-        basicDamage: 50,
+    '破阵子': {
+        name: '破阵子',
+        maxHealth: 200,
+        basicDamage: 140,
         style: '火',
-        portrait: 'https://files.catbox.moe/u1d2cx.png'
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.png'
     },
     '洞庭君': {
-        name: '洞庭君', // 名称
-        maxHealth: 100, // 最大生命值
-        basicDamage: 30, // 轻攻击基础伤害
-        style: '风', // 风格
-        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
+        name: '洞庭君',
+        maxHealth: 275,
+        basicDamage: 100,
+        style: '林',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.png'
     },
     '钱塘君': {
         name: '钱塘君',
-        maxHealth: 80,
-        basicDamage: 50,
+        maxHealth: 150,
+        basicDamage: 100,
         style: '火',
-        portrait: 'https://files.catbox.moe/u1d2cx.png'
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.png'
     },
-    '破阵子': {
-        name: '破阵子', // 名称
-        maxHealth: 100, // 最大生命值
-        basicDamage: 30, // 轻攻击基础伤害
-        style: '风', // 风格
-        portrait: 'https://files.catbox.moe/u1d2cx.png' // 立绘链接
+    '萧白瑚': {
+        name: '萧白瑚',
+        maxHealth: 125,
+        basicDamage: 60,
+        style: '风',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.png'
     },
-    '木青鸾': {
-        name: '木青鸾',
-        maxHealth: 80,
+    '姬姒': {
+        name: '姬姒',
+        maxHealth: 350,
+        basicDamage: 70,
+        style: '山',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png'
+    },
+    '施菖蒲': {
+        name: '施菖蒲',
+        maxHealth: 200,
         basicDamage: 50,
-        style: '火',
-        portrait: 'https://files.catbox.moe/u1d2cx.png'
+        style: '山',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施菖蒲.png'
     },
-    // 可继续添加更多NPC
+    '呼延显': {
+        name: '呼延显',
+        maxHealth: 200,
+        basicDamage: 100,
+        style: '林',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png'
+    }
 };
 
 // 解析敌方信息的函数

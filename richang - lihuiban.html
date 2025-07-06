@@ -1700,6 +1700,20 @@
             G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png'
         };
 
+        // 地点背景图映射
+        const locationBackgrounds = {
+            yanwuchang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.png',
+            cangjingge: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.png',
+            huofang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.png',
+            houshan: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.png',
+            yishiting: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.png',
+            tiejiangpu: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.png',
+            nandizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.png',
+            nvdizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.png',
+            shanmen: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.png',
+            tianshanpai: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.png'
+        };
+
         // 主角天赋属性（1-100）
         let playerTalents = {
             根骨: 75,    // 影响体力和内力
@@ -2163,6 +2177,15 @@
             const modal = document.getElementById('battle-modal');
             const iframe = document.getElementById('battle-iframe');
             
+            // 获取当前场景的背景图
+            const activeScene = document.querySelector('.scene.active');
+            let backgroundUrl = locationBackgrounds.tianshanpai; // 默认背景
+            
+            if (activeScene && activeScene.id !== 'map-scene') {
+                const sceneName = activeScene.id.replace('-scene', '');
+                backgroundUrl = locationBackgrounds[sceneName] || locationBackgrounds.tianshanpai;
+            }
+            
             // 构建URL参数
             const params = new URLSearchParams({
                 playerName: battleData.player.name,
@@ -2170,11 +2193,12 @@
                 playerHealth: battleData.player.health,
                 enemyName: battleData.enemy.name,
                 enemyMaxHealth: battleData.enemy.maxHealth,
-                enemyBasicDamage: battleData.enemy.basicDamage
+                enemyBasicDamage: battleData.enemy.basicDamage,
+                backgroundUrl: backgroundUrl  // 添加背景图参数
             });
             
             // 设置iframe的src
-            const gameUrl = `turn-based-battle.html?${params.toString()}`;
+            const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
             iframe.src = gameUrl;
             
             modal.style.display = 'block';
