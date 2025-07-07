@@ -1668,74 +1668,154 @@
     </div>
 
     <script>
-        //下面这里是SillyTavern的变量区
+        // //下面这里是SillyTavern的变量区
+        // // 用户当前所在位置
+        // let userLocation = 'nandizi';
 
-        // 用户当前所在位置
-        let userLocation = 'nandizi';
+        // // 主角天赋属性（1-100）
+        // let playerTalents = {
+        //     根骨: 25,    // 影响体力和内力
+        //     悟性: 25,    // 影响学习速度
+        //     心性: 25,    // 影响心理素质
+        //     魅力: 25     // 影响社交能力
+        // };
 
-        // 主角天赋属性（1-100）
-        let playerTalents = {
-            根骨: 25,    // 影响体力和内力
-            悟性: 25,    // 影响学习速度
-            心性: 25,    // 影响心理素质
-            魅力: 25     // 影响社交能力
+        // // 主角数值属性
+        // let playerStats = {
+        //     武学: 50,    // 武功修为
+        //     学识: 35,    // 知识水平
+        //     声望: 20,    // 江湖声望
+        //     金钱: 500    // 银两
+        // };
+
+        // // 战斗数值
+        // let combatStats = {
+        //     攻击力: 20,
+        //     生命值: 50
+        // };
+
+        // // 主角心情 (0-100)
+        // let playerMood = 100;
+
+        // // 武功学习情况 - 使用对象方式存储
+        // let martialArts = {
+        //     太白仙迹: 0,      // 已学习
+        //     岱宗如何: 0,      // 未学习
+        //     掠风窃尘: 0,      // 已学习
+        //     流云飞袖: 0,      // 未学习
+        //     惊鸿照影: 0,      // 已学习
+        //     踏雪无痕: 0,      // 未学习
+        //     醉卧沙场: 0,      // 未学习
+        //     万剑归宗: 0       // 未学习
+        // };
+
+        // // NPC好感度（1-100）
+        // let npcFavorability = {
+        //     A: 50,    // 破阵子
+        //     B: 60,    // 洞庭君
+        //     C: 40,    // 钱塘君
+        //     D: 55,    // 萧白瑚
+        //     E: 65,    // 姬姒
+        //     F: 30,     // 施菖蒲
+        //     G: 45      // 呼延显
+        // };
+
+        // // 当前行动点（1-5）
+        // let actionPoints = 3;
+
+        // // 当前周数（1-9999）
+        // let currentWeek = 1;
+
+        // // 每个NPC当前所在的位置
+        // let npcLocationA = 'none';
+        // let npcLocationB = 'none';
+        // let npcLocationC = 'none';
+        // let npcLocationD = 'none';
+        // let npcLocationE = 'none';
+        // let npcLocationF = 'none';
+        // let npcLocationG = 'none';
+        // //SillyTavern的变量区结束
+
+        /* ----------  NEW  SillyTavern 变量自动检测 / 读写 ---------- */
+        const defaultGameData = {
+            userLocation: "nandizi",
+            playerTalents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
+            playerStats:   { "武学": 50, "学识": 35, "声望": 20, "金钱": 500 },
+            combatStats:   { "攻击力": 20, "生命值": 50 },
+            playerMood: 100,
+            martialArts: {
+                "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
+                "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
+            },
+            npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0 },
+            actionPoints: 3,
+            currentWeek: 1,
+            npcLocations: { "A":"none","B":"none","C":"none","D":"none","E":"none","F":"none","G":"none" }
         };
 
-        // 主角数值属性
-        let playerStats = {
-            武学: 50,    // 武功修为
-            学识: 35,    // 知识水平
-            声望: 20,    // 江湖声望
-            金钱: 100    // 银两
-        };
+        let gameData = structuredClone(defaultGameData);   // 全量对象
+        let currentNpcLocations = {}; // 当前NPC位置的集合
+        /* 把 gameData → 零散变量 ------------------------------------ */
+        function syncVariablesFromGameData(){
+            ({ userLocation,
+            playerTalents,
+            playerStats,
+            combatStats,
+            playerMood,
+            martialArts,
+            npcFavorability,
+            actionPoints,
+            currentWeek,
+            npcLocations: currentNpcLocations } = gameData);
 
-        // 战斗数值
-        let combatStats = {
-            攻击力: 20,
-            生命值: 50
-        };
+            // 同步独立 NPC 位置变量，供旧代码使用
+            npcLocationA = currentNpcLocations.A;
+            npcLocationB = currentNpcLocations.B;
+            npcLocationC = currentNpcLocations.C;
+            npcLocationD = currentNpcLocations.D;
+            npcLocationE = currentNpcLocations.E;
+            npcLocationF = currentNpcLocations.F;
+            npcLocationG = currentNpcLocations.G;
+        }
 
-        // 主角心情 (0-100)
-        let playerMood = 100;
+        /* 把零散变量 → gameData ------------------------------------ */
+        function syncGameDataFromVariables(){
+            gameData.userLocation     = userLocation;
+            gameData.playerTalents    = playerTalents;
+            gameData.playerStats      = playerStats;
+            gameData.combatStats      = combatStats;
+            gameData.playerMood       = playerMood;
+            gameData.martialArts      = martialArts;
+            gameData.npcFavorability  = npcFavorability;
+            gameData.actionPoints     = actionPoints;
+            gameData.currentWeek      = currentWeek;
+            gameData.npcLocations     = currentNpcLocations;
+        }
 
-        // 武功学习情况 - 使用对象方式存储
-        let martialArts = {
-            太白仙迹: 0,      // 已学习
-            岱宗如何: 0,      // 未学习
-            掠风窃尘: 0,      // 已学习
-            流云飞袖: 0,      // 未学习
-            惊鸿照影: 0,      // 已学习
-            踏雪无痕: 0,      // 未学习
-            醉卧沙场: 0,      // 未学习
-            万剑归宗: 0       // 未学习
-        };
+        /* 读取或初始化 --------------------------------------------- */
+        async function loadOrInitGameData(){
+            if (typeof STscript !== 'function'){           // 离线预览
+                syncVariablesFromGameData();
+                return;
+            }
+            const probe = await STscript('/getvar gameData');
+            if (!probe){                                   // 未初始化 → 写默认
+                await STscript('/setvar key=gameData ' + JSON.stringify(defaultGameData) +
+                            ' | /echo ✅ 游戏数据初始化完成！');
+                gameData = structuredClone(defaultGameData);
+            }else{
+                gameData = await STscript('/getvar gameData');      
+            }
+            syncVariablesFromGameData();
+        }
 
-        // NPC好感度（1-100）
-        let npcFavorability = {
-            A: 50,    // 破阵子
-            B: 60,    // 洞庭君
-            C: 40,    // 钱塘君
-            D: 55,    // 萧白瑚
-            E: 65,    // 姬姒
-            F: 30,     // 施菖蒲
-            G: 45      // 呼延显
-        };
-
-        // 当前行动点（1-5）
-        let actionPoints = 3;
-
-        // 当前周数（1-9999）
-        let currentWeek = 1;
-
-        // 每个NPC当前所在的位置
-        let npcLocationA = 'none';
-        let npcLocationB = 'none';
-        let npcLocationC = 'none';
-        let npcLocationD = 'none';
-        let npcLocationE = 'none';
-        let npcLocationF = 'none';
-        let npcLocationG = 'none';
-        //SillyTavern的变量区结束
+        /* 保存 ------------------------------------------------------ */
+        async function saveGameData(){
+            if (typeof STscript !== 'function') return;
+            syncGameDataFromVariables();
+            await STscript('/setvar key=gameData ' + JSON.stringify(gameData));
+        }
+        /* ----------  END NEW  -------------------------------------- */
 
         // 地点名称映射
         const locationNames = {
@@ -1773,17 +1853,6 @@
             nvdizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.png',
             shanmen: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.png',
             tianshanpai: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.png'
-        };
-
-        // 当前NPC位置的集合
-        const currentNpcLocations = {
-            A: npcLocationA,
-            B: npcLocationB,
-            C: npcLocationC,
-            D: npcLocationD,
-            E: npcLocationE,
-            F: npcLocationF,
-            G: npcLocationG
         };
 
         // 互动配置
@@ -2010,7 +2079,7 @@
         }
 
         // 执行互动 - 修改数值变化逻辑，特别是声望的变化范围
-        function performAction(action, location) {
+        async function performAction(action, location) {
             // 特殊处理秘密赌场
             if (action === '秘密赌场') {
                 // 检查行动点
@@ -2157,7 +2226,7 @@
             refreshNpcLocations();
             
             // 显示结果
-            showModal(resultMessage);
+            await handleMessageOutput(resultMessage);
         }
 
         // 显示21点游戏 - 新增
@@ -2206,7 +2275,7 @@
         }
 
         // 监听来自iframe的消息
-        window.addEventListener('message', function(event) {
+        window.addEventListener('message', async function(event) {
             if (event.data.type === 'blackjack-exit') {
                 // 更新金钱
                 playerStats.金钱 = event.data.money;
@@ -2230,15 +2299,15 @@
                 if (currentBattleType === 'npc') {
                     // NPC切磋结果
                     if (result === 'victory') {
-                        showModal(`你和${currentBattleNpcName}切磋，获得胜利了`);
+                        await handleMessageOutput(`你和${currentBattleNpcName}切磋，获得胜利了`);
                         // 增加声望
                         playerStats.声望 += 1;
                         updateStatsDisplay();
                     } else if (result === 'defeat') {
-                        showModal(`你和${currentBattleNpcName}切磋，不幸失败了`);
+                        await handleMessageOutput(`你和${currentBattleNpcName}切磋，不幸失败了`);
                     } else if (result === 'quit') {
                         // 退出按钮视为败北
-                        showModal(`你和${currentBattleNpcName}切磋，不幸失败了`);
+                        await handleMessageOutput(`你和${currentBattleNpcName}切磋，不幸失败了`);
                     }
                     
                     // 清空NPC名称
@@ -2253,12 +2322,12 @@
                             applyBattleReward(currentBattleReward);
                             rewardMessage = `<br>获得奖励：${currentBattleReward.类型}+${currentBattleReward.数值}`;
                         }
-                        showModal(currentBattleEvent.事件描述 + 
+                        await handleMessageOutput(currentBattleEvent.事件描述 + 
                             `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！` + 
                             rewardMessage);
                     } else if (result === 'defeat' || result === 'quit') {
                         // 退出按钮也视为败北
-                        showModal(currentBattleEvent.事件描述 + 
+                        await handleMessageOutput(currentBattleEvent.事件描述 + 
                             `<br><br>你迎战${currentBattleEvent.敌方信息.名称}但是不幸败北。`);
                     }
                     
@@ -2336,7 +2405,7 @@
         }
 
         // 发送互动内容
-        function sendInteraction() {
+        async function sendInteraction() {
             const interactionContent = document.getElementById('interaction-input').value.trim();
             
             if (!interactionContent) {
@@ -2354,7 +2423,7 @@
             // 获取在场NPC
             const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
             
-            // 构建结果信息，使用自动换行样式
+            // 构建结果信息
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `地点：${locationNames[location]}<br>` +
                 `行动：互动<br>` +
@@ -2365,14 +2434,12 @@
             // 关闭当前弹窗
             closeModal();
             
-            // 延迟显示结果，避免弹窗冲突
-            setTimeout(() => {
-                showModal(resultMessage);
-            }, 100);
-            
             // 清空临时存储
             currentInteractionNpc = null;
             currentInteractionLocation = null;
+            
+            // 使用新的消息处理函数
+            await handleMessageOutput(resultMessage);
         }
 
         // 计算并更新日期显示
@@ -2610,15 +2677,13 @@
             showConfirmModal(
                 '确认跳过',
                 '确定要跳过这一周吗？',
-                () => {
+                async () => {
                     currentWeek++;
                     actionPoints = 3; // 重置行动点
                     updateAllDisplays();
                     refreshNpcLocations();
-                    // 延迟显示结果，避免弹窗冲突
-                    setTimeout(() => {
-                        showModal('新的一周开始了<br>当前第' + currentWeek + '周<br>行动点已重置为3');
-                    }, 100);
+                    // 使用新的消息处理函数
+                    await handleMessageOutput('新的一周开始了<br>当前第' + currentWeek + '周<br>行动点已重置为3');
                 }
             );
         }
@@ -2637,6 +2702,33 @@
         // 关闭弹窗
         function closeModal() {
             document.getElementById('modal').style.display = 'none';
+        }
+
+        // 判断是否在酒馆环境并处理消息发送,触发新楼层回复
+        async function handleMessageOutput(message) {
+            // 先保存数据
+            await saveGameData();
+            
+            // 判断是否在酒馆环境
+            if (typeof STscript === 'function') {
+                // 在酒馆环境中，将消息作为用户输入发送
+                try {
+                    // 将消息设置到输入框
+                    await STscript(`/setinput ${message}`);
+                    // 触发发送按钮
+                    await STscript('/trigger');
+                    console.log('Message sent in SillyTavern:', message);
+                } catch (error) {
+                    console.error('Error sending message in SillyTavern:', error);
+                    // 如果发送失败，降级到弹窗显示
+                    const message_error = `发生失败降级为弹窗<br>` + message;
+                    showModal(message_error);
+                }
+            } else {
+                // 非酒馆环境，保持原有的弹窗显示
+                const message_notST = `非酒馆环境以弹窗显示<br>` + message;
+                showModal(message_notST);
+            }
         }
 
         // 修改parseLLMResponse函数，处理战斗事件
@@ -2743,7 +2835,7 @@
         }
 
         // 处理事件选项 - 新增
-        function handleEventOption(optionIndex, option) {
+        async function handleEventOption(optionIndex, option) {
             if (!currentRandomEvent) return;
             
             // 计算成功率
@@ -2763,8 +2855,8 @@
             // 隐藏随机事件
             hideRandomEvent();
             
-            // 显示结果弹窗
-            showModal(resultMessage);
+            // 使用新的消息处理函数
+            await handleMessageOutput(resultMessage);
         }
 
         // 应用事件奖励 - 新增
@@ -2847,7 +2939,7 @@
             // 准备战斗数据
             const battleData = {
                 player: {
-                    name: '小虾米',
+                    name: '你',
                     attack: combatStats.攻击力,
                     health: combatStats.生命值
                 },
@@ -2863,7 +2955,7 @@
         }
 
         // 放弃战斗
-        function fleeBattle() {
+        async function fleeBattle() {
             if (!currentBattleEvent) return;
             
             const resultMessage = currentBattleEvent.事件描述 + '<br><br>你选择避开了战斗';
@@ -2871,8 +2963,8 @@
             // 隐藏战斗事件
             hideBattleEvent();
             
-            // 显示结果
-            showModal(resultMessage);
+            // 使用新的消息处理函数
+            await handleMessageOutput(resultMessage);
         }
 
         // 应用战斗奖励
@@ -3322,7 +3414,7 @@
         });
 
         // 发送自由行动
-        function sendFreeAction() {
+        async function sendFreeAction() {
             const inputElement = document.getElementById('free-action-input');
             const actionContent = inputElement.value.trim();
             
@@ -3368,7 +3460,7 @@
             inputElement.style.height = 'auto';
             
             // 显示结果弹窗
-            showModal(resultMessage);
+            await handleMessageOutput(resultMessage);
         }
 
         // 支持Enter键发送（Shift+Enter换行）
@@ -3380,21 +3472,18 @@
         });
 
         // 初始化
-        window.onload = function() {
+        window.onload = async function(){
+            await loadOrInitGameData();          //  NEW 先保证数据就绪
+
             updateAllDisplays();
             setupLocationEvents();
             refreshNpcLocations();
-            
-            // 根据userLocation显示对应场景
-            if (userLocation === 'tianshanpai') {
-                // 如果是天山派，显示地图
+
+            if (userLocation === 'tianshanpai'){
                 document.getElementById('map-scene').classList.add('active');
-            } else {
-                // 否则显示对应的场景
+            }else{
                 switchScene(userLocation);
             }
-            
-            // 解析示例LLM响应
             parseLLMResponse(llmResponse);
         };
     </script>
