@@ -1736,11 +1736,74 @@
         // let npcLocationG = 'none';
         // //SillyTavern的变量区结束
 
+        // 数值范围定义
+        const valueRanges = {
+            playerTalents: {
+                根骨: { min: 0, max: 100 },
+                悟性: { min: 0, max: 100 },
+                心性: { min: 0, max: 100 },
+                魅力: { min: 0, max: 100 }
+            },
+            playerStats: {
+                武学: { min: 0, max: 300 },
+                学识: { min: 0, max: 300 },
+                声望: { min: 0, max: 300 },
+                金钱: { min: 0, max: 999999 }
+            },
+            combatStats: {
+                攻击力: { min: 10, max: 300 },
+                生命值: { min: 25, max: 600 }
+            },
+            playerMood: { min: 0, max: 100 },
+            npcFavorability: { min: 0, max: 100 },
+            actionPoints: { min: 0, max: 3 },
+            currentWeek: { min: 1, max: 9999 }
+        };
+
+        // 检查并限制数值范围
+        function clampValue(value, min, max) {
+            return Math.max(min, Math.min(max, value));
+        }
+
+        // 检查所有数值范围
+        function checkAllValueRanges() {
+            // 检查天赋属性
+            for (let key in playerTalents) {
+                const range = valueRanges.playerTalents[key];
+                playerTalents[key] = clampValue(playerTalents[key], range.min, range.max);
+            }
+            
+            // 检查人物数值
+            for (let key in playerStats) {
+                const range = valueRanges.playerStats[key];
+                playerStats[key] = clampValue(playerStats[key], range.min, range.max);
+            }
+            
+            // 检查战斗数值
+            for (let key in combatStats) {
+                const range = valueRanges.combatStats[key];
+                combatStats[key] = clampValue(combatStats[key], range.min, range.max);
+            }
+            
+            // 检查心情
+            playerMood = clampValue(playerMood, valueRanges.playerMood.min, valueRanges.playerMood.max);
+            
+            // 检查NPC好感度
+            for (let npcId in npcFavorability) {
+                npcFavorability[npcId] = clampValue(npcFavorability[npcId], valueRanges.npcFavorability.min, valueRanges.npcFavorability.max);
+            }
+            
+            // 检查行动点
+            actionPoints = clampValue(actionPoints, valueRanges.actionPoints.min, valueRanges.actionPoints.max);
+            
+            // 检查周数
+            currentWeek = clampValue(currentWeek, valueRanges.currentWeek.min, valueRanges.currentWeek.max);
+        }
         /* ----------  NEW  SillyTavern 变量自动检测 / 读写 ---------- */
         const defaultGameData = {
             userLocation: "nandizi",
-            playerTalents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
-            playerStats:   { "武学": 50, "学识": 35, "声望": 20, "金钱": 500 },
+            playerTalents: { "根骨": 25, "悟性": 25, "心性": 99, "魅力": 99 },
+            playerStats:   { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 },
             combatStats:   { "攻击力": 20, "生命值": 50 },
             playerMood: 100,
             martialArts: {
@@ -1861,9 +1924,9 @@
             学习: { talentBonus: '悟性', affects: '学识' },
             打杂: { talentBonus: '根骨', affects: '金钱' },
             秘密赌场: { talentBonus: '魅力', affects: '金钱' },
-            探索: { talentBonus: '心性', affects: '学识' },
-            汇报: { talentBonus: '魅力', affects: '声望' },
-            打铁: { talentBonus: '根骨', affects: '武学' },
+            探索: { talentBonus: '悟性', affects: '金钱' },
+            汇报: { talentBonus: '悟性', affects: '声望' },
+            打铁: { talentBonus: '心性', affects: '金钱' },
             休息: { talentBonus: '心性', affects: '心情' },
             拜访: { talentBonus: '魅力', affects: '声望' },
             下山: { talentBonus: '心性', affects: '声望' }
@@ -1902,8 +1965,8 @@
             "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
             "剩余行动点": 3,
             "当前地点": "男弟子房",
-            "主要NPC": "F",
-            "好感变化": "不变",
+            "主要NPC": "姬姒",
+            "好感变化": "大幅上升",
             "其他NPC": "无",
             "随机事件": {
                 "事件类型": "战斗事件",
@@ -2088,12 +2151,26 @@
                     return;
                 }
                 
-                // 消耗行动点
-                actionPoints--;
+                // 心性判定（行动点消耗）
+                let actionPointConsumed = true;
+                const mindChance = playerTalents.心性 / 2;
+                if (Math.random() * 100 < mindChance) {
+                    actionPointConsumed = false;
+                    // 不立即显示modal，等赌场结束后再提示
+                } else {
+                    actionPoints--;
+                }
+                checkAllValueRanges(); // 检查数值范围
                 updateAllDisplays();
                 
                 // 显示21点游戏iframe弹窗
                 showBlackjackGame();
+                
+                // 赌场结束后会通过message事件处理，在那里显示心性判定结果
+                if (!actionPointConsumed) {
+                    // 保存心性判定成功的标记，供后续使用
+                    window.pendingMindMessage = true;
+                }
                 return;
             }
 
@@ -2103,6 +2180,17 @@
                 return;
             }
 
+            // 心性判定（行动点消耗）- 先进行判定但不显示modal
+            let actionPointConsumed = true;
+            let mindMessageShown = false;
+            const mindChance = playerTalents.心性 / 2;
+            if (Math.random() * 100 < mindChance) {
+                actionPointConsumed = false;
+                mindMessageShown = true;
+            } else {
+                actionPoints--;
+            }
+            
             // 获取配置
             const config = actionConfigs[action];
             const talentBonus = playerTalents[config.talentBonus] / 2;
@@ -2120,12 +2208,12 @@
                 successText = '成果斐然！';
                 moodCost = 0;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 60);
+                    playerMood = Math.min(100, playerMood + 90);
                     statChange.心情 = '+60';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 1000;
                 } else if (config.affects === '声望') {
-                    statChange[config.affects] = 5;  // 声望最大+5
+                    statChange[config.affects] = 5;
                 } else {
                     statChange[config.affects] = 5;
                 }
@@ -2134,12 +2222,12 @@
                 successText = '收获颇丰。';
                 moodCost = 5;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 45);
+                    playerMood = Math.min(100, playerMood + 60);
                     statChange.心情 = '+45';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 500;
                 } else if (config.affects === '声望') {
-                    statChange[config.affects] = 3;  // 声望+3
+                    statChange[config.affects] = 3;
                 } else {
                     statChange[config.affects] = 3;
                 }
@@ -2148,12 +2236,12 @@
                 successText = '平平无奇。';
                 moodCost = 10;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 30);
+                    playerMood = Math.min(100, playerMood + 45);
                     statChange.心情 = '+30';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 100;
                 } else if (config.affects === '声望') {
-                    statChange[config.affects] = 1;  // 声望+1
+                    statChange[config.affects] = 1;
                 } else {
                     statChange[config.affects] = 1;
                 }
@@ -2167,23 +2255,23 @@
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -500;
                 } else if (config.affects === '声望') {
-                    statChange[config.affects] = -2;  // 声望-2
+                    statChange[config.affects] = -2;
                 } else {
-                    statChange[config.affects] = 0;  // 武学和学识不扣除
+                    statChange[config.affects] = 0;
                 }
             } else {
                 successLevel = '大失败';
                 successText = '惨不忍睹！';
                 moodCost = 20;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 30);
+                    playerMood = Math.min(100, playerMood + 15);
                     statChange.心情 = '+30';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -1000;
                 } else if (config.affects === '声望') {
-                    statChange[config.affects] = -5;  // 声望最多-5
+                    statChange[config.affects] = -5;
                 } else {
-                    statChange[config.affects] = 0;  // 武学和学识不扣除
+                    statChange[config.affects] = 0;
                 }
             }
 
@@ -2195,8 +2283,7 @@
                 }
             }
 
-            // 消耗行动点
-            actionPoints--;
+            checkAllValueRanges(); // 检查数值范围
 
             // 获取在场NPC
             const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
@@ -2209,15 +2296,25 @@
             if (action !== '休息') {
                 changeText += `<br>心情: -${moodCost}`;
             }
-            changeText += '<br>行动点: -1';
+            
+            if (actionPointConsumed) {
+                changeText += '<br>行动点: -1';
+            } else {
+                changeText += '<br>行动点: -0（心性判定成功）';
+            }
 
             // 构建简化的结果信息
-            const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+            let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `地点：${locationNames[location]}<br>` +
                 `行动：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
                 `结果：${successLevel} - ${successText}<br><br>` +
                 `属性变化：${changeText}`;
+            
+            // 如果心性判定成功，在结果信息前加上提示
+            if (mindMessageShown) {
+                resultMessage = '【心性属性判定成功，本次行动不消耗行动点】<br><br>' + resultMessage;
+            }
 
             // 更新显示
             updateAllDisplays();
@@ -2279,6 +2376,7 @@
             if (event.data.type === 'blackjack-exit') {
                 // 更新金钱
                 playerStats.金钱 = event.data.money;
+                checkAllValueRanges(); // 添加这行
                 updateStatsDisplay();
                 
                 // 关闭弹窗
@@ -2286,8 +2384,17 @@
                 document.getElementById('blackjack-iframe').src = '';
                 
                 // 显示结果
-                showModal(`赌场游戏结束<br>当前金钱：${playerStats.金钱}`);
+                let message = `赌场游戏结束<br>当前金钱：${playerStats.金钱}`;
+                
+                // 检查是否有待显示的心性判定消息
+                if (window.pendingMindMessage) {
+                    message = '【心性属性判定成功，本次行动不消耗行动点】<br><br>' + message;
+                    window.pendingMindMessage = false;
+                }
+                
+                showModal(message);
             }
+
             else if (event.data.type === 'battle-exit') {
                 // 关闭战斗弹窗
                 document.getElementById('battle-modal').style.display = 'none';
@@ -2302,6 +2409,7 @@
                         await handleMessageOutput(`你和${currentBattleNpcName}切磋，获得胜利了`);
                         // 增加声望
                         playerStats.声望 += 1;
+                        checkAllValueRanges();
                         updateStatsDisplay();
                     } else if (result === 'defeat') {
                         await handleMessageOutput(`你和${currentBattleNpcName}切磋，不幸失败了`);
@@ -2537,6 +2645,7 @@
                     '消耗1点分配点数，增加10点攻击力？',
                     () => {
                         combatStats.攻击力 += 10;
+                        checkAllValueRanges();
                         updateStatsDisplay();
                         // 延迟显示结果，避免弹窗冲突
                         setTimeout(() => {
@@ -2556,6 +2665,7 @@
                     '消耗1点分配点数，增加25点生命值？',
                     () => {
                         combatStats.生命值 += 25;
+                        checkAllValueRanges();
                         updateStatsDisplay();
                         // 延迟显示结果，避免弹窗冲突
                         setTimeout(() => {
@@ -2680,6 +2790,7 @@
                 async () => {
                     currentWeek++;
                     actionPoints = 3; // 重置行动点
+                    checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
                     // 使用新的消息处理函数
@@ -2740,10 +2851,14 @@
             
             // 处理好感度变化
             if (response.主要NPC && response.好感变化) {
-                const npcName = response.主要NPC;
-                const npcId = npcNameToId[npcName];
+                let npcId = response.主要NPC;
                 
-                if (npcId) {
+                // 如果主要NPC是名字而不是ID，进行转换
+                if (npcNameToId[response.主要NPC]) {
+                    npcId = npcNameToId[response.主要NPC];
+                }
+                
+                if (npcId && npcFavorability.hasOwnProperty(npcId)) {
                     let changeValue = 0;
                     switch (response.好感变化) {
                         case '大幅下降':
@@ -2763,13 +2878,32 @@
                             break;
                     }
                     
-                    // 更新好感度，确保在0-100范围内
-                    npcFavorability[npcId] = Math.max(0, Math.min(100, npcFavorability[npcId] + changeValue));
+                    // 魅力判定（好感度变化）
+                    let finalChangeValue = changeValue;
+                    let charmMessageShown = false;
+                    if (changeValue > 0) { // 只在好感度增加时进行判定
+                        const charmChance = playerTalents.魅力 / 2;
+                        if (Math.random() * 100 < charmChance) {
+                            finalChangeValue = changeValue * 2;
+                            charmMessageShown = true;
+                        }
+                    }
+                    
+                    // 更新好感度
+                    npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
+                    checkAllValueRanges(); // 检查数值范围
                     
                     // 如果在人际关系界面，更新显示
                     const activeScene = document.querySelector('.scene.active');
                     if (activeScene && activeScene.id === 'relationships-scene') {
                         updateRelationshipsDisplay();
+                    }
+                    
+                    // 延迟显示魅力判定消息，避免与其他弹窗冲突
+                    if (charmMessageShown) {
+                        setTimeout(() => {
+                            showModal('魅力属性判定成功，好感度变化加倍');
+                        }, 100);
                     }
                 }
             }
@@ -2875,6 +3009,7 @@
                     } else {
                         playerTalents[attribute] = Math.max(0, playerTalents[attribute] - value);
                     }
+                    checkAllValueRanges();
                     updateStatsDisplay();
                 }
                 // 检查是否是其他属性
@@ -2884,6 +3019,7 @@
                     } else {
                         playerStats[attribute] = Math.max(0, playerStats[attribute] - value);
                     }
+                    checkAllValueRanges();
                     updateStatsDisplay();
                 }
             }
@@ -2985,7 +3121,7 @@
                     playerStats.学识 += reward.数值;
                     break;
             }
-            
+            checkAllValueRanges();
             updateStatsDisplay();
         }
 
@@ -3474,7 +3610,7 @@
         // 初始化
         window.onload = async function(){
             await loadOrInitGameData();          //  NEW 先保证数据就绪
-
+            checkAllValueRanges();
             updateAllDisplays();
             setupLocationEvents();
             refreshNpcLocations();
