@@ -42,15 +42,17 @@
         }
 
         .container {
-            max-width: 1200px;
-            margin: 0 auto;
+            width: 100%;
+            max-width: 100%;  /* 移除宽度限制 */
+            margin: 0;
             padding: clamp(10px, 2vw, 20px);
+            box-sizing: border-box;
         }
 
         /* 视窗包装器 */
         .viewport-wrapper {
             width: 100%;
-            max-width: 800px;
+            max-width: calc(100vw - 40px);  /* 使用全屏宽度减去左右边距 */
             margin: 0 auto;
             position: relative;
         }
@@ -225,7 +227,7 @@
         /* 中间控制按钮组 - 响应式改进 */
         .control-buttons {
             width: 100%;
-            max-width: 800px;
+            max-width: calc(100vw - 40px);  /* 全部改为动态宽度 */
             margin: 0 auto;
             display: flex;
             box-sizing: border-box;
@@ -417,15 +419,37 @@
             font-weight: bold;
             color: #000000;
             text-shadow: 
-                -2px -2px 0 #fff,
-                2px -2px 0 #fff,
-                -2px 2px 0 #fff,
-                2px 2px 0 #fff,
                 -1px -1px 0 #fff,
                 1px -1px 0 #fff,
                 -1px 1px 0 #fff,
-                1px 1px 0 #fff;
+                1px 1px 0 #fff;  /* 默认使用1px描边 */
             letter-spacing: clamp(5px, 1vw, 10px);
+        }
+
+        /* 手机端使用更细的描边 */
+        @media (max-width: 768px) {
+            .scene-title {
+                text-shadow: 
+                    -0.5px -0.5px 0 #fff,
+                    0.5px -0.5px 0 #fff,
+                    -0.5px 0.5px 0 #fff,
+                    0.5px 0.5px 0 #fff;
+            }
+        }
+
+        /* PC端和平板使用稍粗的描边 */
+        @media (min-width: 769px) {
+            .scene-title {
+                text-shadow: 
+                    -1.5px -1.5px 0 #fff,
+                    1.5px -1.5px 0 #fff,
+                    -1.5px 1.5px 0 #fff,
+                    1.5px 1.5px 0 #fff,
+                    -1px 0 0 #fff,
+                    1px 0 0 #fff,
+                    0 -1px 0 #fff,
+                    0 1px 0 #fff;
+            }
         }
 
         /* NPC立绘容器 */
@@ -908,7 +932,7 @@
         /* 故事区域 */
         .story-area {
             width: 100%;
-            max-width: 800px;
+            max-width: calc(100vw - 40px);  /* 全部改为动态宽度 */
             margin: 0 auto;
             background: #fff;
             border: 3px solid #2c2c2c;
@@ -998,7 +1022,7 @@
             }
             
             .viewport-wrapper {
-                max-width: 100%;
+                max-width: calc(100vw - 40px);
             }
         }
 
@@ -1289,7 +1313,7 @@
         /* 自由行动输入框容器 */
         .free-action-container {
             width: 100%;
-            max-width: 800px;
+            max-width: calc(100vw - 40px);  /* 全部改为动态宽度 */
             margin: 0 auto;
             background: #fff;
             border: 3px solid #2c2c2c;
