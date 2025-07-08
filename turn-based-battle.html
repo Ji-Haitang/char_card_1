@@ -789,7 +789,7 @@ const urlParams = new URLSearchParams(window.location.search);
 
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
-    name: urlParams.get('playerName') || '小虾米',
+    name: urlParams.get('playerName') || '你',
     maxHealth: parseInt(urlParams.get('playerHealth')) || 50,
     currentHealth: parseInt(urlParams.get('playerHealth')) || 50,
     energy: 0,
@@ -853,12 +853,12 @@ const commonNPCs = {
         style: '山',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png'
     },
-    '施菖蒲': {
-        name: '施菖蒲',
+    '施延年': {
+        name: '施延年',
         maxHealth: 200,
         basicDamage: 50,
         style: '山',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施菖蒲.png'
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.png'
     },
     '呼延显': {
         name: '呼延显',
