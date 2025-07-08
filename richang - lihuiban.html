@@ -1802,7 +1802,7 @@
         /* ----------  NEW  SillyTavern 变量自动检测 / 读写 ---------- */
         const defaultGameData = {
             userLocation: "nandizi",
-            playerTalents: { "根骨": 25, "悟性": 25, "心性": 99, "魅力": 99 },
+            playerTalents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
             playerStats:   { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 },
             combatStats:   { "攻击力": 20, "生命值": 50 },
             playerMood: 100,
@@ -2135,10 +2135,47 @@
         let currentBattleReward = null;  // 保存战斗奖励信息
         let currentBattleNpcName = null;  // 保存当前切磋的NPC名称
 
-        // 计算剩余分配点数 - 修改为永不为负
+        // 根据武学值计算获得的等级（点数）
+        function calculateLevelFromWuxue(wuxue) {
+            let totalWuxue = 0;
+            let level = 0;
+            
+            // 从5点开始，每级需要的武学值递增1
+            // 第1级需要5点，第2级需要6点，第3级需要7点...
+            for (let i = 1; i <= 20; i++) { // 最多20级，对应290点武学值
+                const requiredWuxue = 4 + i;
+                if (totalWuxue + requiredWuxue <= wuxue) {
+                    totalWuxue += requiredWuxue;
+                    level = i;
+                } else {
+                    break;
+                }
+            }
+            
+            return level;
+        }
+
+        // 计算达到某个等级需要的总武学值
+        function calculateWuxueForLevel(level) {
+            let totalWuxue = 0;
+            for (let i = 1; i <= level; i++) {
+                totalWuxue += (4 + i);
+            }
+            return totalWuxue;
+        }
+
+        // 计算剩余分配点数 - 使用新的递增难度系统
         function calculateRemainingPoints() {
-            const rawPoints = Math.floor(playerStats.武学 / 10) - (combatStats.攻击力 - 20) / 10 - (combatStats.生命值 - 50) / 25;
-            return Math.max(0, rawPoints);
+            // 根据武学值计算获得的等级
+            const earnedLevels = calculateLevelFromWuxue(playerStats.武学);
+            
+            // 计算已经使用的点数
+            const usedForAttack = (combatStats.攻击力 - 20) / 10;
+            const usedForHP = (combatStats.生命值 - 50) / 25;
+            const totalUsed = usedForAttack + usedForHP;
+            
+            // 剩余点数不能为负
+            return Math.max(0, earnedLevels - totalUsed);
         }
 
         // 执行互动 - 修改数值变化逻辑，特别是声望的变化范围
