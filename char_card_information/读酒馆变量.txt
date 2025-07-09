@@ -1,0 +1,3 @@
+<%
+define('gameData', JSON.parse(variables.gameData))
+%>
