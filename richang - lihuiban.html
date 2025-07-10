@@ -1957,6 +1957,32 @@
         };
 
         // LLM返回的示例数据 - 修改主要NPC和好感变化
+        const llmResponse = {
+            "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
+            "主要NPC": "姬姒",
+            "好感变化": "大幅上升",
+            "其他NPC": "无",
+            "随机事件": {
+                "事件类型": "选项事件",
+                "事件描述": "姬姒想要和你探讨昨天练武的心得",
+                "选项一": {
+                    "描述": "你欣然接受邀请，和姬姒一起讨论",
+                    "奖励": "悟性+3",
+                    "成功率": "25%"
+                },
+                "选项二": {
+                    "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
+                    "奖励": "根骨+1",
+                    "成功率": "60%"
+                },
+                "选项三": {
+                    "描述": "你婉拒姬姒，专注于眼前的工作",
+                    "奖励": "心性+2",
+                    "成功率": "40%"
+                }
+            }
+        };
+
         // const llmResponse = {
         //     "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
         //     "剩余行动点": 3,
@@ -1965,49 +1991,21 @@
         //     "好感变化": "大幅上升",
         //     "其他NPC": "无",
         //     "随机事件": {
-        //         "事件类型": "选项事件",
-        //         "事件描述": "姬姒想要和你探讨昨天练武的心得",
-        //         "选项一": {
-        //             "描述": "你欣然接受邀请，和姬姒一起讨论",
-        //             "奖励": "悟性+3",
-        //             "成功率": "25%"
+        //         "事件类型": "战斗事件",
+        //         "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+        //         "敌方信息": {
+        //         "名称": "吐蕃探子",
+        //         "属性": {
+        //             "攻击力": "低",
+        //             "生命力": "中"
         //         },
-        //         "选项二": {
-        //             "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
-        //             "奖励": "根骨+1",
-        //             "成功率": "60%"
-        //         },
-        //         "选项三": {
-        //             "描述": "你婉拒姬姒，专注于眼前的工作",
-        //             "奖励": "心性+2",
-        //             "成功率": "40%"
+        //         "战斗报酬": {
+        //             "类型": "金钱",
+        //             "数值": 500
+        //         }
         //         }
         //     }
         // };
-
-        const llmResponse = {
-            "正文": "烽烟斜晚照，山上的死战，终于趋近尾声。唐门伤亡惨重，武林盟群侠亦将死伤殆尽，忽有白衣晃眼，武林盟主瑞笙翩然而至，划一道剑痕在地，绝你追击之路。师兄弟们杀红了眼，哪管他是谁，话不多说，便掷暗器贸然上前抢攻。瑞笙武功之高，以臻绝世领域，心神凝敛之际，瓢泼的大雨在他眼里都似静止，你师弟们人数虽多，但暗器轨迹与步法都进线笔直，还未近身便被看穿破绽，内力到处，剑身鸣颤，接镖反击、错步揉身一气喝成。一道惊雷乍现，晃得人剎那睁不开眼，只一瞬间便决出了胜负。那瞬间太短，不容你细想，只能见招拆招，使出浑身解数瓦解攻势，堪堪救了几位师弟的性命，最致命的一剑，却有意想不到的人来替你接。",
-            "剩余行动点": 3,
-            "当前地点": "男弟子房",
-            "主要NPC": "姬姒",
-            "好感变化": "大幅上升",
-            "其他NPC": "无",
-            "随机事件": {
-                "事件类型": "战斗事件",
-                "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
-                "敌方信息": {
-                "名称": "吐蕃探子",
-                "属性": {
-                    "攻击力": "低",
-                    "生命力": "中"
-                },
-                "战斗报酬": {
-                    "类型": "金钱",
-                    "数值": 500
-                }
-                }
-            }
-        };
 
         // 保存当前故事正文
         let currentStoryText = "";
@@ -2367,15 +2365,15 @@
             // 构建简化的结果信息
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `地点：${locationNames[location]}<br>` +
-                `行动：${action}<br>` +
+                `{{user}}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
-                `结果：${successLevel} - ${successText}<br><br>` +
+                `选择结果：${successLevel} - ${successText}<br><br>` +
                 `属性变化：${changeText}`;
             
             // 如果心性判定成功，在结果信息前加上提示
-            if (mindMessageShown) {
-                resultMessage = '【心性属性判定成功，本次行动不消耗行动点】<br><br>' + resultMessage;
-            }
+            // if (mindMessageShown) {
+            //     resultMessage = '【心性属性判定成功，本次行动不消耗行动点】<br><br>' + resultMessage;
+            // }
 
             // 更新显示
             updateAllDisplays();
@@ -2467,16 +2465,16 @@
                 if (currentBattleType === 'npc') {
                     // NPC切磋结果
                     if (result === 'victory') {
-                        await handleMessageOutput(`你和${currentBattleNpcName}切磋，获得胜利了`);
+                        await handleMessageOutput(`你和${currentBattleNpcName}切磋武艺，获得胜利了`);
                         // 增加声望
                         playerStats.声望 += 1;
                         checkAllValueRanges();
                         updateStatsDisplay();
                     } else if (result === 'defeat') {
-                        await handleMessageOutput(`你和${currentBattleNpcName}切磋，不幸失败了`);
+                        await handleMessageOutput(`你和${currentBattleNpcName}切磋武艺，不幸失败了`);
                     } else if (result === 'quit') {
                         // 退出按钮视为败北
-                        await handleMessageOutput(`你和${currentBattleNpcName}切磋，不幸失败了`);
+                        await handleMessageOutput(`你和${currentBattleNpcName}切磋武艺，不幸失败了`);
                     }
                     
                     // 清空NPC名称
@@ -2595,7 +2593,7 @@
             // 构建结果信息
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `地点：${locationNames[location]}<br>` +
-                `行动：互动<br>` +
+                `{{user}}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
                 `在场NPC：${npcsPresent}`;
@@ -2855,7 +2853,7 @@
                     updateAllDisplays();
                     refreshNpcLocations();
                     // 使用新的消息处理函数
-                    await handleMessageOutput('新的一周开始了<br>当前第' + currentWeek + '周<br>行动点已重置为3');
+                    await handleMessageOutput('新的一周开始了<br>当前第' + currentWeek + '周');
                 }
             );
         }
@@ -3044,7 +3042,7 @@
             
             // 构建结果信息
             const resultMessage = `事件描述: ${currentRandomEvent.事件描述}<br>` +
-                `行动选择: ${option.描述}<br>` +
+                `{{user}}行动选择: ${option.描述}<br>` +
                 `选择结果: ${isSuccess ? '成功' : '失败'}`;
             
             // 隐藏随机事件
@@ -3649,7 +3647,7 @@
             
             const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                 `地点：${currentLocation}<br>` +
-                `{{user}}自由行动输入："${actionContent}"<br>` +
+                `{{user}}自由行动："${actionContent}"<br>` +
                 `在场NPC：${npcsPresent}`;
             
             // 清空输入框并重置高度
@@ -3674,8 +3672,16 @@
             checkAllValueRanges();
             updateAllDisplays();
             setupLocationEvents();
-            refreshNpcLocations();
+            //refreshNpcLocations();
 
+            // 在酒馆环境下隐藏刷新NPC按钮
+            if (typeof STscript === 'function') {
+                const refreshBtn = document.querySelector('.refresh-npc-btn');
+                if (refreshBtn) {
+                    refreshBtn.style.display = 'none';
+                }
+            }
+            
             if (userLocation === 'tianshanpai'){
                 document.getElementById('map-scene').classList.add('active');
             }else{
