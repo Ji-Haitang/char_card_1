@@ -1690,7 +1690,7 @@
             <iframe id="battle-iframe" class="battle-iframe"></iframe>
         </div>
     </div>
-
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         // //下面这里是SillyTavern的变量区
         // // 用户当前所在位置
@@ -2024,27 +2024,27 @@
             },
             C: {
                 name: "钱塘君",
-                description: "天山派内门弟子，洞庭君的妹妹。<br>16岁少女，苗条挺拔却力大无穷，银白长发编成双辫。<br>活泼俏丽，言行跳脱，你没心没肺的狐朋狗友",
+                description: "天山派内门弟子，洞庭君的妹妹。<br>16岁少女，苗条挺拔却力大无穷，银白长发编成双辫。<br>活泼俏丽，言行跳脱，没心没肺的狐朋狗友。",
                 avatar: "C"
             },
             D: {
                 name: "萧白瑚",
-                description: "天山派弟子，豆蔻年华，性格活泼",
+                description: "天山派外门弟子，年纪最小的弟子之一。<br>14岁女孩，银白色双髻配红色铃铛，活泼灵动。<br>傲娇好胜爱逞强，嘴硬心软。自称要成为天下第一。",
                 avatar: "D"
             },
             E: {
                 name: "姬姒",
-                description: "天山派内门弟子，归义军遗民<br>外表27岁实际100余岁，运功陷入假死状态长眠，每隔一段时间苏醒活跃。<br>心思单纯，饕口馋舌，憨直可爱却武功高强，天山派的守护者",
+                description: "天山派内门弟子，归义军遗民。<br>外表27岁实际100余岁，运功陷入假死状态长眠，每隔一段时间苏醒活跃。<br>心思单纯，饕口馋舌，娇憨正直却武功高强。",
                 avatar: "E"
             },
             F: {
                 name: "施延年",
-                description: "天山派外门弟子，藏经阁管理员<br>16岁少女，身材纤细，清雅脱俗，谈吐不凡。<br>温文尔雅的书呆子，醉心典籍安贫乐道。但偶尔会慷慨激昂针砭时弊",
+                description: "天山派外门弟子，藏经阁管理员。<br>16岁少女，身材纤细，清雅脱俗，谈吐不凡。<br>温文尔雅的书呆子，醉心典籍安贫乐道。但偶尔会慷慨激昂针砭时弊。",
                 avatar: "F"
             },
             G: {
                 name: "呼延显",
-                description: "天山派内门大师兄，破阵子之徒，带发修行的僧侣<br>24岁匈奴族人，男生女相，面容柔美<br>平时玩世不恭满嘴歪理，能言善辩。关键时刻亦有可靠的一面",
+                description: "天山派内门大师兄，破阵子之徒，带发修行的僧侣。<br>24岁匈奴族人，男生女相，面容柔美。<br>平时玩世不恭满嘴歪理，能言善辩。关键时刻亦有可靠的一面。",
                 avatar: "G"
             }
         };
@@ -2063,88 +2063,88 @@
         // NPC在各地点的出现概率（概率总和为1）
         const npcLocationProbability = {
             A: {
-                yanwuchang: 0.30,
-                cangjingge: 0.10,
+                yanwuchang: 0.15,
+                cangjingge: 0.05,
                 huofang: 0.05,
-                houshan: 0.25,
-                yishiting: 0.10,
+                houshan: 0.20,
+                yishiting: 0.20,
                 tiejiangpu: 0.05,
                 nandizi: 0.05,
                 nvdizi: 0.00,
                 shanmen: 0.05,
-                none: 0.05
+                none: 0.2
             },
             B: {
-                yanwuchang: 0.10,
-                cangjingge: 0.05,
-                huofang: 0.35,
-                houshan: 0.15,
-                yishiting: 0.05,
+                yanwuchang: 0.15,
+                cangjingge: 0.10,
+                huofang: 0.05,
+                houshan: 0.05,
+                yishiting: 0.35,
                 tiejiangpu: 0.05,
-                nandizi: 0.10,
-                nvdizi: 0.05,
+                nandizi: 0.00,
+                nvdizi: 0.15,
                 shanmen: 0.05,
                 none: 0.05
             },
             C: {
-                yanwuchang: 0.05,
-                cangjingge: 0.25,
+                yanwuchang: 0.15,
+                cangjingge: 0.05,
                 huofang: 0.05,
-                houshan: 0.20,
-                yishiting: 0.10,
-                tiejiangpu: 0.05,
+                houshan: 0.30,
+                yishiting: 0.05,
+                tiejiangpu: 0.15,
                 nandizi: 0.00,
-                nvdizi: 0.25,
+                nvdizi: 0.15,
                 shanmen: 0.05,
-                none: 0.00
+                none: 0.05
             },
             D: {
-                yanwuchang: 0.35,
-                cangjingge: 0.00,
-                huofang: 0.10,
-                houshan: 0.05,
-                yishiting: 0.15,
-                tiejiangpu: 0.20,
-                nandizi: 0.10,
-                nvdizi: 0.00,
-                shanmen: 0.05,
-                none: 0.00
-            },
-            E: {
-                yanwuchang: 0.05,
-                cangjingge: 0.40,
-                huofang: 0.05,
-                houshan: 0.10,
-                yishiting: 0.25,
-                tiejiangpu: 0.00,
-                nandizi: 0.05,
-                nvdizi: 0.05,
-                shanmen: 0.05,
-                none: 0.00
-            },
-            F: {
                 yanwuchang: 0.20,
                 cangjingge: 0.05,
-                huofang: 0.00,
-                houshan: 0.15,
-                yishiting: 0.40,
-                tiejiangpu: 0.00,
+                huofang: 0.20,
+                houshan: 0.20,
+                yishiting: 0.00,
+                tiejiangpu: 0.05,
                 nandizi: 0.00,
-                nvdizi: 0.00,
-                shanmen: 0.15,
+                nvdizi: 0.20,
+                shanmen: 0.05,
+                none: 0.05
+            },
+            E: {
+                yanwuchang: 0.10,
+                cangjingge: 0.10,
+                huofang: 0.30,
+                houshan: 0.15,
+                yishiting: 0.05,
+                tiejiangpu: 0.05,
+                nandizi: 0.00,
+                nvdizi: 0.15,
+                shanmen: 0.05,
+                none: 0.05
+            },
+            F: {
+                yanwuchang: 0.05,
+                cangjingge: 0.55,
+                huofang: 0.05,
+                houshan: 0.05,
+                yishiting: 0.05,
+                tiejiangpu: 0.05,
+                nandizi: 0.00,
+                nvdizi: 0.10,
+                shanmen: 0.05,
                 none: 0.05
             },
             G: {
-                yanwuchang: 0.40,  
-                cangjingge: 0.05,
-                huofang: 0.10,
+                yanwuchang: 0.20,
+                cangjingge: 0.20,
+                huofang: 0.05,
                 houshan: 0.15,
-                yishiting: 0.05,
-                tiejiangpu: 0.10,
+                yishiting: 0.10,
+                tiejiangpu: 0.05,
                 nandizi: 0.10,
                 nvdizi: 0.00,
                 shanmen: 0.05,
-                none: 0.00
+                none: 0.10
             }
         };
 
@@ -3187,7 +3187,12 @@
         // 更新故事文本（保持原有正文不被覆盖）
         function updateStoryText(text) {
             const storyElement = document.getElementById('story-text');
-            storyElement.textContent = text;
+            
+            // 使用 marked 将 markdown 转换为 HTML
+            const htmlContent = marked.parse(text);
+            
+            // 使用 innerHTML 而不是 textContent
+            storyElement.innerHTML = htmlContent;
             
             // 添加淡入动画效果
             storyElement.style.opacity = '0';
