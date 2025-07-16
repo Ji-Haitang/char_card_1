@@ -20,10 +20,11 @@ body {
     background-color: #000;
     color: #fff;
     overflow: hidden;
-    /* 移除min-height，改为通过JS动态设置 */
+    margin: 0;  /* 确保没有margin */
+    padding: 0;  /* 确保没有padding */
     display: flex;
     justify-content: center;
-    align-items: center;
+    align-items: flex-start;  /* 从center改为flex-start，让内容从顶部开始 */
     width: 100vw;
     height: 100vh;
 }
@@ -36,6 +37,7 @@ body {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
+    margin-top: 0;  /* 确保紧贴顶部 */
 }
 
 /* //回合制系统集成更新 - 修改退出按钮样式到右下角 */
@@ -1790,22 +1792,21 @@ function handleKeyPress(event) {
 }
 
 // 初始化游戏 
-// 动态设置4:3比例的函数 
+// 动态设置1.46比例的函数 
 function setAspectRatio() { 
-
     const gameContainer = document.querySelector('.game-container'); 
     if (!gameContainer) return;
 
     const viewportWidth = window.innerWidth;
     const viewportHeight = window.innerHeight;
 
-    // 计算4:3比例的尺寸
-    const aspectRatio = 4 / 3;
+    // 计算1.46比例的尺寸（与主界面viewport一致）
+    const aspectRatio = 1.46;
     let gameWidth, gameHeight;
 
-    // 根据视口宽度计算高度（宽度的75%）
-    gameHeight = viewportWidth * 0.75;
+    // 优先基于宽度计算（高度为宽度的 1/1.46 ≈ 0.685）
     gameWidth = viewportWidth;
+    gameHeight = viewportWidth / aspectRatio;
 
     // 如果计算出的高度超过视口高度，则根据高度反推宽度
     if (gameHeight > viewportHeight) {
@@ -1820,8 +1821,20 @@ function setAspectRatio() {
     // 应用尺寸
     gameContainer.style.width = `${gameWidth}px`;
     gameContainer.style.height = `${gameHeight}px`;
+    
+    // 确保容器紧贴顶部
+    gameContainer.style.marginTop = '0';
+    
+    // 水平居中（如果宽度小于视口宽度）
+    if (gameWidth < viewportWidth) {
+        gameContainer.style.marginLeft = `${(viewportWidth - gameWidth) / 2}px`;
+        gameContainer.style.marginRight = 'auto';
+    } else {
+        gameContainer.style.marginLeft = '0';
+        gameContainer.style.marginRight = '0';
+    }
 
-    console.log(`游戏容器尺寸: ${gameWidth}x${gameHeight}, 比例: ${(gameWidth/gameHeight).toFixed(2)}`);
+    console.log(`游戏容器尺寸: ${gameWidth}x${gameHeight}, 视口: ${viewportWidth}x${viewportHeight}, 比例: ${(gameWidth/gameHeight).toFixed(2)}`);
 }
 
 // 窗口大小变化时重新设置比例 

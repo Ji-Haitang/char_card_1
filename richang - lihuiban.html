@@ -39,20 +39,22 @@
                     rgba(0,0,0,.03) 10px,
                     rgba(0,0,0,.03) 20px
                 );
+            margin: 0;  /* 确保body没有margin */
+            padding: 0;  /* 确保body没有padding */
         }
 
         .container {
             width: 100%;
             max-width: 100%;  /* 移除宽度限制 */
             margin: 0;
-            padding: clamp(10px, 2vw, 20px);
+            padding: 0;
             box-sizing: border-box;
         }
 
         /* 视窗包装器 */
         .viewport-wrapper {
             width: 100%;
-            max-width: calc(100vw - 40px);  /* 使用全屏宽度减去左右边距 */
+            max-width: 100%;  /* 使用全屏宽度减去左右边距 */
             margin: 0 auto;
             position: relative;
         }
@@ -227,7 +229,7 @@
         /* 中间控制按钮组 - 响应式改进 */
         .control-buttons {
             width: 100%;
-            max-width: calc(100vw - 40px);  /* 全部改为动态宽度 */
+            max-width: 100%;  /* 全部改为动态宽度 */
             margin: 0 auto;
             display: flex;
             box-sizing: border-box;
@@ -832,7 +834,7 @@
         /* 弹窗 - 响应式改进 */
         .modal {
             display: none;
-            position: fixed;
+            position: absolute;
             z-index: 2000;
             left: 0;
             top: 0;
@@ -854,9 +856,10 @@
             text-align: center;
             border-radius: 10px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-            position: relative;
+            position: absolute;  /* 改为absolute定位 */
             top: 50%;
-            transform: translateY(-50%);
+            left: 50%;
+            transform: translate(-50%, -50%);  /* 居中定位 */
         }
 
         .modal-text {
@@ -932,7 +935,7 @@
         /* 故事区域 */
         .story-area {
             width: 100%;
-            max-width: calc(100vw - 40px);  /* 全部改为动态宽度 */
+            max-width: 100%;  /* 全部改为动态宽度 */
             margin: 0 auto;
             background: #fff;
             border: 3px solid #2c2c2c;
@@ -991,7 +994,7 @@
         /* 21点游戏iframe弹窗 - 新增 */
         .blackjack-modal {
             display: none;
-            position: fixed;
+            position: absolute;  /* 从fixed改为absolute */
             z-index: 3000;
             left: 0;
             top: 0;
@@ -1001,10 +1004,9 @@
         }
 
         .blackjack-container {
-            width: 90%;
-            max-width: 900px;
-            height: 90%;
-            margin: 5% auto;
+            width: 100%;  /* 改为100% */
+            height: 100%;  /* 改为100% */
+            margin: 0;  /* 移除margin */
             position: relative;
         }
 
@@ -1018,11 +1020,11 @@
         /* 响应式调整 */
         @media (max-width: 840px) {
             .container {
-                padding: 10px;
+                padding: 0;
             }
             
             .viewport-wrapper {
-                max-width: calc(100vw - 40px);
+                max-width: 100%;
             }
         }
 
@@ -1287,7 +1289,7 @@
         /* 战斗iframe弹窗 */
         .battle-modal {
             display: none;
-            position: fixed;
+            position: absolute;  /* 从fixed改为absolute */
             z-index: 3000;
             left: 0;
             top: 0;
@@ -1297,10 +1299,9 @@
         }
 
         .battle-container {
-            width: 90%;
-            max-width: 900px;
-            height: 90%;
-            margin: 5% auto;
+            width: 100%;  /* 改为100% */
+            height: 100%;  /* 改为100% */
+            margin: 0;  /* 移除margin */
             position: relative;
         }
 
@@ -1313,7 +1314,7 @@
         /* 自由行动输入框容器 */
         .free-action-container {
             width: 100%;
-            max-width: calc(100vw - 40px);  /* 全部改为动态宽度 */
+            max-width: 100%;  /* 全部改为动态宽度 */
             margin: 0 auto;
             background: #fff;
             border: 3px solid #2c2c2c;
@@ -1608,6 +1609,29 @@
                         <!-- <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button> -->
                     </div>
                 </div>
+                <!-- 弹窗 -->
+                <div id="modal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-text" id="modal-text">新的一周开始了</div>
+                        <div class="modal-buttons" id="modal-buttons">
+                            <button class="modal-btn" onclick="closeModal()">确定</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 21点游戏iframe弹窗 - 新增 -->
+                <div id="blackjack-modal" class="blackjack-modal">
+                    <div class="blackjack-container">
+                        <iframe id="blackjack-iframe" class="blackjack-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- 战斗iframe弹窗 -->
+                <div id="battle-modal" class="battle-modal">
+                    <div class="battle-container">
+                        <iframe id="battle-iframe" class="battle-iframe"></iframe>
+                    </div>
+                </div>
             </div>
         </div>
         <!-- 自由行动输入框 -->
@@ -1664,30 +1688,6 @@
                     <button class="battle-action-btn flee" onclick="fleeBattle()">放弃战斗</button>
                 </div>
             </div>
-        </div>
-    </div>
-
-    <!-- 弹窗 -->
-    <div id="modal" class="modal">
-        <div class="modal-content">
-            <div class="modal-text" id="modal-text">新的一周开始了</div>
-            <div class="modal-buttons" id="modal-buttons">
-                <button class="modal-btn" onclick="closeModal()">确定</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 21点游戏iframe弹窗 - 新增 -->
-    <div id="blackjack-modal" class="blackjack-modal">
-        <div class="blackjack-container">
-            <iframe id="blackjack-iframe" class="blackjack-iframe"></iframe>
-        </div>
-    </div>
-
-    <!-- 战斗iframe弹窗 -->
-    <div id="battle-modal" class="battle-modal">
-        <div class="battle-container">
-            <iframe id="battle-iframe" class="battle-iframe"></iframe>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
@@ -2913,7 +2913,7 @@
                 // 在酒馆环境中，将消息作为用户输入发送
                 try {
                     // 将消息设置到输入框
-                    await STscript(`/setinput ${message}`);
+                    await STscript(`/send at={{lastMessageId}}+1 ${message}`);
                     // 触发发送按钮
                     await STscript('/trigger');
                     console.log('Message sent in SillyTavern:', message);
