@@ -43,15 +43,18 @@ body {
 /* //回合制系统集成更新 - 修改退出按钮样式到右下角 */
 .exit-battle-btn {
     position: absolute;
-    bottom: 20px;
-    right: 20px;
+    bottom: 0px;
+    right: 18px;
     padding: 10px 20px;
     background: #1a1a1a;
     color: #ffffff;
     border: 2px solid #333;
     border-radius: 5px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: clamp(0.9rem, 2.2vw, 1.8rem);
+    font-weight: bold;
+    font-family: 'Ma Shan Zheng', cursive;  /* 统一字体 */
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
     z-index: 100;
     font-weight: bold;
     transition: all 0.3s ease;
@@ -171,17 +174,18 @@ body {
 /* 回合指示器 - 优化位置避免被遮挡 */
 .turn-indicator {
     position: absolute;
-    top: clamp(45px, 8vw, 80px);
+    top: 0;  /* 改为0，紧贴上边缘 */
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.85);
     padding: clamp(4px, 1vw, 8px) clamp(10px, 2.5vw, 20px);
-    border-radius: clamp(12px, 3vw, 20px);
-    z-index: 6; /* 提高层级，确保不被状态区遮挡 */
+    border-radius: 0 0 clamp(12px, 3vw, 20px) clamp(12px, 3vw, 20px); /* 修改为只有底部圆角 */
+    z-index: 6;
     font-size: clamp(12px, 2.8vw, 18px);
     font-weight: bold;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
+    border-top: none; /* 移除顶部边框 */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     font-family: 'Ma Shan Zheng', cursive;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
     white-space: nowrap;
@@ -532,15 +536,17 @@ body {
 
 .npc-portrait-layer {
     position: absolute;
-    left: 0; top: 0; right: 0; bottom: 0;
-    width: 100%;
-    height: 100%;
+    left: 7.5%;  /* 水平居中 */
+    bottom: 0;  /* 紧贴下边缘 */
+    width: 85%; /* 改为70%大小 */
+    height: 85%; /* 改为70%大小 */
+    /* transform: translateX(-50%); 水平居中对齐 */
     pointer-events: none;
     z-index: 3;
     background: none;
-    background-position: center center;
+    background-position: center bottom; /* 改为底部对齐 */
     background-repeat: no-repeat;
-    background-size: cover;
+    background-size: contain; /* 改为contain保持比例 */
     transition: background-image 0.3s;
 }
 
@@ -682,7 +688,7 @@ body {
     }
     
     .turn-indicator {
-        top: clamp(25px, 5vw, 40px);
+        top: 0;
     }
 }
 </style>

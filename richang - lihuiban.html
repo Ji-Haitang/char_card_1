@@ -1850,7 +1850,8 @@
             nandizi: '男弟子房',
             nvdizi: '女弟子房',
             shanmen: '山门',
-            tianshanpai: '天山派'  // 新增
+            tianshanpai: '天山派',
+            none: 'none'
         };
         // NPC立绘URL映射
         const npcPortraits = {
@@ -2957,10 +2958,10 @@
                         let changeValue = 0;
                         switch (npcData.好感变化) {
                             case '大幅下降':
-                                changeValue = -3;
+                                changeValue = -4;
                                 break;
                             case '下降':
-                                changeValue = -1;
+                                changeValue = -2;
                                 break;
                             case '不变':
                                 changeValue = 0;
@@ -2969,7 +2970,7 @@
                                 changeValue = 1;
                                 break;
                             case '大幅上升':
-                                changeValue = 3;
+                                changeValue = 2;
                                 break;
                         }
                         
