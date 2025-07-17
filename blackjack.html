@@ -2,32 +2,43 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>21点游戏</title>
     <style>
+        /* 基础样式和响应式改进 */
+        * {
+            box-sizing: border-box;
+        }
+        
+        html, body {
+            overflow-x: hidden;
+        }
+        
         body {
             font-family: 'Microsoft YaHei', Arial, sans-serif;
             background: #1a1a1a;
             color: #e0e0e0;
             margin: 0;
-            padding: 20px;
+            padding: 10px;
         }
         
         .container {
             max-width: 800px;
             margin: 0 auto;
+            width: 100%;
         }
 
         .game-area {
             background: linear-gradient(135deg, #1f2937 0%, #2d3748 100%);
             border-radius: 10px;
-            padding: 20px;
+            padding: clamp(10px, 3vw, 20px);
             border: 1px solid #4b5563;
             box-shadow: 0 0 20px rgba(75, 85, 99, 0.2);
         }
 
         .dealer-section, .player-section {
             background: linear-gradient(135deg, #2b1216 0%, #451c24 100%);
-            padding: 20px;
+            padding: clamp(10px, 3vw, 20px);
             border-radius: 6px;
             text-align: center;
             border: 1px solid #632a35;
@@ -38,46 +49,63 @@
             color: #ff4d6d;
             text-shadow: 0 0 5px rgba(255, 77, 109, 0.3);
             margin: 10px 0;
+            font-size: clamp(18px, 4vw, 24px);
         }
 
+        /* 响应式卡片设计 */
         .card {
             display: inline-block;
-            width: 80px;
-            height: 120px;
+            width: clamp(60px, 10vw, 80px);
+            height: clamp(90px, 15vw, 120px);
             background: linear-gradient(135deg, #e5e7eb 0%, #d1d5db 100%);
             border-radius: 6px;
-            margin: 5px;
-            padding: 10px;
+            margin: 3px;
+            padding: 5px;
             box-shadow: 0 0 20px rgba(0, 0, 0, 0.2);
             border: 1px solid #9ca3af;
-            font-size: 24px;
+            font-size: clamp(18px, 4vw, 24px);
             color: #1f2937;
             display: inline-flex;
             flex-direction: column;
             justify-content: center;
             align-items: center;
+            vertical-align: top;
         }
 
         .card.red {
             color: #dc2626;
         }
 
+        .card-suit {
+            font-size: clamp(24px, 6vw, 36px);
+        }
+
+        .card-value {
+            font-size: clamp(16px, 4vw, 24px);
+            margin-top: 5px;
+        }
+
+        /* 响应式按钮布局 */
         .buttons {
-            margin: 20px;
+            margin: 20px 0;
             display: flex;
             justify-content: center;
             gap: 10px;
+            flex-wrap: wrap;
         }
 
         button {
             background: linear-gradient(135deg, #ff4d6d 0%, #c53a57 100%);
             color: white;
             border: none;
-            padding: 10px 20px;
+            padding: clamp(8px, 2vw, 10px) clamp(15px, 3vw, 20px);
             border-radius: 4px;
             cursor: pointer;
             transition: all 0.3s ease;
-            font-size: 16px;
+            font-size: clamp(14px, 3vw, 16px);
+            white-space: nowrap;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         button:hover {
@@ -93,20 +121,22 @@
 
         #result {
             background: rgba(255, 255, 255, 0.05);
-            padding: 15px;
+            padding: clamp(10px, 2vw, 15px);
             border-radius: 4px;
             margin: 10px 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
-            font-size: 18px;
+            font-size: clamp(14px, 3vw, 18px);
             text-align: center;
+            white-space: pre-line;
         }
 
         .score {
-            font-size: 24px;
+            font-size: clamp(18px, 4vw, 24px);
             color: #ff4d6d;
             font-weight: bold;
         }
 
+        /* 响应式金额信息 */
         .money-info {
             background: rgba(255, 255, 255, 0.05);
             padding: 15px;
@@ -114,8 +144,11 @@
             margin: 10px 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
             display: flex;
+            flex-direction: row;
             justify-content: space-around;
             align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
         }
 
         .bet-input {
@@ -124,8 +157,8 @@
             color: #e0e0e0;
             padding: 8px 12px;
             border-radius: 4px;
-            width: 150px;
-            font-size: 16px;
+            width: min(150px, 40vw);
+            font-size: clamp(14px, 3vw, 16px);
         }
 
         .bet-input:focus {
@@ -134,30 +167,133 @@
         }
 
         .money-display {
-            font-size: 18px;
+            font-size: clamp(16px, 3vw, 18px);
             color: #ff4d6d;
         }
 
         .bet-error {
             color: #ff4d6d;
-            font-size: 14px;
+            font-size: clamp(12px, 2.5vw, 14px);
             margin-top: 5px;
             display: none;
         }
 
+        /* 响应式退出按钮 */
         .exit-btn {
-            position: absolute;
-            top: 20px;
-            right: 20px;
+            position: fixed;
+            top: 10px;
+            right: 10px;
             background: #ff4d6d;
-            padding: 10px 20px;
+            padding: clamp(8px, 2vw, 10px) clamp(15px, 3vw, 20px);
             border-radius: 5px;
             cursor: pointer;
             font-weight: bold;
+            font-size: clamp(12px, 3vw, 14px);
+            z-index: 1000;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .exit-btn:hover {
             background: #ff6b87;
+        }
+
+        /* 小屏幕优化 */
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .dealer-section, .player-section {
+                padding: 10px;
+                margin: 5px 0;
+            }
+            
+            .card {
+                margin: 2px;
+            }
+            
+            .money-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .money-display {
+                margin-bottom: 10px;
+            }
+            
+            #result {
+                padding: 10px;
+            }
+            
+            /* 按钮在小屏幕上占满宽度 */
+            .buttons {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            button {
+                width: 100%;
+                margin: 5px 0;
+            }
+        }
+
+        /* 中等屏幕优化 */
+        @media (min-width: 481px) and (max-width: 768px) {
+            .card {
+                width: 70px;
+                height: 105px;
+            }
+            
+            .buttons {
+                gap: 15px;
+            }
+        }
+
+        /* 横屏模式优化 */
+        @media (orientation: landscape) and (max-height: 600px) {
+            .game-area {
+                padding: 10px;
+            }
+            
+            .dealer-section, .player-section {
+                padding: 10px;
+                margin: 5px 0;
+            }
+            
+            .card {
+                width: 50px;
+                height: 75px;
+            }
+            
+            h3 {
+                margin: 5px 0;
+                font-size: 18px;
+            }
+            
+            .score {
+                font-size: 18px;
+            }
+            
+            .money-info {
+                padding: 10px;
+            }
+        }
+
+        /* 超小屏幕优化 */
+        @media (max-width: 320px) {
+            .card {
+                width: 50px;
+                height: 75px;
+            }
+            
+            .card-suit {
+                font-size: 20px;
+            }
+            
+            .card-value {
+                font-size: 14px;
+            }
         }
     </style>
 </head>
@@ -263,8 +399,8 @@
                 container.innerHTML = hand.map(card => {
                     const isRed = card.suit === '♥' || card.suit === '♦';
                     return `<div class="card ${isRed ? 'red' : ''}">
-                        <div style="font-size: 36px;">${card.suit}</div>
-                        <div style="font-size: 24px; margin-top: 10px;">${card.value}</div>
+                        <div class="card-suit">${card.suit}</div>
+                        <div class="card-value">${card.value}</div>
                     </div>`;
                 }).join('');
             }
@@ -380,6 +516,28 @@
             const betAmount = parseInt(this.value);
             validateBet(betAmount);
         });
+
+        // 监听窗口大小变化，优化显示
+        window.addEventListener('resize', () => {
+            // 可以在这里添加额外的响应式逻辑
+        });
+
+        // 阻止双击缩放
+        document.addEventListener('touchstart', function(event) {
+            if (event.touches.length > 1) {
+                event.preventDefault();
+            }
+        });
+
+        // 提升移动端体验
+        let lastTouchEnd = 0;
+        document.addEventListener('touchend', function(event) {
+            const now = (new Date()).getTime();
+            if (now - lastTouchEnd <= 300) {
+                event.preventDefault();
+            }
+            lastTouchEnd = now;
+        }, false);
     </script>
 </body>
 </html>
