@@ -19,13 +19,14 @@
             background: #1a1a1a;
             color: #e0e0e0;
             margin: 0;
-            padding: 10px;
+            padding: 0;
         }
         
         .container {
             max-width: 800px;
             margin: 0 auto;
             width: 100%;
+            padding: 10px;
         }
 
         .game-area {
@@ -34,6 +35,34 @@
             padding: clamp(10px, 3vw, 20px);
             border: 1px solid #4b5563;
             box-shadow: 0 0 20px rgba(75, 85, 99, 0.2);
+            position: relative; /* 为退出按钮提供定位上下文 */
+            padding-top: 50px; /* 为退出按钮预留空间 */
+        }
+
+        /* 退出按钮样式 - 游戏框体内部左上角 */
+        .exit-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 30px;
+            height: 30px;
+            background-color: #ff4d6d;
+            color: white;
+            text-align: center;
+            line-height: 30px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
+            border: none;
+            padding: 0;
+        }
+
+        .exit-btn:hover {
+            background-color: #ff6b87;
         }
 
         .dealer-section, .player-section {
@@ -136,19 +165,35 @@
             font-weight: bold;
         }
 
-        /* 响应式金额信息 */
+        /* 重新设计的金额信息区域 */
         .money-info {
             background: rgba(255, 255, 255, 0.05);
             padding: 15px;
             border-radius: 4px;
             margin: 10px 0;
             border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .money-display {
+            font-size: clamp(16px, 3vw, 18px);
+            color: #ff4d6d;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        /* 押注输入区域 */
+        .bet-section {
             display: flex;
-            flex-direction: row;
-            justify-content: space-around;
-            align-items: center;
-            flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-start;
             gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .bet-input-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .bet-input {
@@ -157,18 +202,13 @@
             color: #e0e0e0;
             padding: 8px 12px;
             border-radius: 4px;
-            width: min(150px, 40vw);
+            width: min(200px, 40vw);
             font-size: clamp(14px, 3vw, 16px);
         }
 
         .bet-input:focus {
             outline: none;
             border-color: #ff4d6d;
-        }
-
-        .money-display {
-            font-size: clamp(16px, 3vw, 18px);
-            color: #ff4d6d;
         }
 
         .bet-error {
@@ -178,30 +218,28 @@
             display: none;
         }
 
-        /* 响应式退出按钮 */
-        .exit-btn {
-            position: fixed;
-            top: 10px;
-            right: 10px;
-            background: #ff4d6d;
-            padding: clamp(8px, 2vw, 10px) clamp(15px, 3vw, 20px);
-            border-radius: 5px;
-            cursor: pointer;
-            font-weight: bold;
-            font-size: clamp(12px, 3vw, 14px);
-            z-index: 1000;
-            -webkit-tap-highlight-color: transparent;
-            touch-action: manipulation;
-        }
-
-        .exit-btn:hover {
-            background: #ff6b87;
+        /* 开始游戏按钮现在与输入框并排 */
+        #deal {
+            align-self: flex-start;
         }
 
         /* 小屏幕优化 */
         @media (max-width: 480px) {
-            body {
+            .container {
                 padding: 5px;
+            }
+
+            .game-area {
+                padding-top: 40px;
+            }
+
+            .exit-btn {
+                width: 25px;
+                height: 25px;
+                line-height: 25px;
+                font-size: 16px;
+                top: 8px;
+                left: 8px;
             }
             
             .dealer-section, .player-section {
@@ -213,20 +251,29 @@
                 margin: 2px;
             }
             
-            .money-info {
-                flex-direction: column;
-                text-align: center;
-            }
-            
             .money-display {
                 margin-bottom: 10px;
+            }
+
+            .bet-section {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .bet-input {
+                width: 100%;
+            }
+
+            #deal {
+                width: 100%;
+                margin-top: 10px;
             }
             
             #result {
                 padding: 10px;
             }
             
-            /* 按钮在小屏幕上占满宽度 */
+            /* 其他按钮在小屏幕上占满宽度 */
             .buttons {
                 flex-direction: column;
                 align-items: stretch;
@@ -248,12 +295,17 @@
             .buttons {
                 gap: 15px;
             }
+
+            .bet-section {
+                justify-content: center;
+            }
         }
 
         /* 横屏模式优化 */
         @media (orientation: landscape) and (max-height: 600px) {
             .game-area {
                 padding: 10px;
+                padding-top: 40px;
             }
             
             .dealer-section, .player-section {
@@ -278,6 +330,17 @@
             .money-info {
                 padding: 10px;
             }
+
+            .money-display {
+                margin-bottom: 10px;
+            }
+
+            .exit-btn {
+                width: 25px;
+                height: 25px;
+                line-height: 25px;
+                font-size: 16px;
+            }
         }
 
         /* 超小屏幕优化 */
@@ -294,21 +357,29 @@
             .card-value {
                 font-size: 14px;
             }
+
+            .bet-input {
+                font-size: 14px;
+                padding: 6px 10px;
+            }
         }
     </style>
 </head>
 
 <body>
-    <button class="exit-btn" onclick="exitGame()">退出游戏</button>
     <div class="container">
         <div class="game-area">
+            <button class="exit-btn" onclick="exitGame()">×</button>
             <div class="money-info">
                 <div class="money-display">
                     总金额: <span id="total-money">10000</span>
                 </div>
-                <div>
-                    <input type="number" id="bet-amount" class="bet-input" placeholder="请输入押注金额" min="1">
-                    <div id="bet-error" class="bet-error">押注金额不能大于总金额</div>
+                <div class="bet-section">
+                    <div class="bet-input-wrapper">
+                        <input type="number" id="bet-amount" class="bet-input" placeholder="请输入押注金额" min="1">
+                        <div id="bet-error" class="bet-error">押注金额不能大于总金额</div>
+                    </div>
+                    <button id="deal">开始游戏</button>
                 </div>
             </div>
             <div class="dealer-section">
@@ -324,7 +395,6 @@
             </div>
             
             <div class="buttons">
-                <button id="deal">开始游戏</button>
                 <button id="hit" disabled>要牌</button>
                 <button id="stand" disabled>停牌</button>
             </div>
@@ -538,6 +608,13 @@
             }
             lastTouchEnd = now;
         }, false);
+
+        // 为押注输入框添加回车键支持
+        document.getElementById('bet-amount').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !document.getElementById('deal').disabled) {
+                document.getElementById('deal').click();
+            }
+        });
     </script>
 </body>
 </html>
