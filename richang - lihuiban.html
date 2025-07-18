@@ -1692,6 +1692,11 @@
     </div>
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <script>
+        // 首先记录原始状态
+        window._originalRenderer = {
+            hasSTscript: typeof window.STscript === 'function',
+            hasTriggerSlash: typeof window.triggerSlash === 'function'
+        };
         //兼容层
         window.triggerSlash = window.triggerSlash || window.STscript;
         window.STscript    = window.STscript    || window.triggerSlash;
@@ -1705,6 +1710,19 @@
             if (typeof STscript === 'function') return STscript;
             if (typeof triggerSlash === 'function') return triggerSlash;
             return null;
+        }
+
+        // 检测当前使用的渲染工具类型
+        function getCurrentRenderer() {
+            if (window._originalRenderer.hasSTscript && !window._originalRenderer.hasTriggerSlash) {
+                return 'xiaobaiX';  // 原本只有STscript
+            } else if (!window._originalRenderer.hasSTscript && window._originalRenderer.hasTriggerSlash) {
+                return 'otherRenderer';  // 原本只有triggerSlash
+            } else if (window._originalRenderer.hasSTscript && window._originalRenderer.hasTriggerSlash) {
+                // 两个都有，可能需要其他方式判断
+                return 'xiaobaiX';
+            }
+            return 'none';
         }
         // 数值范围定义
         const valueRanges = {
@@ -1832,17 +1850,30 @@
                 syncVariablesFromGameData();
                 return;
             }
+            
             const probe = await renderFunc('/getvar gameData');
             if (!probe){                                   // 未初始化 → 写默认
                 await renderFunc('/setvar key=gameData ' + JSON.stringify(defaultGameData) +
                             ' | /echo ✅ 游戏数据初始化完成！');
                 gameData = structuredClone(defaultGameData);
             }else{
-                gameData = await renderFunc('/getvar gameData');      
+                // 根据渲染器类型处理返回值
+                const renderer = getCurrentRenderer();
+                if (renderer === 'xiaobaiX') {
+                    // 小白X自动解析JSON
+                    gameData = probe;
+                } else {
+                    // 另一个渲染工具需要手动解析
+                    try {
+                        gameData = typeof probe === 'string' ? JSON.parse(probe) : probe;
+                    } catch (e) {
+                        console.error('JSON解析失败:', e);
+                        gameData = structuredClone(defaultGameData);
+                    }
+                }
             }
             syncVariablesFromGameData();
         }
-
 
         /* 保存 ------------------------------------------------------ */
         async function saveGameData(){
