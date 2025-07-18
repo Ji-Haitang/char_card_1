@@ -1695,6 +1695,17 @@
         //兼容层
         window.triggerSlash = window.triggerSlash || window.STscript;
         window.STscript    = window.STscript    || window.triggerSlash;
+        // 辅助函数：检查是否在任一渲染环境中
+        function isInRenderEnvironment() {
+            return (typeof STscript === 'function') || (typeof triggerSlash === 'function');
+        }
+
+        // 辅助函数：获取可用的渲染函数
+        function getRenderFunction() {
+            if (typeof STscript === 'function') return STscript;
+            if (typeof triggerSlash === 'function') return triggerSlash;
+            return null;
+        }
         // 数值范围定义
         const valueRanges = {
             playerTalents: {
@@ -1816,27 +1827,31 @@
 
         /* 读取或初始化 --------------------------------------------- */
         async function loadOrInitGameData(){
-            if (typeof STscript !== 'function'){           // 离线预览
+            const renderFunc = getRenderFunction();
+            if (!renderFunc){           // 离线预览
                 syncVariablesFromGameData();
                 return;
             }
-            const probe = await STscript('/getvar gameData');
+            const probe = await renderFunc('/getvar gameData');
             if (!probe){                                   // 未初始化 → 写默认
-                await STscript('/setvar key=gameData ' + JSON.stringify(defaultGameData) +
+                await renderFunc('/setvar key=gameData ' + JSON.stringify(defaultGameData) +
                             ' | /echo ✅ 游戏数据初始化完成！');
                 gameData = structuredClone(defaultGameData);
             }else{
-                gameData = await STscript('/getvar gameData');      
+                gameData = await renderFunc('/getvar gameData');      
             }
             syncVariablesFromGameData();
         }
 
+
         /* 保存 ------------------------------------------------------ */
         async function saveGameData(){
-            if (typeof STscript !== 'function') return;
+            const renderFunc = getRenderFunction();
+            if (!renderFunc) return;
             syncGameDataFromVariables();
-            await STscript('/setvar key=gameData ' + JSON.stringify(gameData));
+            await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
         }
+
         /* ----------  END NEW  -------------------------------------- */
 
         // 地点名称映射
@@ -2913,27 +2928,29 @@
             // 先保存数据
             await saveGameData();
             
-            // 判断是否在酒馆环境
-            if (typeof STscript === 'function') {
-                // 在酒馆环境中，将消息作为用户输入发送
+            // 判断是否在渲染环境
+            if (isInRenderEnvironment()) {
+                const renderFunc = getRenderFunction();
+                // 在渲染环境中，将消息作为用户输入发送
                 try {
                     // 将消息设置到输入框
-                    await STscript(`/send at={{lastMessageId}}+1 ${message}`);
+                    await renderFunc(`/send at={{lastMessageId}}+1 ${message}`);
                     // 触发发送按钮
-                    await STscript('/trigger');
-                    console.log('Message sent in SillyTavern:', message);
+                    await renderFunc('/trigger');
+                    console.log('Message sent:', message);
                 } catch (error) {
-                    console.error('Error sending message in SillyTavern:', error);
+                    console.error('Error sending message:', error);
                     // 如果发送失败，降级到弹窗显示
                     const message_error = `发生失败降级为弹窗<br>` + message;
                     showModal(message_error);
                 }
             } else {
-                // 非酒馆环境，保持原有的弹窗显示
+                // 非渲染环境，保持原有的弹窗显示
                 const message_notST = `非酒馆环境以弹窗显示<br>` + message;
                 showModal(message_notST);
             }
         }
+
 
         // 修改parseLLMResponse函数，处理新格式（不限制位置人数）
         function parseLLMResponse(response, mainTextContent) {
@@ -3801,8 +3818,8 @@
             updateAllDisplays();
             setupLocationEvents();
 
-            // 在酒馆环境下隐藏刷新NPC按钮
-            if (typeof STscript === 'function') {
+            // 在渲染环境下隐藏刷新NPC按钮
+            if (isInRenderEnvironment()) {
                 const refreshBtn = document.querySelector('.refresh-npc-btn');
                 if (refreshBtn) {
                     refreshBtn.style.display = 'none';
