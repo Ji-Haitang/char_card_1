@@ -1943,9 +1943,9 @@
             下山: { talentBonus: '心性', affects: '声望' }
         };
 
-       /* ★ 小白X流式缓存区 ★ */
-        let pendingMain = '';   // 累加 MAIN_TEXT
-        let pendingSide = null; // 保存解析后的 SIDE_NOTE
+        /* ★ 小白X流式缓存区 ★ */
+        let pendingMain = '';        // 用来累加 MAIN_TEXT
+        let pendingSide = null;      // 暂存解析后的 SIDE_NOTE
 
         // 保存当前故事正文
         let currentStoryText = "";
@@ -2842,33 +2842,6 @@
                 showModal(message_notST);
             }
         }
-        /* ========= 由小白X每 ~2 秒调用 ========= */
-        window.updateTemplateVariables = function (vars) {
-            if (!vars) return;
-
-            // 1) 累加正文
-            if (typeof vars.MAIN_TEXT === 'string') {
-                pendingMain += vars.MAIN_TEXT;
-            }
-
-            // 2) 侧边数据只取一次
-            if (typeof vars.SIDE_NOTE === 'string' && !pendingSide) {
-                try     { pendingSide = JSON.parse(vars.SIDE_NOTE); }
-                catch(e){ pendingSide = vars.SIDE_NOTE; }
-            }
-
-            // 3) 两块数据都齐且本回合未渲染 → 触发渲染
-            if (pendingMain && pendingSide && !localState.turnUpdateApplied) {
-                localState.turnUpdateApplied = true;
-
-                /* 原函数直接复用 */
-                parseLLMResponse(pendingSide, pendingMain);
-
-                /* 清理缓存，准备下一回合 */
-                pendingMain = '';
-                pendingSide = null;
-            }
-        };
 
         // 修改parseLLMResponse函数，处理新格式（不限制位置人数）
         function parseLLMResponse(response, mainTextContent) {
@@ -3728,6 +3701,34 @@
                 sendFreeAction();
             }
         });
+
+        /* ========= 由小白X反复调用 ========= */
+        window.updateTemplateVariables = function (vars) {
+            if (!vars) return;
+
+            /* 1. 流式累加正文 */
+            if (typeof vars.MAIN_TEXT === 'string') {
+                pendingMain += vars.MAIN_TEXT;
+            }
+
+            /* 2. SIDE_NOTE 通常一次性到齐，解析一次即可 */
+            if (typeof vars.SIDE_NOTE === 'string' && !pendingSide) {
+                try { pendingSide = JSON.parse(vars.SIDE_NOTE); }
+                catch(e){ pendingSide = vars.SIDE_NOTE; }
+            }
+
+            /* 3. 两块数据都齐了而且本回合没渲染过，就渲染 */
+            if (pendingMain && pendingSide && !localState.turnUpdateApplied) {
+                localState.turnUpdateApplied = true;
+
+                /* 旧的处理函数复用 */
+                parseLLMResponse(pendingSide, pendingMain);
+
+                /* 清空，为下回合做准备 */
+                pendingMain = '';
+                pendingSide = null;
+            }
+        };
 
         // 初始化
         window.onload = async function(){
