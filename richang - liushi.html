@@ -3703,28 +3703,30 @@
         });
 
         /* ========= 由小白X反复调用 ========= */
-        window.updateTemplateVariables = function (vars) {
+        window.updateTemplateVariables = function (vars){
             if (!vars) return;
 
-            /* 1. 流式累加正文 */
+            /* 1. 主正文永远是字符串，直接累加 */
             if (typeof vars.MAIN_TEXT === 'string') {
                 pendingMain += vars.MAIN_TEXT;
             }
 
-            /* 2. SIDE_NOTE 通常一次性到齐，解析一次即可 */
-            if (typeof vars.SIDE_NOTE === 'string' && !pendingSide) {
-                try { pendingSide = JSON.parse(vars.SIDE_NOTE); }
-                catch(e){ pendingSide = vars.SIDE_NOTE; }
+            /* 2. SIDE_NOTE 可能是对象也可能是字符串 */
+            if (vars.SIDE_NOTE !== undefined && pendingSide === null){
+                if (typeof vars.SIDE_NOTE === 'string'){
+                    try { pendingSide = JSON.parse(vars.SIDE_NOTE); }
+                    catch { pendingSide = vars.SIDE_NOTE; }
+                }else{
+                    pendingSide = vars.SIDE_NOTE;   // 已经是对象
+                }
             }
 
-            /* 3. 两块数据都齐了而且本回合没渲染过，就渲染 */
-            if (pendingMain && pendingSide && !localState.turnUpdateApplied) {
+            /* 3. 两块数据都齐后渲染（只渲染一次） */
+            if (pendingMain && pendingSide !== null && !localState.turnUpdateApplied){
                 localState.turnUpdateApplied = true;
 
-                /* 旧的处理函数复用 */
                 parseLLMResponse(pendingSide, pendingMain);
 
-                /* 清空，为下回合做准备 */
                 pendingMain = '';
                 pendingSide = null;
             }
