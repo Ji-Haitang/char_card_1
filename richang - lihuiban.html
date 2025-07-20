@@ -2347,7 +2347,7 @@
                 moodCost = 0;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 90);
-                    statChange.心情 = '+60';
+                    statChange.心情 = '+90';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 1000;
                 } else if (config.affects === '声望') {
@@ -2361,7 +2361,7 @@
                 moodCost = 5;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 60);
-                    statChange.心情 = '+45';
+                    statChange.心情 = '+60';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 500;
                 } else if (config.affects === '声望') {
@@ -2375,7 +2375,7 @@
                 moodCost = 10;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 45);
-                    statChange.心情 = '+30';
+                    statChange.心情 = '+45';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 100;
                 } else if (config.affects === '声望') {
@@ -2389,7 +2389,7 @@
                 moodCost = 15;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 30);
-                    statChange.心情 = '+20';
+                    statChange.心情 = '+30';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -500;
                 } else if (config.affects === '声望') {
@@ -2402,8 +2402,8 @@
                 successText = '惨不忍睹！';
                 moodCost = 20;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 15);
-                    statChange.心情 = '+10';
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -1000;
                 } else if (config.affects === '声望') {
