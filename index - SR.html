@@ -1,0 +1,996 @@
+<!-- /**
+ * index.html 内联函数说明
+ * 
+ * 这些函数保留在HTML中是为了支持onclick等内联事件调用。
+ * 它们主要是对其他模块函数的封装或直接实现。
+ * 
+ * 主要函数：
+ * 
+ * - showPlayerStats(): 显示角色属性界面
+ *   作用：切换到属性面板场景，显示玩家的各项数值
+ * 
+ * - showRelationships(): 显示人际关系界面
+ *   作用：切换到关系面板场景，显示与各NPC的好感度
+ * 
+ * - skipWeek(): 跳过当前周
+ *   作用：推进游戏时间一周，重置行动点
+ * 
+ * - performAction(action, location): 执行地点行动
+ *   作用：处理玩家在各地点的行动选择，计算结果
+ * 
+ * - refreshNpcLocations(): 刷新NPC位置
+ *   作用：重新随机分配所有NPC的位置
+ * 
+ * - backToMap(): 返回地图
+ *   作用：从其他场景返回主地图界面
+ * 
+ * - closeModal(): 关闭弹窗
+ *   作用：关闭当前显示的模态弹窗
+ * 
+ * - sendInteraction(): 发送NPC互动
+ *   作用：处理玩家输入的NPC互动内容
+ * 
+ * - addAttack(): 增加攻击力
+ *   作用：消耗属性点增加10点攻击力
+ * 
+ * - addHP(): 增加生命值
+ *   作用：消耗属性点增加25点生命值
+ * 
+ * - npcAction(npcId, action): NPC动作处理
+ *   作用：处理对NPC的切磋或互动操作
+ * 
+ * - goToLocation(locationId): 前往地点
+ *   作用：从地图点击前往具体场景
+ * 
+ * - sendFreeAction(): 发送自由行动
+ *   作用：处理玩家输入的自由行动内容
+ * 
+ * - startBattle(): 发起战斗
+ *   作用：开始战斗事件的战斗
+ * 
+ * - fleeBattle(): 放弃战斗
+ *   作用：放弃战斗事件，避开战斗
+ */ -->
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>类脑群侠传</title>
+    
+    <!-- 从GitHub加载CSS -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-styles.css">
+</head>
+<body>
+    <div class="container">
+        <div class="viewport-wrapper">
+            <div class="viewport" id="main-viewport">
+                <!-- 悬浮提示框 -->
+                <div class="tooltip" id="tooltip"></div>
+
+                <!-- NPC信息弹窗 -->
+                <div class="npc-info-popup" id="npc-info-popup"></div>
+
+                <!-- 地点信息弹窗 - 新增 -->
+                <div class="location-info-popup" id="location-info-popup"></div>
+
+                <!-- 地图场景 -->
+                <div id="map-scene" class="scene active">
+                    <div class="status-display">
+                        <div class="date-display" id="date-display">第1年第1月第1周</div>
+                        <div class="mood-display" id="mood-display">心情: 100</div>
+                        <div class="action-points-display" id="action-points-display">行动点: 3</div>
+                    </div>
+                    <button class="refresh-npc-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
+                    <div class="location" id="yanwuchang"></div>
+                    <div class="location" id="cangjingge"></div>
+                    <div class="location" id="huofang"></div>
+                    <div class="location" id="houshan"></div>
+                    <div class="location" id="yishiting"></div>
+                    <div class="location" id="tiejiangpu"></div>
+                    <div class="location" id="nandizi"></div>
+                    <div class="location" id="nvdizi"></div>
+                    <div class="location" id="shanmen"></div>
+                    <div class="ink-decoration ink1"></div>
+                    <div class="ink-decoration ink2"></div>
+                </div>
+
+                <!-- 后续场景保持不变 -->
+                <!-- 角色属性场景 -->
+                <div id="player-stats-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="stats-container">
+                        <div class="stats-group">
+                            <h3>天赋属性</h3>
+                            <div class="stat-item">
+                                <span class="stat-name">根骨</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-gengu" style="width: 75%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-gengu-value">75</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">悟性</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-wuxing" style="width: 82%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-wuxing-value">82</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">心性</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-xinxing" style="width: 68%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-xinxing-value">68</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-name">魅力</span>
+                                <div class="stat-bar">
+                                    <div class="stat-fill" id="talent-meili" style="width: 70%"></div>
+                                </div>
+                                <span class="stat-value" id="talent-meili-value">70</span>
+                            </div>
+                        </div>
+                        
+                        <div class="bottom-stats-row">
+                            <div class="stats-group">
+                                <h3>人物数值</h3>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">武学</span>
+                                    <span class="simple-stat-value" id="stat-wuxue-value">50</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">学识</span>
+                                    <span class="simple-stat-value" id="stat-xueshi-value">35</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">声望</span>
+                                    <span class="simple-stat-value" id="stat-shengwang-value">20</span>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">金钱</span>
+                                    <span class="simple-stat-value" id="stat-jinqian-value">100</span>
+                                </div>
+                            </div>
+                            
+                            <div class="stats-group">
+                                <h3>战斗数值</h3>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">攻击力</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-attack-value">20</span>
+                                        <button class="add-point-btn" id="add-attack-btn" onclick="addAttack()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">生命值</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-hp-value">50</span>
+                                        <button class="add-point-btn" id="add-hp-btn" onclick="addHP()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">剩余点数</span>
+                                    <span class="simple-stat-value" id="remaining-points-value">0</span>
+                                </div>
+                                <div class="skill-list">
+                                    <div class="simple-stat-name" style="margin-bottom: 10px;">已学武功</div>
+                                    <div id="learned-skills"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 人际关系场景 -->
+                <div id="relationships-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="relationships-container">
+                        <div class="relationship-grid" id="relationship-grid">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 各个场景 -->
+                <div id="yanwuchang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">演武场</div>
+                    <div class="npc-container" id="yanwuchang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('练武', 'yanwuchang')">练武</button>
+                    </div>
+                </div>
+
+                <div id="cangjingge-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">藏经阁</div>
+                    <div class="npc-container" id="cangjingge-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('学习', 'cangjingge')">学习</button>
+                    </div>
+                </div>
+
+                <div id="huofang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">伙房</div>
+                    <div class="npc-container" id="huofang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('打杂', 'huofang')">打杂</button>
+                    </div>
+                </div>
+
+                <div id="houshan-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">后山</div>
+                    <div class="npc-container" id="houshan-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('秘密赌场', 'houshan')">秘密赌场</button>
+                        <button class="scene-btn" onclick="performAction('探索', 'houshan')">探索</button>
+                    </div>
+                </div>
+
+                <div id="yishiting-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">议事厅</div>
+                    <div class="npc-container" id="yishiting-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('汇报', 'yishiting')">汇报</button>
+                    </div>
+                </div>
+
+                <div id="tiejiangpu-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">铁匠铺</div>
+                    <div class="npc-container" id="tiejiangpu-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('打铁', 'tiejiangpu')">打铁</button>
+                    </div>
+                </div>
+
+                <div id="nandizi-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">男弟子房</div>
+                    <div class="npc-container" id="nandizi-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('休息', 'nandizi')">休息</button>
+                    </div>
+                </div>
+
+                <div id="nvdizi-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">女弟子房</div>
+                    <div class="npc-container" id="nvdizi-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('拜访', 'nvdizi')">拜访</button>
+                    </div>
+                </div>
+
+                <div id="shanmen-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <div class="scene-title">山门</div>
+                    <div class="npc-container" id="shanmen-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" disabled>下山</button>
+                        <!-- <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button> -->
+                    </div>
+                </div>
+                <!-- 弹窗 -->
+                <div id="modal" class="modal">
+                    <div class="modal-content">
+                        <div class="modal-text" id="modal-text">新的一周开始了</div>
+                        <div class="modal-buttons" id="modal-buttons">
+                            <button class="modal-btn" onclick="closeModal()">确定</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 21点游戏iframe弹窗 - 新增 -->
+                <div id="blackjack-modal" class="blackjack-modal">
+                    <div class="blackjack-container">
+                        <iframe id="blackjack-iframe" class="blackjack-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- 战斗iframe弹窗 -->
+                <div id="battle-modal" class="battle-modal">
+                    <div class="battle-container">
+                        <iframe id="battle-iframe" class="battle-iframe"></iframe>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 自由行动输入框 -->
+        <div class="free-action-container">
+            <textarea 
+                class="free-action-input" 
+                id="free-action-input" 
+                placeholder="输入自由行动内容"
+                rows="1"
+            ></textarea>
+            <button class="free-action-send-btn" onclick="sendFreeAction()">发送</button>
+        </div>
+        
+        <!-- 中间控制按钮 -->
+        <div class="control-buttons">
+            <button class="control-btn" onclick="showPlayerStats()">角色属性</button>
+            <button class="control-btn" onclick="showRelationships()">人际关系</button>
+            <button class="control-btn" onclick="skipWeek()">跳过这一周</button>
+        </div>
+
+        <!-- 故事区域 -->
+        <div class="story-area">
+            <div class="story-text" id="story-text">
+                江湖路远，故事未始...
+            </div>
+            <!-- 随机事件容器 - 新增 -->
+            <div class="random-event-container" id="random-event-container">
+                <div class="event-title">随机事件</div>
+                <div class="event-description" id="event-description"></div>
+                <div class="event-options" id="event-options"></div>
+            </div>
+            <!-- 战斗事件容器 -->
+            <div class="battle-event-container" id="battle-event-container">
+                <div class="battle-event-title">战斗事件</div>
+                <div class="battle-event-description" id="battle-event-description"></div>
+                <div class="battle-enemy-info">
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">敌人：</span>
+                        <span id="enemy-name-display"></span>
+                    </div>
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">攻击力：</span>
+                        <span id="enemy-attack-display"></span>
+                    </div>
+                    <div class="enemy-info-item">
+                        <span class="enemy-info-label">生命力：</span>
+                        <span id="enemy-health-display"></span>
+                    </div>
+                </div>
+                <div class="battle-reward">
+                    <div class="battle-reward-text" id="battle-reward-text"></div>
+                </div>
+                <div class="battle-actions">
+                    <button class="battle-action-btn fight" onclick="startBattle()">发起战斗</button>
+                    <button class="battle-action-btn flee" onclick="fleeBattle()">放弃战斗</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载外部库 -->
+    <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    
+    <!-- 从GitHub加载游戏模块 -->
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-events.js"></script>
+    
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {  
+        // 记录原始渲染环境状态
+        window._originalRenderer = {
+            hasSTscript: typeof window.STscript === 'function',
+            hasTriggerSlash: typeof window.triggerSlash === 'function'
+        };
+        
+        // 兼容层
+        window.triggerSlash = window.triggerSlash || window.STscript;
+        window.STscript = window.STscript || window.triggerSlash;
+
+        window.updateTemplateVariables = function(vars) {
+            if (!vars) return;
+            
+            let hasUpdate = false;
+            
+            if (vars.MAIN_TEXT !== undefined) {
+                localState.currentStoryText = vars.MAIN_TEXT;
+                updateStoryText(localState.currentStoryText);
+                //hasUpdate = true;
+            }
+            
+            if (vars.SIDE_NOTE !== undefined && !localState.turnUpdateApplied) {
+                try {
+                    let llmResponse = vars.SIDE_NOTE;
+                    if (typeof llmResponse === 'string') {
+                        llmResponse = JSON.parse(llmResponse);
+                    }
+                    parseLLMResponse(llmResponse, localState.currentStoryText);
+                    hasUpdate = true;
+                } catch (error) {
+                    console.error('解析SIDE_NOTE失败:', error);
+                }
+            }
+            
+            if (hasUpdate) {
+                localState.turnUpdateApplied = true;
+            }
+        };
+        
+        // 模板变量
+        // const mainText = `$1`;
+        // const llmResponse = $2;
+        
+        // ========== 保留在HTML中的函数（用于onclick调用） ==========
+        
+        // 显示角色属性
+        function showPlayerStats() {
+            switchScene('player-stats');
+            updateStatsDisplay();
+        }
+
+        // 显示人际关系
+        function showRelationships() {
+            switchScene('relationships');
+            updateRelationshipsDisplay();
+        }
+
+        // 跳过这一周
+        function skipWeek() {
+            showConfirmModal(
+                '确认跳过',
+                '确定要跳过这一周吗？',
+                async () => {
+                    currentWeek++;
+                    actionPoints = 3;
+                    userLocation = "tianshanpai";
+                    checkAllValueRanges();
+                    updateAllDisplays();
+                    refreshNpcLocations();
+                    await handleMessageOutput('新的一周开始了<br>当前第' + currentWeek + '周');
+                }
+            );
+        }
+
+        // 执行互动
+        async function performAction(action, location) {
+            if (action === '秘密赌场') {
+                if (actionPoints < 1) {
+                    showModal('行动点不足，无法进行此操作！');
+                    return;
+                }
+                
+                let actionPointConsumed = true;
+                const mindChance = playerTalents.心性 / 2;
+                if (Math.random() * 100 < mindChance) {
+                    actionPointConsumed = false;
+                } else {
+                    actionPoints--;
+                }
+                checkAllValueRanges();
+                updateAllDisplays();
+                
+                showBlackjackGame();
+                
+                if (!actionPointConsumed) {
+                    window.pendingMindMessage = true;
+                }
+                return;
+            }
+
+            if (actionPoints < 1) {
+                showModal('行动点不足，无法进行此操作！');
+                return;
+            }
+
+            let actionPointConsumed = true;
+            let mindMessageShown = false;
+            const mindChance = playerTalents.心性 / 2;
+            if (Math.random() * 100 < mindChance) {
+                actionPointConsumed = false;
+                mindMessageShown = true;
+            } else {
+                actionPoints--;
+            }
+            
+            const config = actionConfigs[action];
+            const talentBonus = playerTalents[config.talentBonus] / 2;
+            
+            const randomRoll = Math.random() * 100;
+            const finalValue = (randomRoll + talentBonus) * playerMood / 100;
+
+            let successLevel, successText, moodCost;
+            let statChange = {};
+            
+            if (finalValue >= 80) {
+                successLevel = '大成功';
+                successText = '成果斐然！';
+                moodCost = 0;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 90);
+                    statChange.心情 = '+90';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 1000;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 5;
+                } else {
+                    statChange[config.affects] = 5;
+                }
+            } else if (finalValue >= 60) {
+                successLevel = '成功';
+                successText = '收获颇丰。';
+                moodCost = 5;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 60);
+                    statChange.心情 = '+60';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 500;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 3;
+                } else {
+                    statChange[config.affects] = 3;
+                }
+            } else if (finalValue >= 40) {
+                successLevel = '一般';
+                successText = '平平无奇。';
+                moodCost = 10;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 45);
+                    statChange.心情 = '+45';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = 100;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = 1;
+                } else {
+                    statChange[config.affects] = 1;
+                }
+            } else if (finalValue >= 20) {
+                successLevel = '失败';
+                successText = '事与愿违...';
+                moodCost = 15;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = -500;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = -2;
+                } else {
+                    statChange[config.affects] = 0;
+                }
+            } else {
+                successLevel = '大失败';
+                successText = '惨不忍睹！';
+                moodCost = 20;
+                if (action === '休息') {
+                    playerMood = Math.min(100, playerMood + 30);
+                    statChange.心情 = '+30';
+                } else if (config.affects === '金钱') {
+                    statChange[config.affects] = -1000;
+                } else if (config.affects === '声望') {
+                    statChange[config.affects] = -5;
+                } else {
+                    statChange[config.affects] = 0;
+                }
+            }
+
+            if (config.affects !== '心情') {
+                playerStats[config.affects] = Math.max(0, playerStats[config.affects] + statChange[config.affects]);
+                if (action !== '休息') {
+                    playerMood = Math.max(0, playerMood - moodCost);
+                }
+            }
+
+            checkAllValueRanges();
+
+            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+
+            let changeText = '';
+            Object.entries(statChange).forEach(([key, value]) => {
+                changeText += `<br>${key}: ${value > 0 ? '+' : ''}${value}`;
+            });
+            if (action !== '休息') {
+                changeText += `<br>心情: -${moodCost}`;
+            }
+            
+            if (actionPointConsumed) {
+                changeText += '<br>行动点: -1';
+            } else {
+                changeText += '<br>行动点: -0（心性判定成功）';
+            }
+
+            let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `地点：${locationNames[location]}<br>` +
+                `{{user}}行动选择：${action}<br>` +
+                `在场NPC：${npcsPresent}<br>` +
+                `选择结果：${successLevel} - ${successText}<br><br>` +
+                `属性变化：${changeText}`;
+
+            updateAllDisplays();
+            refreshNpcLocations();
+            
+            await handleMessageOutput(resultMessage);
+        }
+
+        // 刷新NPC位置
+        function refreshNpcLocations() {
+            const locationCount = {
+                yanwuchang: 0,
+                cangjingge: 0,
+                huofang: 0,
+                houshan: 0,
+                yishiting: 0,
+                tiejiangpu: 0,
+                nandizi: 0,
+                nvdizi: 0,
+                shanmen: 0
+            };
+
+            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].sort(() => Math.random() - 0.5);
+
+            npcOrder.forEach(npcId => {
+                let assigned = false;
+                let attempts = 0;
+                const maxAttempts = 20;
+
+                while (!assigned && attempts < maxAttempts) {
+                    const location = getRandomLocation(npcId);
+                    
+                    if (location === 'none') {
+                        currentNpcLocations[npcId] = location;
+                        assigned = true;
+                    } else if (locationCount[location] < 2) {
+                        currentNpcLocations[npcId] = location;
+                        locationCount[location]++;
+                        assigned = true;
+                    }
+                    
+                    attempts++;
+                }
+
+                if (!assigned) {
+                    currentNpcLocations[npcId] = 'none';
+                }
+            });
+
+            npcLocationA = currentNpcLocations.A;
+            npcLocationB = currentNpcLocations.B;
+            npcLocationC = currentNpcLocations.C;
+            npcLocationD = currentNpcLocations.D;
+            npcLocationE = currentNpcLocations.E;
+            npcLocationF = currentNpcLocations.F;
+            npcLocationG = currentNpcLocations.G;
+            
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && activeScene.id !== 'map-scene') {
+                const locationName = activeScene.id.replace('-scene', '');
+                displayNpcs(locationName);
+            }
+        }
+
+        // 返回地图
+        function backToMap() {
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => {
+                scene.classList.remove('active');
+            });
+
+            document.getElementById('map-scene').classList.add('active');
+            userLocation = 'tianshanpai';
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('modal').style.display = 'none';
+        }
+
+        // 发送互动内容
+        async function sendInteraction() {
+            const interactionContent = document.getElementById('interaction-input').value.trim();
+            
+            if (!interactionContent) {
+                alert('请输入互动内容！');
+                return;
+            }
+            
+            const activeScene = document.querySelector('.scene.active');
+            const location = activeScene.id.replace('-scene', '');
+            
+            const npc = npcs[currentInteractionNpc];
+            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+            
+            const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `地点：${locationNames[location]}<br>` +
+                `{{user}}行动选择：NPC互动<br>` +
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
+                `在场NPC：${npcsPresent}`;
+            
+            closeModal();
+            
+            currentInteractionNpc = null;
+            currentInteractionLocation = null;
+            
+            await handleMessageOutput(resultMessage);
+        }
+
+        // 增加攻击力
+        function addAttack() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加10点攻击力？',
+                    () => {
+                        combatStats.攻击力 += 10;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        setTimeout(() => {
+                            showModal(`攻击力提升至 ${combatStats.攻击力}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        // 增加生命值
+        function addHP() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加25点生命值？',
+                    () => {
+                        combatStats.生命值 += 25;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        setTimeout(() => {
+                            showModal(`生命值提升至 ${combatStats.生命值}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        // NPC动作
+        function npcAction(npcId, action) {
+            const popup = document.getElementById('npc-info-popup');
+            popup.classList.remove('show');
+            document.removeEventListener('click', closeNpcInfo);
+            
+            if (action === '互动') {
+                const activeScene = document.querySelector('.scene.active');
+                const location = activeScene.id.replace('-scene', '');
+                showInteractionInput(npcId, location);
+            } else if (action === '切磋') {
+                const npc = npcs[npcId];
+                currentBattleType = 'npc';
+                currentBattleNpcName = npc.name;
+                
+                const battleData = {
+                    player: {
+                        name: '你',
+                        attack: combatStats.攻击力,
+                        health: combatStats.生命值
+                    },
+                    enemy: {
+                        name: npc.name,
+                        maxHealth: '中',
+                        basicDamage: '中'
+                    }
+                };
+                
+                showBattleGame(battleData);
+            }
+        }
+
+        // 前往地点
+        function goToLocation(locationId) {
+            const popup = document.getElementById('location-info-popup');
+            popup.classList.remove('show');
+            document.removeEventListener('click', closeLocationInfo);
+            
+            userLocation = locationId;
+            switchScene(locationId);
+        }
+
+        // 发送自由行动
+        async function sendFreeAction() {
+            const inputElement = document.getElementById('free-action-input');
+            const actionContent = inputElement.value.trim();
+            
+            if (!actionContent) {
+                alert('请输入自由行动内容！');
+                return;
+            }
+            
+            const activeScene = document.querySelector('.scene.active');
+            let currentLocation = '';
+            let npcsPresent = '无';
+            
+            if (activeScene.id === 'map-scene') {
+                currentLocation = '天山派（地图）';
+                npcsPresent = '无在场NPC';
+            } else {
+                const sceneName = activeScene.id.replace('-scene', '');
+                currentLocation = locationNames[sceneName] || sceneName;
+                
+                const npcsAtLocation = getNpcsAtLocation(sceneName);
+                if (npcsAtLocation.length > 0) {
+                    npcsPresent = npcsAtLocation.map(npc => npc.name).join('、');
+                }
+            }
+            
+            const year = Math.floor((currentWeek - 1) / 48) + 1;
+            const remainingWeeks = (currentWeek - 1) % 48;
+            const month = Math.floor(remainingWeeks / 4) + 1;
+            const week = remainingWeeks % 4 + 1;
+            
+            const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                `地点：${currentLocation}<br>` +
+                `{{user}}自由行动："${actionContent}"<br>` +
+                `在场NPC：${npcsPresent}`;
+            
+            inputElement.value = '';
+            inputElement.style.height = 'auto';
+            
+            await handleMessageOutput(resultMessage);
+        }
+
+        // 发起战斗
+        function startBattle() {
+            if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
+            
+            const enemyInfo = currentBattleEvent.敌方信息;
+            currentBattleType = 'event';
+            
+            const battleData = {
+                player: {
+                    name: '你',
+                    attack: combatStats.攻击力,
+                    health: combatStats.生命值
+                },
+                enemy: {
+                    name: enemyInfo.名称,
+                    maxHealth: enemyInfo.属性?.生命力 || '中',
+                    basicDamage: enemyInfo.属性?.攻击力 || '中'
+                }
+            };
+            
+            showBattleGame(battleData);
+        }
+
+        // 放弃战斗
+        async function fleeBattle() {
+            if (!currentBattleEvent) return;
+            
+            const resultMessage = currentBattleEvent.事件描述 + '<br><br>你选择避开了战斗';
+            
+            hideBattleEvent();
+            
+            await handleMessageOutput(resultMessage);
+        }
+        
+        // ========== 初始化 ==========
+        window.onload = async function() {
+            await loadOrInitGameData();
+            checkAllValueRanges();
+            updateAllDisplays();
+            setupLocationEvents();
+            setupMessageListeners();
+            
+            if (isInRenderEnvironment()) {
+                const refreshBtn = document.querySelector('.refresh-npc-btn');
+                if (refreshBtn) {
+                    refreshBtn.style.display = 'none';
+                }
+            }
+            
+            if (userLocation === 'tianshanpai') {
+                document.getElementById('map-scene').classList.add('active');
+            } else {
+                switchScene(userLocation);
+            }
+            
+            parseLLMResponse(llmResponse, mainText);
+        };
+        
+        // 自由行动输入框事件
+        document.getElementById('free-action-input').addEventListener('input', function() {
+            this.style.height = 'auto';
+            const scrollHeight = this.scrollHeight;
+            this.style.height = Math.min(scrollHeight, 120) + 'px';
+        });
+        
+        document.getElementById('free-action-input').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendFreeAction();
+            }
+        });
+        
+        // 弹窗背景点击事件
+        document.getElementById('blackjack-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                const iframe = document.getElementById('blackjack-iframe');
+                try {
+                    iframe.contentWindow.postMessage({ type: 'close-game' }, '*');
+                } catch(e) {
+                    this.style.display = 'none';
+                    iframe.src = '';
+                }
+            }
+        });
+        
+        document.getElementById('battle-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要退出战斗吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('battle-iframe').src = '';
+                    
+                    if (currentBattleType === 'event') {
+                        hideBattleEvent();
+                    }
+                    
+                    currentBattleType = null;
+                    currentBattleReward = null;
+                }
+            }
+        });
+
+        async function initializeOrSync() {
+            await loadOrInitGameData();
+            checkAllValueRanges();
+            updateAllDisplays();
+            setupLocationEvents();
+
+            if (isInRenderEnvironment()) {
+                const refreshBtn = document.querySelector('.refresh-npc-btn');
+                if (refreshBtn) {
+                    refreshBtn.style.display = 'none';
+                }
+            }
+            
+            if (userLocation === 'tianshanpai'){
+                document.getElementById('map-scene').classList.add('active');
+            }else{
+                switchScene(userLocation);
+            }
+        }
+
+        try {
+            if (window.parent) {
+                const inputElement = window.parent.document.getElementById('send_textarea');
+                const sendButton = window.parent.document.getElementById('send_button');
+                
+                if (inputElement) {
+                    inputElement.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                            localState.turnUpdateApplied = false;
+                        }
+                    });
+                }
+                
+                if (sendButton) {
+                    sendButton.addEventListener('click', function() {
+                        localState.turnUpdateApplied = false;
+                    });
+                }
+            }
+        } catch (error) {
+        }
+        window.showPlayerStats = showPlayerStats;
+        window.showRelationships = showRelationships;
+        window.skipWeek = skipWeek;
+        window.performAction = performAction;
+        window.refreshNpcLocations = refreshNpcLocations;
+        window.backToMap = backToMap;
+        window.closeModal = closeModal;
+        window.sendInteraction = sendInteraction;
+        window.addAttack = addAttack;
+        window.addHP = addHP;
+        window.npcAction = npcAction;
+        window.goToLocation = goToLocation;
+        window.sendFreeAction = sendFreeAction;
+        window.startBattle = startBattle;
+        window.fleeBattle = fleeBattle;
+        initializeOrSync();
+    });
+    </script>
+</body>
+</html>

@@ -1,0 +1,1388 @@
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 根字体大小响应式设置 */
+:root {
+    font-size: 16px;
+}
+
+@media (max-width: 768px) {
+    :root {
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 480px) {
+    :root {
+        font-size: 12px;
+    }
+}
+
+body {
+    font-family: "Microsoft YaHei", "SimSun", serif;
+    background: #f5f5f5;
+    background-image: 
+        repeating-linear-gradient(
+            45deg,
+            transparent,
+            transparent 10px,
+            rgba(0,0,0,.03) 10px,
+            rgba(0,0,0,.03) 20px
+        );
+    margin: 0;  /* 确保body没有margin */
+    padding: 0;  /* 确保body没有padding */
+}
+
+.container {
+    width: 100%;
+    max-width: 100%;  /* 移除宽度限制 */
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+/* 视窗包装器 */
+.viewport-wrapper {
+    width: 100%;
+    max-width: 100%;  /* 使用全屏宽度减去左右边距 */
+    margin: 0 auto;
+    position: relative;
+}
+
+/* 视窗样式 */
+.viewport {
+    width: 100%;
+    aspect-ratio: 1.46;
+    background: #fff;
+    border: 3px solid #2c2c2c;
+    box-shadow: 0 0 30px rgba(0,0,0,0.3);
+    position: relative;
+    overflow: hidden;
+    background-image: 
+        radial-gradient(circle at 20% 80%, rgba(0,0,0,0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(0,0,0,0.05) 0%, transparent 50%);
+    box-sizing: border-box;
+}
+
+/* 场景容器 */
+.scene {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: none;
+    background: #f8f8f8;
+}
+
+.scene.active {
+    display: block;
+}
+
+/* 地图场景 */
+#map-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #e8e8e8;
+}
+
+/* 演武场场景 */
+#yanwuchang-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 藏经阁场景 */
+#cangjingge-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 伙房场景 */
+#huofang-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 后山场景 */
+#houshan-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 议事厅场景 */
+#yishiting-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 铁匠铺场景 */
+#tiejiangpu-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 男弟子房场景 */
+#nandizi-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 女弟子房场景 */
+#nvdizi-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+/* 山门场景 */
+#shanmen-scene {
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.png');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    background-color: #f8f8f8;
+}
+
+
+/* 状态显示 - 响应式改进 */
+.status-display {
+    position: absolute;
+    top: clamp(10px, 3%, 30px);
+    left: clamp(10px, 3%, 30px);
+    color: #1a1a1a;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
+    background: rgba(255, 255, 255, 0.85);
+    padding: clamp(8px, 2vw, 15px);
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+    font-size: clamp(0.75rem, 2vw, 1rem);
+}
+
+.date-display {
+    font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.mood-display,
+.action-points-display {
+    font-size: clamp(0.8rem, 2.2vw, 1.125rem);
+    font-weight: bold;
+    margin-top: 3px;
+}
+
+/* 刷新NPC按钮 - 响应式改进 */
+.refresh-npc-btn {
+    position: absolute;
+    top: clamp(10px, 3%, 30px);
+    right: clamp(10px, 3%, 30px);
+    padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+    background: rgba(44, 44, 44, 0.9);
+    color: #fff;
+    border: 2px solid #1a1a1a;
+    cursor: pointer;
+    font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+}
+
+.refresh-npc-btn:hover {
+    background: #3c3c3c;
+    transform: translateY(-2px);
+}
+
+/* 中间控制按钮组 - 响应式改进 */
+.control-buttons {
+    width: 100%;
+    max-width: 100%;  /* 全部改为动态宽度 */
+    margin: 0 auto;
+    display: flex;
+    box-sizing: border-box;
+}
+
+.control-btn {
+    flex: 1;
+    padding: clamp(10px, 2vw, 15px) clamp(15px, 3vw, 30px);
+    background: #2c2c2c;
+    color: #fff;
+    border: 3px solid #2c2c2c;
+    border-top: none;
+    cursor: pointer;
+    font-size: clamp(0.75rem, 2vw, 1rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 480px) {
+    .control-btn {
+        padding: 10px 5px;
+        font-size: 0.75rem;
+    }
+}
+
+.control-btn:hover {
+    background: #3c3c3c;
+}
+
+.control-btn:first-child {
+    border-right: none;
+}
+
+.control-btn:last-child {
+    border-left: none;
+}
+
+/* 地点按钮 */
+.location {
+    position: absolute;
+    width: clamp(12px, 2vw, 16px);
+    height: clamp(12px, 2vw, 16px);
+    border-radius: 50%;
+    background: #fff;
+    border: 2px solid #2c2c2c;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+}
+
+.location:hover {
+    transform: scale(1.5);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4);
+}
+
+/* 地点位置 */
+#yanwuchang { top: 50%; left: 50%; }
+#cangjingge { top: 30%; left: 20%; }
+#huofang { top: 60%; left: 67%; }
+#houshan { top: 35%; left: 77%; }
+#yishiting { top: 15%; left: 59%; }
+#tiejiangpu { top: 70%; left: 80%; }
+#nandizi { top: 30%; left: 67%; }
+#nvdizi { top: 30%; left: 40%; }
+#shanmen { top: 80%; left: 37%; }
+
+/* 悬浮提示框 - 响应式改进 */
+.tooltip {
+    position: absolute;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: 0;
+    border-radius: 5px;
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    min-width: clamp(100px, 20vw, 150px);
+    max-width: 90vw;
+}
+
+.tooltip.show {
+    opacity: 1;
+}
+
+.tooltip-item {
+    padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2vw, 15px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    white-space: nowrap;
+}
+
+.tooltip-item:last-child {
+    border-bottom: none;
+}
+
+.tooltip-location {
+    font-weight: bold;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: #4ecdc4;
+}
+
+/* 地点信息弹窗 - 新增 */
+.location-info-popup {
+    position: fixed;
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: clamp(15px, 3vw, 20px);
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    z-index: 2000;
+    min-width: clamp(180px, 35vw, 250px);
+    text-align: center;
+    display: none;
+}
+
+.location-info-popup.show {
+    display: block;
+}
+
+.location-info-name {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    font-weight: bold;
+    margin-bottom: clamp(8px, 2vw, 10px);
+    color: #4ecdc4;
+}
+
+.location-info-npcs {
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    color: #ccc;
+    margin-bottom: clamp(12px, 3vw, 15px);
+    line-height: 1.4;
+}
+
+.location-info-npc-item {
+    margin: 5px 0;
+}
+
+.location-go-btn {
+    padding: clamp(8px, 2vw, 10px) clamp(25px, 5vw, 35px);
+    background: #4ecdc4;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.location-go-btn:hover {
+    background: #3dbbb3;
+    transform: scale(1.05);
+}
+
+/* 返回按钮 - 响应式改进 */
+.back-btn {
+    position: absolute;
+    top: clamp(10px, 2vw, 20px);
+    left: clamp(10px, 2vw, 20px);
+    padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+    background: #2c2c2c;
+    color: #fff;
+    border: 2px solid #1a1a1a;
+    cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    z-index: 100;
+}
+
+.back-btn:hover {
+    background: #3c3c3c;
+    transform: translateY(-2px);
+}
+
+/* 场景标题 - 响应式改进 */
+.scene-title {
+    position: absolute;
+    top: clamp(20px, 3vw, 30px);
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: clamp(1.5rem, 4vw, 2.25rem);
+    font-weight: bold;
+    color: #000000;
+    text-shadow: 
+        -1px -1px 0 #fff,
+        1px -1px 0 #fff,
+        -1px 1px 0 #fff,
+        1px 1px 0 #fff;  /* 默认使用1px描边 */
+    letter-spacing: clamp(5px, 1vw, 10px);
+}
+
+/* 手机端使用更细的描边 */
+@media (max-width: 768px) {
+    .scene-title {
+        text-shadow: 
+            -0.5px -0.5px 0 #fff,
+            0.5px -0.5px 0 #fff,
+            -0.5px 0.5px 0 #fff,
+            0.5px 0.5px 0 #fff;
+    }
+}
+
+/* PC端和平板使用稍粗的描边 */
+@media (min-width: 769px) {
+    .scene-title {
+        text-shadow: 
+            -1.5px -1.5px 0 #fff,
+            1.5px -1.5px 0 #fff,
+            -1.5px 1.5px 0 #fff,
+            1.5px 1.5px 0 #fff,
+            -1px 0 0 #fff,
+            1px 0 0 #fff,
+            0 -1px 0 #fff,
+            0 1px 0 #fff;
+    }
+}
+
+/* NPC立绘容器 */
+.npc-container {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+}
+
+/* NPC立绘 - 修改为70%大小 */
+.npc-portrait {
+    position: absolute;
+    bottom: 0;
+    width: 70%;  /* 从60%改为70% */
+    height: 70%; /* 从60%改为70% */
+    cursor: pointer;
+    pointer-events: auto;
+    transition: filter 0.3s ease;
+}
+
+.npc-portrait:hover {
+    filter: brightness(1.1);
+}
+
+.npc-portrait img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: bottom center;
+}
+
+/* 单个NPC时的位置 */
+.npc-portrait.single {
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* 两个NPC时的位置 - 修改为30%和70% */
+.npc-portrait.double-left {
+    left: 30%;  /* 从33%改为30% */
+    transform: translateX(-50%);
+}
+
+.npc-portrait.double-right {
+    left: 70%;  /* 从66%改为70% */
+    transform: translateX(-50%);
+}
+
+/* NPC信息弹窗 - 修复响应式问题 */
+.npc-info-popup {
+    position: fixed;  /* 改为fixed定位 */
+    background: rgba(0, 0, 0, 0.9);
+    color: #fff;
+    padding: clamp(12px, 3vw, 20px);
+    border-radius: 10px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.5);
+    z-index: 2000;  /* 提高z-index */
+    min-width: clamp(150px, 30vw, 200px);
+    max-width: 90vw;
+    text-align: center;
+    display: none;
+}
+
+.npc-info-popup.show {
+    display: block;
+}
+
+.npc-info-name {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    font-weight: bold;
+    margin-bottom: clamp(8px, 2vw, 10px);
+}
+
+.npc-info-desc {
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    color: #ccc;
+    margin-bottom: clamp(10px, 2.5vw, 15px);
+    line-height: 1.4;
+}
+
+.npc-info-actions {
+    display: flex;
+    gap: clamp(8px, 2vw, 10px);
+    justify-content: center;
+}
+
+.npc-info-btn {
+    padding: clamp(6px, 1.5vw, 8px) clamp(10px, 2.5vw, 15px);
+    background: #fff;
+    color: #1a1a1a;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.npc-info-btn:hover {
+    background: #f0f0f0;
+    transform: scale(1.05);
+}
+
+/* 场景交互按钮容器 - 响应式改进 */
+.scene-actions {
+    position: absolute;
+    bottom: clamp(20px, 3vw, 30px);
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: clamp(10px, 2vw, 15px);
+    z-index: 100;
+}
+
+/* 场景交互按钮 - 响应式改进 */
+.scene-btn {
+    padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+    background: #2c2c2c;
+    color: #fff;
+    border: 2px solid #1a1a1a;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    white-space: nowrap;
+}
+
+.scene-btn:hover:not(:disabled) {
+    background: #fff;
+    color: #2c2c2c;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+}
+
+.scene-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 属性展示容器 */
+.stats-container {
+    position: absolute;
+    top: clamp(60px, 10vw, 80px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 85%;
+    max-width: 600px;
+    max-height: calc(100% - clamp(80px, 15vw, 100px));
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* 属性分组 */
+.stats-group {
+    background: rgba(255, 255, 255, 0.9);
+    border: 2px solid #2c2c2c;
+    border-radius: 10px;
+    padding: clamp(15px, 3vw, 25px);
+    margin-bottom: clamp(15px, 3vw, 20px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.stats-group h3 {
+    font-size: clamp(1.2rem, 3vw, 1.5rem);
+    color: #2c2c2c;
+    margin-bottom: clamp(15px, 3vw, 20px);
+    text-align: center;
+    letter-spacing: 3px;
+}
+
+/* 属性项 */
+.stat-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: clamp(10px, 2vw, 15px);
+}
+
+.stat-name {
+    width: clamp(60px, 15vw, 100px);
+    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+    font-weight: bold;
+    color: #2c2c2c;
+}
+
+.stat-bar {
+    flex: 1;
+    height: clamp(20px, 4vw, 25px);
+    background: #e0e0e0;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    margin: 0 clamp(10px, 2vw, 15px);
+}
+
+.stat-fill {
+    height: 100%;
+    background: linear-gradient(to right, #4a4a4a, #2c2c2c);
+    transition: width 0.5s ease;
+}
+
+.stat-value {
+    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+    font-weight: bold;
+    color: #2c2c2c;
+    width: clamp(40px, 8vw, 50px);
+    text-align: right;
+}
+
+/* 下方数值分组容器 */
+.bottom-stats-row {
+    display: flex;
+    gap: clamp(15px, 3vw, 20px);
+}
+
+@media (max-width: 600px) {
+    .bottom-stats-row {
+        flex-direction: column;
+    }
+}
+
+.bottom-stats-row .stats-group {
+    flex: 1;
+}
+
+/* 简单数值项 */
+.simple-stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: clamp(10px, 2vw, 15px);
+    font-size: clamp(0.8rem, 2vw, 1rem);
+}
+
+.simple-stat-name {
+    font-weight: bold;
+    color: #2c2c2c;
+}
+
+.simple-stat-value {
+    font-weight: bold;
+    color: #4a4a4a;
+}
+
+/* 加点按钮 */
+.point-control {
+    display: flex;
+    align-items: center;
+    gap: clamp(8px, 2vw, 10px);
+}
+
+.add-point-btn {
+    padding: clamp(3px, 0.8vw, 4px) clamp(8px, 2vw, 12px);
+    background: #4ecdc4;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.add-point-btn:hover:not(:disabled) {
+    background: #3dbbb3;
+    transform: scale(1.05);
+}
+
+.add-point-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 武功列表 */
+.skill-list {
+    margin-top: clamp(10px, 2vw, 15px);
+}
+
+.skill-item {
+    padding: 5px 0;
+    color: #4a4a4a;
+    font-size: clamp(0.8rem, 1.9vw, 0.9375rem);
+}
+
+/* 关系卡片容器 - 响应式改进 */
+.relationships-container {
+    position: absolute;
+    top: clamp(60px, 10vw, 80px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 90%;
+    max-height: calc(100% - clamp(80px, 15vw, 100px));
+    overflow-y: auto;
+    padding: clamp(10px, 2vw, 20px);
+}
+
+/* 关系卡片网格 - 固定3列2行 */
+.relationship-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: clamp(10px, 2vw, 20px);
+    max-height: calc(100% - 20px);
+}
+
+/* 只显示前6个，其余通过滚动查看 */
+.relationship-grid > :nth-child(n+7) {
+    display: block;
+}
+
+.relationship-card {
+    background: #fff;
+    border: 2px solid #2c2c2c;
+    border-radius: 10px;
+    padding: 0; /* 改为0，因为立绘需要紧贴上边缘 */
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.relationship-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.3);
+}
+
+.relationship-info {
+    padding: clamp(10px, 2vw, 15px);
+}
+
+.relationship-portrait {
+    width: 100%;
+    height: auto;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: clamp(5px, 1vw, 8px);
+}
+
+.relationship-portrait img {
+    width: 100%;
+    height: auto;
+    display: block;
+    object-fit: cover;
+    object-position: top center;
+}
+
+.relationship-name {
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: bold;
+    margin-bottom: clamp(8px, 1.5vw, 10px);
+    color: #2c2c2c;
+}
+
+.relationship-bar {
+    width: 100%;
+    height: clamp(15px, 3vw, 20px);
+    background: #e0e0e0;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 5px;
+}
+
+.relationship-fill {
+    height: 100%;
+    background: linear-gradient(to right, #ff6b6b, #4ecdc4);
+    transition: width 0.5s ease;
+}
+
+.relationship-value {
+    font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+    color: #666;
+}
+
+/* 弹窗 - 响应式改进 */
+.modal {
+    display: none;
+    position: absolute;
+    z-index: 2000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    padding: 20px;
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: auto;
+    padding: clamp(20px, 4vw, 30px);
+    border: 3px solid #2c2c2c;
+    width: min(400px, 100%);
+    max-width: 90%;
+    max-height: 80%;
+    overflow-y: auto;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: absolute;  /* 改为absolute定位 */
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);  /* 居中定位 */
+}
+
+.modal-text {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: bold;
+    color: #2c2c2c;
+    margin-bottom: clamp(15px, 3vw, 20px);
+    line-height: 1.6;
+}
+
+.modal-buttons {
+    display: flex;
+    gap: clamp(10px, 2vw, 15px);
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+.modal-btn {
+    padding: clamp(8px, 2vw, 10px) clamp(20px, 4vw, 30px);
+    background: #2c2c2c;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: bold;
+}
+
+.modal-btn:hover {
+    background: #3c3c3c;
+}
+
+.modal-btn.cancel {
+    background: #666;
+}
+
+.modal-btn.cancel:hover {
+    background: #555;
+}
+
+/* 输入框样式 */
+.input-area {
+    margin: clamp(15px, 3vw, 20px) 0;
+}
+
+.input-field {
+    width: 100%;
+    padding: clamp(8px, 2vw, 10px);
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    border: 2px solid #2c2c2c;
+    border-radius: 5px;
+    resize: vertical;
+    min-height: clamp(80px, 15vw, 100px);
+    max-height: 200px;
+    font-family: "Microsoft YaHei", "SimSun", serif;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: #4ecdc4;
+}
+
+/* 互动内容自动换行样式 */
+.interaction-content {
+    word-wrap: break-word;
+    word-break: break-all;
+    white-space: pre-wrap;
+    text-align: left;
+    max-width: 100%;
+    display: inline-block;
+}
+
+/* 故事区域 */
+.story-area {
+    width: 100%;
+    max-width: 100%;  /* 全部改为动态宽度 */
+    margin: 0 auto;
+    background: #fff;
+    border: 3px solid #2c2c2c;
+    border-top: none;
+    padding: clamp(15px, 3vw, 25px);
+    min-height: clamp(120px, 20vw, 180px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+}
+
+/* 故事文本 */
+.story-text {
+    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+    line-height: 1.8;
+    color: #2c2c2c;
+    text-indent: 2em;
+    font-family: "Microsoft YaHei", "SimSun", serif;
+}
+
+/* 水墨效果装饰 */
+.ink-decoration {
+    position: absolute;
+    width: clamp(60px, 12vw, 100px);
+    height: clamp(60px, 12vw, 100px);
+    background: radial-gradient(circle, rgba(0,0,0,0.1) 0%, transparent 70%);
+    border-radius: 50%;
+    pointer-events: none;
+}
+
+.ink1 { top: 10%; right: 10%; }
+.ink2 { bottom: 10%; left: 5%; }
+
+/* 滚动条样式 */
+.stats-container::-webkit-scrollbar,
+.relationships-container::-webkit-scrollbar {
+    width: 8px;
+}
+
+.stats-container::-webkit-scrollbar-track,
+.relationships-container::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.stats-container::-webkit-scrollbar-thumb,
+.relationships-container::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 4px;
+}
+
+.stats-container::-webkit-scrollbar-thumb:hover,
+.relationships-container::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 21点游戏iframe弹窗 - 新增 */
+.blackjack-modal {
+    display: none;
+    position: absolute;  /* 从fixed改为absolute */
+    z-index: 3000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+}
+
+.blackjack-container {
+    width: 100%;  /* 改为100% */
+    height: 100%;  /* 改为100% */
+    margin: 0;  /* 移除margin */
+    position: relative;
+}
+
+.blackjack-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 10px;
+}
+
+/* 响应式调整 */
+@media (max-width: 840px) {
+    .container {
+        padding: 0;
+    }
+    
+    .viewport-wrapper {
+        max-width: 100%;
+    }
+}
+
+@media (max-width: 600px) {
+    /* 移动端关系卡片网格调整 */
+    .relationship-grid {
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+    }
+    
+    .relationship-card {
+        padding: 0; /* 确保为0 */
+    }
+    
+    .relationship-info {
+        padding: 5px;
+    }
+    
+    .relationship-name {
+        font-size: 0.7rem;
+    }
+    
+}
+
+/* 随机事件框样式 - 响应式优化 */
+.random-event-container {
+    background: rgba(44, 44, 44, 0.95);
+    border: 2px solid #4ecdc4;
+    border-radius: 10px;
+    padding: clamp(12px, 3vw, 20px);
+    margin-top: clamp(12px, 3vw, 20px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: none;
+}
+
+.random-event-container.show {
+    display: block;
+}
+
+.event-title {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: bold;
+    color: #4ecdc4;
+    margin-bottom: clamp(6px, 1.5vw, 10px);
+    text-align: center;
+}
+
+.event-description {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: #fff;
+    margin-bottom: clamp(12px, 3vw, 20px);
+    line-height: 1.5;
+    text-align: center;
+}
+
+.event-options {
+    display: flex;
+    flex-direction: column;
+    gap: clamp(8px, 2vw, 15px);
+}
+
+.event-option-btn {
+    background: #2c2c2c;
+    border: 2px solid #4ecdc4;
+    border-radius: 8px;
+    padding: clamp(10px, 2.5vw, 15px);
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-align: left;
+}
+
+.event-option-btn:hover {
+    background: #3c3c3c;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(78, 205, 196, 0.3);
+}
+
+.option-desc {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: #fff;
+    margin-bottom: clamp(5px, 1vw, 8px);
+    line-height: 1.4;
+}
+
+.option-reward {
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    color: #4ecdc4;
+    margin-bottom: clamp(3px, 0.8vw, 5px);
+}
+
+.option-success-rate {
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    color: #aaa;
+}
+
+/* 小屏幕优化 */
+@media (max-width: 600px) {
+    .random-event-container {
+        margin-top: 10px;
+        padding: 10px;
+    }
+    
+    .event-options {
+        gap: 6px;
+    }
+    
+    .event-option-btn {
+        padding: 8px 10px;
+        border-radius: 6px;
+    }
+    
+    /* 在非常小的屏幕上，减少行间距 */
+    .option-desc {
+        margin-bottom: 3px;
+    }
+    
+    .option-reward {
+        margin-bottom: 2px;
+    }
+}
+
+/* 横屏手机优化 */
+@media (max-height: 500px) and (orientation: landscape) {
+    .random-event-container {
+        padding: 8px 12px;
+        margin-top: 8px;
+    }
+    
+    .event-title {
+        margin-bottom: 5px;
+    }
+    
+    .event-description {
+        margin-bottom: 8px;
+    }
+    
+    .event-options {
+        gap: 5px;
+    }
+    
+    .event-option-btn {
+        padding: 6px 10px;
+    }
+}
+
+/* 平板和小窗口优化 */
+@media (min-width: 600px) and (max-width: 840px) {
+    .random-event-container {
+        padding: 15px;
+        margin-top: 15px;
+    }
+    
+    .event-options {
+        gap: 10px;
+    }
+    
+    .event-option-btn {
+        padding: 12px;
+    }
+}
+
+/* 战斗信息框样式 */
+.battle-event-container {
+    background: rgba(44, 44, 44, 0.95);
+    border: 2px solid #ff4d6d;
+    border-radius: 10px;
+    padding: clamp(12px, 3vw, 20px);
+    margin-top: clamp(12px, 3vw, 20px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: none;
+}
+
+.battle-event-container.show {
+    display: block;
+}
+
+.battle-event-title {
+    font-size: clamp(1rem, 2.5vw, 1.25rem);
+    font-weight: bold;
+    color: #ff4d6d;
+    margin-bottom: clamp(6px, 1.5vw, 10px);
+    text-align: center;
+}
+
+.battle-event-description {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: #fff;
+    margin-bottom: clamp(12px, 3vw, 20px);
+    line-height: 1.5;
+    text-align: center;
+}
+
+.battle-enemy-info {
+    background: rgba(0, 0, 0, 0.5);
+    padding: clamp(10px, 2vw, 15px);
+    border-radius: 8px;
+    margin-bottom: clamp(10px, 2vw, 15px);
+}
+
+.enemy-info-item {
+    font-size: clamp(0.8rem, 1.8vw, 0.9rem);
+    color: #ccc;
+    margin: clamp(3px, 0.8vw, 5px) 0;
+}
+
+.enemy-info-label {
+    color: #ff4d6d;
+    font-weight: bold;
+}
+
+.battle-reward {
+    background: rgba(78, 205, 196, 0.2);
+    padding: clamp(8px, 2vw, 12px);
+    border-radius: 6px;
+    margin-bottom: clamp(12px, 3vw, 20px);
+    text-align: center;
+}
+
+.battle-reward-text {
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: #4ecdc4;
+}
+
+.battle-actions {
+    display: flex;
+    gap: clamp(10px, 2vw, 15px);
+    justify-content: center;
+}
+
+.battle-action-btn {
+    flex: 1;
+    padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+    border: 2px solid #ff4d6d;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.battle-action-btn.fight {
+    background: #ff4d6d;
+    color: #fff;
+}
+
+.battle-action-btn.fight:hover {
+    background: #ff6b87;
+    transform: translateY(-2px);
+}
+
+.battle-action-btn.flee {
+    background: #2c2c2c;
+    color: #fff;
+    border-color: #666;
+}
+
+.battle-action-btn.flee:hover {
+    background: #3c3c3c;
+    transform: translateY(-2px);
+}
+
+/* 战斗iframe弹窗 */
+.battle-modal {
+    display: none;
+    position: absolute;  /* 从fixed改为absolute */
+    z-index: 3000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+}
+
+.battle-container {
+    width: 100%;  /* 改为100% */
+    height: 100%;  /* 改为100% */
+    margin: 0;  /* 移除margin */
+    position: relative;
+}
+
+.battle-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 10px;
+}
+/* 自由行动输入框容器 */
+.free-action-container {
+    width: 100%;
+    max-width: 100%;  /* 全部改为动态宽度 */
+    margin: 0 auto;
+    background: #fff;
+    border: 3px solid #2c2c2c;
+    border-bottom: none;
+    padding: clamp(10px, 2vw, 15px);
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    box-sizing: border-box;
+}
+
+/* 自由行动输入框 */
+.free-action-input {
+    flex: 1;
+    min-height: 36px;
+    max-height: 120px;
+    padding: clamp(6px, 1.5vw, 10px) clamp(10px, 2vw, 15px);
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-family: "Microsoft YaHei", "SimSun", serif;
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    resize: none;
+    overflow-y: auto;
+    line-height: 1.4;
+    transition: border-color 0.3s ease;
+}
+
+.free-action-input:focus {
+    outline: none;
+    border-color: #4ecdc4;
+}
+
+.free-action-input::placeholder {
+    color: #999;
+}
+
+/* 发送按钮 */
+.free-action-send-btn {
+    padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
+    background: #2c2c2c;
+    color: #fff;
+    border: 2px solid #1a1a1a;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: clamp(0.8rem, 2vw, 1rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    min-height: 36px;
+}
+
+.free-action-send-btn:hover {
+    background: #3c3c3c;
+    transform: translateY(-1px);
+}
+
+.free-action-send-btn:active {
+    transform: translateY(0);
+}
+
+/* 响应式调整 */
+@media (max-width: 600px) {
+    .free-action-container {
+        padding: 8px;
+        gap: 8px;
+    }
+    
+    .free-action-input {
+        min-height: 32px;
+        font-size: 0.8rem;
+    }
+    
+    .free-action-send-btn {
+        padding: 8px 15px;
+        min-height: 32px;
+    }
+}
