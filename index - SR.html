@@ -621,7 +621,7 @@
                 shanmen: 0
             };
 
-            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G'].sort(() => Math.random() - 0.5);
+            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].sort(() => Math.random() - 0.5);
 
             npcOrder.forEach(npcId => {
                 let assigned = false;
@@ -655,6 +655,7 @@
             npcLocationE = currentNpcLocations.E;
             npcLocationF = currentNpcLocations.F;
             npcLocationG = currentNpcLocations.G;
+            npcLocationH = currentNpcLocations.H;
             
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id !== 'map-scene') {

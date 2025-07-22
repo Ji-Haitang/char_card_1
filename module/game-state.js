@@ -49,7 +49,7 @@ let martialArts = {
     "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
     "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
 };
-let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0 };
+let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0 };
 let actionPoints = 3;
 let currentWeek = 1;
 
@@ -61,6 +61,7 @@ let npcLocationD = "shanmen";
 let npcLocationE = "nvdizi";
 let npcLocationF = "cangjingge";
 let npcLocationG = "yanwuchang";
+let npcLocationH = "houshan";
 
 // 临时状态变量
 let currentInteractionNpc = null;
@@ -107,6 +108,7 @@ function syncVariablesFromGameData() {
     npcLocationE = currentNpcLocations.E;
     npcLocationF = currentNpcLocations.F;
     npcLocationG = currentNpcLocations.G;
+    npcLocationH = currentNpcLocations.H;
 }
 
 function syncGameDataFromVariables() {

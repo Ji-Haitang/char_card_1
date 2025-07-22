@@ -102,6 +102,11 @@ const npcs = {
         name: "呼延显",
         description: "天山派内门大师兄，破阵子之徒，带发修行的僧侣。<br>24岁匈奴族人，男生女相，面容柔美。<br>平时玩世不恭满嘴歪理，能言善辩。关键时刻亦有可靠的一面。",
         avatar: "G"
+    },
+    H: {
+        name: "雨烛",
+        description: "天山派内门弟子，破阵子长老的小徒弟。<br>15岁梵衍那族少女，金发碧眼，腰后生有青色半透明羽翼，身姿轻盈如仙。<br>活泼乖巧的团宠小天使，纯真善良。是门派的开心果。",
+        avatar: "H"
     }
 };
 
@@ -113,7 +118,8 @@ const npcNameToId = {
     "萧白瑚": "D",
     "姬姒": "E",
     "施延年": "F",
-    "呼延显": "G"
+    "呼延显": "G",
+    "雨烛": "H"
 };
 
 // NPC立绘URL映射
@@ -124,7 +130,8 @@ const npcPortraits = {
     D: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.png',
     E: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png',
     F: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.png',
-    G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png'
+    G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png',
+    H: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.png'
 };
 
 // 地点背景图映射
@@ -240,6 +247,18 @@ const npcLocationProbability = {
         nvdizi: 0.00,
         shanmen: 0.05,
         none: 0.10
+    },
+    H: {
+        yanwuchang: 0.15,
+        cangjingge: 0.10,
+        huofang: 0.20,
+        houshan: 0.25,
+        yishiting: 0.05,
+        tiejiangpu: 0.05,
+        nandizi: 0.00,
+        nvdizi: 0.15,
+        shanmen: 0.05,
+        none: 0.00
     }
 };
 
@@ -257,5 +276,5 @@ const defaultGameData = {
     npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0 },
     actionPoints: 3,
     currentWeek: 1,
-    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang" }
+    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan"}
 };
