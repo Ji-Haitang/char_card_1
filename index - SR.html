@@ -322,10 +322,24 @@
 
         <!-- 故事区域 -->
         <div class="story-area">
-            <div class="story-text" id="story-text">
-                江湖路远，故事未始...
+            <div class="story-content-wrapper">
+                <!-- 页面指示器 -->
+                <div class="page-indicator" id="page-indicator"></div>
+                
+                <!-- 翻页箭头 -->
+                <button class="story-nav-btn prev" id="story-prev-btn" onclick="prevPage()">◀</button>
+                <button class="story-nav-btn next" id="story-next-btn" onclick="nextPage()">▶</button>
+                
+                <!-- 故事文本 -->
+                <div class="story-text" id="story-text">
+                    江湖路远，故事未始...
+                </div>
+                
+                <!-- 展开/收起按钮 -->
+                <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
             </div>
-            <!-- 随机事件容器 - 新增 -->
+            
+            <!-- 随机事件容器 -->
             <div class="random-event-container" id="random-event-container">
                 <div class="event-title">随机事件</div>
                 <div class="event-description" id="event-description"></div>
@@ -934,6 +948,31 @@
             }
         });
 
+        // 翻页相关函数（调用game-ui.js中的实际实现）
+        function goToPage(pageNum) {
+            if (typeof doGoToPage === 'function') {
+                doGoToPage(pageNum);
+            }
+        }
+
+        function prevPage() {
+            if (typeof doPrevPage === 'function') {
+                doPrevPage();
+            }
+        }
+
+        function nextPage() {
+            if (typeof doNextPage === 'function') {
+                doNextPage();
+            }
+        }
+
+        function toggleStoryExpand() {
+            if (typeof doToggleStoryExpand === 'function') {
+                doToggleStoryExpand();
+            }
+        }
+        
         async function initializeOrSync() {
             await loadOrInitGameData();
             checkAllValueRanges();
@@ -990,6 +1029,10 @@
         window.sendFreeAction = sendFreeAction;
         window.startBattle = startBattle;
         window.fleeBattle = fleeBattle;
+        window.goToPage = goToPage;
+        window.prevPage = prevPage;
+        window.nextPage = nextPage;
+        window.toggleStoryExpand = toggleStoryExpand;
         initializeOrSync();
     });
     </script>

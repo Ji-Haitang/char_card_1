@@ -31,6 +31,11 @@
  * - 依赖外部库 markdown-it 进行文本渲染
  */
 
+// 在文件开头添加翻页相关的状态变量
+let storyPages = [];  // 存储分页后的文本
+let currentPage = 0;  // 当前页码
+let isStoryExpanded = false;  // 是否展开显示全文
+
 // 更新日期显示
 function updateDateDisplay() {
     const year = Math.floor((currentWeek - 1) / 48) + 1;
@@ -184,10 +189,12 @@ function hideTooltip() {
     tooltip.classList.remove('show');
 }
 
-// 更新故事文本
+// 更新故事文本（支持分页）
 function updateStoryText(text) {
     const storyElement = document.getElementById('story-text');
+    currentStoryText = text;
     
+    // 使用markdown渲染
     const md = window.markdownit({
         html: true,
         breaks: true,
@@ -197,13 +204,141 @@ function updateStoryText(text) {
     
     const htmlContent = md.render(text);
     
-    storyElement.innerHTML = htmlContent;
+    // 分段处理 - 改进版本
+    let paragraphs = [];
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = htmlContent;
     
+    // 首先尝试按<p>标签分段
+    const pTags = tempDiv.getElementsByTagName('p');
+    if (pTags.length > 1) {  // 注意这里改为 > 1
+        for (let p of pTags) {
+            if (p.innerHTML.trim()) {
+                paragraphs.push(p.outerHTML);
+            }
+        }
+    } else {
+        // 如果没有足够的p标签，尝试按双换行符分段
+        let parts = htmlContent.split(/<br\s*\/?>\s*<br\s*\/?>|\n\n/);
+        if (parts.length > 1) {
+            paragraphs = parts.filter(p => p.trim()).map(p => `<p>${p}</p>`);
+        } else {
+            // 如果还是没有，尝试按单个换行符分段
+            parts = htmlContent.split(/<br\s*\/?>/);
+            if (parts.length > 1) {
+                paragraphs = parts.filter(p => p.trim()).map(p => `<p>${p}</p>`);
+            } else {
+                // 最后的备选：按原始文本的换行符分段
+                parts = text.split(/\n/);
+                if (parts.length > 1) {
+                    paragraphs = parts.filter(p => p.trim()).map(p => {
+                        const renderedPart = md.render(p);
+                        return `<div class="story-paragraph">${renderedPart}</div>`;
+                    });
+                } else {
+                    // 如果还是没有分段，将整个文本作为一段
+                    paragraphs = [htmlContent];
+                }
+            }
+        }
+    }
+    
+    // 如果没有分段，将整个文本作为一段
+    if (paragraphs.length === 0) {
+        paragraphs = [htmlContent];
+    }
+    
+    storyPages = paragraphs;
+    currentPage = 0;
+    isStoryExpanded = false;
+    
+    // 更新显示
+    updateStoryDisplay();
+}
+
+// 更新故事显示
+function updateStoryDisplay() {
+    const storyElement = document.getElementById('story-text');
+    const pageIndicator = document.getElementById('page-indicator');
+    const prevBtn = document.getElementById('story-prev-btn');
+    const nextBtn = document.getElementById('story-next-btn');
+    const expandBtn = document.getElementById('story-expand-btn');
+    
+    if (isStoryExpanded) {
+        // 展开模式：显示全部内容
+        storyElement.innerHTML = storyPages.join('');
+        storyElement.classList.add('expanded');
+        if (expandBtn) expandBtn.innerHTML = '▲ 收起';
+        
+        // 隐藏翻页控件
+        if (pageIndicator) pageIndicator.style.display = 'none';
+        if (prevBtn) prevBtn.style.display = 'none';
+        if (nextBtn) nextBtn.style.display = 'none';
+    } else {
+        // 分页模式
+        storyElement.innerHTML = storyPages[currentPage] || '';
+        storyElement.classList.remove('expanded');
+        if (expandBtn) expandBtn.innerHTML = '▼ 展开全文';
+        
+        // 显示翻页控件（如果有多页）
+        if (storyPages.length > 1) {
+            // 更新页面指示器
+            if (pageIndicator) {
+                pageIndicator.style.display = 'flex';
+                pageIndicator.innerHTML = '';
+                for (let i = 0; i < storyPages.length; i++) {
+                    const dot = document.createElement('span');
+                    dot.className = 'page-dot' + (i === currentPage ? ' active' : '');
+                    dot.onclick = () => doGoToPage(i);
+                    pageIndicator.appendChild(dot);
+                }
+            }
+            
+            // 更新翻页按钮状态
+            if (prevBtn) {
+                prevBtn.style.display = 'block';
+                prevBtn.disabled = currentPage === 0;
+            }
+            if (nextBtn) {
+                nextBtn.style.display = 'block';
+                nextBtn.disabled = currentPage === storyPages.length - 1;
+            }
+        } else {
+            // 只有一页时隐藏翻页控件
+            if (pageIndicator) pageIndicator.style.display = 'none';
+            if (prevBtn) prevBtn.style.display = 'none';
+            if (nextBtn) nextBtn.style.display = 'none';
+        }
+    }
+    
+    // 添加淡入效果
     storyElement.style.opacity = '0';
     setTimeout(() => {
         storyElement.style.transition = 'opacity 0.5s ease';
         storyElement.style.opacity = '1';
     }, 100);
+}
+
+// 翻页函数（注意函数名改为doXXX避免冲突）
+function doGoToPage(pageNum) {
+    if (pageNum >= 0 && pageNum < storyPages.length) {
+        currentPage = pageNum;
+        updateStoryDisplay();
+    }
+}
+
+function doPrevPage() {
+    doGoToPage(currentPage - 1);
+}
+
+function doNextPage() {
+    doGoToPage(currentPage + 1);
+}
+
+// 切换展开/收起
+function doToggleStoryExpand() {
+    isStoryExpanded = !isStoryExpanded;
+    updateStoryDisplay();
 }
 
 // 显示弹窗

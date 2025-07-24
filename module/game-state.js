@@ -72,6 +72,9 @@ let currentBattleType = null;
 let currentBattleReward = null;
 let currentBattleNpcName = null;
 let currentStoryText = "";
+// let storyPages = [];  // 存储分页后的文本
+// let currentPage = 0;  // 当前页码
+// let isStoryExpanded = false;  // 是否展开显示全文
 
 // 流式版本的本地状态
 let localState = {

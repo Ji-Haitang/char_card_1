@@ -928,13 +928,15 @@ body {
 
 /* 故事区域 */
 .story-area {
+    position: relative;
     width: 100%;
-    max-width: 100%;  /* 全部改为动态宽度 */
+    max-width: 100%;
     margin: 0 auto;
     background: #fff;
     border: 3px solid #2c2c2c;
     border-top: none;
     padding: clamp(15px, 3vw, 25px);
+    padding-bottom: clamp(35px, 5vw, 45px);  /* 增加底部内边距，为展开按钮留空间 */
     min-height: clamp(120px, 20vw, 180px);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     box-sizing: border-box;
@@ -1022,25 +1024,26 @@ body {
     }
 }
 
+/* 移动端适配调整 */
 @media (max-width: 600px) {
-    /* 移动端关系卡片网格调整 */
-    .relationship-grid {
-        grid-template-columns: repeat(3, 1fr);
-        gap: 8px;
+    .story-content-wrapper {
+        padding-top: 25px;  /* 移动端稍微减少顶部padding */
+        padding-bottom: 20px;
     }
     
-    .relationship-card {
-        padding: 0; /* 确保为0 */
+    .page-indicator {
+        top: 3px;  /* 移动端更贴近顶部 */
     }
     
-    .relationship-info {
-        padding: 5px;
-    }
-    
-    .relationship-name {
+    .story-expand-btn {
         font-size: 0.7rem;
+        padding: 3px 12px;
+        bottom: -20px;  /* 移动端稍微减少距离 */
     }
     
+    .story-area {
+        padding-bottom: 30px;  /* 移动端减少底部padding */
+    }
 }
 
 /* 随机事件框样式 - 响应式优化 */
@@ -1384,5 +1387,185 @@ body {
     .free-action-send-btn {
         padding: 8px 15px;
         min-height: 32px;
+    }
+}
+
+/* 故事区域改造 */
+.story-area {
+    position: relative;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 auto;
+    background: #fff;
+    border: 3px solid #2c2c2c;
+    border-top: none;
+    padding: clamp(15px, 3vw, 25px);
+    min-height: clamp(120px, 20vw, 180px);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    box-sizing: border-box;
+}
+
+/* 故事文本容器 */
+.story-content-wrapper {
+    position: relative;
+    width: 100%;
+    padding-top: 35px;  /* 新增：为页面指示器留出空间 */
+    padding-bottom: 25px;  /* 新增：为展开按钮留出空间 */
+}
+
+/* 页面指示器 */
+.page-indicator {
+    position: absolute;
+    top: clamp(5px, 1vw, 10px);  /* 从10px改为5px，减少与顶部的距离 */
+    left: clamp(10px, 2vw, 15px);
+    display: flex;
+    gap: clamp(6px, 1.5vw, 8px);
+    z-index: 10;
+}
+
+.page-dot {
+    width: clamp(8px, 1.5vw, 10px);
+    height: clamp(8px, 1.5vw, 10px);
+    border-radius: 50%;
+    background: #ccc;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.page-dot:hover {
+    background: #999;
+    transform: scale(1.2);
+}
+
+.page-dot.active {
+    background: #2c2c2c;
+    transform: scale(1.3);
+}
+
+/* 翻页箭头 */
+.story-nav-btn {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: clamp(30px, 6vw, 40px);
+    height: clamp(40px, 8vw, 60px);
+    background: rgba(44, 44, 44, 0.8);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    font-size: clamp(16px, 3vw, 20px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    z-index: 10;
+}
+
+.story-nav-btn:hover:not(:disabled) {
+    background: rgba(44, 44, 44, 0.95);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.story-nav-btn:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+}
+
+.story-nav-btn.prev {
+    left: clamp(-35px, -7vw, -45px);
+    border-radius: 0 5px 5px 0;
+}
+
+.story-nav-btn.next {
+    right: clamp(-35px, -7vw, -45px);
+    border-radius: 5px 0 0 5px;
+}
+
+/* 展开/收起按钮 */
+.story-expand-btn {
+    position: absolute;
+    bottom: -25px;  /* 从-15px改为-25px，向下移动更多 */
+    left: 50%;
+    transform: translateX(-50%);
+    padding: clamp(4px, 1vw, 6px) clamp(15px, 3vw, 20px);
+    background: #2c2c2c;
+    color: #fff;
+    border: none;
+    border-radius: 0 0 8px 8px;
+    cursor: pointer;
+    font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+    transition: all 0.3s ease;
+    white-space: nowrap;
+    z-index: 10;
+}
+
+.story-expand-btn:hover {
+    background: #3c3c3c;
+    padding-bottom: clamp(6px, 1.5vw, 8px);
+}
+
+/* 故事文本样式调整 */
+.story-text {
+    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+    line-height: 1.8;
+    color: #2c2c2c;
+    text-indent: 2em;
+    font-family: "Microsoft YaHei", "SimSun", serif;
+    min-height: clamp(80px, 15vw, 120px);
+    transition: all 0.3s ease;
+    /* padding-top: 20px;  如果上面的wrapper padding不够，可以加这行 */
+}
+
+/* 展开状态 */
+.story-text.expanded {
+    max-height: 60vh;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+/* 自定义滚动条 */
+.story-text.expanded::-webkit-scrollbar {
+    width: 6px;
+}
+
+.story-text.expanded::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 3px;
+}
+
+.story-text.expanded::-webkit-scrollbar-thumb {
+    background: #888;
+    border-radius: 3px;
+}
+
+.story-text.expanded::-webkit-scrollbar-thumb:hover {
+    background: #555;
+}
+
+/* 移动端适配 */
+@media (max-width: 600px) {
+    .story-nav-btn {
+        width: 25px;
+        height: 35px;
+        font-size: 14px;
+    }
+    
+    .story-nav-btn.prev {
+        left: -28px;
+    }
+    
+    .story-nav-btn.next {
+        right: -28px;
+    }
+    
+    .page-dot {
+        width: 6px;
+        height: 6px;
+    }
+    
+    .story-expand-btn {
+        font-size: 0.7rem;
+        padding: 3px 12px;
+        bottom: -12px;
     }
 }
