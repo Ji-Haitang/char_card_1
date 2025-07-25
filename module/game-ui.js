@@ -194,6 +194,11 @@ function updateStoryText(text) {
     const storyElement = document.getElementById('story-text');
     currentStoryText = text;
     
+    // 预处理文本：将连续的换行符统一替换为单个换行符
+    let processedText = text.replace(/\n+/g, '\n');  // 将多个连续的\n替换为单个\n
+    processedText = processedText.replace(/(\r\n)+/g, '\n');  // 处理Windows换行符
+    processedText = processedText.replace(/\r+/g, '\n');  // 处理Mac换行符
+    
     // 使用markdown渲染
     const md = window.markdownit({
         html: true,
@@ -202,48 +207,36 @@ function updateStoryText(text) {
         typographer: true
     }).disable('strikethrough');
     
-    const htmlContent = md.render(text);
+    const htmlContent = md.render(processedText);
     
-    // 分段处理 - 改进版本
+    // 分段处理 - 简化版本，直接按处理后的换行符分段
     let paragraphs = [];
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = htmlContent;
     
-    // 首先尝试按<p>标签分段
-    const pTags = tempDiv.getElementsByTagName('p');
-    if (pTags.length > 1) {  // 注意这里改为 > 1
-        for (let p of pTags) {
-            if (p.innerHTML.trim()) {
-                paragraphs.push(p.outerHTML);
-            }
-        }
+    // 先尝试按原始文本的换行符分段（已经统一为单个换行符）
+    const textParts = processedText.split('\n');
+    
+    if (textParts.length > 1) {
+        // 过滤掉空段落，并为每段渲染Markdown
+        paragraphs = textParts
+            .filter(part => part.trim())  // 过滤空段落
+            .map(part => {
+                const renderedPart = md.render(part);
+                return `<div class="story-paragraph">${renderedPart}</div>`;
+            });
     } else {
-        // 如果没有足够的p标签，尝试按双换行符分段
-        let parts = htmlContent.split(/<br\s*\/?>\s*<br\s*\/?>|\n\n/);
-        if (parts.length > 1) {
-            paragraphs = parts.filter(p => p.trim()).map(p => `<p>${p}</p>`);
+        // 如果没有换行符，尝试按渲染后的<br>标签分段
+        const htmlParts = htmlContent.split(/<br\s*\/?>/);
+        if (htmlParts.length > 1) {
+            paragraphs = htmlParts
+                .filter(part => part.trim())
+                .map(part => `<div class="story-paragraph">${part}</div>`);
         } else {
-            // 如果还是没有，尝试按单个换行符分段
-            parts = htmlContent.split(/<br\s*\/?>/);
-            if (parts.length > 1) {
-                paragraphs = parts.filter(p => p.trim()).map(p => `<p>${p}</p>`);
-            } else {
-                // 最后的备选：按原始文本的换行符分段
-                parts = text.split(/\n/);
-                if (parts.length > 1) {
-                    paragraphs = parts.filter(p => p.trim()).map(p => {
-                        const renderedPart = md.render(p);
-                        return `<div class="story-paragraph">${renderedPart}</div>`;
-                    });
-                } else {
-                    // 如果还是没有分段，将整个文本作为一段
-                    paragraphs = [htmlContent];
-                }
-            }
+            // 如果还是没有分段，将整个文本作为一段
+            paragraphs = [htmlContent];
         }
     }
     
-    // 如果没有分段，将整个文本作为一段
+    // 确保至少有一段
     if (paragraphs.length === 0) {
         paragraphs = [htmlContent];
     }

@@ -936,7 +936,7 @@ body {
     border: 3px solid #2c2c2c;
     border-top: none;
     padding: clamp(15px, 3vw, 25px);
-    padding-bottom: clamp(35px, 5vw, 45px);  /* 增加底部内边距，为展开按钮留空间 */
+    padding-bottom: clamp(35px, 5vw, 45px);
     min-height: clamp(120px, 20vw, 180px);
     box-shadow: 0 10px 30px rgba(0,0,0,0.3);
     box-sizing: border-box;
@@ -1518,28 +1518,9 @@ body {
 
 /* 展开状态 */
 .story-text.expanded {
-    max-height: 60vh;
-    overflow-y: auto;
-    padding-right: 10px;
-}
-
-/* 自定义滚动条 */
-.story-text.expanded::-webkit-scrollbar {
-    width: 6px;
-}
-
-.story-text.expanded::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 3px;
-}
-
-.story-text.expanded::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 3px;
-}
-
-.story-text.expanded::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    max-height: none;  /* 移除最大高度限制 */
+    overflow-y: visible;  /* 改为visible，不显示滚动条 */
+    padding-right: 0;  /* 移除右侧padding */
 }
 
 /* 移动端适配 */

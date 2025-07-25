@@ -623,6 +623,21 @@
 
         // 刷新NPC位置
         function refreshNpcLocations() {
+            // 获取用户当前位置（排除特殊场景）
+            const currentLocation = userLocation === 'tianshanpai' || 
+                                userLocation === 'player-stats' || 
+                                userLocation === 'relationships' ? null : userLocation;
+            
+            // 保存当前位置的NPC
+            const npcsAtCurrentLocation = [];
+            if (currentLocation) {
+                Object.keys(currentNpcLocations).forEach(npcId => {
+                    if (currentNpcLocations[npcId] === currentLocation) {
+                        npcsAtCurrentLocation.push(npcId);
+                    }
+                });
+            }
+            
             const locationCount = {
                 yanwuchang: 0,
                 cangjingge: 0,
@@ -634,8 +649,17 @@
                 nvdizi: 0,
                 shanmen: 0
             };
+            
+            // 如果有当前位置，先统计该位置的NPC数量
+            if (currentLocation && locationCount.hasOwnProperty(currentLocation)) {
+                locationCount[currentLocation] = npcsAtCurrentLocation.length;
+            }
 
-            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].sort(() => Math.random() - 0.5);
+            // 只对不在当前位置的NPC进行重新分配
+            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].filter(
+                npcId => !npcsAtCurrentLocation.includes(npcId)
+            );
+            const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
 
             npcOrder.forEach(npcId => {
                 let assigned = false;
@@ -644,6 +668,12 @@
 
                 while (!assigned && attempts < maxAttempts) {
                     const location = getRandomLocation(npcId);
+                    
+                    // 跳过用户当前位置
+                    if (currentLocation && location === currentLocation) {
+                        attempts++;
+                        continue;
+                    }
                     
                     if (location === 'none') {
                         currentNpcLocations[npcId] = location;
@@ -662,6 +692,7 @@
                 }
             });
 
+            // 更新各个NPC的位置变量
             npcLocationA = currentNpcLocations.A;
             npcLocationB = currentNpcLocations.B;
             npcLocationC = currentNpcLocations.C;

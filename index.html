@@ -61,6 +61,7 @@
     
     <!-- 从GitHub加载CSS -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-styles.css">
+    <!-- <link rel="stylesheet" href="module/game-styles.css"> -->
 </head>
 <body>
     <div class="container">
@@ -196,6 +197,7 @@
                 <!-- 各个场景 -->
                 <div id="yanwuchang-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">演武场</div>
                     <div class="npc-container" id="yanwuchang-npcs"></div>
                     <div class="scene-actions">
@@ -205,6 +207,7 @@
 
                 <div id="cangjingge-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">藏经阁</div>
                     <div class="npc-container" id="cangjingge-npcs"></div>
                     <div class="scene-actions">
@@ -214,6 +217,7 @@
 
                 <div id="huofang-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">伙房</div>
                     <div class="npc-container" id="huofang-npcs"></div>
                     <div class="scene-actions">
@@ -223,6 +227,7 @@
 
                 <div id="houshan-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">后山</div>
                     <div class="npc-container" id="houshan-npcs"></div>
                     <div class="scene-actions">
@@ -233,6 +238,7 @@
 
                 <div id="yishiting-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">议事厅</div>
                     <div class="npc-container" id="yishiting-npcs"></div>
                     <div class="scene-actions">
@@ -242,6 +248,7 @@
 
                 <div id="tiejiangpu-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">铁匠铺</div>
                     <div class="npc-container" id="tiejiangpu-npcs"></div>
                     <div class="scene-actions">
@@ -251,6 +258,7 @@
 
                 <div id="nandizi-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">男弟子房</div>
                     <div class="npc-container" id="nandizi-npcs"></div>
                     <div class="scene-actions">
@@ -260,6 +268,7 @@
 
                 <div id="nvdizi-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">女弟子房</div>
                     <div class="npc-container" id="nvdizi-npcs"></div>
                     <div class="scene-actions">
@@ -269,6 +278,7 @@
 
                 <div id="shanmen-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">山门</div>
                     <div class="npc-container" id="shanmen-npcs"></div>
                     <div class="scene-actions">
@@ -384,6 +394,13 @@
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-helpers.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/module/game-events.js"></script>
+
+    <!-- <script src="module/game-config.js"></script>
+    <script src="module/game-utils.js"></script>
+    <script src="module/game-state.js"></script>
+    <script src="module/game-ui.js"></script>
+    <script src="module/game-helpers.js"></script>
+    <script src="module/game-events.js"></script> -->
     
     <script>
         // 记录原始渲染环境状态
@@ -400,13 +417,20 @@
         const mainText = `$1`;
         const llmResponse = $2;
 
-        //测试用
+//         //测试用
 //         const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」
 // 你连忙点头，跟在这个只到你胸口的小师妹身后，开始了漫长的登山之路。山道蜿蜒曲折，两旁古松参天，偶尔能看到雪白的瀑布从崖壁倾泻而下。萧白瑚一边走一边叽叽喳喳：「这里是解剑池，登门上山的客人都要在这里暂存兵器，以前我们门派显赫的时候，这里都摆不下……那边是温泉，冬天也不会结冰，师兄师姐们经常在那里……喂！你有在听吗！」「有、有在听！」你赶紧回应。
+
 // 穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。
 // 呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。
 // 就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」
+
+
 // 议事厅庄严肃穆，供奉着天山派历代掌门的牌位。洞庭君站在一旁，虽然需要微微踮起脚尖才能显得威严些，但她认真的表情让人不敢轻视。「跪下，向历代掌门行礼。」你恭恭敬敬地跪下，三叩九拜。「从今日起，你便是天山派外门弟子。当谨记门规，勤修武学，行侠仗义……」
+
+
+
+
 // 就在洞庭君一本正经地训话时——「砰！」议事厅的大门被猛地推开。「姐~我来找——咦？」一个活泼的少女冒冒失失冲了进来，她看到你，眼睛一亮：「哎呀！这不是{{user}}吗！」你惊讶地看着面前的少女——那张俏丽的脸庞你再熟悉不过。是钱塘君，你自小在外堡相识的损友！虽然她早就拜入天山派门下，但这家伙隔三岔五就偷偷溜下山来找你玩闹，每次都带着一堆八卦趣事，还总是拉着你做些让人哭笑不得的恶作剧。
 // 「钱塘君，我在举行入门仪式。」洞庭君皱起眉头。「哎呀姐姐，仪式都快结束了嘛！」钱塘君大大咧咧地走过来，一把搭住你的肩膀，「这可是我从小的跟班呢！今天终于也进天山派了！」她凑到你耳边，坏笑着说：「既然我先入门，你现在得叫我师姐哦~来，叫一声听听？」「我……」「快点快点！不叫的话……」她举的笑容变得『危险』起来，「我就趁你不备把你推下山崖哦~」「钱塘君！」洞庭君忍无可忍。「好啦好啦，我这就带新师弟去熟悉环境！」钱塘君拉起你就往外跑，「走！师姐带你去后山玩！那里可有意思了！」就这样，你还没来得及消化自己已经成为天山弟子的事实，就被儿时的玩伴拖着冲出了议事厅。身后传来洞庭君无奈的叹息声，而萧白瑚气呼呼的声音远远传来：「喂！带新师弟参观明明是我的工作！」`;
 
@@ -703,6 +727,21 @@
 
         // 刷新NPC位置
         function refreshNpcLocations() {
+            // 获取用户当前位置（排除特殊场景）
+            const currentLocation = userLocation === 'tianshanpai' || 
+                                userLocation === 'player-stats' || 
+                                userLocation === 'relationships' ? null : userLocation;
+            
+            // 保存当前位置的NPC
+            const npcsAtCurrentLocation = [];
+            if (currentLocation) {
+                Object.keys(currentNpcLocations).forEach(npcId => {
+                    if (currentNpcLocations[npcId] === currentLocation) {
+                        npcsAtCurrentLocation.push(npcId);
+                    }
+                });
+            }
+            
             const locationCount = {
                 yanwuchang: 0,
                 cangjingge: 0,
@@ -714,8 +753,17 @@
                 nvdizi: 0,
                 shanmen: 0
             };
+            
+            // 如果有当前位置，先统计该位置的NPC数量
+            if (currentLocation && locationCount.hasOwnProperty(currentLocation)) {
+                locationCount[currentLocation] = npcsAtCurrentLocation.length;
+            }
 
-            const npcOrder = ['A', 'B', 'C', 'D', 'E', 'F', 'G','H'].sort(() => Math.random() - 0.5);
+            // 只对不在当前位置的NPC进行重新分配
+            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].filter(
+                npcId => !npcsAtCurrentLocation.includes(npcId)
+            );
+            const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
 
             npcOrder.forEach(npcId => {
                 let assigned = false;
@@ -724,6 +772,12 @@
 
                 while (!assigned && attempts < maxAttempts) {
                     const location = getRandomLocation(npcId);
+                    
+                    // 跳过用户当前位置
+                    if (currentLocation && location === currentLocation) {
+                        attempts++;
+                        continue;
+                    }
                     
                     if (location === 'none') {
                         currentNpcLocations[npcId] = location;
@@ -742,6 +796,7 @@
                 }
             });
 
+            // 更新各个NPC的位置变量
             npcLocationA = currentNpcLocations.A;
             npcLocationB = currentNpcLocations.B;
             npcLocationC = currentNpcLocations.C;
@@ -995,10 +1050,11 @@
             setupMessageListeners();
             
             if (isInRenderEnvironment()) {
-                const refreshBtn = document.querySelector('.refresh-npc-btn');
-                if (refreshBtn) {
-                    refreshBtn.style.display = 'none';
-                }
+                // 隐藏所有刷新NPC按钮（包括地图和各个场景的）
+                const refreshBtns = document.querySelectorAll('.refresh-npc-btn');
+                refreshBtns.forEach(btn => {
+                    btn.style.display = 'none';
+                });
             }
             
             if (userLocation === 'tianshanpai') {
