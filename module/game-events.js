@@ -258,6 +258,7 @@ function parseLLMResponse(response, mainTextContent) {
                         case 'F': npcLocationF = toLocationId; break;
                         case 'G': npcLocationG = toLocationId; break;
                         case 'H': npcLocationH = toLocationId; break;
+                        case 'I': npcLocationI = toLocationId; break;
                     }
                     
                     console.log(`${npcName} 移动到 ${toLocation}`);

@@ -760,7 +760,7 @@
             }
 
             // 只对不在当前位置的NPC进行重新分配
-            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H'].filter(
+            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].filter(
                 npcId => !npcsAtCurrentLocation.includes(npcId)
             );
             const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
@@ -805,6 +805,7 @@
             npcLocationF = currentNpcLocations.F;
             npcLocationG = currentNpcLocations.G;
             npcLocationH = currentNpcLocations.H;
+            npcLocationI = currentNpcLocations.I;
             
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id !== 'map-scene') {

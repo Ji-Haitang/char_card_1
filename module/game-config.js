@@ -80,7 +80,7 @@ const npcs = {
     },
     C: {
         name: "钱塘君",
-        description: "天山派内门弟子，洞庭君的妹妹。<br>16岁少女，苗条挺拔却力大无穷，银白长发编成双辫。<br>活泼俏丽，言行跳脱，没心没肺的狐朋狗友。",
+        description: "天山派内门弟子，洞庭君的妹妹。<br>16岁少女，苗条挺拔，英气逼人，银白长发编成双辫。<br>活泼俏丽，言行跳脱，没心没肺的狐朋狗友。",
         avatar: "C"
     },
     D: {
@@ -107,6 +107,11 @@ const npcs = {
         name: "雨烛",
         description: "天山派内门弟子，破阵子长老的小徒弟。<br>15岁梵衍那族少女，金发碧眼，腰后生有青色半透明羽翼，身姿轻盈如仙。<br>活泼乖巧的团宠小天使，纯真善良。是门派的开心果。",
         avatar: "H"
+    },
+    I: {
+        name: "安慕",
+        description: "天山派外门弟子，伙房主厨<br>18岁少女，身材娇小力大无穷，金色猫耳猫尾，因近视常眯眼显凶。<br>刀子嘴豆腐心的小厨娘，不善言辞却用美食温暖人心。天生怪力让人不敢靠近。",
+        avatar: "I"
     }
 };
 
@@ -119,7 +124,8 @@ const npcNameToId = {
     "姬姒": "E",
     "施延年": "F",
     "呼延显": "G",
-    "雨烛": "H"
+    "雨烛": "H",
+    "安慕": "I"
 };
 
 // NPC立绘URL映射
@@ -131,7 +137,8 @@ const npcPortraits = {
     E: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png',
     F: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.png',
     G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png',
-    H: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.png'
+    H: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.png',
+    I: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.png'
 };
 
 // 地点背景图映射
@@ -259,6 +266,18 @@ const npcLocationProbability = {
         nvdizi: 0.15,
         shanmen: 0.05,
         none: 0.00
+    },
+    I: {
+        yanwuchang: 0.05,
+        cangjingge: 0.05,
+        huofang: 0.50,
+        houshan: 0.15,
+        yishiting: 0.05,
+        tiejiangpu: 0.05,
+        nandizi: 0.00,
+        nvdizi: 0.10,
+        shanmen: 0.05,
+        none: 0.00
     }
 };
 
@@ -273,8 +292,8 @@ const defaultGameData = {
         "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
         "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
     },
-    npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0},
+    npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0},
     actionPoints: 3,
     currentWeek: 1,
-    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan"}
+    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang"}
 };
