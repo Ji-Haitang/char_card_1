@@ -506,7 +506,7 @@
             const talentBonus = playerTalents[config.talentBonus] / 2;
             
             const randomRoll = Math.random() * 100;
-            const finalValue = (randomRoll + talentBonus) * playerMood / 100;
+            const finalValue = (randomRoll + talentBonus) * (playerMood + 20) / 100;
 
             let successLevel, successText, moodCost;
             let statChange = {};
