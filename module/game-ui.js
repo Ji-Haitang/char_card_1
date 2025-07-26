@@ -257,6 +257,9 @@ function updateStoryDisplay() {
     const nextBtn = document.getElementById('story-next-btn');
     const expandBtn = document.getElementById('story-expand-btn');
     
+    // 移除之前的点击事件监听器（避免重复绑定）
+    storyElement.onclick = null;
+    
     if (isStoryExpanded) {
         // 展开模式：显示全部内容
         storyElement.innerHTML = storyPages.join('');
@@ -275,6 +278,24 @@ function updateStoryDisplay() {
         
         // 显示翻页控件（如果有多页）
         if (storyPages.length > 1) {
+            // 添加点击区域翻页功能
+            storyElement.style.cursor = 'pointer';
+            storyElement.onclick = function(e) {
+                const rect = storyElement.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                const width = rect.width;
+                
+                // 判断点击位置
+                if (clickX < width / 3) {
+                    // 点击左1/3，向前翻页
+                    doPrevPage();
+                } else if (clickX > width * 2 / 3) {
+                    // 点击右1/3，向后翻页
+                    doNextPage();
+                }
+                // 中间1/3不做任何操作
+            };
+            
             // 更新页面指示器
             if (pageIndicator) {
                 pageIndicator.style.display = 'flex';
@@ -282,7 +303,10 @@ function updateStoryDisplay() {
                 for (let i = 0; i < storyPages.length; i++) {
                     const dot = document.createElement('span');
                     dot.className = 'page-dot' + (i === currentPage ? ' active' : '');
-                    dot.onclick = () => doGoToPage(i);
+                    dot.onclick = (e) => {
+                        e.stopPropagation(); // 阻止事件冒泡到story-text
+                        doGoToPage(i);
+                    };
                     pageIndicator.appendChild(dot);
                 }
             }
@@ -297,7 +321,10 @@ function updateStoryDisplay() {
                 nextBtn.disabled = currentPage === storyPages.length - 1;
             }
         } else {
-            // 只有一页时隐藏翻页控件
+            // 只有一页时隐藏翻页控件，移除点击事件
+            storyElement.style.cursor = 'default';
+            storyElement.onclick = null;
+            
             if (pageIndicator) pageIndicator.style.display = 'none';
             if (prevBtn) prevBtn.style.display = 'none';
             if (nextBtn) nextBtn.style.display = 'none';
