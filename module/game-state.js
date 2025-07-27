@@ -113,6 +113,7 @@ function syncVariablesFromGameData() {
     npcLocationF = currentNpcLocations.F;
     npcLocationG = currentNpcLocations.G;
     npcLocationH = currentNpcLocations.H;
+    npcLocationI = currentNpcLocations.I;
 }
 
 function syncGameDataFromVariables() {
@@ -128,14 +129,47 @@ function syncGameDataFromVariables() {
     gameData.npcLocations = currentNpcLocations;
 }
 
-// 数据加载和保存
+// 深度合并函数
+function mergeWithDefaults(loadedData, defaultData) {
+    // 如果加载的数据是null或undefined，直接返回默认数据
+    if (loadedData === null || loadedData === undefined) {
+        return structuredClone(defaultData);
+    }
+    // 如果默认数据不是对象，直接返回加载的数据
+    if (typeof defaultData !== 'object' || defaultData === null || Array.isArray(defaultData)) {
+        return loadedData;
+    }
+    // 如果加载的数据不是对象，返回默认数据
+    if (typeof loadedData !== 'object' || Array.isArray(loadedData)) {
+        return structuredClone(defaultData);
+    }
+    // 创建结果对象，先复制加载的数据
+    const result = {...loadedData};
+    // 遍历默认数据的所有key
+    for (const key in defaultData) {
+        if (defaultData.hasOwnProperty(key)) {
+            if (!(key in result)) {
+                // 如果key在加载的数据中不存在，添加默认值
+                console.log(`版本更新：添加缺失的字段 "${key}"`);
+                result[key] = structuredClone(defaultData[key]);
+            } else if (typeof defaultData[key] === 'object' && 
+                       defaultData[key] !== null && 
+                       !Array.isArray(defaultData[key])) {
+                // 如果是嵌套对象，递归合并
+                result[key] = mergeWithDefaults(result[key], defaultData[key]);
+            }
+            // 如果key存在且不是对象，保持原值不变
+        }
+    }
+    return result;
+}
+// 修改后的 loadOrInitGameData 函数
 async function loadOrInitGameData() {
     const renderFunc = getRenderFunction();
     if (!renderFunc) {
         syncVariablesFromGameData();
         return;
     }
-    
     const probe = await renderFunc('/getvar gameData');
     if (!probe) {
         await renderFunc('/setvar key=gameData ' + JSON.stringify(defaultGameData) +
@@ -143,15 +177,23 @@ async function loadOrInitGameData() {
         gameData = structuredClone(defaultGameData);
     } else {
         const renderer = getCurrentRenderer();
+        let loadedData;
         if (renderer === 'xiaobaiX') {
-            gameData = probe;
+            loadedData = probe;
         } else {
             try {
-                gameData = typeof probe === 'string' ? JSON.parse(probe) : probe;
+                loadedData = typeof probe === 'string' ? JSON.parse(probe) : probe;
             } catch (e) {
                 console.error('JSON解析失败:', e);
-                gameData = structuredClone(defaultGameData);
+                loadedData = null;
             }
+        }
+        // 使用mergeWithDefaults确保所有必要的字段都存在
+        gameData = mergeWithDefaults(loadedData, defaultGameData);
+        // 如果有字段被添加，保存更新后的数据
+        if (JSON.stringify(loadedData) !== JSON.stringify(gameData)) {
+            console.log('检测到版本更新，正在保存补充后的游戏数据...');
+            await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
         }
     }
     syncVariablesFromGameData();
