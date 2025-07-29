@@ -373,22 +373,22 @@ function parseLLMResponse(response, mainTextContent) {
                 }
             }
         }
+    }
+
+    // 处理随机事件
+    if (response.随机事件) {
+        currentRandomEvent = response.随机事件;
         
-        // 处理随机事件
-        if (response.随机事件) {
-            currentRandomEvent = response.随机事件;
-            
-            if (currentRandomEvent.事件类型 === '战斗事件') {
-                displayBattleEvent(currentRandomEvent);
-                hideRandomEvent();
-            } else {
-                displayRandomEvent(currentRandomEvent);
-                hideBattleEvent();
-            }
-        } else {
+        if (currentRandomEvent.事件类型 === '战斗事件') {
+            displayBattleEvent(currentRandomEvent);
             hideRandomEvent();
+        } else {
+            displayRandomEvent(currentRandomEvent);
             hideBattleEvent();
         }
+    } else {
+        hideRandomEvent();
+        hideBattleEvent();
     }
     
     // 更新关系显示（如果在关系界面）

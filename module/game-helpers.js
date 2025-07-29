@@ -277,25 +277,39 @@ function switchScene(sceneName) {
     const scenes = document.querySelectorAll('.scene');
     scenes.forEach(scene => {
         scene.classList.remove('active');
-        scene.classList.remove('slg-mode'); // 移除SLG模式类
+        scene.classList.remove('slg-mode');
     });
+
+    // 如果切换到角色属性或人际关系场景，清除SLG元素
+    if (sceneName === 'player-stats' || sceneName === 'relationships') {
+        const viewport = document.getElementById('main-viewport');
+        const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
+        existingLayers.forEach(layer => layer.remove());
+        const existingMask = viewport.querySelector('.slg-interaction-mask');
+        if (existingMask) existingMask.remove();
+        
+        // 不要记录这两个特殊场景为userLocation
+    } else {
+        // 只在非特殊场景时更新userLocation
+        if (sceneName !== 'map') {
+            userLocation = sceneName;
+        }
+    }
 
     const targetScene = document.getElementById(sceneName + '-scene');
     if (targetScene) {
         targetScene.classList.add('active');
         
-        // 新增：如果是SLG模式，添加标记类
-        if (GameMode === 1) {
+        // 只给需要遮罩的场景添加slg-mode类
+        if (GameMode === 1 && sceneName !== 'player-stats' && sceneName !== 'relationships') {
             targetScene.classList.add('slg-mode');
         }
         
-        if (sceneName !== 'player-stats' && sceneName !== 'relationships') {
-            userLocation = sceneName;
+        if (sceneName !== 'player-stats' && sceneName !== 'relationships' && sceneName !== 'map') {
             displayNpcs(sceneName);
         }
     }
     
-    // 新增：更新SLG返回按钮显示
     updateSLGReturnButton();
 }
 

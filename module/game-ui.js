@@ -68,7 +68,13 @@ function updateAllDisplays() {
     updateMoodDisplay();
     updateActionPointsDisplay();
     updateStatsDisplay();
-    updateSLGReturnButton();  // 新增
+    updateSLGReturnButton();  // 确保这个函数被调用
+    
+    // 删除或注释掉这部分
+    // if (GameMode === 0) {
+    //     const backBtns = document.querySelectorAll('.back-btn.slg-mode-offset');
+    //     backBtns.forEach(btn => btn.classList.remove('slg-mode-offset'));
+    // }
 }
 
 // 更新属性显示
@@ -148,7 +154,7 @@ function updateRelationshipsDisplay() {
                     <label class="visibility-checkbox">
                         <input type="checkbox" id="visibility-${npcId}" ${isVisible ? 'checked' : ''} 
                                onchange="toggleNpcVisibility('${npcId}')">
-                        <span class="checkbox-label">显示</span>
+                        <span class="checkbox-label">出场</span>
                     </label>
                     <button class="gift-btn ${!canGift ? 'disabled' : ''}" 
                             onclick="giveGift('${npcId}')" 
@@ -324,10 +330,18 @@ function updateStoryDisplay() {
         
         // 如果是SLG模式，显示对应的图片
         if (GameMode === 1 && slgModeData && slgModeData[currentPage]) {
-            // 新增：先添加遮罩层，阻止所有场景互动
-            const interactionMask = document.createElement('div');
-            interactionMask.className = 'slg-interaction-mask';
-            viewport.appendChild(interactionMask);
+            // 检查当前场景，只在需要遮罩的场景添加遮罩
+            const activeScene = document.querySelector('.scene.active');
+            const needsMask = activeScene && 
+                            activeScene.id !== 'player-stats-scene' && 
+                            activeScene.id !== 'relationships-scene';
+            
+            if (needsMask) {
+                // 添加遮罩层，阻止场景互动
+                const interactionMask = document.createElement('div');
+                interactionMask.className = 'slg-interaction-mask';
+                viewport.appendChild(interactionMask);
+            }
             
             const pageData = slgModeData[currentPage];
             
@@ -375,19 +389,21 @@ function updateStoryDisplay() {
             viewport.appendChild(layerContainer);
         }
         
-        // 翻页控件逻辑保持不变
+        // 翻页控件逻辑
         if (storyPages.length > 1) {
             storyElement.style.cursor = 'pointer';
             storyElement.onclick = function(e) {
                 const rect = storyElement.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const width = rect.width;
+                
                 if (clickX < width / 3) {
                     doPrevPage();
                 } else if (clickX > width * 2 / 3) {
                     doNextPage();
                 }
             };
+            
             if (pageIndicator) {
                 pageIndicator.style.display = 'flex';
                 pageIndicator.innerHTML = '';
@@ -401,6 +417,7 @@ function updateStoryDisplay() {
                     pageIndicator.appendChild(dot);
                 }
             }
+            
             if (prevBtn) {
                 prevBtn.style.display = 'block';
                 prevBtn.disabled = currentPage === 0;
@@ -412,6 +429,7 @@ function updateStoryDisplay() {
         } else {
             storyElement.style.cursor = 'default';
             storyElement.onclick = null;
+            
             if (pageIndicator) pageIndicator.style.display = 'none';
             if (prevBtn) prevBtn.style.display = 'none';
             if (nextBtn) nextBtn.style.display = 'none';
@@ -481,12 +499,17 @@ function showConfirmModal(title, message, onConfirm) {
 // 更新SLG返回按钮的显示状态
 function updateSLGReturnButton() {
     const slgReturnBtn = document.getElementById('slg-return-btn');
-    if (slgReturnBtn) {
+    const skipWeekBtn = document.getElementById('skip-week-btn');
+    
+    if (slgReturnBtn && skipWeekBtn) {
         if (GameMode === 1) {
+            // SLG模式：显示返回按钮，隐藏跳过按钮
             slgReturnBtn.style.display = 'block';
+            skipWeekBtn.style.display = 'none';
         } else {
+            // 普通模式：隐藏返回按钮，显示跳过按钮
             slgReturnBtn.style.display = 'none';
+            skipWeekBtn.style.display = 'block';
         }
     }
 }
-

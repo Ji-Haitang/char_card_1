@@ -75,7 +75,7 @@
 
                 <!-- 地点信息弹窗 - 新增 -->
                 <div class="location-info-popup" id="location-info-popup"></div>
-                <button class="slg-return-btn" id="slg-return-btn" onclick="returnFromSLG()">返回天山派</button>
+                <!-- <button class="slg-return-btn" id="slg-return-btn" onclick="returnFromSLG()">返回天山派</button> -->
                 <!-- 地图场景 -->
                 <div id="map-scene" class="scene active">
                     <div class="status-display">
@@ -327,7 +327,8 @@
         <div class="control-buttons">
             <button class="control-btn" onclick="showPlayerStats()">角色属性</button>
             <button class="control-btn" onclick="showRelationships()">人际关系</button>
-            <button class="control-btn" onclick="skipWeek()">跳过这一周</button>
+            <button class="control-btn" id="skip-week-btn" onclick="skipWeek()">跳过这一周</button>
+            <button class="control-btn" id="slg-return-btn" onclick="returnFromSLG()" style="display: none;">返回天山派</button>
         </div>
 
         <!-- 故事区域 -->
@@ -468,61 +469,20 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
         //     "其他NPC": "无"
         // };
 
-        const llmResponse = {
-            "随机事件": {
-                "事件类型": "战斗事件",
-                "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
-                "敌方信息": {
-                "名称": "吐蕃探子",
-                "属性": {
-                    "攻击力": "低",
-                    "生命力": "中"
-                },
-                "战斗报酬": {
-                    "类型": "金钱",
-                    "数值": 500
-                }
-                }
-            },
-            "主要NPC": {
-                "呼延显": {
-                "好感变化": "上升",
-                "位置变动": "演武场|藏经阁"
-                },
-                "萧白瑚": {
-                "好感变化": "上升",
-                "位置变动": "山门|议事厅"
-                },
-                "洞庭君": {
-                "好感变化": "不变",
-                "位置变动": "演武场|议事厅"
-                },
-                "钱塘君": {
-                "好感变化": "大幅上升",
-                "位置变动": "议事厅|后山"
-                }
-            },
-            "其他NPC": "无"
-        };
-
         // const llmResponse = {
         //     "随机事件": {
-        //         "事件类型": "选项事件",
-        //         "事件描述": "姬姒想要和你探讨昨天练武的心得",
-        //         "选项一": {
-        //             "描述": "你欣然接受邀请，和姬姒一起讨论",
-        //             "奖励": "悟性+3",
-        //             "成功率": "25%"
+        //         "事件类型": "战斗事件",
+        //         "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+        //         "敌方信息": {
+        //         "名称": "吐蕃探子",
+        //         "属性": {
+        //             "攻击力": "低",
+        //             "生命力": "中"
         //         },
-        //         "选项二": {
-        //             "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
-        //             "奖励": "根骨+1",
-        //             "成功率": "60%"
-        //         },
-        //         "选项三": {
-        //             "描述": "你婉拒姬姒，专注于眼前的工作",
-        //             "奖励": "心性+2",
-        //             "成功率": "40%"
+        //         "战斗报酬": {
+        //             "类型": "金钱",
+        //             "数值": 500
+        //         }
         //         }
         //     },
         //     "主要NPC": {
@@ -545,19 +505,106 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
         //     },
         //     "其他NPC": "无"
         // };
+
+        const llmResponse = {
+            "随机事件": {
+                "事件类型": "选项事件",
+                "事件描述": "姬姒想要和你探讨昨天练武的心得",
+                "选项一": {
+                    "描述": "你欣然接受邀请，和姬姒一起讨论",
+                    "奖励": "悟性+3",
+                    "成功率": "25%"
+                },
+                "选项二": {
+                    "描述": "你急不可耐，跳过探讨环节，直接和姬姒过招",
+                    "奖励": "根骨+1",
+                    "成功率": "60%"
+                },
+                "选项三": {
+                    "描述": "你婉拒姬姒，专注于眼前的工作",
+                    "奖励": "心性+2",
+                    "成功率": "40%"
+                }
+            },
+            "主要NPC": {
+                "呼延显": {
+                "好感变化": "上升",
+                "位置变动": "演武场|藏经阁"
+                },
+                "萧白瑚": {
+                "好感变化": "上升",
+                "位置变动": "山门|议事厅"
+                },
+                "洞庭君": {
+                "好感变化": "不变",
+                "位置变动": "演武场|议事厅"
+                },
+                "钱塘君": {
+                "好感变化": "大幅上升",
+                "位置变动": "议事厅|后山"
+                }
+            },
+            "其他NPC": "无"
+        };
         
         // ========== 保留在HTML中的函数（用于onclick调用） ==========
         
-        // 显示角色属性
+        // 修改 showPlayerStats 函数
         function showPlayerStats() {
+            // 只有当前场景不是角色属性或人际关系时才记录
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && 
+                activeScene.id !== 'player-stats-scene' && 
+                activeScene.id !== 'relationships-scene') {
+                previousScene = activeScene.id.replace('-scene', '');
+                wasInSLGMode = GameMode === 1;
+            }
+            
+            // 清除SLG相关元素
+            const viewport = document.getElementById('main-viewport');
+            const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
+            existingLayers.forEach(layer => layer.remove());
+            const existingMask = viewport.querySelector('.slg-interaction-mask');
+            if (existingMask) existingMask.remove();
+            
+            // 先切换场景
             switchScene('player-stats');
             updateStatsDisplay();
+            
+            // 如果是SLG模式，移除该场景的slg-mode类
+            if (GameMode === 1) {
+                const statsScene = document.getElementById('player-stats-scene');
+                statsScene.classList.remove('slg-mode');
+            }
         }
 
-        // 显示人际关系
+        // 修改 showRelationships 函数
         function showRelationships() {
+            // 只有当前场景不是角色属性或人际关系时才记录
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && 
+                activeScene.id !== 'player-stats-scene' && 
+                activeScene.id !== 'relationships-scene') {
+                previousScene = activeScene.id.replace('-scene', '');
+                wasInSLGMode = GameMode === 1;
+            }
+            
+            // 清除SLG相关元素
+            const viewport = document.getElementById('main-viewport');
+            const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
+            existingLayers.forEach(layer => layer.remove());
+            const existingMask = viewport.querySelector('.slg-interaction-mask');
+            if (existingMask) existingMask.remove();
+            
+            // 先切换场景
             switchScene('relationships');
             updateRelationshipsDisplay();
+            
+            // 如果是SLG模式，移除该场景的slg-mode类
+            if (GameMode === 1) {
+                const relScene = document.getElementById('relationships-scene');
+                relScene.classList.remove('slg-mode');
+            }
         }
 
         // 切换NPC可见性
@@ -628,7 +675,7 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
             const message = `你花费500金钱给${npc.name}送了一份礼物<br>` +
                         `${npc.name}的好感度提升至${npcFavorability[npcId]}`;
             
-            await handleMessageOutput(message);
+            await showModal(message);
         }
 
         // 修改 skipWeek 函数，在跳过周时重置送礼状态
@@ -913,15 +960,46 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
             }
         }
 
-        // 返回地图
+        // 修改 backToMap 函数
         function backToMap() {
-            const scenes = document.querySelectorAll('.scene');
-            scenes.forEach(scene => {
-                scene.classList.remove('active');
-            });
+            // 移除返回按钮的偏移类
+            const backBtns = document.querySelectorAll('.back-btn.slg-mode-offset');
+            backBtns.forEach(btn => btn.classList.remove('slg-mode-offset'));
+            
+            // 获取当前场景
+            const activeScene = document.querySelector('.scene.active');
+            const currentSceneId = activeScene ? activeScene.id : '';
+            
+            // 如果是从角色属性或人际关系界面返回，且之前在SLG模式
+            if ((currentSceneId === 'player-stats-scene' || currentSceneId === 'relationships-scene') 
+                && wasInSLGMode && GameMode === 1) {
+                
+                // 直接返回到之前的SLG场景
+                switchScene(previousScene);
+                
+                // 如果不是地图场景，添加slg-mode类
+                if (previousScene !== 'map') {
+                    const targetScene = document.getElementById(previousScene + '-scene');
+                    if (targetScene) {
+                        targetScene.classList.add('slg-mode');
+                    }
+                }
+                
+                // 恢复SLG显示
+                updateStoryDisplay();
+                
+                // 重置状态
+                wasInSLGMode = false;
+            } else {
+                // 普通模式：返回地图
+                const scenes = document.querySelectorAll('.scene');
+                scenes.forEach(scene => {
+                    scene.classList.remove('active');
+                });
 
-            document.getElementById('map-scene').classList.add('active');
-            userLocation = 'tianshanpai';
+                document.getElementById('map-scene').classList.add('active');
+                userLocation = 'tianshanpai';
+            }
         }
 
         // 关闭弹窗
@@ -1221,7 +1299,7 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
             
             parseLLMResponse(llmResponse, mainText);
             // 新增：初始化时更新SLG返回按钮显示
-             updateSLGReturnButton();
+            updateSLGReturnButton();
         };
         
         // 自由行动输入框事件

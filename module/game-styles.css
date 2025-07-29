@@ -221,33 +221,33 @@ body {
 }
 
 /* SLG模式返回按钮 */
-.slg-return-btn {
+/* .slg-return-btn {
     position: absolute;
     top: clamp(10px, 3%, 30px);
     left: clamp(10px, 3%, 30px);
     padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
-    background: rgba(44, 44, 44, 0.9);  /* 改为黑底 */
-    color: #fff;  /* 白字 */
-    border: 2px solid #1a1a1a;  /* 黑色边框 */
+    background: rgba(44, 44, 44, 0.9);  
+    color: #fff;  
+    border: 2px solid #1a1a1a;  
     cursor: pointer;
     font-size: clamp(0.7rem, 1.8vw, 0.875rem);
     font-weight: bold;
     transition: all 0.3s ease;
     box-shadow: 0 4px 10px rgba(0,0,0,0.3);
     display: none;
-    z-index: 1000;  /* 提高z-index到1000，确保在最顶层 */
+    z-index: 1000;  
 }
 
 .slg-return-btn:hover {
-    background: #3c3c3c;  /* 悬停时变为深灰色 */
+    background: #3c3c3c;  
     transform: translateY(-2px);
     box-shadow: 0 6px 15px rgba(0,0,0,0.4);
-}
+} */
 
 /* 在SLG模式下调整状态显示的位置，避免与返回按钮重叠 */
-.scene.slg-mode .status-display {
-    top: clamp(50px, 8%, 70px);  /* 向下移动 */
-}
+/* .scene.slg-mode .status-display {
+    top: clamp(50px, 8%, 70px);  
+} */
 
 /* SLG遮罩层样式更新 */
 .slg-interaction-mask {
@@ -262,9 +262,9 @@ body {
 }
 
 /* 确保SLG返回按钮在所有元素之上，包括弹窗 */
-.slg-return-btn {
-    z-index: 2500;  /* 比弹窗的2000还要高 */
-}
+/* .slg-return-btn {
+    z-index: 2500; 
+} */
 
 /* 禁用SLG模式下的地点点击 */
 .scene.slg-mode .location {
@@ -1782,3 +1782,37 @@ body {
         padding: 6px 10px;
     }
 }
+
+/* 确保角色属性和人际关系场景始终可见 */
+#player-stats-scene.scene.active,
+#relationships-scene.scene.active {
+    z-index: 100 !important;
+    pointer-events: auto !important;
+    display: block !important;
+}
+
+/* 确保这两个场景不受SLG遮罩影响 */
+#player-stats-scene .slg-interaction-mask,
+#relationships-scene .slg-interaction-mask {
+    display: none !important;
+}
+
+#player-stats-scene .back-btn,
+#relationships-scene .back-btn {
+    /* 使用默认位置，不需要特殊调整 */
+}
+
+/* 在SLG模式下，调整返回按钮位置避免重叠 */
+/* #player-stats-scene.scene.active .back-btn,
+#relationships-scene.scene.active .back-btn {
+} */
+
+/* 当SLG返回按钮显示时，调整这两个场景的返回按钮位置
+.slg-return-btn:not([style*="display: none"]) ~ * #player-stats-scene.scene.active .back-btn,
+.slg-return-btn:not([style*="display: none"]) ~ * #relationships-scene.scene.active .back-btn {
+    top: clamp(60px, 10%, 80px);  
+} */
+
+/* .back-btn.slg-mode-offset {
+    top: clamp(60px, 10%, 80px) !important;  
+} */
