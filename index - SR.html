@@ -444,7 +444,78 @@
             updateRelationshipsDisplay();
         }
 
-        // 跳过这一周
+        // 切换NPC可见性
+        function toggleNpcVisibility(npcId) {
+            const checkbox = document.getElementById(`visibility-${npcId}`);
+            npcVisibility[npcId] = checkbox.checked;
+            
+            // 如果NPC被设置为不显示，立即将其位置设为none
+            if (!npcVisibility[npcId]) {
+                currentNpcLocations[npcId] = 'none';
+                
+                // 更新对应的位置变量
+                switch(npcId) {
+                    case 'A': npcLocationA = 'none'; break;
+                    case 'B': npcLocationB = 'none'; break;
+                    case 'C': npcLocationC = 'none'; break;
+                    case 'D': npcLocationD = 'none'; break;
+                    case 'E': npcLocationE = 'none'; break;
+                    case 'F': npcLocationF = 'none'; break;
+                    case 'G': npcLocationG = 'none'; break;
+                    case 'H': npcLocationH = 'none'; break;
+                    case 'I': npcLocationI = 'none'; break;
+                }
+                
+                // 如果当前场景有该NPC，更新显示
+                const activeScene = document.querySelector('.scene.active');
+                if (activeScene && activeScene.id !== 'map-scene') {
+                    const locationName = activeScene.id.replace('-scene', '');
+                    displayNpcs(locationName);
+                }
+            }
+            
+            // 保存游戏数据
+            saveGameData();
+        }
+
+        // 送礼函数
+        async function giveGift(npcId) {
+            const npc = npcs[npcId];
+            const currentFavorability = npcFavorability[npcId];
+            
+            // 再次检查条件
+            if (npcGiftGiven[npcId]) {
+                showModal('本周已经给该NPC送过礼物了！');
+                return;
+            }
+            
+            if (currentFavorability > 40) {
+                showModal(`${npc.name}的好感度已经超过40，无需再送礼！`);
+                return;
+            }
+            
+            if (playerStats.金钱 < 500) {
+                showModal('金钱不足500，无法送礼！');
+                return;
+            }
+            
+            // 执行送礼
+            playerStats.金钱 -= 500;
+            npcFavorability[npcId] = Math.min(100, npcFavorability[npcId] + 5);
+            npcGiftGiven[npcId] = true;
+            
+            checkAllValueRanges();
+            updateStatsDisplay();
+            updateRelationshipsDisplay();
+            
+            // 发送消息
+            const message = `你花费500金钱给${npc.name}送了一份礼物<br>` +
+                        `${npc.name}的好感度提升至${npcFavorability[npcId]}`;
+            
+            await handleMessageOutput(message);
+        }
+
+        // 修改 skipWeek 函数，在跳过周时重置送礼状态
         function skipWeek() {
             showConfirmModal(
                 '确认跳过',
@@ -453,6 +524,12 @@
                     currentWeek++;
                     actionPoints = 3;
                     userLocation = "tianshanpai";
+                    
+                    // 重置所有NPC的送礼状态
+                    Object.keys(npcGiftGiven).forEach(npcId => {
+                        npcGiftGiven[npcId] = false;
+                    });
+                    
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
@@ -666,6 +743,12 @@
             const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
 
             npcOrder.forEach(npcId => {
+                // 新增：检查NPC是否被设置为不显示
+                if (!npcVisibility[npcId]) {
+                    currentNpcLocations[npcId] = 'none';
+                    return;
+                }
+                
                 let assigned = false;
                 let attempts = 0;
                 const maxAttempts = 20;
@@ -1130,6 +1213,8 @@
         window.nextPage = nextPage;
         window.toggleStoryExpand = toggleStoryExpand;
         window.returnFromSLG = returnFromSLG;
+        window.toggleNpcVisibility = toggleNpcVisibility;
+        window.giveGift = giveGift;
         initializeOrSync();
     });
     </script>

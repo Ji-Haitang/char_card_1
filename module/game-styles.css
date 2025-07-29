@@ -1702,3 +1702,83 @@ body {
 .slg-layer-container {
     z-index: 10; /* 提高z-index */
 }
+
+/* 关系卡片控制区域 */
+.relationship-controls {
+    margin-top: clamp(8px, 2vw, 12px);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: clamp(8px, 2vw, 10px);
+}
+
+/* 可见性勾选框 */
+.visibility-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: clamp(0.7rem, 1.8vw, 0.85rem);
+}
+
+.visibility-checkbox input[type="checkbox"] {
+    width: clamp(14px, 3vw, 18px);
+    height: clamp(14px, 3vw, 18px);
+    margin-right: clamp(4px, 1vw, 6px);
+    cursor: pointer;
+}
+
+.checkbox-label {
+    color: #666;
+    font-weight: normal;
+}
+
+/* 送礼按钮 */
+.gift-btn {
+    padding: clamp(4px, 1vw, 6px) clamp(8px, 2vw, 12px);
+    background: #2c2c2c;
+    color: #fff;
+    border: 1px solid #1a1a1a;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: clamp(0.65rem, 1.6vw, 0.8rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.gift-btn:hover:not(.disabled) {
+    background: #3c3c3c;
+    transform: translateY(-1px);
+}
+
+.gift-btn.disabled {
+    background: #666;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 调整关系卡片以适应新内容 */
+.relationship-card {
+    background: #fff;
+    border: 2px solid #2c2c2c;
+    border-radius: 10px;
+    padding: 0;
+    text-align: center;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+/* 移动端优化 */
+@media (max-width: 600px) {
+    .relationship-controls {
+        flex-direction: column;
+        gap: 6px;
+    }
+    
+    .gift-btn {
+        width: 100%;
+        padding: 6px 10px;
+    }
+}

@@ -53,6 +53,8 @@ let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"
 let actionPoints = 3;
 let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
+let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true};
+let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false};
 
 // 独立的NPC位置变量
 let npcLocationA = "none";
@@ -93,7 +95,7 @@ function getLocalState() {
     return localState;
 }
 
-// 同步函数
+// 修改 syncVariablesFromGameData 函数
 function syncVariablesFromGameData() {
     ({ userLocation,
     playerTalents,
@@ -105,7 +107,9 @@ function syncVariablesFromGameData() {
     actionPoints,
     currentWeek,
     npcLocations: currentNpcLocations,
-    GameMode } = gameData);
+    GameMode,
+    npcVisibility,
+    npcGiftGiven } = gameData);  // 添加新变量
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -118,6 +122,7 @@ function syncVariablesFromGameData() {
     npcLocationI = currentNpcLocations.I;
 }
 
+// 修改 syncGameDataFromVariables 函数
 function syncGameDataFromVariables() {
     gameData.userLocation = userLocation;
     gameData.playerTalents = playerTalents;
@@ -130,6 +135,8 @@ function syncGameDataFromVariables() {
     gameData.currentWeek = currentWeek;
     gameData.npcLocations = currentNpcLocations;
     gameData.GameMode = GameMode;
+    gameData.npcVisibility = npcVisibility;  // 添加新变量
+    gameData.npcGiftGiven = npcGiftGiven;    // 添加新变量
 }
 
 // 深度合并函数

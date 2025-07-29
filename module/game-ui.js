@@ -125,9 +125,15 @@ function updateRelationshipsDisplay() {
     Object.keys(npcs).forEach(npcId => {
         const npc = npcs[npcId];
         const favorability = npcFavorability[npcId];
+        const isVisible = npcVisibility[npcId];
+        const hasGifted = npcGiftGiven[npcId];
         
         const card = document.createElement('div');
         card.className = 'relationship-card';
+        
+        // 判断是否可以送礼
+        const canGift = !hasGifted && favorability <= 40 && playerStats.金钱 >= 500;
+        
         card.innerHTML = `
             <div class="relationship-portrait">
                 <img src="${npcPortraits[npcId]}" alt="${npc.name}">
@@ -138,6 +144,18 @@ function updateRelationshipsDisplay() {
                     <div class="relationship-fill" style="width: ${favorability}%"></div>
                 </div>
                 <div class="relationship-value">好感度: ${favorability}</div>
+                <div class="relationship-controls">
+                    <label class="visibility-checkbox">
+                        <input type="checkbox" id="visibility-${npcId}" ${isVisible ? 'checked' : ''} 
+                               onchange="toggleNpcVisibility('${npcId}')">
+                        <span class="checkbox-label">显示</span>
+                    </label>
+                    <button class="gift-btn ${!canGift ? 'disabled' : ''}" 
+                            onclick="giveGift('${npcId}')" 
+                            ${!canGift ? 'disabled' : ''}>
+                        送礼 (500金)
+                    </button>
+                </div>
             </div>
         `;
         
@@ -152,6 +170,7 @@ function updateRelationshipsDisplay() {
         grid.appendChild(card);
     });
 }
+
 
 // 显示悬停提示
 function showTooltip(event, text) {

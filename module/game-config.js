@@ -296,5 +296,7 @@ const defaultGameData = {
     actionPoints: 3,
     currentWeek: 1,
     npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang"},
-    GameMode: 0  // 新增：游戏模式，0=普通模式，1=SLG模式
+    GameMode: 0,  // 游戏模式，0=普通模式，1=SLG模式
+    npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true}, // 新增：NPC是否显示
+    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false} // 新增：本周是否已送礼
 };
