@@ -220,6 +220,64 @@ body {
     transform: translateY(-2px);
 }
 
+/* SLG模式返回按钮 */
+.slg-return-btn {
+    position: absolute;
+    top: clamp(10px, 3%, 30px);
+    left: clamp(10px, 3%, 30px);
+    padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
+    background: rgba(44, 44, 44, 0.9);  /* 改为黑底 */
+    color: #fff;  /* 白字 */
+    border: 2px solid #1a1a1a;  /* 黑色边框 */
+    cursor: pointer;
+    font-size: clamp(0.7rem, 1.8vw, 0.875rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+    display: none;
+    z-index: 1000;  /* 提高z-index到1000，确保在最顶层 */
+}
+
+.slg-return-btn:hover {
+    background: #3c3c3c;  /* 悬停时变为深灰色 */
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(0,0,0,0.4);
+}
+
+/* 在SLG模式下调整状态显示的位置，避免与返回按钮重叠 */
+.scene.slg-mode .status-display {
+    top: clamp(50px, 8%, 70px);  /* 向下移动 */
+}
+
+/* SLG遮罩层样式更新 */
+.slg-interaction-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 5;
+    pointer-events: auto;
+}
+
+/* 确保SLG返回按钮在所有元素之上，包括弹窗 */
+.slg-return-btn {
+    z-index: 2500;  /* 比弹窗的2000还要高 */
+}
+
+/* 禁用SLG模式下的地点点击 */
+.scene.slg-mode .location {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+/* 禁用SLG模式下的刷新NPC按钮 */
+.scene.slg-mode .refresh-npc-btn {
+    display: none !important;
+}
+
+
 /* 中间控制按钮组 - 响应式改进 */
 .control-buttons {
     width: 100%;
@@ -1549,4 +1607,98 @@ body {
         padding: 3px 12px;
         bottom: -12px;
     }
+}
+
+/* SLG模式图层样式 */
+.slg-layer-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 1;
+}
+
+.slg-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.slg-layer img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center;
+}
+
+/* 场景图层（最底层） */
+.slg-scene-layer {
+    z-index: 1;
+}
+
+/* NPC表情图层（中层） */
+.slg-emotion-layer {
+    z-index: 2;
+}
+
+/* 特殊CG图层（最顶层） */
+.slg-cg-layer {
+    z-index: 3;
+}
+
+/* 确保故事文本在图层之上 */
+.story-area {
+    position: relative;
+    z-index: 10;
+}
+
+/* SLG模式下，确保viewport的scene在图层下方 */
+.scene.active {
+    z-index: 0;
+}
+
+/* SLG模式遮罩层 - 阻止场景互动 */
+.slg-interaction-mask {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: transparent;
+    z-index: 5; /* 在场景内容之上，但在SLG图层之下 */
+    pointer-events: auto; /* 捕获所有点击事件 */
+}
+
+/* SLG模式下禁用的元素样式 */
+.slg-mode-disabled {
+    pointer-events: none !important;
+    cursor: default !important;
+}
+
+.slg-mode-disabled:hover {
+    filter: none !important;
+    transform: none !important;
+}
+
+/* SLG模式下隐藏场景按钮 */
+.scene.active .scene-btn {
+    display: block;
+}
+
+.scene.active.slg-mode .scene-btn {
+    display: none !important;
+}
+
+/* SLG模式下隐藏刷新NPC按钮 */
+.scene.active.slg-mode .refresh-npc-btn {
+    display: none !important;
+}
+
+/* 确保SLG图层容器在遮罩层之上 */
+.slg-layer-container {
+    z-index: 10; /* 提高z-index */
 }

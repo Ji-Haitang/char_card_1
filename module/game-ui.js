@@ -35,6 +35,7 @@
 let storyPages = [];  // 存储分页后的文本
 let currentPage = 0;  // 当前页码
 let isStoryExpanded = false;  // 是否展开显示全文
+let slgModeData = [];  // 新增：存储SLG模式的数据
 
 // 更新日期显示
 function updateDateDisplay() {
@@ -67,6 +68,7 @@ function updateAllDisplays() {
     updateMoodDisplay();
     updateActionPointsDisplay();
     updateStatsDisplay();
+    updateSLGReturnButton();  // 新增
 }
 
 // 更新属性显示
@@ -194,54 +196,64 @@ function updateStoryText(text) {
     const storyElement = document.getElementById('story-text');
     currentStoryText = text;
     
-    // 预处理文本：将连续的换行符统一替换为单个换行符
-    let processedText = text.replace(/\n+/g, '\n');  // 将多个连续的\n替换为单个\n
-    processedText = processedText.replace(/(\r\n)+/g, '\n');  // 处理Windows换行符
-    processedText = processedText.replace(/\r+/g, '\n');  // 处理Mac换行符
-    
-    // 使用markdown渲染
-    const md = window.markdownit({
-        html: true,
-        breaks: true,
-        linkify: true,
-        typographer: true
-    }).disable('strikethrough');
-    
-    const htmlContent = md.render(processedText);
-    
-    // 分段处理 - 简化版本，直接按处理后的换行符分段
-    let paragraphs = [];
-    
-    // 先尝试按原始文本的换行符分段（已经统一为单个换行符）
-    const textParts = processedText.split('\n');
-    
-    if (textParts.length > 1) {
-        // 过滤掉空段落，并为每段渲染Markdown
-        paragraphs = textParts
-            .filter(part => part.trim())  // 过滤空段落
-            .map(part => {
-                const renderedPart = md.render(part);
-                return `<div class="story-paragraph">${renderedPart}</div>`;
-            });
+    // 检查是否为SLG模式
+    if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
+        // SLG模式：使用slgModeData中的文本
+        storyPages = slgModeData.map(data => {
+            // 提取文本内容（第一个|之前的部分）
+            const textContent = data.text || '';
+            const md = window.markdownit({
+                html: true,
+                breaks: true,
+                linkify: true,
+                typographer: true
+            }).disable('strikethrough');
+            
+            return md.render(textContent);
+        });
     } else {
-        // 如果没有换行符，尝试按渲染后的<br>标签分段
-        const htmlParts = htmlContent.split(/<br\s*\/?>/);
-        if (htmlParts.length > 1) {
-            paragraphs = htmlParts
+        // 普通模式：原有的分段逻辑
+        let processedText = text.replace(/\n+/g, '\n');
+        processedText = processedText.replace(/(\r\n)+/g, '\n');
+        processedText = processedText.replace(/\r+/g, '\n');
+        
+        const md = window.markdownit({
+            html: true,
+            breaks: true,
+            linkify: true,
+            typographer: true
+        }).disable('strikethrough');
+        
+        const htmlContent = md.render(processedText);
+        
+        let paragraphs = [];
+        const textParts = processedText.split('\n');
+        
+        if (textParts.length > 1) {
+            paragraphs = textParts
                 .filter(part => part.trim())
-                .map(part => `<div class="story-paragraph">${part}</div>`);
+                .map(part => {
+                    const renderedPart = md.render(part);
+                    return `<div class="story-paragraph">${renderedPart}</div>`;
+                });
         } else {
-            // 如果还是没有分段，将整个文本作为一段
+            const htmlParts = htmlContent.split(/<br\s*\/?>/);
+            if (htmlParts.length > 1) {
+                paragraphs = htmlParts
+                    .filter(part => part.trim())
+                    .map(part => `<div class="story-paragraph">${part}</div>`);
+            } else {
+                paragraphs = [htmlContent];
+            }
+        }
+        
+        if (paragraphs.length === 0) {
             paragraphs = [htmlContent];
         }
+        
+        storyPages = paragraphs;
     }
     
-    // 确保至少有一段
-    if (paragraphs.length === 0) {
-        paragraphs = [htmlContent];
-    }
-    
-    storyPages = paragraphs;
     currentPage = 0;
     isStoryExpanded = false;
     
@@ -249,24 +261,39 @@ function updateStoryText(text) {
     updateStoryDisplay();
 }
 
-// 更新故事显示
+ // emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}_${pageData.emotion}.png`;
+// 修改 updateStoryDisplay 函数
 function updateStoryDisplay() {
     const storyElement = document.getElementById('story-text');
     const pageIndicator = document.getElementById('page-indicator');
     const prevBtn = document.getElementById('story-prev-btn');
     const nextBtn = document.getElementById('story-next-btn');
     const expandBtn = document.getElementById('story-expand-btn');
+    const viewport = document.getElementById('main-viewport');
     
-    // 移除之前的点击事件监听器（避免重复绑定）
+    // 只在非展开模式或非SLG模式时清除图层
+    if (!isStoryExpanded || GameMode !== 1) {
+        // 清除之前的SLG图层
+        const existingLayers = viewport.querySelectorAll('.slg-layer');
+        existingLayers.forEach(layer => layer.remove());
+        
+        // 清除之前的SLG遮罩层
+        const existingMask = viewport.querySelector('.slg-interaction-mask');
+        if (existingMask) existingMask.remove();
+    }
+    
     storyElement.onclick = null;
     
     if (isStoryExpanded) {
-        // 展开模式：显示全部内容
-        storyElement.innerHTML = storyPages.join('');
+        // 展开模式
+        if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
+            storyElement.innerHTML = storyPages.join('');
+            // 在SLG模式展开时，保持当前页的图片显示
+        } else {
+            storyElement.innerHTML = storyPages.join('');
+        }
         storyElement.classList.add('expanded');
         if (expandBtn) expandBtn.innerHTML = '▲ 收起';
-        
-        // 隐藏翻页控件
         if (pageIndicator) pageIndicator.style.display = 'none';
         if (prevBtn) prevBtn.style.display = 'none';
         if (nextBtn) nextBtn.style.display = 'none';
@@ -276,27 +303,72 @@ function updateStoryDisplay() {
         storyElement.classList.remove('expanded');
         if (expandBtn) expandBtn.innerHTML = '▼ 展开全文';
         
-        // 显示翻页控件（如果有多页）
+        // 如果是SLG模式，显示对应的图片
+        if (GameMode === 1 && slgModeData && slgModeData[currentPage]) {
+            // 新增：先添加遮罩层，阻止所有场景互动
+            const interactionMask = document.createElement('div');
+            interactionMask.className = 'slg-interaction-mask';
+            viewport.appendChild(interactionMask);
+            
+            const pageData = slgModeData[currentPage];
+            
+            // 创建图层容器
+            const layerContainer = document.createElement('div');
+            layerContainer.className = 'slg-layer-container';
+            
+            // 1. 场景图层（最底层）
+            if (pageData.scene && pageData.scene !== '无') {
+                const sceneLayer = document.createElement('div');
+                sceneLayer.className = 'slg-layer slg-scene-layer';
+                const sceneImg = document.createElement('img');
+                sceneImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${pageData.scene}.png`;
+                sceneImg.alt = pageData.scene;
+                sceneLayer.appendChild(sceneImg);
+                layerContainer.appendChild(sceneLayer);
+            }
+            
+            // 2. NPC表情图层（中层）
+            if (pageData.npc && pageData.emotion && pageData.emotion !== '无') {
+                const npcId = npcNameToId[pageData.npc];
+                if (npcId) {
+                    const emotionLayer = document.createElement('div');
+                    emotionLayer.className = 'slg-layer slg-emotion-layer';
+                    const emotionImg = document.createElement('img');
+                    emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.png`;
+                    emotionImg.alt = `${pageData.npc} - ${pageData.emotion}`;
+                    emotionLayer.appendChild(emotionImg);
+                    layerContainer.appendChild(emotionLayer);
+                }
+            }
+            
+            // 3. 特殊CG图层（最顶层）
+            if (pageData.cg && pageData.cg !== '无') {
+                const cgLayer = document.createElement('div');
+                cgLayer.className = 'slg-layer slg-cg-layer';
+                const cgImg = document.createElement('img');
+                cgImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/CG/${pageData.cg}.png`;
+                cgImg.alt = pageData.cg;
+                cgLayer.appendChild(cgImg);
+                layerContainer.appendChild(cgLayer);
+            }
+            
+            // 将图层容器添加到viewport
+            viewport.appendChild(layerContainer);
+        }
+        
+        // 翻页控件逻辑保持不变
         if (storyPages.length > 1) {
-            // 添加点击区域翻页功能
             storyElement.style.cursor = 'pointer';
             storyElement.onclick = function(e) {
                 const rect = storyElement.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const width = rect.width;
-                
-                // 判断点击位置
                 if (clickX < width / 3) {
-                    // 点击左1/3，向前翻页
                     doPrevPage();
                 } else if (clickX > width * 2 / 3) {
-                    // 点击右1/3，向后翻页
                     doNextPage();
                 }
-                // 中间1/3不做任何操作
             };
-            
-            // 更新页面指示器
             if (pageIndicator) {
                 pageIndicator.style.display = 'flex';
                 pageIndicator.innerHTML = '';
@@ -304,14 +376,12 @@ function updateStoryDisplay() {
                     const dot = document.createElement('span');
                     dot.className = 'page-dot' + (i === currentPage ? ' active' : '');
                     dot.onclick = (e) => {
-                        e.stopPropagation(); // 阻止事件冒泡到story-text
+                        e.stopPropagation();
                         doGoToPage(i);
                     };
                     pageIndicator.appendChild(dot);
                 }
             }
-            
-            // 更新翻页按钮状态
             if (prevBtn) {
                 prevBtn.style.display = 'block';
                 prevBtn.disabled = currentPage === 0;
@@ -321,17 +391,14 @@ function updateStoryDisplay() {
                 nextBtn.disabled = currentPage === storyPages.length - 1;
             }
         } else {
-            // 只有一页时隐藏翻页控件，移除点击事件
             storyElement.style.cursor = 'default';
             storyElement.onclick = null;
-            
             if (pageIndicator) pageIndicator.style.display = 'none';
             if (prevBtn) prevBtn.style.display = 'none';
             if (nextBtn) nextBtn.style.display = 'none';
         }
     }
     
-    // 添加淡入效果
     storyElement.style.opacity = '0';
     setTimeout(() => {
         storyElement.style.transition = 'opacity 0.5s ease';
@@ -391,3 +458,16 @@ function showConfirmModal(title, message, onConfirm) {
     
     modal.style.display = 'block';
 }
+
+// 更新SLG返回按钮的显示状态
+function updateSLGReturnButton() {
+    const slgReturnBtn = document.getElementById('slg-return-btn');
+    if (slgReturnBtn) {
+        if (GameMode === 1) {
+            slgReturnBtn.style.display = 'block';
+        } else {
+            slgReturnBtn.style.display = 'none';
+        }
+    }
+}
+

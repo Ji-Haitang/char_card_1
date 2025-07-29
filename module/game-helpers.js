@@ -176,6 +176,11 @@ function displayNpcs(location) {
         const portrait = document.createElement('div');
         portrait.className = 'npc-portrait';
         
+        // 新增：如果是SLG模式，添加禁用样式
+        if (GameMode === 1) {
+            portrait.classList.add('slg-mode-disabled');
+        }
+        
         if (npcsAtLocation.length === 1) {
             portrait.classList.add('single');
         } else if (npcsAtLocation.length === 2) {
@@ -194,10 +199,13 @@ function displayNpcs(location) {
         
         portrait.innerHTML = `<img src="${npcPortraits[npc.id]}" alt="${npc.name}">`;
         
-        portrait.addEventListener('click', function(e) {
-            e.stopPropagation();
-            showNpcInfo(npc.id, location, e);
-        });
+        // 修改：只在非SLG模式下添加点击事件
+        if (GameMode !== 1) {
+            portrait.addEventListener('click', function(e) {
+                e.stopPropagation();
+                showNpcInfo(npc.id, location, e);
+            });
+        }
         
         container.appendChild(portrait);
     });
@@ -205,6 +213,10 @@ function displayNpcs(location) {
 
 // 显示NPC信息弹窗
 function showNpcInfo(npcId, location, event) {
+    // 新增：如果是SLG模式，不显示NPC信息弹窗
+    if (GameMode === 1) {
+        return;
+    }
     const npc = npcs[npcId];
     const popup = document.getElementById('npc-info-popup');
     
@@ -265,20 +277,34 @@ function switchScene(sceneName) {
     const scenes = document.querySelectorAll('.scene');
     scenes.forEach(scene => {
         scene.classList.remove('active');
+        scene.classList.remove('slg-mode'); // 移除SLG模式类
     });
 
     const targetScene = document.getElementById(sceneName + '-scene');
     if (targetScene) {
         targetScene.classList.add('active');
+        
+        // 新增：如果是SLG模式，添加标记类
+        if (GameMode === 1) {
+            targetScene.classList.add('slg-mode');
+        }
+        
         if (sceneName !== 'player-stats' && sceneName !== 'relationships') {
             userLocation = sceneName;
             displayNpcs(sceneName);
         }
     }
+    
+    // 新增：更新SLG返回按钮显示
+    updateSLGReturnButton();
 }
 
 // 显示地点信息弹窗
 function showLocationInfo(locationId, event) {
+    // 新增：如果是SLG模式，不显示地点信息弹窗
+    if (GameMode === 1) {
+        return;
+    }
     const popup = document.getElementById('location-info-popup');
     const locationName = locationNames[locationId];
     const npcsAtLocation = getNpcsAtLocation(locationId);

@@ -179,121 +179,230 @@ function applyBattleReward(reward) {
 
 // 解析LLM响应
 function parseLLMResponse(response, mainTextContent) {
-    if (mainTextContent) {
-        currentStoryText = mainTextContent;
-        updateStoryText(currentStoryText);
-    }
-    
-    if (response.主要NPC && typeof response.主要NPC === 'object') {
-        for (const npcName in response.主要NPC) {
-            const npcData = response.主要NPC[npcName];
-            
-            let npcId = npcNameToId[npcName];
-            
-            if (!npcId) {
-                console.warn(`未找到NPC "${npcName}" 的ID映射`);
-                continue;
+    // 检查是否为SLG模式
+    if (GameMode === 1 && mainTextContent) {
+        // SLG模式：解析特殊格式的输出
+        const lines = mainTextContent.trim().split('\n');
+        slgModeData = [];
+        
+        // 解析每一行
+        lines.forEach(line => {
+            if (line.trim()) {
+                const parts = line.split('|').map(part => part.trim());
+                slgModeData.push({
+                    text: parts[0] || '',
+                    npc: parts[1] || '',
+                    scene: parts[2] || '',
+                    emotion: parts[3] || '',
+                    cg: parts[4] || '无'
+                });
             }
-            
-            if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
-                let changeValue = 0;
-                switch (npcData.好感变化) {
-                    case '大幅下降':
-                        changeValue = -4;
-                        break;
-                    case '下降':
-                        changeValue = -2;
-                        break;
-                    case '不变':
-                        changeValue = 0;
-                        break;
-                    case '上升':
-                        changeValue = 2;
-                        break;
-                    case '大幅上升':
-                        changeValue = 4;
-                        break;
+        });
+        
+        // 使用slgModeData中的文本更新显示
+        if (slgModeData.length > 0) {
+            const allText = slgModeData.map(data => data.text).join('\n');
+            currentStoryText = allText;
+            updateStoryText(allText);
+        }
+        
+        // 处理response中的NPC数据（如果有）
+        if (response && response.主要NPC && typeof response.主要NPC === 'object') {
+            for (const npcName in response.主要NPC) {
+                const npcData = response.主要NPC[npcName];
+                let npcId = npcNameToId[npcName];
+                
+                if (!npcId) {
+                    console.warn(`未找到NPC "${npcName}" 的ID映射`);
+                    continue;
                 }
                 
-                let finalChangeValue = changeValue;
-                let charmMessageShown = false;
-                if (changeValue > 0) {
-                    const charmChance = playerTalents.魅力 / 2;
-                    if (Math.random() * 100 < charmChance) {
-                        finalChangeValue = changeValue * 2;
-                        charmMessageShown = true;
-                    }
-                }
-                
-                npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
-                checkAllValueRanges();
-                
-                if (charmMessageShown) {
-                    setTimeout(() => {
-                        showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
-                    }, 100);
-                }
-            }
-            
-            if (npcData.位置变动 && npcData.位置变动.includes('|')) {
-                const [fromLocation, toLocation] = npcData.位置变动.split('|');
-                
-                let toLocationId = null;
-                for (const [locId, locName] of Object.entries(locationNames)) {
-                    if (locName === toLocation.trim()) {
-                        toLocationId = locId;
-                        break;
-                    }
-                }
-                
-                if (toLocationId) {
-                    currentNpcLocations[npcId] = toLocationId;
-                    
-                    switch(npcId) {
-                        case 'A': npcLocationA = toLocationId; break;
-                        case 'B': npcLocationB = toLocationId; break;
-                        case 'C': npcLocationC = toLocationId; break;
-                        case 'D': npcLocationD = toLocationId; break;
-                        case 'E': npcLocationE = toLocationId; break;
-                        case 'F': npcLocationF = toLocationId; break;
-                        case 'G': npcLocationG = toLocationId; break;
-                        case 'H': npcLocationH = toLocationId; break;
-                        case 'I': npcLocationI = toLocationId; break;
+                // 处理好感变化
+                if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
+                    let changeValue = 0;
+                    switch (npcData.好感变化) {
+                        case '大幅下降': changeValue = -4; break;
+                        case '下降': changeValue = -2; break;
+                        case '不变': changeValue = 0; break;
+                        case '上升': changeValue = 2; break;
+                        case '大幅上升': changeValue = 4; break;
                     }
                     
-                    console.log(`${npcName} 移动到 ${toLocation}`);
-                } else {
-                    console.warn(`未找到位置 "${toLocation}" 的ID映射`);
+                    let finalChangeValue = changeValue;
+                    let charmMessageShown = false;
+                    if (changeValue > 0) {
+                        const charmChance = playerTalents.魅力 / 2;
+                        if (Math.random() * 100 < charmChance) {
+                            finalChangeValue = changeValue * 2;
+                            charmMessageShown = true;
+                        }
+                    }
+                    
+                    npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
+                    checkAllValueRanges();
+                    
+                    if (charmMessageShown) {
+                        setTimeout(() => {
+                            showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
+                        }, 100);
+                    }
+                }
+                
+                // 处理位置变动
+                if (npcData.位置变动 && npcData.位置变动.includes('|')) {
+                    const [fromLocation, toLocation] = npcData.位置变动.split('|');
+                    
+                    let toLocationId = null;
+                    for (const [locId, locName] of Object.entries(locationNames)) {
+                        if (locName === toLocation.trim()) {
+                            toLocationId = locId;
+                            break;
+                        }
+                    }
+                    
+                    if (toLocationId) {
+                        currentNpcLocations[npcId] = toLocationId;
+                        
+                        switch(npcId) {
+                            case 'A': npcLocationA = toLocationId; break;
+                            case 'B': npcLocationB = toLocationId; break;
+                            case 'C': npcLocationC = toLocationId; break;
+                            case 'D': npcLocationD = toLocationId; break;
+                            case 'E': npcLocationE = toLocationId; break;
+                            case 'F': npcLocationF = toLocationId; break;
+                            case 'G': npcLocationG = toLocationId; break;
+                            case 'H': npcLocationH = toLocationId; break;
+                            case 'I': npcLocationI = toLocationId; break;
+                        }
+                    }
                 }
             }
         }
         
-        const activeScene = document.querySelector('.scene.active');
-        if (activeScene && activeScene.id === 'relationships-scene') {
-            updateRelationshipsDisplay();
+    } else {
+        // 原有的解析逻辑（普通模式）
+        slgModeData = [];  // 清空SLG模式数据
+        
+        if (mainTextContent) {
+            currentStoryText = mainTextContent;
+            updateStoryText(currentStoryText);
         }
         
-        if (activeScene && activeScene.id !== 'map-scene' && 
-            activeScene.id !== 'player-stats-scene' && 
-            activeScene.id !== 'relationships-scene') {
-            const locationName = activeScene.id.replace('-scene', '');
-            displayNpcs(locationName);
+        // 处理主要NPC
+        if (response.主要NPC && typeof response.主要NPC === 'object') {
+            for (const npcName in response.主要NPC) {
+                const npcData = response.主要NPC[npcName];
+                
+                let npcId = npcNameToId[npcName];
+                
+                if (!npcId) {
+                    console.warn(`未找到NPC "${npcName}" 的ID映射`);
+                    continue;
+                }
+                
+                if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
+                    let changeValue = 0;
+                    switch (npcData.好感变化) {
+                        case '大幅下降':
+                            changeValue = -4;
+                            break;
+                        case '下降':
+                            changeValue = -2;
+                            break;
+                        case '不变':
+                            changeValue = 0;
+                            break;
+                        case '上升':
+                            changeValue = 2;
+                            break;
+                        case '大幅上升':
+                            changeValue = 4;
+                            break;
+                    }
+                    
+                    let finalChangeValue = changeValue;
+                    let charmMessageShown = false;
+                    if (changeValue > 0) {
+                        const charmChance = playerTalents.魅力 / 2;
+                        if (Math.random() * 100 < charmChance) {
+                            finalChangeValue = changeValue * 2;
+                            charmMessageShown = true;
+                        }
+                    }
+                    
+                    npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
+                    checkAllValueRanges();
+                    
+                    if (charmMessageShown) {
+                        setTimeout(() => {
+                            showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
+                        }, 100);
+                    }
+                }
+                
+                if (npcData.位置变动 && npcData.位置变动.includes('|')) {
+                    const [fromLocation, toLocation] = npcData.位置变动.split('|');
+                    
+                    let toLocationId = null;
+                    for (const [locId, locName] of Object.entries(locationNames)) {
+                        if (locName === toLocation.trim()) {
+                            toLocationId = locId;
+                            break;
+                        }
+                    }
+                    
+                    if (toLocationId) {
+                        currentNpcLocations[npcId] = toLocationId;
+                        
+                        switch(npcId) {
+                            case 'A': npcLocationA = toLocationId; break;
+                            case 'B': npcLocationB = toLocationId; break;
+                            case 'C': npcLocationC = toLocationId; break;
+                            case 'D': npcLocationD = toLocationId; break;
+                            case 'E': npcLocationE = toLocationId; break;
+                            case 'F': npcLocationF = toLocationId; break;
+                            case 'G': npcLocationG = toLocationId; break;
+                            case 'H': npcLocationH = toLocationId; break;
+                            case 'I': npcLocationI = toLocationId; break;
+                        }
+                        
+                        console.log(`${npcName} 移动到 ${toLocation}`);
+                    } else {
+                        console.warn(`未找到位置 "${toLocation}" 的ID映射`);
+                    }
+                }
+            }
         }
-    }
-    
-    if (response.随机事件) {
-        currentRandomEvent = response.随机事件;
         
-        if (currentRandomEvent.事件类型 === '战斗事件') {
-            displayBattleEvent(currentRandomEvent);
-            hideRandomEvent();
+        // 处理随机事件
+        if (response.随机事件) {
+            currentRandomEvent = response.随机事件;
+            
+            if (currentRandomEvent.事件类型 === '战斗事件') {
+                displayBattleEvent(currentRandomEvent);
+                hideRandomEvent();
+            } else {
+                displayRandomEvent(currentRandomEvent);
+                hideBattleEvent();
+            }
         } else {
-            displayRandomEvent(currentRandomEvent);
+            hideRandomEvent();
             hideBattleEvent();
         }
-    } else {
-        hideRandomEvent();
-        hideBattleEvent();
+    }
+    
+    // 更新关系显示（如果在关系界面）
+    const activeScene = document.querySelector('.scene.active');
+    if (activeScene && activeScene.id === 'relationships-scene') {
+        updateRelationshipsDisplay();
+    }
+    
+    // 更新当前场景的NPC显示
+    if (activeScene && activeScene.id !== 'map-scene' && 
+        activeScene.id !== 'player-stats-scene' && 
+        activeScene.id !== 'relationships-scene') {
+        const locationName = activeScene.id.replace('-scene', '');
+        displayNpcs(locationName);
     }
 }
 

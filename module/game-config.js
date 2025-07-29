@@ -295,5 +295,6 @@ const defaultGameData = {
     npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0},
     actionPoints: 3,
     currentWeek: 1,
-    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang"}
+    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang"},
+    GameMode: 0  // 新增：游戏模式，0=普通模式，1=SLG模式
 };

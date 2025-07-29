@@ -74,7 +74,7 @@
 
                 <!-- 地点信息弹窗 - 新增 -->
                 <div class="location-info-popup" id="location-info-popup"></div>
-
+                <button class="slg-return-btn" id="slg-return-btn" onclick="returnFromSLG()">返回天山派</button>
                 <!-- 地图场景 -->
                 <div id="map-scene" class="scene active">
                     <div class="status-display">
@@ -463,6 +463,10 @@
 
         // 执行互动
         async function performAction(action, location) {
+            // 新增：如果是SLG模式，不执行任何操作
+            if (GameMode === 1) {
+                return;
+            }
             if (action === '秘密赌场') {
                 if (actionPoints < 1) {
                     showModal('行动点不足，无法进行此操作！');
@@ -828,6 +832,11 @@
 
         // 前往地点
         function goToLocation(locationId) {
+            // 新增：如果是SLG模式，不允许切换场景
+            if (GameMode === 1) {
+                return;
+            }
+            
             const popup = document.getElementById('location-info-popup');
             popup.classList.remove('show');
             document.removeEventListener('click', closeLocationInfo);
@@ -1004,6 +1013,59 @@
                 doToggleStoryExpand();
             }
         }
+
+        // 从SLG模式返回
+        async function returnFromSLG() {
+            const message = '你结束了山下的游历，回到了天山派';
+            
+            // 重置游戏模式
+            GameMode = 0;
+            slgModeData = [];
+            
+            // 清除SLG图层
+            const viewport = document.getElementById('main-viewport');
+            const existingLayers = viewport.querySelectorAll('.slg-layer');
+            existingLayers.forEach(layer => layer.remove());
+            const existingMask = viewport.querySelector('.slg-interaction-mask');
+            if (existingMask) existingMask.remove();
+            
+            // 移除场景的SLG模式标记
+            const scenes = document.querySelectorAll('.scene');
+            scenes.forEach(scene => {
+                scene.classList.remove('slg-mode');
+            });
+            
+            // 设置userLocation为天山派地图
+            userLocation = 'tianshanpai';
+            
+            // 切换到地图场景
+            switchScene('map');
+            document.getElementById('map-scene').classList.add('active');
+            
+            // 更新按钮显示
+            updateSLGReturnButton();
+            
+            // 刷新NPC位置
+            refreshNpcLocations();
+            
+            // 保存游戏数据
+            await saveGameData();
+            
+            // 根据环境处理消息输出
+            if (isInRenderEnvironment()) {
+                const renderFunc = getRenderFunction();
+                try {
+                    await renderFunc(`/send at={{lastMessageId}}+1 ${message}`);
+                    await renderFunc('/trigger');
+                    console.log('SLG return message sent:', message);
+                } catch (error) {
+                    console.error('Error sending message:', error);
+                    showModal(message);
+                }
+            } else {
+                showModal(message);
+            }
+        }
         
         async function initializeOrSync() {
             await loadOrInitGameData();
@@ -1023,6 +1085,8 @@
             }else{
                 switchScene(userLocation);
             }
+            // 新增：初始化时更新SLG返回按钮显示
+            updateSLGReturnButton();
         }
 
         try {
@@ -1065,6 +1129,7 @@
         window.prevPage = prevPage;
         window.nextPage = nextPage;
         window.toggleStoryExpand = toggleStoryExpand;
+        window.returnFromSLG = returnFromSLG;
         initializeOrSync();
     });
     </script>
