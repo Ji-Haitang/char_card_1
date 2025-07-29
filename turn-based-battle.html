@@ -909,6 +909,12 @@ const commonNPCs = {
     }
 };
 
+const genericNPCPortraits = [
+    'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.png',  // 占位链接1
+    'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼2.png',  // 占位链接2
+    'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼3.png'   // 占位链接3
+];
+
 // 解析敌方信息的函数
 function parseEnemyInfo(text) {
     // 提取
@@ -932,11 +938,14 @@ function parseEnemyInfo(text) {
         };
     }
 
-    // 没有匹配到常见NPC，走原有解析逻辑，风格随机
+    // 没有匹配到常见NPC，为普通NPC随机选择立绘
+    const randomPortrait = genericNPCPortraits[Math.floor(Math.random() * genericNPCPortraits.length)];
+    updateEnemyPortrait(randomPortrait);
+    
+    // 走原有解析逻辑，风格随机
     const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
     const basicDamageMatch = text.match(/basicDamage:\s*([^\n]+)/);
-    // 清除敌人立绘
-    clearEnemyPortrait();
+    
     return {
         name: npcName,
         maxHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
