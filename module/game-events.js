@@ -273,6 +273,9 @@ function parseLLMResponse(response, mainTextContent) {
                             case 'G': npcLocationG = toLocationId; break;
                             case 'H': npcLocationH = toLocationId; break;
                             case 'I': npcLocationI = toLocationId; break;
+                            case 'J': npcLocationJ = toLocationId; break;
+                            case 'K': npcLocationK = toLocationId; break;
+                            case 'L': npcLocationL = toLocationId; break;
                         }
                     }
                 }
@@ -364,6 +367,9 @@ function parseLLMResponse(response, mainTextContent) {
                             case 'G': npcLocationG = toLocationId; break;
                             case 'H': npcLocationH = toLocationId; break;
                             case 'I': npcLocationI = toLocationId; break;
+                            case 'J': npcLocationI = toLocationId; break;
+                            case 'K': npcLocationI = toLocationId; break;
+                            case 'L': npcLocationI = toLocationId; break;
                         }
                         
                         console.log(`${npcName} 移动到 ${toLocation}`);

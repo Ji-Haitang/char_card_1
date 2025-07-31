@@ -511,6 +511,9 @@
                     case 'G': npcLocationG = 'none'; break;
                     case 'H': npcLocationH = 'none'; break;
                     case 'I': npcLocationI = 'none'; break;
+                    case 'J': npcLocationJ = 'none'; break;
+                    case 'K': npcLocationK = 'none'; break;
+                    case 'L': npcLocationL = 'none'; break;
                 }
                 
                 // 如果当前场景有该NPC，更新显示
@@ -784,7 +787,7 @@
             }
 
             // 只对不在当前位置的NPC进行重新分配
-            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I'].filter(
+            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].filter(
                 npcId => !npcsAtCurrentLocation.includes(npcId)
             );
             const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
@@ -836,6 +839,9 @@
             npcLocationG = currentNpcLocations.G;
             npcLocationH = currentNpcLocations.H;
             npcLocationI = currentNpcLocations.I;
+            npcLocationJ = currentNpcLocations.J;
+            npcLocationK = currentNpcLocations.K;
+            npcLocationL = currentNpcLocations.L;
             
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id !== 'map-scene') {
