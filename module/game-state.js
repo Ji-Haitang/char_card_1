@@ -55,6 +55,7 @@ let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
+let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 
 // 独立的NPC位置变量
 let npcLocationA = "none";
@@ -81,6 +82,7 @@ let currentBattleNpcName = null;
 let currentStoryText = "";
 let previousScene = 'map';  // 记录进入属性/关系界面前的场景
 let wasInSLGMode = false;   // 记录是否从SLG模式进入
+let currentBattleNpcId = null;  // 记录当前战斗的NPC ID
 // let storyPages = [];  // 存储分页后的文本
 // let currentPage = 0;  // 当前页码
 // let isStoryExpanded = false;  // 是否展开显示全文
@@ -114,7 +116,8 @@ function syncVariablesFromGameData() {
     npcLocations: currentNpcLocations,
     GameMode,
     npcVisibility,
-    npcGiftGiven } = gameData);  // 添加新变量
+    npcGiftGiven,
+    npcSparred } = gameData);  // 添加新变量
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -143,8 +146,9 @@ function syncGameDataFromVariables() {
     gameData.currentWeek = currentWeek;
     gameData.npcLocations = currentNpcLocations;
     gameData.GameMode = GameMode;
-    gameData.npcVisibility = npcVisibility;  // 添加新变量
-    gameData.npcGiftGiven = npcGiftGiven;    // 添加新变量
+    gameData.npcVisibility = npcVisibility;
+    gameData.npcGiftGiven = npcGiftGiven;
+    gameData.npcSparred = npcSparred;    // 添加npcSparred
 }
 
 // 深度合并函数

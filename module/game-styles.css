@@ -610,6 +610,17 @@ body {
     transform: scale(1.05);
 }
 
+.npc-info-btn.disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.npc-info-btn.disabled:hover {
+    background: #ccc;
+    transform: none;
+}
+
 /* 场景交互按钮容器 - 响应式改进 */
 .scene-actions {
     position: absolute;

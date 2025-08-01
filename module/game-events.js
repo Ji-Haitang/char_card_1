@@ -439,18 +439,54 @@ function setupMessageListeners() {
             const result = event.data.result;
             
             if (currentBattleType === 'npc') {
+                // 无论胜利还是失败，都标记本周已经切磋过
+                npcSparred[currentBattleNpcId] = true;
+                
+                // 获取时间信息
+                const year = Math.floor((currentWeek - 1) / 48) + 1;
+                const remainingWeeks = (currentWeek - 1) % 48;
+                const month = Math.floor(remainingWeeks / 4) + 1;
+                const week = remainingWeeks % 4 + 1;
+                
+                // 获取当前地点
+                const activeScene = document.querySelector('.scene.active');
+                const locationId = activeScene.id.replace('-scene', '');
+                const locationName = locationNames[locationId] || '未知地点';
+                
+                // 基础信息
+                let resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                                `地点：${locationName}<br>` +
+                                `{{user}}行动选择：武艺切磋<br>` +
+                                `切磋对手：${currentBattleNpcName}<br>`;
+                
                 if (result === 'victory') {
-                    await handleMessageOutput(`你和${currentBattleNpcName}切磋武艺，获得胜利了`);
-                    playerStats.声望 += 1;
-                    checkAllValueRanges();
-                    updateStatsDisplay();
-                } else if (result === 'defeat') {
-                    await handleMessageOutput(`你和${currentBattleNpcName}切磋武艺，不幸失败了`);
-                } else if (result === 'quit') {
-                    await handleMessageOutput(`你和${currentBattleNpcName}切磋武艺，不幸失败了`);
+                    resultMessage += `比试结果：胜利<br><br>属性变化：`;
+                    
+                    // 获取对应的奖励配置
+                    const reward = npcSparRewards[currentBattleNpcId];
+                    
+                    if (reward) {
+                        // 应用奖励
+                        if (playerTalents.hasOwnProperty(reward.type)) {
+                            // 天赋属性
+                            playerTalents[reward.type] = Math.min(100, playerTalents[reward.type] + reward.value);
+                        } else if (playerStats.hasOwnProperty(reward.type)) {
+                            // 人物数值
+                            playerStats[reward.type] += reward.value;
+                        }
+                        resultMessage += `<br>${reward.type}: +${reward.value}`;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                    }
+                    
+                } else if (result === 'defeat' || result === 'quit') {
+                    resultMessage += `比试结果：失败<br><br>属性变化：<br>无`;
                 }
                 
+                await handleMessageOutput(resultMessage);
+                
                 currentBattleNpcName = null;
+                currentBattleNpcId = null;
                 
             } else if (currentBattleType === 'event') {
                 if (result === 'victory') {

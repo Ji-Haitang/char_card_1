@@ -580,6 +580,11 @@
                         npcGiftGiven[npcId] = false;
                     });
                     
+                    // 重置所有NPC的切磋状态
+                    Object.keys(npcSparred).forEach(npcId => {
+                        npcSparred[npcId] = false;
+                    });
+                    
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
@@ -976,9 +981,16 @@
                 const location = activeScene.id.replace('-scene', '');
                 showInteractionInput(npcId, location);
             } else if (action === '切磋') {
+                // 检查是否本周已经切磋过
+                if (npcSparred[npcId]) {
+                    showModal('本周已经和该NPC切磋过了！');
+                    return;
+                }
+                
                 const npc = npcs[npcId];
                 currentBattleType = 'npc';
                 currentBattleNpcName = npc.name;
+                currentBattleNpcId = npcId;  // 新增：记录NPC ID
                 
                 const battleData = {
                     player: {
@@ -1216,22 +1228,23 @@
             refreshNpcLocations();
             
             // 保存游戏数据
-            await saveGameData();
+            // await saveGameData();
             
-            // 根据环境处理消息输出
-            if (isInRenderEnvironment()) {
-                const renderFunc = getRenderFunction();
-                try {
-                    await renderFunc(`/send at={{lastMessageId}}+1 ${message}`);
-                    await renderFunc('/trigger');
-                    console.log('SLG return message sent:', message);
-                } catch (error) {
-                    console.error('Error sending message:', error);
-                    showModal(message);
-                }
-            } else {
-                showModal(message);
-            }
+            // // 根据环境处理消息输出
+            // if (isInRenderEnvironment()) {
+            //     const renderFunc = getRenderFunction();
+            //     try {
+            //         await renderFunc(`/send at={{lastMessageId}}+1 ${message}`);
+            //         await renderFunc('/trigger');
+            //         console.log('SLG return message sent:', message);
+            //     } catch (error) {
+            //         console.error('Error sending message:', error);
+            //         showModal(message);
+            //     }
+            // } else {
+            //     showModal(message);
+            // }
+            await handleMessageOutput(message);
         }
         
         async function initializeOrSync() {

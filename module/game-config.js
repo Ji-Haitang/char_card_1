@@ -190,6 +190,21 @@ const actionConfigs = {
     下山: { talentBonus: '心性', affects: '声望' }
 };
 
+const npcSparRewards = {
+    A: { type: '武学', value: 5 },      // 破阵子 - 武学+3
+    B: { type: '声望', value: 5 },      // 洞庭君 - 声望+2
+    C: { type: '金钱', value: 500 },    // 钱塘君 - 金钱+300
+    D: { type: '武学', value: 1 },      // 萧白瑚 - 根骨+1
+    E: { type: '武学', value: 3 },      // 姬姒 - 武学+5
+    F: { type: '学识', value: 3 },      // 施延年 - 学识+3
+    G: { type: '学识', value: 4 },      // 呼延显 - 悟性+1
+    H: { type: '声望', value: 1 },      // 雨烛 - 心性+1
+    I: { type: '金钱', value: 300 },    // 安慕 - 金钱+500
+    J: { type: '金钱', value: 1000 },      // 唐沐梨 - 魅力+1
+    K: { type: '学识', value: 2 },      // 洛潜幽 - 学识+2
+    L: { type: '金钱', value: 3000 }   // 神秘杂役 - 金钱+1000
+};
+
 // NPC在各地点的出现概率
 const npcLocationProbability = {
     A: {
@@ -325,16 +340,16 @@ const npcLocationProbability = {
         none: 0.10
     },
     L: {
-        yanwuchang: 0.025,
-        cangjingge: 0.025,
-        huofang: 0.025,
-        houshan: 0.025,
-        yishiting: 0.025,
-        tiejiangpu: 0.025,
-        nandizi: 0.025,
+        yanwuchang: 0.0125,
+        cangjingge: 0.0125,
+        huofang: 0.0125,
+        houshan: 0.0125,
+        yishiting: 0.0125,
+        tiejiangpu: 0.0125,
+        nandizi: 0.0125,
         nvdizi: 0.0,
-        shanmen: 0.025,
-        none: 0.8
+        shanmen: 0.0125,
+        none: 0.9
     }
 };
 
@@ -355,5 +370,6 @@ const defaultGameData = {
     npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang","J":"tiejiangpu","K":"nvdizi","L":"none"},
     GameMode: 1,  // 游戏模式，0=普通模式，1=SLG模式
     npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true}, // 新增：NPC是否显示
-    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false} // 新增：本周是否已送礼
+    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已送礼
+    npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false} // 新增：本周是否已切磋
 };

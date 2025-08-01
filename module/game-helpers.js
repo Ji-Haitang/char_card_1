@@ -220,11 +220,22 @@ function showNpcInfo(npcId, location, event) {
     const npc = npcs[npcId];
     const popup = document.getElementById('npc-info-popup');
     
+    // 检查是否已经切磋过
+    const hasSparred = npcSparred[npcId];
+    const sparBtnText = hasSparred ? '已切磋' : '切磋';
+    const sparBtnDisabled = hasSparred ? 'disabled' : '';
+    
+    // 获取切磋奖励信息
+    const reward = npcSparRewards[npcId];
+    const rewardText = reward ? `(${reward.type}+${reward.value})` : '';
+    
     popup.innerHTML = `
         <div class="npc-info-name">${npc.name}</div>
         <div class="npc-info-desc">${npc.description}</div>
         <div class="npc-info-actions">
-            <button class="npc-info-btn" onclick="npcAction('${npcId}', '切磋')">切磋</button>
+            <button class="npc-info-btn ${hasSparred ? 'disabled' : ''}" 
+                    onclick="npcAction('${npcId}', '切磋')" 
+                    ${sparBtnDisabled}>${sparBtnText} ${rewardText}</button>
             <button class="npc-info-btn" onclick="npcAction('${npcId}', '互动')">互动</button>
         </div>
     `;
