@@ -53,6 +53,7 @@ let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"
 let actionPoints = 3;
 let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
+let difficulty = 'normal';
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
@@ -115,9 +116,10 @@ function syncVariablesFromGameData() {
     currentWeek,
     npcLocations: currentNpcLocations,
     GameMode,
+    difficulty,
     npcVisibility,
     npcGiftGiven,
-    npcSparred } = gameData);  // 添加新变量
+    npcSparred } = gameData);  // 添加新变量,，
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -146,6 +148,7 @@ function syncGameDataFromVariables() {
     gameData.currentWeek = currentWeek;
     gameData.npcLocations = currentNpcLocations;
     gameData.GameMode = GameMode;
+    gameData.difficulty = difficulty;
     gameData.npcVisibility = npcVisibility;
     gameData.npcGiftGiven = npcGiftGiven;
     gameData.npcSparred = npcSparred;    // 添加npcSparred

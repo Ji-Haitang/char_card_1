@@ -315,10 +315,215 @@
         
         <!-- 中间控制按钮 -->
         <div class="control-buttons">
-            <button class="control-btn" onclick="showPlayerStats()">角色属性</button>
-            <button class="control-btn" onclick="showRelationships()">人际关系</button>
+            <!-- 属性查看下拉菜单 -->
+            <div class="dropdown-wrapper">
+                <button class="control-btn dropdown-toggle" onclick="toggleDropdown('attribute-dropdown')">
+                    属性查看 ▲
+                </button>
+                <div id="attribute-dropdown" class="dropdown-menu">
+                    <button class="dropdown-item" onclick="showPlayerStats()">角色属性</button>
+                    <button class="dropdown-item" onclick="showRelationships()">人际关系</button>
+                </div>
+            </div>
+            
+            <!-- 系统设置下拉菜单 -->
+            <div class="dropdown-wrapper">
+                <button class="control-btn dropdown-toggle" onclick="toggleDropdown('system-dropdown')">
+                    系统设置 ▲
+                </button>
+                <div id="system-dropdown" class="dropdown-menu">
+                    <button class="dropdown-item" onclick="saveGame()">存档</button>
+                    <button class="dropdown-item" onclick="loadGame()">读档</button>
+                    <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
+                    <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
+                </div>
+            </div>
+            
             <button class="control-btn" id="skip-week-btn" onclick="skipWeek()">跳过这一周</button>
             <button class="control-btn" id="slg-return-btn" onclick="returnFromSLG()" style="display: none;">返回天山派</button>
+        </div>
+
+        <!-- 难度设置弹窗 -->
+        <div id="difficulty-modal" class="modal viewport-overlay">
+            <div class="modal-content">
+                <h3>难度设置</h3>
+                <p>选择游戏难度，将影响行动成功率的计算：</p>
+                <div class="difficulty-options">
+                    <label class="difficulty-option">
+                        <input type="radio" name="difficulty" value="easy" id="diff-easy">
+                        <span class="option-content">
+                            <strong>简单模式</strong>
+                            <small>心情加成 +20，更容易获得成功</small>
+                        </span>
+                    </label>
+                    <label class="difficulty-option">
+                        <input type="radio" name="difficulty" value="normal" id="diff-normal" checked>
+                        <span class="option-content">
+                            <strong>普通模式</strong>
+                            <small>心情加成 +10，平衡的游戏体验</small>
+                        </span>
+                    </label>
+                    <label class="difficulty-option">
+                        <input type="radio" name="difficulty" value="hard" id="diff-hard">
+                        <span class="option-content">
+                            <strong>困难模式</strong>
+                            <small>无心情加成，更具挑战性</small>
+                        </span>
+                    </label>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn" onclick="saveDifficulty()">确认</button>
+                    <button class="modal-btn cancel" onclick="closeDifficultyModal()">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 金手指弹窗 -->
+        <div id="cheat-modal" class="modal viewport-overlay">
+            <div class="modal-content cheat-content">
+                <h3>金手指 - 数值修改</h3>
+                <div class="cheat-sections">
+                    <!-- 天赋属性 -->
+                    <div class="cheat-section">
+                        <h4>天赋属性</h4>
+                        <div class="cheat-grid">
+                            <div class="cheat-item">
+                                <label>根骨</label>
+                                <input type="number" id="cheat-gengu" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>悟性</label>
+                                <input type="number" id="cheat-wuxing" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>心性</label>
+                                <input type="number" id="cheat-xinxing" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>魅力</label>
+                                <input type="number" id="cheat-meili" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 人物数值 -->
+                    <div class="cheat-section">
+                        <h4>人物数值</h4>
+                        <div class="cheat-grid">
+                            <div class="cheat-item">
+                                <label>武学</label>
+                                <input type="number" id="cheat-wuxue" min="0" max="300">
+                            </div>
+                            <div class="cheat-item">
+                                <label>学识</label>
+                                <input type="number" id="cheat-xueshi" min="0" max="300">
+                            </div>
+                            <div class="cheat-item">
+                                <label>声望</label>
+                                <input type="number" id="cheat-shengwang" min="0" max="300">
+                            </div>
+                            <div class="cheat-item">
+                                <label>金钱</label>
+                                <input type="number" id="cheat-jinqian" min="0" max="999999">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 战斗数值 -->
+                    <div class="cheat-section">
+                        <h4>战斗数值</h4>
+                        <div class="cheat-grid">
+                            <div class="cheat-item">
+                                <label>攻击力</label>
+                                <input type="number" id="cheat-attack" min="10" max="300">
+                            </div>
+                            <div class="cheat-item">
+                                <label>生命值</label>
+                                <input type="number" id="cheat-hp" min="25" max="600">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他数值 -->
+                    <div class="cheat-section">
+                        <h4>其他数值</h4>
+                        <div class="cheat-grid">
+                            <div class="cheat-item">
+                                <label>心情</label>
+                                <input type="number" id="cheat-mood" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>行动点</label>
+                                <input type="number" id="cheat-actionpoints" min="0" max="3">
+                            </div>
+                            <div class="cheat-item">
+                                <label>当前周数</label>
+                                <input type="number" id="cheat-week" min="1" max="9999">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- NPC好感度 -->
+                    <div class="cheat-section">
+                        <h4>NPC好感度</h4>
+                        <div class="cheat-grid npc-grid">
+                            <div class="cheat-item">
+                                <label>破阵子</label>
+                                <input type="number" id="cheat-npc-A" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>洞庭君</label>
+                                <input type="number" id="cheat-npc-B" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>钱塘君</label>
+                                <input type="number" id="cheat-npc-C" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>萧白瑚</label>
+                                <input type="number" id="cheat-npc-D" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>姬姒</label>
+                                <input type="number" id="cheat-npc-E" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>施延年</label>
+                                <input type="number" id="cheat-npc-F" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>呼延显</label>
+                                <input type="number" id="cheat-npc-G" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>雨烛</label>
+                                <input type="number" id="cheat-npc-H" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>安慕</label>
+                                <input type="number" id="cheat-npc-I" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>唐沐梨</label>
+                                <input type="number" id="cheat-npc-J" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>洛潜幽</label>
+                                <input type="number" id="cheat-npc-K" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>神秘杂役</label>
+                                <input type="number" id="cheat-npc-L" min="0" max="100">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="modal-buttons">
+                    <button class="modal-btn" onclick="saveCheatValues()">保存</button>
+                    <button class="modal-btn cancel" onclick="closeCheatModal()">取消</button>
+                </div>
+            </div>
         </div>
 
         <!-- 故事区域 -->
@@ -641,8 +846,23 @@
             const config = actionConfigs[action];
             const talentBonus = playerTalents[config.talentBonus] / 2;
             
+            // 根据难度调整成功率计算
+            let moodBonus = 10; // 默认普通难度
+            
+            switch(difficulty) {
+                case 'easy':
+                    moodBonus = 20;
+                    break;
+                case 'normal':
+                    moodBonus = 10;
+                    break;
+                case 'hard':
+                    moodBonus = 0;
+                    break;
+            }
+            
             const randomRoll = Math.random() * 100;
-            const finalValue = (randomRoll + talentBonus) * (playerMood + 20) / 100;
+            const finalValue = (randomRoll + talentBonus) * (playerMood + moodBonus) / 100;
 
             let successLevel, successText, moodCost;
             let statChange = {};
@@ -1246,7 +1466,255 @@
             // }
             await handleMessageOutput(message);
         }
-        
+
+        // 下拉菜单控制
+        function toggleDropdown(dropdownId) {
+            const dropdown = document.getElementById(dropdownId);
+            const allDropdowns = document.querySelectorAll('.dropdown-menu');
+            const button = dropdown.previousElementSibling;
+            
+            // 关闭其他下拉菜单
+            allDropdowns.forEach(d => {
+                if (d.id !== dropdownId) {
+                    d.classList.remove('show');
+                    d.previousElementSibling.classList.remove('active');
+                }
+            });
+            
+            // 切换当前下拉菜单
+            dropdown.classList.toggle('show');
+            button.classList.toggle('active');
+        }
+
+        // 点击外部关闭下拉菜单
+        document.addEventListener('click', function(event) {
+            if (!event.target.closest('.dropdown-wrapper')) {
+                document.querySelectorAll('.dropdown-menu').forEach(dropdown => {
+                    dropdown.classList.remove('show');
+                });
+                document.querySelectorAll('.dropdown-toggle').forEach(button => {
+                    button.classList.remove('active');
+                });
+            }
+        });
+
+        // 存档功能
+        async function saveGame() {
+            // 计算时间信息
+            const year = Math.floor((currentWeek - 1) / 48) + 1;
+            const remainingWeeks = (currentWeek - 1) % 48;
+            const month = Math.floor(remainingWeeks / 4) + 1;
+            const week = remainingWeeks % 4 + 1;
+            
+            // 获取当前地点名称
+            const locationName = locationNames[userLocation] || '未知地点';
+            
+            // 构建存档名称
+            const saveName = `第${year}年第${month}月第${week}周_所在地${locationName}`;
+            
+            // 调用SillyTavern的checkpoint命令
+            if (isInRenderEnvironment()) {
+                const renderFunc = getRenderFunction();
+                try {
+                    await renderFunc(`/checkpoint-create mesId={{LastMessageID}} ${saveName}`);
+                    showModal('存档成功！<br>存档名称：' + saveName);
+                } catch (error) {
+                    console.error('存档失败:', error);
+                    showModal('存档失败，请重试');
+                }
+            } else {
+                showModal('当前环境不支持存档功能');
+            }
+            
+            // 关闭下拉菜单
+            toggleDropdown('system-dropdown');
+        }
+
+        // 读档功能
+        async function loadGame() {
+            if (isInRenderEnvironment()) {
+                const renderFunc = getRenderFunction();
+                try {
+                    await renderFunc('/chat-manager');
+                } catch (error) {
+                    console.error('打开聊天管理器失败:', error);
+                    showModal('无法打开聊天管理器');
+                }
+            } else {
+                showModal('当前环境不支持读档功能');
+            }
+            
+            // 关闭下拉菜单
+            toggleDropdown('system-dropdown');
+        }
+
+        /* 工具：把指定 modal 精准套到 #main-viewport */
+        function fitModalToViewport(modal){
+            const vp = document.getElementById('main-viewport').getBoundingClientRect();
+            Object.assign(modal.style,{
+                left : vp.left  +'px',
+                top  : vp.top   +'px',
+                width: vp.width +'px',
+                height:vp.height+'px'
+            });
+        }
+
+        /* 供窗口大小变化时实时刷新位置 */
+        function bindModalAutoFit(modal){
+            const refresh = ()=>fitModalToViewport(modal);
+            window.addEventListener('resize',refresh);
+            modal._unbindFit = ()=>window.removeEventListener('resize',refresh);
+        }
+
+        /* 打开难度设置 */
+        function showDifficultySettings(){
+            const modal = document.getElementById('difficulty-modal');
+            document.getElementById(`diff-${gameData.difficulty||'normal'}`).checked=true;
+            modal.style.display='block';
+            fitModalToViewport(modal);
+            bindModalAutoFit(modal);
+            toggleDropdown('system-dropdown');
+        }
+
+        // 保存难度设置
+        async function saveDifficulty() {
+            const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
+            gameData.difficulty = selectedDifficulty;
+            
+            // 保存到SillyTavern变量
+            await saveGameData();
+            
+            // 显示确认信息
+            const difficultyNames = {
+                'easy': '简单',
+                'normal': '普通',
+                'hard': '困难'
+            };
+            showModal(`难度已设置为：${difficultyNames[selectedDifficulty]}`);
+            
+            // 关闭弹窗
+            closeDifficultyModal();
+        }
+
+        /* 关闭难度设置 */
+        function closeDifficultyModal(){
+            const modal=document.getElementById('difficulty-modal');
+            modal.style.display='none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
+        // 显示金手指
+        function showCheatMode() {
+            // 填充当前数值
+            document.getElementById('cheat-gengu').value = playerTalents.根骨;
+            document.getElementById('cheat-wuxing').value = playerTalents.悟性;
+            document.getElementById('cheat-xinxing').value = playerTalents.心性;
+            document.getElementById('cheat-meili').value = playerTalents.魅力;
+            
+            document.getElementById('cheat-wuxue').value = playerStats.武学;
+            document.getElementById('cheat-xueshi').value = playerStats.学识;
+            document.getElementById('cheat-shengwang').value = playerStats.声望;
+            document.getElementById('cheat-jinqian').value = playerStats.金钱;
+            
+            document.getElementById('cheat-attack').value = combatStats.攻击力;
+            document.getElementById('cheat-hp').value = combatStats.生命值;
+            
+            document.getElementById('cheat-mood').value = playerMood;
+            document.getElementById('cheat-actionpoints').value = actionPoints;
+            document.getElementById('cheat-week').value = currentWeek;
+            
+            // 填充NPC好感度
+            document.getElementById('cheat-npc-A').value = npcFavorability.A;
+            document.getElementById('cheat-npc-B').value = npcFavorability.B;
+            document.getElementById('cheat-npc-C').value = npcFavorability.C;
+            document.getElementById('cheat-npc-D').value = npcFavorability.D;
+            document.getElementById('cheat-npc-E').value = npcFavorability.E;
+            document.getElementById('cheat-npc-F').value = npcFavorability.F;
+            document.getElementById('cheat-npc-G').value = npcFavorability.G;
+            document.getElementById('cheat-npc-H').value = npcFavorability.H;
+            document.getElementById('cheat-npc-I').value = npcFavorability.I;
+            document.getElementById('cheat-npc-J').value = npcFavorability.J;
+            document.getElementById('cheat-npc-K').value = npcFavorability.K;
+            document.getElementById('cheat-npc-L').value = npcFavorability.L;
+            
+            // // 显示弹窗
+            // document.getElementById('cheat-modal').style.display = 'block';
+            
+            // // 关闭下拉菜单
+            // toggleDropdown('system-dropdown');
+            const modal=document.getElementById('cheat-modal');
+            modal.style.display='block';
+            fitModalToViewport(modal);
+            bindModalAutoFit(modal);
+            toggleDropdown('system-dropdown');
+        }
+
+        // 保存金手指数值
+        async function saveCheatValues() {
+            // 更新天赋属性
+            playerTalents.根骨 = parseInt(document.getElementById('cheat-gengu').value);
+            playerTalents.悟性 = parseInt(document.getElementById('cheat-wuxing').value);
+            playerTalents.心性 = parseInt(document.getElementById('cheat-xinxing').value);
+            playerTalents.魅力 = parseInt(document.getElementById('cheat-meili').value);
+            
+            // 更新人物数值
+            playerStats.武学 = parseInt(document.getElementById('cheat-wuxue').value);
+            playerStats.学识 = parseInt(document.getElementById('cheat-xueshi').value);
+            playerStats.声望 = parseInt(document.getElementById('cheat-shengwang').value);
+            playerStats.金钱 = parseInt(document.getElementById('cheat-jinqian').value);
+            
+            // 更新战斗数值
+            combatStats.攻击力 = parseInt(document.getElementById('cheat-attack').value);
+            combatStats.生命值 = parseInt(document.getElementById('cheat-hp').value);
+            
+            // 更新其他数值
+            playerMood = parseInt(document.getElementById('cheat-mood').value);
+            actionPoints = parseInt(document.getElementById('cheat-actionpoints').value);
+            currentWeek = parseInt(document.getElementById('cheat-week').value);
+            
+            // 更新NPC好感度
+            npcFavorability.A = parseInt(document.getElementById('cheat-npc-A').value);
+            npcFavorability.B = parseInt(document.getElementById('cheat-npc-B').value);
+            npcFavorability.C = parseInt(document.getElementById('cheat-npc-C').value);
+            npcFavorability.D = parseInt(document.getElementById('cheat-npc-D').value);
+            npcFavorability.E = parseInt(document.getElementById('cheat-npc-E').value);
+            npcFavorability.F = parseInt(document.getElementById('cheat-npc-F').value);
+            npcFavorability.G = parseInt(document.getElementById('cheat-npc-G').value);
+            npcFavorability.H = parseInt(document.getElementById('cheat-npc-H').value);
+            npcFavorability.I = parseInt(document.getElementById('cheat-npc-I').value);
+            npcFavorability.J = parseInt(document.getElementById('cheat-npc-J').value);
+            npcFavorability.K = parseInt(document.getElementById('cheat-npc-K').value);
+            npcFavorability.L = parseInt(document.getElementById('cheat-npc-L').value);
+            
+            // 检查数值范围
+            checkAllValueRanges();
+            
+            // 更新所有显示
+            updateAllDisplays();
+            
+            // 如果在关系界面，更新关系显示
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && activeScene.id === 'relationships-scene') {
+                updateRelationshipsDisplay();
+            }
+            
+            // 保存到SillyTavern
+            await saveGameData();
+            
+            // 显示确认信息
+            showModal('数值已修改并保存！');
+            
+            // 关闭弹窗
+            closeCheatModal();
+        }
+
+        // 关闭金手指弹窗
+        function closeCheatModal(){
+            const modal=document.getElementById('cheat-modal');
+            modal.style.display='none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
         async function initializeOrSync() {
             await loadOrInitGameData();
             checkAllValueRanges();
@@ -1312,6 +1780,15 @@
         window.returnFromSLG = returnFromSLG;
         window.toggleNpcVisibility = toggleNpcVisibility;
         window.giveGift = giveGift;
+        window.toggleDropdown = toggleDropdown;
+        window.saveGame = saveGame;
+        window.loadGame = loadGame;
+        window.showDifficultySettings = showDifficultySettings;
+        window.saveDifficulty = saveDifficulty;
+        window.closeDifficultyModal = closeDifficultyModal;
+        window.showCheatMode = showCheatMode;
+        window.saveCheatValues = saveCheatValues;
+        window.closeCheatModal = closeCheatModal;
         initializeOrSync();
     });
     </script>
