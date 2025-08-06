@@ -2005,3 +2005,8 @@ body {
     flex:1;                     /* 把高度全部交给内容区域 */
     overflow:auto;
 }
+
+.story-text pre, .story-text code {
+    white-space: pre-wrap;   /* 保留空白但允许换行 */
+    word-break: break-word;  /* 中文、长单词都可断行 */
+}

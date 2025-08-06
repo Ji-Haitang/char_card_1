@@ -348,29 +348,27 @@
             <div class="modal-content">
                 <h3>难度设置</h3>
                 <p>选择游戏难度，将影响行动成功率的计算：</p>
-                <div class="difficulty-options">
                     <label class="difficulty-option">
                         <input type="radio" name="difficulty" value="easy" id="diff-easy">
                         <span class="option-content">
                             <strong>简单模式</strong>
-                            <small>心情加成 +20，更容易获得成功</small>
+                            <small>心情加成 +20，更容易获得成功<br>好感度变化：上升+2/+4，下降-1/-2</small>
                         </span>
                     </label>
                     <label class="difficulty-option">
                         <input type="radio" name="difficulty" value="normal" id="diff-normal" checked>
                         <span class="option-content">
                             <strong>普通模式</strong>
-                            <small>心情加成 +10，平衡的游戏体验</small>
+                            <small>心情加成 +10，平衡的游戏体验<br>好感度变化：大幅±2，普通±1</small>
                         </span>
                     </label>
                     <label class="difficulty-option">
                         <input type="radio" name="difficulty" value="hard" id="diff-hard">
                         <span class="option-content">
                             <strong>困难模式</strong>
-                            <small>无心情加成，更具挑战性</small>
+                            <small>无心情加成，更具挑战性<br>好感度变化：上升+1/+2，下降-2/-4</small>
                         </span>
                     </label>
-                </div>
                 <div class="modal-buttons">
                     <button class="modal-btn" onclick="saveDifficulty()">确认</button>
                     <button class="modal-btn cancel" onclick="closeDifficultyModal()">取消</button>
@@ -1569,7 +1567,7 @@
         /* 打开难度设置 */
         function showDifficultySettings(){
             const modal = document.getElementById('difficulty-modal');
-            document.getElementById(`diff-${gameData.difficulty||'normal'}`).checked=true;
+            document.getElementById(`diff-${difficulty||'normal'}`).checked=true;
             modal.style.display='block';
             fitModalToViewport(modal);
             bindModalAutoFit(modal);
@@ -1579,7 +1577,7 @@
         // 保存难度设置
         async function saveDifficulty() {
             const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
-            gameData.difficulty = selectedDifficulty;
+            difficulty = selectedDifficulty;
             
             // 保存到SillyTavern变量
             await saveGameData();

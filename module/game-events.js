@@ -220,12 +220,54 @@ function parseLLMResponse(response, mainTextContent) {
                 // 处理好感变化
                 if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
                     let changeValue = 0;
+    
+                    // 根据难度调整好感度变化值
+                    const currentDifficulty = difficulty || 'normal';
+                    
                     switch (npcData.好感变化) {
-                        case '大幅下降': changeValue = -4; break;
-                        case '下降': changeValue = -2; break;
-                        case '不变': changeValue = 0; break;
-                        case '上升': changeValue = 2; break;
-                        case '大幅上升': changeValue = 4; break;
+                        case '大幅下降':
+                            if (currentDifficulty === 'easy') {
+                                changeValue = -2;  // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = -2;  // 普通：大幅下降变为-2
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = -4;  // 困难：大幅下降-4
+                            }
+                            break;
+                            
+                        case '下降':
+                            if (currentDifficulty === 'easy') {
+                                changeValue = -1;  // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = -1;  // 普通：下降变为-1
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = -2;  // 困难：下降-2
+                            }
+                            break;
+                            
+                        case '不变':
+                            changeValue = 0;  // 所有难度都是0
+                            break;
+                            
+                        case '上升':
+                            if (currentDifficulty === 'easy') {
+                                changeValue = 2;   // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = 1;   // 普通：上升变为+1
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = 1;   // 困难：上升+1
+                            }
+                            break;
+                            
+                        case '大幅上升':
+                            if (currentDifficulty === 'easy') {
+                                changeValue = 4;   // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = 2;   // 普通：大幅上升变为+2
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = 2;   // 困难：大幅上升+2
+                            }
+                            break;
                     }
                     
                     let finalChangeValue = changeValue;
@@ -305,21 +347,53 @@ function parseLLMResponse(response, mainTextContent) {
                 
                 if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
                     let changeValue = 0;
+    
+                    // 根据难度调整好感度变化值
+                    const currentDifficulty = difficulty || 'normal';
+                    
                     switch (npcData.好感变化) {
                         case '大幅下降':
-                            changeValue = -4;
+                            if (currentDifficulty === 'easy') {
+                                changeValue = -2;  // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = -2;  // 普通：大幅下降变为-2
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = -4;  // 困难：大幅下降-4
+                            }
                             break;
+                            
                         case '下降':
-                            changeValue = -2;
+                            if (currentDifficulty === 'easy') {
+                                changeValue = -1;  // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = -1;  // 普通：下降变为-1
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = -2;  // 困难：下降-2
+                            }
                             break;
+                            
                         case '不变':
-                            changeValue = 0;
+                            changeValue = 0;  // 所有难度都是0
                             break;
+                            
                         case '上升':
-                            changeValue = 2;
+                            if (currentDifficulty === 'easy') {
+                                changeValue = 2;   // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = 1;   // 普通：上升变为+1
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = 1;   // 困难：上升+1
+                            }
                             break;
+                            
                         case '大幅上升':
-                            changeValue = 4;
+                            if (currentDifficulty === 'easy') {
+                                changeValue = 4;   // 简单：保持原状
+                            } else if (currentDifficulty === 'normal') {
+                                changeValue = 2;   // 普通：大幅上升变为+2
+                            } else if (currentDifficulty === 'hard') {
+                                changeValue = 2;   // 困难：大幅上升+2
+                            }
                             break;
                     }
                     
