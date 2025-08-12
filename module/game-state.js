@@ -88,6 +88,18 @@ let currentBattleNpcId = null;  // 记录当前战斗的NPC ID
 // let currentPage = 0;  // 当前页码
 // let isStoryExpanded = false;  // 是否展开显示全文
 
+let inventory = {
+    "肉包子": 5,
+    "制式铁剑": 1
+};
+
+let equipment = {
+    "武器": null,
+    "防具": "普通弟子服",  // 开局默认装备
+    "饰品1": null,
+    "饰品2": null
+};
+
 // 流式版本的本地状态
 let localState = {
     turnUpdateApplied: false
@@ -119,7 +131,9 @@ function syncVariablesFromGameData() {
     difficulty,
     npcVisibility,
     npcGiftGiven,
-    npcSparred } = gameData);  // 添加新变量,，
+    npcSparred,
+    inventory,
+    equipment } = gameData);  // 添加新变量,，
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -152,6 +166,8 @@ function syncGameDataFromVariables() {
     gameData.npcVisibility = npcVisibility;
     gameData.npcGiftGiven = npcGiftGiven;
     gameData.npcSparred = npcSparred;    // 添加npcSparred
+    gameData.inventory = inventory;
+    gameData.equipment = equipment;
 }
 
 // 深度合并函数

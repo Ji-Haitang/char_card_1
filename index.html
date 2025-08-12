@@ -60,8 +60,8 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-styles.css">
-    <!-- <link rel="stylesheet" href="module/game-styles.css"> -->
+    <!-- <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-styles.css"> -->
+    <link rel="stylesheet" href="module/game-styles.css">
 </head>
 <body>
     <div class="container">
@@ -333,6 +333,8 @@
                 <div id="attribute-dropdown" class="dropdown-menu">
                     <button class="dropdown-item" onclick="showPlayerStats()">角色属性</button>
                     <button class="dropdown-item" onclick="showRelationships()">人际关系</button>
+                    <button class="dropdown-item" onclick="showInventory()">查看背包</button>
+                    <button class="dropdown-item" onclick="showEquipment()">查看装备</button>
                 </div>
             </div>
             
@@ -536,6 +538,73 @@
             </div>
         </div>
 
+        <!-- 背包弹窗 -->
+        <div id="inventory-modal" class="modal viewport-overlay">
+            <div class="modal-content inventory-content">
+                <h3>背包</h3>
+                <div class="inventory-grid" id="inventory-grid">
+                    <!-- 动态生成 -->
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn cancel" onclick="closeInventoryModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 装备弹窗 -->
+        <div id="equipment-modal" class="modal viewport-overlay">
+            <div class="modal-content equipment-content">
+                <h3>装备栏</h3>
+                <div class="equipment-slots">
+                    <div class="equipment-slot">
+                        <div class="slot-label">武器</div>
+                        <div class="slot-item" id="weapon-slot">
+                            <div class="empty-slot">空</div>
+                        </div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="slot-label">防具</div>
+                        <div class="slot-item" id="armor-slot">
+                            <div class="empty-slot">空</div>
+                        </div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="slot-label">饰品1</div>
+                        <div class="slot-item" id="accessory1-slot">
+                            <div class="empty-slot">空</div>
+                        </div>
+                    </div>
+                    <div class="equipment-slot">
+                        <div class="slot-label">饰品2</div>
+                        <div class="slot-item" id="accessory2-slot">
+                            <div class="empty-slot">空</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="equipment-stats">
+                    <h4>当前装备效果</h4>
+                    <div id="equipment-effect">
+                        <!-- 动态显示装备效果 -->
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn cancel" onclick="closeEquipmentModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 道具详情弹窗 -->
+        <div id="item-detail-modal" class="modal">
+            <div class="modal-content item-detail-content">
+                <h3 id="item-name"></h3>
+                <div class="item-description" id="item-description"></div>
+                <div class="item-info" id="item-info"></div>
+                <div class="modal-buttons" id="item-actions">
+                    <!-- 动态生成操作按钮 -->
+                </div>
+            </div>
+        </div>
+
         <!-- 故事区域 -->
         <div class="story-area">
             <div class="story-content-wrapper">
@@ -594,19 +663,19 @@
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-config.js"></script>
+    <!-- <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-config.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-utils.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-state.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ba32184/module/game-events.js"></script> -->
 
-    <!-- <script src="module/game-config.js"></script>
+    <script src="module/game-config.js"></script>
     <script src="module/game-utils.js"></script>
     <script src="module/game-state.js"></script>
     <script src="module/game-ui.js"></script>
     <script src="module/game-helpers.js"></script>
-    <script src="module/game-events.js"></script> -->
+    <script src="module/game-events.js"></script>
     
     <script>
         // 记录原始渲染环境状态
@@ -620,8 +689,8 @@
         window.STscript = window.STscript || window.triggerSlash;
         
         // 模板变量
-        const mainText = `$1`;
-        const llmResponse = $2;
+        // const mainText = `$1`;
+        // const llmResponse = $2;
 
 //         //测试用
 //         const mainText = `## **景祐二年正月 第2周**
@@ -656,16 +725,16 @@
 // > 你上一周過得可謂是跌宕起伏，簡直能寫成一本三流志怪小說的序章。先是在悬崖边上走了几辈子的好运，帮门派发了一笔横财，让你暂时忘却了自己武学资质的平庸。紧接着，现实就用一盒只值一百文的破烂，在你脸上左右开弓，狠狠扇了你几巴掌，让你清晰地认识到，你终究只是个运气好过头的废物陪玩。练功场上的每一次失败和啼笑皆非的“指导”，都像是在反复提醒你这个残酷的事实。好运不会一直眷顾，而废柴的标签却仿佛烙印般紧紧贴着你。新的一周开始了，别再做发财的美梦了，想想怎么在这吃人的世道里多活两天吧。`;
 
 
-// const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|萧白瑚|山门|不满|无
+const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|萧白瑚|山门|不满|无
 
 
-// 穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。|萧白瑚|演武场|不满|亲吻
+穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。|萧白瑚|演武场|不满|亲吻
 
-// 呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。|呼延显|演武场|微笑|无
+呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。|呼延显|演武场|微笑|无
 
 
 
-// 就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」|洞庭君|演武场|严肃|后背位`;
+就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」|洞庭君|演武场|严肃|后背位`;
 
         // const llmResponse = {
         //     "主要NPC": {
@@ -689,42 +758,42 @@
         //     "其他NPC": "无"
         // };
 
-        // const llmResponse = {
-        //     "随机事件": {
-        //         "事件类型": "战斗事件",
-        //         "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
-        //         "敌方信息": {
-        //         "名称": "吐蕃探子",
-        //         "属性": {
-        //             "攻击力": "低",
-        //             "生命力": "中"
-        //         },
-        //         "战斗报酬": {
-        //             "类型": "金钱",
-        //             "数值": 500
-        //         }
-        //         }
-        //     },
-        //     "主要NPC": {
-        //         "呼延显": {
-        //         "好感变化": "上升",
-        //         "位置变动": "演武场|藏经阁"
-        //         },
-        //         "萧白瑚": {
-        //         "好感变化": "上升",
-        //         "位置变动": "山门|议事厅"
-        //         },
-        //         "洞庭君": {
-        //         "好感变化": "不变",
-        //         "位置变动": "演武场|议事厅"
-        //         },
-        //         "钱塘君": {
-        //         "好感变化": "大幅上升",
-        //         "位置变动": "议事厅|后山"
-        //         }
-        //     },
-        //     "其他NPC": "无"
-        // };
+        const llmResponse = {
+            "随机事件": {
+                "事件类型": "战斗事件",
+                "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+                "敌方信息": {
+                "名称": "吐蕃探子",
+                "属性": {
+                    "攻击力": "低",
+                    "生命力": "中"
+                },
+                "战斗报酬": {
+                    "类型": "金钱",
+                    "数值": 500
+                }
+                }
+            },
+            "主要NPC": {
+                "呼延显": {
+                "好感变化": "上升",
+                "位置变动": "演武场|藏经阁"
+                },
+                "萧白瑚": {
+                "好感变化": "上升",
+                "位置变动": "山门|议事厅"
+                },
+                "洞庭君": {
+                "好感变化": "不变",
+                "位置变动": "演武场|议事厅"
+                },
+                "钱塘君": {
+                "好感变化": "大幅上升",
+                "位置变动": "议事厅|后山"
+                }
+            },
+            "其他NPC": "无"
+        };
 
         // const llmResponse = {
         //     "随机事件": {
@@ -1631,6 +1700,7 @@
 
         // 显示难度设置
         function showDifficultySettings(){
+            closeAllSpecialModals();
             const modal = document.getElementById('difficulty-modal');
             document.getElementById(`diff-${difficulty||'normal'}`).checked=true;
             modal.style.display='block';
@@ -1668,6 +1738,7 @@
 
         // 显示金手指
         function showCheatMode() {
+            closeAllSpecialModals();
             // 填充当前数值
             document.getElementById('cheat-gengu').value = playerTalents.根骨;
             document.getElementById('cheat-wuxing').value = playerTalents.悟性;
@@ -1772,6 +1843,347 @@
             modal.style.display='none';
             modal._unbindFit && modal._unbindFit();
         }
+
+        // 关闭所有特殊弹窗（背包、装备、难度、金手指）
+        function closeAllSpecialModals() {
+            // 关闭背包
+            const inventoryModal = document.getElementById('inventory-modal');
+            if (inventoryModal.style.display === 'block') {
+                closeInventoryModal();
+            }
+            
+            // 关闭装备
+            const equipmentModal = document.getElementById('equipment-modal');
+            if (equipmentModal.style.display === 'block') {
+                closeEquipmentModal();
+            }
+            
+            // 关闭难度设置
+            const difficultyModal = document.getElementById('difficulty-modal');
+            if (difficultyModal.style.display === 'block') {
+                closeDifficultyModal();
+            }
+            
+            // 关闭金手指
+            const cheatModal = document.getElementById('cheat-modal');
+            if (cheatModal.style.display === 'block') {
+                closeCheatModal();
+            }
+            
+            // 关闭物品详情
+            const itemDetailModal = document.getElementById('item-detail-modal');
+            if (itemDetailModal.style.display === 'block') {
+                closeItemDetailModal();
+            }
+        }
+
+        // 显示背包
+        function showInventory() {
+            closeAllSpecialModals();
+            const grid = document.getElementById('inventory-grid');
+            grid.innerHTML = '';
+            
+            for (const [itemName, quantity] of Object.entries(inventory)) {
+                if (quantity > 0) {
+                    const itemData = item_list[itemName];
+                    const itemDiv = document.createElement('div');
+                    itemDiv.className = 'inventory-item';
+                    itemDiv.onclick = () => showItemDetail(itemName);
+                    
+                    let icon = '📦';
+                    if (itemData) {
+                        if (itemData.装备类型 === '武器') icon = '⚔️';
+                        else if (itemData.装备类型 === '防具') icon = '🛡️';
+                        else if (itemData.装备类型 === '饰品') icon = '💎';
+                        else if (itemData.可使用) icon = '🍖';
+                    }
+                    
+                    itemDiv.innerHTML = `
+                        <div class="item-icon">${icon}</div>
+                        <div class="item-name">${itemName}</div>
+                        <div class="item-quantity">×${quantity}</div>
+                    `;
+                    
+                    grid.appendChild(itemDiv);
+                }
+            }
+            
+            if (grid.children.length === 0) {
+                grid.innerHTML = '<div style="text-align: center; color: #999; padding: 40px;">背包空空如也</div>';
+            }
+            
+            const modal = document.getElementById('inventory-modal');
+            modal.style.display = 'block';
+            fitModalToViewport(modal);
+            bindModalAutoFit(modal);
+            toggleDropdown('attribute-dropdown');
+        }
+
+        // 显示装备
+        function showEquipment() {
+            closeAllSpecialModals();
+            updateEquipmentSlot('weapon-slot', equipment.武器);
+            updateEquipmentSlot('armor-slot', equipment.防具);
+            updateEquipmentSlot('accessory1-slot', equipment.饰品1);
+            updateEquipmentSlot('accessory2-slot', equipment.饰品2);
+            
+            // 显示当前装备效果
+            const effectDiv = document.getElementById('equipment-effect');
+            effectDiv.innerHTML = '';
+            
+            let hasEffect = false;
+            for (const [slot, itemName] of Object.entries(equipment)) {
+                if (itemName && item_list[itemName]) {
+                    const item = item_list[itemName];
+                    effectDiv.innerHTML += `<div class="stat-effect">${itemName}: ${item.装备属性} +${item.装备数值}</div>`;
+                    hasEffect = true;
+                }
+            }
+            
+            if (!hasEffect) {
+                effectDiv.innerHTML = '<div style="color: #999;">暂无装备效果</div>';
+            }
+            
+            const modal = document.getElementById('equipment-modal');
+            modal.style.display = 'block';
+            fitModalToViewport(modal);
+            bindModalAutoFit(modal);
+            toggleDropdown('attribute-dropdown');
+        }
+
+        // 更新装备槽显示
+        function updateEquipmentSlot(slotId, itemName) {
+            const slot = document.getElementById(slotId);
+            if (itemName) {
+                slot.innerHTML = `<div class="equipped-item">${itemName}</div>`;
+            } else {
+                slot.innerHTML = '<div class="empty-slot">空</div>';
+            }
+        }
+
+        // 显示道具详情
+        function showItemDetail(itemName) {
+            const item = item_list[itemName];
+            if (!item) return;
+            
+            // 先关闭可能已经打开的物品详情弹窗
+            const existingDetailModal = document.getElementById('item-detail-modal');
+            if (existingDetailModal.style.display === 'block') {
+                closeItemDetailModal();
+            }
+            
+            document.getElementById('item-name').textContent = itemName;
+            document.getElementById('item-description').textContent = item.描述;
+            
+            let infoHTML = '';
+            if (item.可交易) {
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">买入价格：</span>${item.买入价格} 金</div>`;
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">卖出价格：</span>${item.卖出价格} 金</div>`;
+            }
+            if (item.可装备) {
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">装备类型：</span>${item.装备类型}</div>`;
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+            }
+            if (item.可使用) {
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;
+            }
+            document.getElementById('item-info').innerHTML = infoHTML;
+            
+            const actionsDiv = document.getElementById('item-actions');
+            actionsDiv.innerHTML = '';
+            
+            if (item.可使用) {
+                const useBtn = document.createElement('button');
+                useBtn.className = 'modal-btn';
+                useBtn.textContent = '使用';
+                useBtn.onclick = () => useItem(itemName);
+                actionsDiv.appendChild(useBtn);
+            }
+            
+            if (item.可装备) {
+                const isEquipped = Object.values(equipment).includes(itemName);
+                
+                if (isEquipped) {
+                    const unequipBtn = document.createElement('button');
+                    unequipBtn.className = 'modal-btn unequip-btn';
+                    unequipBtn.textContent = '卸下';
+                    unequipBtn.onclick = () => unequipItem(itemName);
+                    actionsDiv.appendChild(unequipBtn);
+                } else {
+                    const equipBtn = document.createElement('button');
+                    equipBtn.className = 'modal-btn';
+                    equipBtn.textContent = '装备';
+                    equipBtn.onclick = () => equipItem(itemName);
+                    actionsDiv.appendChild(equipBtn);
+                }
+            }
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'modal-btn cancel';
+            closeBtn.textContent = '关闭';
+            closeBtn.onclick = () => closeItemDetailModal();
+            actionsDiv.appendChild(closeBtn);
+            
+            const modal = document.getElementById('item-detail-modal');
+            modal.style.display = 'block';
+            
+            // 将物品详情弹窗定位在背包弹窗的中心
+            const inventoryModal = document.getElementById('inventory-modal');
+            const inventoryRect = inventoryModal.getBoundingClientRect();
+            const detailContent = modal.querySelector('.modal-content');
+            
+            // 设置物品详情弹窗的位置
+            detailContent.style.position = 'fixed';
+            detailContent.style.left = inventoryRect.left + inventoryRect.width / 2 + 'px';
+            detailContent.style.top = inventoryRect.top + inventoryRect.height / 2 + 'px';
+            detailContent.style.transform = 'translate(-50%, -50%)';
+        }
+
+        // 获取道具效果文本
+        function getItemEffectText(item) {
+            if (item.影响属性 === 'playerMood') {
+                return `心情 +${item.影响数值}`;
+            }
+            return `${item.影响属性} +${item.影响数值}`;
+        }
+
+        // 使用道具
+        async function useItem(itemName) {
+            const item = item_list[itemName];
+            if (!item || !item.可使用 || inventory[itemName] <= 0) return;
+            
+            if (item.影响属性 === 'playerMood') {
+                playerMood = Math.min(100, playerMood + item.影响数值);
+            }
+            
+            inventory[itemName]--;
+            if (inventory[itemName] <= 0) {
+                delete inventory[itemName];
+            }
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();
+            
+            showModal(`使用了${itemName}！<br>心情 +${item.影响数值}`);
+            
+            closeItemDetailModal();
+            showInventory();
+        }
+
+        // 装备道具（简化逻辑：直接修改属性值）
+        async function equipItem(itemName) {
+            const item = item_list[itemName];
+            if (!item || !item.可装备 || inventory[itemName] <= 0) return;
+            
+            let targetSlot = null;
+            
+            if (item.装备类型 === '武器') {
+                targetSlot = '武器';
+            } else if (item.装备类型 === '防具') {
+                targetSlot = '防具';
+            } else if (item.装备类型 === '饰品') {
+                if (!equipment.饰品1) {
+                    targetSlot = '饰品1';
+                } else if (!equipment.饰品2) {
+                    targetSlot = '饰品2';
+                } else {
+                    targetSlot = '饰品1';
+                }
+            }
+            
+            if (!targetSlot) return;
+            
+            // 如果槽位已有装备，先卸下旧装备
+            const oldEquipment = equipment[targetSlot];
+            if (oldEquipment) {
+                const oldItem = item_list[oldEquipment];
+                if (oldItem) {
+                    // 减去旧装备的属性
+                    if (oldItem.装备属性 === '攻击力') {
+                        combatStats.攻击力 -= oldItem.装备数值;
+                    } else if (oldItem.装备属性 === '生命值') {
+                        combatStats.生命值 -= oldItem.装备数值;
+                    }
+                }
+                inventory[oldEquipment] = (inventory[oldEquipment] || 0) + 1;
+            }
+            
+            // 装备新道具，直接加上属性
+            equipment[targetSlot] = itemName;
+            if (item.装备属性 === '攻击力') {
+                combatStats.攻击力 += item.装备数值;
+            } else if (item.装备属性 === '生命值') {
+                combatStats.生命值 += item.装备数值;
+            }
+            
+            inventory[itemName]--;
+            if (inventory[itemName] <= 0) {
+                delete inventory[itemName];
+            }
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();
+            
+            showModal(`装备了${itemName}！<br>${item.装备属性} +${item.装备数值}`);
+            
+            closeItemDetailModal();
+            showEquipment();
+        }
+
+        // 卸下装备（简化逻辑：直接修改属性值）
+        async function unequipItem(itemName) {
+            let slot = null;
+            for (const [key, value] of Object.entries(equipment)) {
+                if (value === itemName) {
+                    slot = key;
+                    break;
+                }
+            }
+            
+            if (!slot) return;
+            
+            const item = item_list[itemName];
+            if (item) {
+                // 减去装备的属性
+                if (item.装备属性 === '攻击力') {
+                    combatStats.攻击力 -= item.装备数值;
+                } else if (item.装备属性 === '生命值') {
+                    combatStats.生命值 -= item.装备数值;
+                }
+            }
+            
+            equipment[slot] = null;
+            inventory[itemName] = (inventory[itemName] || 0) + 1;
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();
+            
+            showModal(`卸下了${itemName}！`);
+            
+            closeItemDetailModal();
+            showEquipment();
+        }
+
+        // 关闭弹窗函数
+        function closeInventoryModal() {
+            const modal = document.getElementById('inventory-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
+        function closeEquipmentModal() {
+            const modal = document.getElementById('equipment-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
+        function closeItemDetailModal() {
+            document.getElementById('item-detail-modal').style.display = 'none';
+        }
+
         // ========== 初始化 ==========
         window.onload = async function() {
             await loadOrInitGameData();

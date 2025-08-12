@@ -109,8 +109,32 @@ function calculateWuxueForLevel(level) {
 
 function calculateRemainingPoints() {
     const earnedLevels = calculateLevelFromWuxue(playerStats.武学);
-    const usedForAttack = (combatStats.攻击力 - 20) / 10;
-    const usedForHP = (combatStats.生命值 - 50) / 25;
+    
+    // 计算装备的总加成
+    let equipmentAttackBonus = 0;
+    let equipmentHPBonus = 0;
+    
+    // 遍历所有装备
+    for (const [slot, itemName] of Object.entries(equipment)) {
+        if (itemName && item_list[itemName]) {
+            const item = item_list[itemName];
+            if (item.装备属性 === '攻击力') {
+                equipmentAttackBonus += item.装备数值;
+            } else if (item.装备属性 === '生命值') {
+                equipmentHPBonus += item.装备数值;
+            }
+        }
+    }
+    
+    // 计算基础数值（排除装备加成）
+    const baseAttack = combatStats.攻击力 - equipmentAttackBonus;
+    const baseHP = combatStats.生命值 - equipmentHPBonus;
+    
+    // 基于基础数值计算已使用的点数
+    const usedForAttack = (baseAttack - 20) / 10;
+    const usedForHP = (baseHP - 50) / 25;
     const totalUsed = usedForAttack + usedForHP;
+    
     return Math.max(0, earnedLevels - totalUsed);
 }
+
