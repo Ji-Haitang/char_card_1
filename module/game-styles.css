@@ -1980,24 +1980,25 @@ body {
 }
 
 /* 让覆盖视窗的弹窗占满 #main-viewport */
-.modal.viewport-overlay{
-    position:absolute;          /* 相对于 body 定位，由 JS 精确摆放 */
-    z-index:2500;               /* 高于一切场景 */
-    background:rgba(0,0,0,.6);  /* 半透明遮罩 */
-    overflow:hidden;            /* 多余内容截断 */
+.modal.viewport-overlay {
+    position: fixed;  /* 改为fixed定位，不受滚动影响 */
+    z-index: 2500;
+    background: rgba(0,0,0,0.6);
+    overflow: hidden;
+    display: none;  /* 默认隐藏 */
 }
 
-/* 填满视窗的内容盒子 */
-.modal.viewport-overlay .modal-content{
-    position:relative;
-    width:100%;
-    height:100%;
-    max-width:none;
-    max-height:none;
-    border-radius:0;            /* 与视窗矩形对齐 */
-    display:flex;
-    flex-direction:column;
-    overflow:auto;              /* 内部可滚动 */
+/* 确保modal内容正确定位 */
+.modal.viewport-overlay .modal-content {
+    position: relative;  /* 改回relative，因为容器已经正确定位 */
+    transform: none !important;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: auto;
+    margin: 0;
+    width: 100%;
+    height: 100%;
 }
 
 /* 金手指长内容的专属滚动优化 */

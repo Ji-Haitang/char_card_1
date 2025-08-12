@@ -1616,31 +1616,79 @@
         }
 
         /* 工具：把指定 modal 精准套到 #main-viewport */
-        function fitModalToViewport(modal){
-            const vp = document.getElementById('main-viewport').getBoundingClientRect();
-            Object.assign(modal.style,{
-                left : vp.left  +'px',
-                top  : vp.top   +'px',
-                width: vp.width +'px',
-                height:vp.height+'px'
+        function fitModalToViewport(modal) {
+            const vp = document.getElementById('main-viewport');
+            const vpRect = vp.getBoundingClientRect();
+            
+            // 使用fixed定位时，直接使用getBoundingClientRect的值即可
+            Object.assign(modal.style, {
+                left: vpRect.left + 'px',
+                top: vpRect.top + 'px',
+                width: vpRect.width + 'px',
+                height: vpRect.height + 'px',
+                position: 'fixed',
+                margin: '0',
+                transform: 'none'
             });
+            
+            // 同时设置modal-content的大小
+            const content = modal.querySelector('.modal-content');
+            if (content) {
+                Object.assign(content.style, {
+                    width: '100%',
+                    height: '100%',
+                    maxWidth: 'none',
+                    maxHeight: 'none',
+                    left: '0',
+                    top: '0',
+                    transform: 'none'
+                });
+            }
         }
 
         /* 供窗口大小变化时实时刷新位置 */
-        function bindModalAutoFit(modal){
-            const refresh = ()=>fitModalToViewport(modal);
-            window.addEventListener('resize',refresh);
-            modal._unbindFit = ()=>window.removeEventListener('resize',refresh);
+        function bindModalAutoFit(modal) {
+            let rafId = null;
+            
+            const refresh = () => {
+                // 使用requestAnimationFrame避免过度更新
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = requestAnimationFrame(() => {
+                    fitModalToViewport(modal);
+                });
+            };
+            
+            // 监听窗口大小变化
+            window.addEventListener('resize', refresh);
+            
+            // 监听滚动事件
+            window.addEventListener('scroll', refresh, { passive: true });
+            document.addEventListener('scroll', refresh, { passive: true });
+            
+            // 清理函数
+            modal._unbindFit = () => {
+                if (rafId) cancelAnimationFrame(rafId);
+                window.removeEventListener('resize', refresh);
+                window.removeEventListener('scroll', refresh);
+                document.removeEventListener('scroll', refresh);
+            };
         }
 
         /* 打开难度设置 */
-        function showDifficultySettings(){
+        function showDifficultySettings() {
             closeAllSpecialModals();
             const modal = document.getElementById('difficulty-modal');
-            document.getElementById(`diff-${difficulty||'normal'}`).checked=true;
-            modal.style.display='block';
-            fitModalToViewport(modal);
-            bindModalAutoFit(modal);
+            document.getElementById(`diff-${difficulty||'normal'}`).checked = true;
+            
+            // 先显示modal
+            modal.style.display = 'block';
+            
+            // 延迟一帧后调整位置，确保DOM更新完成
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+            
             toggleDropdown('system-dropdown');
         }
 
@@ -1706,15 +1754,15 @@
             document.getElementById('cheat-npc-K').value = npcFavorability.K;
             document.getElementById('cheat-npc-L').value = npcFavorability.L;
             
-            // // 显示弹窗
-            // document.getElementById('cheat-modal').style.display = 'block';
+            const modal = document.getElementById('cheat-modal');
+            modal.style.display = 'block';
             
-            // // 关闭下拉菜单
-            // toggleDropdown('system-dropdown');
-            const modal=document.getElementById('cheat-modal');
-            modal.style.display='block';
-            fitModalToViewport(modal);
-            bindModalAutoFit(modal);
+            // 延迟一帧后调整位置
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+            
             toggleDropdown('system-dropdown');
         }
 
@@ -1854,8 +1902,13 @@
             
             const modal = document.getElementById('inventory-modal');
             modal.style.display = 'block';
-            fitModalToViewport(modal);
-            bindModalAutoFit(modal);
+            
+            // 延迟一帧后调整位置
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+            
             toggleDropdown('attribute-dropdown');
         }
 
@@ -1886,8 +1939,13 @@
             
             const modal = document.getElementById('equipment-modal');
             modal.style.display = 'block';
-            fitModalToViewport(modal);
-            bindModalAutoFit(modal);
+            
+            // 延迟一帧后调整位置
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+            
             toggleDropdown('attribute-dropdown');
         }
 
