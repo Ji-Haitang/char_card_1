@@ -79,7 +79,7 @@
                 <div id="map-scene" class="scene active">
                     <div class="status-display">
                         <div class="date-display" id="date-display">第1年第1月第1周</div>
-                        <div class="mood-display" id="mood-display">心情: 100</div>
+                        <div class="mood-display" id="mood-display">体力: 100</div>
                         <div class="action-points-display" id="action-points-display">行动点: 3</div>
                     </div>
                     <button class="refresh-npc-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
@@ -354,21 +354,21 @@
                         <input type="radio" name="difficulty" value="easy" id="diff-easy">
                         <span class="option-content">
                             <strong>简单模式</strong>
-                            <small>心情加成 +20，更容易获得成功<br>好感度变化：上升+2/+4，下降-1/-2</small>
+                            <small>体力加成 +20，更容易获得成功<br>好感度变化：上升+2/+4，下降-1/-2</small>
                         </span>
                     </label>
                     <label class="difficulty-option">
                         <input type="radio" name="difficulty" value="normal" id="diff-normal" checked>
                         <span class="option-content">
                             <strong>普通模式</strong>
-                            <small>心情加成 +10，平衡的游戏体验<br>好感度变化：大幅±2，普通±1</small>
+                            <small>体力加成 +10，平衡的游戏体验<br>好感度变化：大幅±2，普通±1</small>
                         </span>
                     </label>
                     <label class="difficulty-option">
                         <input type="radio" name="difficulty" value="hard" id="diff-hard">
                         <span class="option-content">
                             <strong>困难模式</strong>
-                            <small>无心情加成，更具挑战性<br>好感度变化：上升+1/+2，下降-2/-4</small>
+                            <small>无体力加成，更具挑战性<br>好感度变化：上升+1/+2，下降-2/-4</small>
                         </span>
                     </label>
                 <div class="modal-buttons">
@@ -449,7 +449,7 @@
                         <h4>其他数值</h4>
                         <div class="cheat-grid">
                             <div class="cheat-item">
-                                <label>心情</label>
+                                <label>体力</label>
                                 <input type="number" id="cheat-mood" min="0" max="100">
                             </div>
                             <div class="cheat-item">
@@ -940,7 +940,7 @@
                 moodCost = 0;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 90);
-                    statChange.心情 = '+90';
+                    statChange.体力 = '+90';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 1000;
                 } else if (config.affects === '声望') {
@@ -954,7 +954,7 @@
                 moodCost = 5;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 60);
-                    statChange.心情 = '+60';
+                    statChange.体力 = '+60';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 500;
                 } else if (config.affects === '声望') {
@@ -968,7 +968,7 @@
                 moodCost = 10;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 45);
-                    statChange.心情 = '+45';
+                    statChange.体力 = '+45';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 100;
                 } else if (config.affects === '声望') {
@@ -982,7 +982,7 @@
                 moodCost = 15;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 30);
-                    statChange.心情 = '+30';
+                    statChange.体力 = '+30';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -500;
                 } else if (config.affects === '声望') {
@@ -996,7 +996,7 @@
                 moodCost = 20;
                 if (action === '休息') {
                     playerMood = Math.min(100, playerMood + 30);
-                    statChange.心情 = '+30';
+                    statChange.体力 = '+30';
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -1000;
                 } else if (config.affects === '声望') {
@@ -1006,7 +1006,7 @@
                 }
             }
 
-            if (config.affects !== '心情') {
+            if (config.affects !== '体力') {
                 playerStats[config.affects] = Math.max(0, playerStats[config.affects] + statChange[config.affects]);
                 if (action !== '休息') {
                     playerMood = Math.max(0, playerMood - moodCost);
@@ -1022,7 +1022,7 @@
                 changeText += `<br>${key}: ${value > 0 ? '+' : ''}${value}`;
             });
             if (action !== '休息') {
-                changeText += `<br>心情: -${moodCost}`;
+                changeText += `<br>体力: -${moodCost}`;
             }
             
             if (actionPointConsumed) {
@@ -2040,7 +2040,7 @@
         // 获取道具效果文本
         function getItemEffectText(item) {
             if (item.影响属性 === 'playerMood') {
-                return `心情 +${item.影响数值}`;
+                return `体力 +${item.影响数值}`;
             }
             return `${item.影响属性} +${item.影响数值}`;
         }
@@ -2063,7 +2063,7 @@
             updateAllDisplays();
             await saveGameData();
             
-            showModal(`使用了${itemName}！<br>心情 +${item.影响数值}`);
+            showModal(`使用了${itemName}！<br>体力 +${item.影响数值}`);
             
             closeItemDetailModal();
             showInventory();

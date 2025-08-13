@@ -16,7 +16,7 @@
  * - playerTalents: 玩家天赋属性（根骨、悟性、心性、魅力）
  * - playerStats: 玩家数值（武学、学识、声望、金钱）
  * - combatStats: 战斗数值（攻击力、生命值）
- * - playerMood: 玩家心情值
+ * - playerMood: 玩家体力值
  * - martialArts: 已学武功列表
  * - npcFavorability: NPC好感度
  * - actionPoints: 当前行动点

@@ -6,14 +6,14 @@
  * 处理弹窗显示、文本渲染和动态内容更新。
  * 
  * 主要功能：
- * 1. 更新各种显示元素（日期、心情、行动点、属性等）
+ * 1. 更新各种显示元素（日期、体力、行动点、属性等）
  * 2. 管理弹窗和提示框
  * 3. 处理Markdown文本渲染
  * 4. 管理悬浮提示框
  * 
  * 对外暴露的主要函数：
  * - updateDateDisplay(): 更新日期显示（年/月/周）
- * - updateMoodDisplay(): 更新心情值显示
+ * - updateMoodDisplay(): 更新体力值显示
  * - updateActionPointsDisplay(): 更新行动点显示并控制按钮状态
  * - updateAllDisplays(): 一次性更新所有显示内容
  * - updateStatsDisplay(): 更新角色属性面板（天赋、数值、战斗属性等）
@@ -47,9 +47,9 @@ function updateDateDisplay() {
     document.getElementById('date-display').textContent = `第${year}年第${month}月第${week}周`;
 }
 
-// 更新心情显示
+// 更新体力显示
 function updateMoodDisplay() {
-    document.getElementById('mood-display').textContent = `心情: ${playerMood}`;
+    document.getElementById('mood-display').textContent = `体力: ${playerMood}`;
 }
 
 // 更新行动点显示

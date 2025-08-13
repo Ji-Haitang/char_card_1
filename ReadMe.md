@@ -61,7 +61,7 @@ userLocation - 用户当前位置
 playerTalents - 玩家天赋属性
 playerStats - 玩家数值
 combatStats - 战斗数值
-playerMood - 玩家心情值
+playerMood - 玩家体力值
 martialArts - 已学武功列表
 npcFavorability - NPC好感度
 actionPoints - 当前行动点
@@ -81,7 +81,7 @@ syncGameDataFromVariables() - 从独立变量同步到gameData
 功能概述：负责所有用户界面的更新和显示逻辑，处理弹窗显示、文本渲染和动态内容更新。
 主要函数：
 updateDateDisplay() - 更新日期显示（年/月/周）
-updateMoodDisplay() - 更新心情值显示
+updateMoodDisplay() - 更新体力值显示
 updateActionPointsDisplay() - 更新行动点显示并控制按钮状态
 updateAllDisplays() - 一次性更新所有显示内容
 updateStatsDisplay() - 更新角色属性面板
