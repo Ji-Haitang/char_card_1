@@ -513,3 +513,207 @@ function updateSLGReturnButton() {
         }
     }
 }
+
+/* 工具：把指定 modal 精准套到 #main-viewport */
+function fitModalToViewport(modal) {
+    const vp = document.getElementById('main-viewport');
+    const vpRect = vp.getBoundingClientRect();
+    
+    // 使用fixed定位时，直接使用getBoundingClientRect的值即可
+    Object.assign(modal.style, {
+        left: vpRect.left + 'px',
+        top: vpRect.top + 'px',
+        width: vpRect.width + 'px',
+        height: vpRect.height + 'px',
+        position: 'fixed',
+        margin: '0',
+        transform: 'none'
+    });
+    
+    // 同时设置modal-content的大小
+    const content = modal.querySelector('.modal-content');
+    if (content) {
+        Object.assign(content.style, {
+            width: '100%',
+            height: '100%',
+            maxWidth: 'none',
+            maxHeight: 'none',
+            left: '0',
+            top: '0',
+            transform: 'none'
+        });
+    }
+}
+
+/* 供窗口大小变化时实时刷新位置 */
+function bindModalAutoFit(modal) {
+    let rafId = null;
+    
+    const refresh = () => {
+        // 使用requestAnimationFrame避免过度更新
+        if (rafId) cancelAnimationFrame(rafId);
+        rafId = requestAnimationFrame(() => {
+            fitModalToViewport(modal);
+        });
+    };
+    
+    // 监听窗口大小变化
+    window.addEventListener('resize', refresh);
+    
+    // 监听滚动事件
+    window.addEventListener('scroll', refresh, { passive: true });
+    document.addEventListener('scroll', refresh, { passive: true });
+    
+    // 清理函数
+    modal._unbindFit = () => {
+        if (rafId) cancelAnimationFrame(rafId);
+        window.removeEventListener('resize', refresh);
+        window.removeEventListener('scroll', refresh);
+        document.removeEventListener('scroll', refresh);
+    };
+}
+
+// 关闭所有特殊弹窗（背包、装备、难度、金手指）
+function closeAllSpecialModals() {
+    // 关闭背包
+    const inventoryModal = document.getElementById('inventory-modal');
+    if (inventoryModal.style.display === 'block') {
+        closeInventoryModal();
+    }
+    
+    // 关闭装备
+    const equipmentModal = document.getElementById('equipment-modal');
+    if (equipmentModal.style.display === 'block') {
+        closeEquipmentModal();
+    }
+    
+    // 关闭难度设置
+    const difficultyModal = document.getElementById('difficulty-modal');
+    if (difficultyModal.style.display === 'block') {
+        closeDifficultyModal();
+    }
+    
+    // 关闭金手指
+    const cheatModal = document.getElementById('cheat-modal');
+    if (cheatModal.style.display === 'block') {
+        closeCheatModal();
+    }
+    
+    // 关闭物品详情
+    const itemDetailModal = document.getElementById('item-detail-modal');
+    if (itemDetailModal.style.display === 'block') {
+        closeItemDetailModal();
+    }
+
+    // 关闭交易
+    const tradingModal = document.getElementById('trading-modal');
+    if (tradingModal && tradingModal.style.display === 'block') {
+        closeTrading();
+    }
+
+    // 关闭商品详情
+    const shopDetailModal = document.getElementById('shop-detail-modal');
+    if (shopDetailModal && shopDetailModal.style.display === 'block') {
+        closeShopDetailModal();
+    }
+}
+
+// 更新装备槽显示
+function updateEquipmentSlot(slotId, itemName) {
+    const slot = document.getElementById(slotId);
+    if (itemName) {
+        slot.innerHTML = `<div class="equipped-item">${itemName}</div>`;
+    } else {
+        slot.innerHTML = '<div class="empty-slot">空</div>';
+    }
+}
+
+// 显示道具详情
+function showItemDetail(itemName) {
+    const item = item_list[itemName];
+    if (!item) return;
+    
+    // 先关闭可能已经打开的物品详情弹窗
+    const existingDetailModal = document.getElementById('item-detail-modal');
+    if (existingDetailModal.style.display === 'block') {
+        closeItemDetailModal();
+    }
+    
+    document.getElementById('item-name').textContent = itemName;
+    document.getElementById('item-description').textContent = item.描述;
+    
+    let infoHTML = '';
+    if (item.可交易) {
+        infoHTML += `<div class="item-stat"><span class="item-stat-label">买入价格：</span>${item.买入价格} 金</div>`;
+        infoHTML += `<div class="item-stat"><span class="item-stat-label">卖出价格：</span>${item.卖出价格} 金</div>`;
+    }
+    if (item.可装备) {
+        infoHTML += `<div class="item-stat"><span class="item-stat-label">装备类型：</span>${item.装备类型}</div>`;
+        infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+    }
+    if (item.可使用) {
+        infoHTML += `<div class="item-stat"><span class="item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;
+    }
+    document.getElementById('item-info').innerHTML = infoHTML;
+    
+    const actionsDiv = document.getElementById('item-actions');
+    actionsDiv.innerHTML = '';
+    
+    if (item.可使用) {
+        const useBtn = document.createElement('button');
+        useBtn.className = 'modal-btn';
+        useBtn.textContent = '使用';
+        useBtn.onclick = () => useItem(itemName);
+        actionsDiv.appendChild(useBtn);
+    }
+    
+    if (item.可装备) {
+        const isEquipped = Object.values(equipment).includes(itemName);
+        
+        if (isEquipped) {
+            const unequipBtn = document.createElement('button');
+            unequipBtn.className = 'modal-btn unequip-btn';
+            unequipBtn.textContent = '卸下';
+            unequipBtn.onclick = () => unequipItem(itemName);
+            actionsDiv.appendChild(unequipBtn);
+        } else {
+            const equipBtn = document.createElement('button');
+            equipBtn.className = 'modal-btn';
+            equipBtn.textContent = '装备';
+            equipBtn.onclick = () => equipItem(itemName);
+            actionsDiv.appendChild(equipBtn);
+        }
+    }
+    
+    const closeBtn = document.createElement('button');
+    closeBtn.className = 'modal-btn cancel';
+    closeBtn.textContent = '关闭';
+    closeBtn.onclick = () => closeItemDetailModal();
+    actionsDiv.appendChild(closeBtn);
+    
+    const modal = document.getElementById('item-detail-modal');
+    modal.style.display = 'block';
+    
+    // 将物品详情弹窗定位在背包弹窗的中心
+    const inventoryModal = document.getElementById('inventory-modal');
+    const inventoryRect = inventoryModal.getBoundingClientRect();
+    const detailContent = modal.querySelector('.modal-content');
+    
+    // 设置物品详情弹窗的位置
+    detailContent.style.position = 'fixed';
+    detailContent.style.left = inventoryRect.left + inventoryRect.width / 2 + 'px';
+    detailContent.style.top = inventoryRect.top + inventoryRect.height / 2 + 'px';
+    detailContent.style.transform = 'translate(-50%, -50%)';
+}
+
+// 获取道具效果文本
+function getItemEffectText(item) {
+    if (item.影响属性 === 'playerMood') {
+        return `体力 +${item.影响数值}`;
+    }
+    return `${item.影响属性} +${item.影响数值}`;
+}
+
+function closeItemDetailModal() {
+    document.getElementById('item-detail-modal').style.display = 'none';
+}

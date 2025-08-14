@@ -443,3 +443,123 @@ function setupLocationEvents() {
         });
     });
 }
+
+// 使用道具
+async function useItem(itemName) {
+    const item = item_list[itemName];
+    if (!item || !item.可使用 || inventory[itemName] <= 0) return;
+    
+    if (item.影响属性 === 'playerMood') {
+        playerMood = Math.min(100, playerMood + item.影响数值);
+    }
+    
+    inventory[itemName]--;
+    if (inventory[itemName] <= 0) {
+        delete inventory[itemName];
+    }
+    
+    checkAllValueRanges();
+    updateAllDisplays();
+    await saveGameData();
+    
+    // showModal(`使用了${itemName}！<br>体力 +${item.影响数值}`);
+    
+    closeItemDetailModal();
+    showInventory();
+}
+
+// 装备道具（简化逻辑：直接修改属性值）
+async function equipItem(itemName) {
+    const item = item_list[itemName];
+    if (!item || !item.可装备 || inventory[itemName] <= 0) return;
+    
+    let targetSlot = null;
+    
+    if (item.装备类型 === '武器') {
+        targetSlot = '武器';
+    } else if (item.装备类型 === '防具') {
+        targetSlot = '防具';
+    } else if (item.装备类型 === '饰品') {
+        if (!equipment.饰品1) {
+            targetSlot = '饰品1';
+        } else if (!equipment.饰品2) {
+            targetSlot = '饰品2';
+        } else {
+            targetSlot = '饰品1';
+        }
+    }
+    
+    if (!targetSlot) return;
+    
+    // 如果槽位已有装备，先卸下旧装备
+    const oldEquipment = equipment[targetSlot];
+    if (oldEquipment) {
+        const oldItem = item_list[oldEquipment];
+        if (oldItem) {
+            // 减去旧装备的属性
+            if (oldItem.装备属性 === '攻击力') {
+                combatStats.攻击力 -= oldItem.装备数值;
+            } else if (oldItem.装备属性 === '生命值') {
+                combatStats.生命值 -= oldItem.装备数值;
+            }
+        }
+        inventory[oldEquipment] = (inventory[oldEquipment] || 0) + 1;
+    }
+    
+    // 装备新道具，直接加上属性
+    equipment[targetSlot] = itemName;
+    if (item.装备属性 === '攻击力') {
+        combatStats.攻击力 += item.装备数值;
+    } else if (item.装备属性 === '生命值') {
+        combatStats.生命值 += item.装备数值;
+    }
+    
+    inventory[itemName]--;
+    if (inventory[itemName] <= 0) {
+        delete inventory[itemName];
+    }
+    
+    checkAllValueRanges();
+    updateAllDisplays();
+    await saveGameData();
+    
+    // showModal(`装备了${itemName}！<br>${item.装备属性} +${item.装备数值}`);
+    
+    closeItemDetailModal();
+    showEquipment();
+}
+
+// 卸下装备（简化逻辑：直接修改属性值）
+async function unequipItem(itemName) {
+    let slot = null;
+    for (const [key, value] of Object.entries(equipment)) {
+        if (value === itemName) {
+            slot = key;
+            break;
+        }
+    }
+    
+    if (!slot) return;
+    
+    const item = item_list[itemName];
+    if (item) {
+        // 减去装备的属性
+        if (item.装备属性 === '攻击力') {
+            combatStats.攻击力 -= item.装备数值;
+        } else if (item.装备属性 === '生命值') {
+            combatStats.生命值 -= item.装备数值;
+        }
+    }
+    
+    equipment[slot] = null;
+    inventory[itemName] = (inventory[itemName] || 0) + 1;
+    
+    checkAllValueRanges();
+    updateAllDisplays();
+    await saveGameData();
+    
+    // showModal(`卸下了${itemName}！`);
+    
+    closeItemDetailModal();
+    showEquipment();
+}
