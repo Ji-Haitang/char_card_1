@@ -218,6 +218,7 @@
                     <div class="npc-container" id="huofang-npcs"></div>
                     <div class="scene-actions">
                         <button class="scene-btn" onclick="performAction('打杂', 'huofang')">打杂</button>
+                        <button class="scene-btn" onclick="showTrading('food')">交易</button>
                     </div>
                 </div>
 
@@ -246,6 +247,7 @@
                     <div class="npc-container" id="tiejiangpu-npcs"></div>
                     <div class="scene-actions">
                         <button class="scene-btn" onclick="performAction('打铁', 'tiejiangpu')">打铁</button>
+                        <button class="scene-btn" onclick="showTrading('equipment')">交易</button>
                     </div>
                 </div>
 
@@ -589,6 +591,56 @@
                 <div class="item-info" id="item-info"></div>
                 <div class="modal-buttons" id="item-actions">
                     <!-- 动态生成操作按钮 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- 交易弹窗 -->
+        <div id="trading-modal" class="modal viewport-overlay">
+            <div class="modal-content trading-content">
+                <div class="trading-header">
+                    <h3 id="trading-title">交易</h3>
+                    <div class="trading-money">当前金钱: <span id="trading-money-value">0</span></div>
+                </div>
+                <div class="trading-container">
+                    <!-- 左侧：用户物品 -->
+                    <div class="trading-section user-items">
+                        <h4>我的物品</h4>
+                        <div class="trading-list" id="user-items-list">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                    
+                    <!-- 分隔线 -->
+                    <div class="trading-divider"></div>
+                    
+                    <!-- 右侧：商店物品 -->
+                    <div class="trading-section shop-items">
+                        <h4 id="shop-title">商店物品</h4>
+                        <div class="trading-list" id="shop-items-list">
+                            <!-- 动态生成 -->
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn cancel" onclick="closeTrading()">关闭</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 商品详情弹窗 -->
+        <div id="shop-detail-modal" class="modal">
+            <div class="modal-content shop-detail-content">
+                <h3 id="shop-item-name"></h3>
+                <div class="shop-item-description" id="shop-item-description"></div>
+                <div class="shop-item-info" id="shop-item-info"></div>
+                <div class="shop-item-price-info">
+                    <div class="price-label">价格：</div>
+                    <div class="price-value" id="shop-item-price"></div>
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn" id="shop-buy-btn" onclick="buyItemFromDetail()">购买</button>
+                    <button class="modal-btn cancel" onclick="closeShopDetailModal()">关闭</button>
                 </div>
             </div>
         </div>
@@ -1863,6 +1915,18 @@
             if (itemDetailModal.style.display === 'block') {
                 closeItemDetailModal();
             }
+
+            // 关闭交易
+            const tradingModal = document.getElementById('trading-modal');
+            if (tradingModal && tradingModal.style.display === 'block') {
+                closeTrading();
+            }
+
+            // 关闭商品详情
+            const shopDetailModal = document.getElementById('shop-detail-modal');
+            if (shopDetailModal && shopDetailModal.style.display === 'block') {
+                closeShopDetailModal();
+            }
         }
 
         // 显示背包
@@ -2182,6 +2246,233 @@
             document.getElementById('item-detail-modal').style.display = 'none';
         }
 
+        // 当前交易类型
+        let currentTradingType = 'food';
+
+        // 显示交易界面
+        function showTrading(type) {
+            closeAllSpecialModals();
+            currentTradingType = type;
+            
+            // 设置标题
+            const title = type === 'food' ? '伙房交易' : '铁匠铺交易';
+            document.getElementById('trading-title').textContent = title;
+            document.getElementById('shop-title').textContent = type === 'food' ? '伙房食物' : '铁匠铺装备';
+            
+            // 显示当前金钱
+            document.getElementById('trading-money-value').textContent = playerStats.金钱;
+            
+            // 生成用户可卖物品列表
+            const userList = document.getElementById('user-items-list');
+            userList.innerHTML = '';
+            
+            let hasTradeableItems = false;
+            for (const [itemName, quantity] of Object.entries(inventory)) {
+                if (quantity > 0 && item_list[itemName] && item_list[itemName].可交易) {
+                    hasTradeableItems = true;
+                    const item = item_list[itemName];
+                    
+                    const itemRow = document.createElement('div');
+                    itemRow.className = 'trading-item-row';
+                    
+                    itemRow.innerHTML = `
+                        <div class="trading-item-info">
+                            <div class="trading-item-name">${itemName} × ${quantity}</div>
+                            <div class="trading-item-price">售价: ${item.卖出价格}金</div>
+                        </div>
+                        <button class="trading-btn sell-btn" onclick="sellItem('${itemName}')">卖出</button>
+                    `;
+                    
+                    userList.appendChild(itemRow);
+                }
+            }
+            
+            if (!hasTradeableItems) {
+                userList.innerHTML = '<div class="trading-empty">没有可交易的物品</div>';
+            }
+            
+            // 生成商店物品列表
+            const shopList = document.getElementById('shop-items-list');
+            shopList.innerHTML = '';
+
+            let shopItems = [];
+
+            if (type === 'food') {
+                // 伙房出售食物
+                shopItems = ['胡饼', '桂花糕', '烤羊腿'];
+            } else {
+                // 铁匠铺出售装备
+                shopItems = ['制式铁剑', '精钢长剑', '普通弟子服', '铁环软锁甲'];
+            }
+
+            shopItems.forEach(itemName => {
+                const item = item_list[itemName];
+                if (item && item.可交易) {
+                    const itemRow = document.createElement('div');
+                    itemRow.className = 'trading-item-row shop-item-row';
+                    
+                    // 只保留详情按钮，移除购买按钮
+                    itemRow.innerHTML = `
+                        <div class="trading-item-info">
+                            <div class="trading-item-name">${itemName}</div>
+                            <div class="trading-item-price">价格: ${item.买入价格}金</div>
+                        </div>
+                        <button class="trading-btn detail-btn" onclick="showShopItemDetail('${itemName}')">详情</button>
+                    `;
+                    
+                    shopList.appendChild(itemRow);
+                }
+            });
+            
+            const modal = document.getElementById('trading-modal');
+            modal.style.display = 'block';
+            
+            // 延迟一帧后调整位置
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+        }
+
+        // 购买物品
+        async function buyItem(itemName) {
+            const item = item_list[itemName];
+            if (!item || playerStats.金钱 < item.买入价格) return;
+            
+            playerStats.金钱 -= item.买入价格;
+            inventory[itemName] = (inventory[itemName] || 0) + 1;
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();
+            
+            // 不显示弹窗，直接刷新交易界面
+            showTrading(currentTradingType);
+        }
+
+        // 卖出物品（只保留这一个）
+        async function sellItem(itemName) {
+            const item = item_list[itemName];
+            if (!item || !inventory[itemName] || inventory[itemName] <= 0) return;
+            
+            // 检查是否是已装备的物品
+            const isEquipped = Object.values(equipment).includes(itemName);
+            if (isEquipped && inventory[itemName] === 1) {
+                showModal('该物品已装备，请先卸下装备再卖出！');
+                return;
+            }
+            
+            playerStats.金钱 += item.卖出价格;
+            inventory[itemName]--;
+            if (inventory[itemName] <= 0) {
+                delete inventory[itemName];
+            }
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();
+            
+            // 不显示弹窗，直接刷新交易界面
+            showTrading(currentTradingType);
+        }
+
+        // 关闭交易弹窗
+        function closeTrading() {
+            const modal = document.getElementById('trading-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
+        // 当前查看的商品
+        let currentShopItem = null;
+
+        // 显示商品详情
+        function showShopItemDetail(itemName) {
+            const item = item_list[itemName];
+            if (!item) return;
+            
+            currentShopItem = itemName;
+            
+            document.getElementById('shop-item-name').textContent = itemName;
+            document.getElementById('shop-item-description').textContent = item.描述;
+            document.getElementById('shop-item-price').textContent = item.买入价格 + ' 金';
+            
+            let infoHTML = '';
+            if (item.可装备) {
+                infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">装备类型：</span>${item.装备类型}</div>`;
+                infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+            }
+            if (item.可使用) {
+                infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;
+            }
+            document.getElementById('shop-item-info').innerHTML = infoHTML;
+            
+            // 更新购买按钮状态
+            const buyBtn = document.getElementById('shop-buy-btn');
+            const canAfford = playerStats.金钱 >= item.买入价格;
+            buyBtn.disabled = !canAfford;
+            buyBtn.textContent = canAfford ? '购买' : '金钱不足';
+            
+            const modal = document.getElementById('shop-detail-modal');
+            modal.style.display = 'block';
+            
+            // 将商品详情弹窗定位在交易弹窗的中心
+            const tradingModal = document.getElementById('trading-modal');
+            const tradingRect = tradingModal.getBoundingClientRect();
+            const detailContent = modal.querySelector('.modal-content');
+            
+            // 设置商品详情弹窗的位置
+            detailContent.style.position = 'fixed';
+            detailContent.style.left = tradingRect.left + tradingRect.width / 2 + 'px';
+            detailContent.style.top = tradingRect.top + tradingRect.height / 2 + 'px';
+            detailContent.style.transform = 'translate(-50%, -50%)';
+            
+            // 确保弹窗不超出交易弹窗的范围
+            requestAnimationFrame(() => {
+                const detailRect = detailContent.getBoundingClientRect();
+                
+                // 检查是否超出边界并调整
+                if (detailRect.left < tradingRect.left + 20) {
+                    detailContent.style.left = (tradingRect.left + 20 + detailRect.width / 2) + 'px';
+                }
+                if (detailRect.right > tradingRect.right - 20) {
+                    detailContent.style.left = (tradingRect.right - 20 - detailRect.width / 2) + 'px';
+                }
+                if (detailRect.top < tradingRect.top + 20) {
+                    detailContent.style.top = (tradingRect.top + 20 + detailRect.height / 2) + 'px';
+                }
+                if (detailRect.bottom > tradingRect.bottom - 20) {
+                    detailContent.style.top = (tradingRect.bottom - 20 - detailRect.height / 2) + 'px';
+                }
+            });
+        }
+
+        // 从详情弹窗购买
+        async function buyItemFromDetail() {
+            if (!currentShopItem) return;
+            
+            const item = item_list[currentShopItem];
+            if (!item || playerStats.金钱 < item.买入价格) return;
+            
+            playerStats.金钱 -= item.买入价格;
+            inventory[currentShopItem] = (inventory[currentShopItem] || 0) + 1;
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();
+            
+            showModal(`购买了${currentShopItem}！<br>花费: ${item.买入价格}金`);
+            
+            closeShopDetailModal();
+            showTrading(currentTradingType);
+        }
+
+        // 关闭商品详情弹窗
+        function closeShopDetailModal() {
+            document.getElementById('shop-detail-modal').style.display = 'none';
+            currentShopItem = null;
+        }
+
         async function initializeOrSync() {
             await loadOrInitGameData();
             checkAllValueRanges();
@@ -2260,6 +2551,13 @@
         window.showEquipment = showEquipment;
         window.closeInventoryModal = closeInventoryModal;
         window.closeEquipmentModal = closeEquipmentModal;
+        window.showTrading = showTrading;
+        window.buyItem = buyItem;
+        window.sellItem = sellItem;
+        window.closeTrading = closeTrading;
+        window.showShopItemDetail = showShopItemDetail;
+        window.buyItemFromDetail = buyItemFromDetail;
+        window.closeShopDetailModal = closeShopDetailModal;
         initializeOrSync();
     });
     </script>

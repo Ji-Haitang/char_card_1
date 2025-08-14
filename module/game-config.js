@@ -460,7 +460,7 @@ const item_list = {
     },
     "铁环软锁甲": {
         "描述": "铁匠铺打造的改良型锁子甲，采用特殊工艺让铁环更加细密柔软，贴身而不妨碍活动",
-        "可交易": false,
+        "可交易": true,
         "买入价格": 5000,
         "卖出价格": 2500,
         "可使用": false,
@@ -706,7 +706,7 @@ const defaultGameData = {
     npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已送礼
     npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已切磋
     inventory: {
-        "肉包子": 5,
+        "胡饼": 5,
         "制式铁剑": 1,
         "普通弟子服": 1,
     },

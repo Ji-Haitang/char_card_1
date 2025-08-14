@@ -2175,3 +2175,282 @@ body {
 .unequip-btn:hover {
     background: #ff5252;
 }
+
+/* 交易弹窗样式 */
+.trading-content {
+    max-width: 900px;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.trading-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.trading-header h3 {
+    margin: 0;
+}
+
+.trading-money {
+    font-size: 16px;
+    font-weight: bold;
+    color: #4ecdc4;
+}
+
+.trading-container {
+    display: flex;
+    gap: 20px;
+    flex: 1;
+    overflow: hidden;
+    margin-bottom: 20px;
+}
+
+.trading-section {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.trading-section h4 {
+    margin-bottom: 15px;
+    color: #2c2c2c;
+    text-align: center;
+    padding-bottom: 10px;
+    border-bottom: 2px solid #ddd;
+}
+
+.trading-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 8px;
+}
+
+.trading-divider {
+    width: 2px;
+    background: #ddd;
+    margin: 0 10px;
+}
+
+/* 交易物品行 */
+.trading-item-row {
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 6px;
+    padding: 8px 10px;  /* 减小padding */
+    margin-bottom: 6px;  /* 减小间距 */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+}
+
+.trading-item-row:hover {
+    border-color: #4ecdc4;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.trading-item-info {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;  /* 减小间距 */
+    min-width: 0;  /* 防止文字溢出 */
+}
+
+.trading-item-name {
+    font-size: 13px;  /* 减小字体 */
+    font-weight: bold;
+    color: #333;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.trading-item-detail {
+    display: none;
+}
+
+.trading-item-price {
+    font-size: 11px;  /* 减小字体 */
+    color: #4ecdc4;
+    font-weight: bold;
+}
+
+/* 详情按钮样式 */
+.detail-btn {
+    background: #666;
+    color: white;
+    margin-right: 5px;
+}
+
+.detail-btn:hover {
+    background: #555;
+}
+
+.trading-btn {
+    padding: 6px 16px;
+    font-size: 13px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.buy-btn {
+    background: #4ecdc4;
+    color: white;
+}
+
+.buy-btn:hover:not(:disabled) {
+    background: #3dbbb3;
+}
+
+.sell-btn {
+    background: #ff6b6b;
+    color: white;
+}
+
+.sell-btn:hover:not(:disabled) {
+    background: #ff5252;
+}
+
+.trading-btn:disabled {
+    background: #ccc;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 响应式调整 - 保持左右布局 */
+@media (max-width: 768px) {
+    .trading-header {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    
+    .trading-money {
+        font-size: 14px;
+    }
+    
+    .trading-container {
+        gap: 10px;
+    }
+    
+    .trading-item-row {
+        padding: 8px 10px;
+    }
+    
+    .trading-item-name {
+        font-size: 13px;
+    }
+    
+    .trading-item-detail,
+    .trading-item-price {
+        font-size: 11px;
+    }
+    
+    .trading-btn {
+        padding: 5px 12px;
+        font-size: 12px;
+    }
+}
+
+/* 移动端进一步优化 */
+@media (max-width: 480px) {
+    .trading-list {
+        padding: 5px;
+    }
+    
+    .trading-item-row {
+        padding: 6px 8px;
+        margin-bottom: 4px;
+    }
+    
+    .trading-item-name {
+        font-size: 12px;
+    }
+    
+    .trading-item-price {
+        font-size: 10px;
+    }
+    
+    .trading-btn {
+        padding: 4px 10px;
+        font-size: 11px;
+    }
+}
+
+/* 空状态提示 */
+.trading-empty {
+    text-align: center;
+    color: #999;
+    padding: 40px 20px;
+}
+
+#shop-detail-modal {
+    z-index: 3500; /* 确保在交易弹窗(2500)之上 */
+}
+
+.shop-detail-content {
+    max-width: 350px;  /* 稍微增大一点，从400px改为350px */
+    max-height: 60vh;  /* 限制高度 */
+    padding: 20px;
+    overflow-y: auto;
+}
+
+.shop-item-description {
+    font-size: 14px;
+    color: #666;
+    margin: 15px 0;
+    line-height: 1.6;
+}
+
+.shop-item-info {
+    background: #f5f5f5;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+}
+
+.shop-item-stat {
+    font-size: 13px;
+    margin: 5px 0;
+}
+
+.shop-item-stat-label {
+    font-weight: bold;
+    color: #666;
+}
+
+.shop-item-price-info {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 20px;
+    padding: 10px;
+    background: #e8f8f7;
+    border-radius: 8px;
+}
+
+.price-label {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.price-value {
+    font-size: 18px;
+    font-weight: bold;
+    color: #4ecdc4;
+}
