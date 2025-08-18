@@ -1141,7 +1141,15 @@
                 changeText += '<br>行动点: -0（心性判定成功）';
             }
 
+            // 检查并更新季节（以防某些行动改变了周数）
+            const newSeason = calculateSeason(currentWeek);
+            if (newSeason !== seasonStatus) {
+                seasonStatus = newSeason;
+                updateSceneBackgrounds();
+            }
+
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
                 `地点：${locationNames[location]}<br>` +
                 `{{user}}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
@@ -1150,13 +1158,6 @@
 
             updateAllDisplays();
             refreshNpcLocations();
-            
-            // 检查并更新季节（以防某些行动改变了周数）
-            const newSeason = calculateSeason(currentWeek);
-            if (newSeason !== seasonStatus) {
-                seasonStatus = newSeason;
-                updateSceneBackgrounds();
-            }
             
             await handleMessageOutput(resultMessage);
         }
@@ -1323,6 +1324,7 @@
             const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
             
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
                 `地点：${locationNames[location]}<br>` +
                 `{{user}}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
@@ -1462,6 +1464,7 @@
             const week = remainingWeeks % 4 + 1;
             
             const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
                 `地点：${currentLocation}<br>` +
                 `{{user}}自由行动："${actionContent}"<br>` +
                 `在场NPC：${npcsPresent}`;

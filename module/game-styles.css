@@ -277,16 +277,16 @@ body {
 }
 
 /* 地点位置 */
-#yanwuchang { top: 50%; left: 50%; }
+#yanwuchang { top: 53%; left: 48%; }
 #cangjingge { top: 30%; left: 20%; }
-#huofang { top: 60%; left: 67%; }
+#huofang { top: 55%; left: 65%; }
 #houshan { top: 35%; left: 77%; }
-#yishiting { top: 15%; left: 59%; }
-#tiejiangpu { top: 70%; left: 80%; }
-#nandizi { top: 30%; left: 67%; }
+#yishiting { top: 15%; left: 58%; }
+#tiejiangpu { top: 60%; left: 85%; }
+#nandizi { top: 32%; left: 67%; }
 #nvdizi { top: 30%; left: 40%; }
 #shanmen { top: 80%; left: 37%; }
-#gongtian { top: 55%; left: 15%; }
+#gongtian { top: 51%; left: 16%; }
 
 /* 悬浮提示框 - 响应式改进 */
 .tooltip {

@@ -770,8 +770,6 @@ const defaultGameData = {
     farmGrid: [],     // 新增：农场地块状态
     inventory: {
         "胡饼": 5,
-        "制式铁剑": 1,
-        "普通弟子服": 1,
         "小麦种子": 5
     },
     equipment: {
