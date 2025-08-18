@@ -93,6 +93,7 @@
                     <div class="location" id="nandizi"></div>
                     <div class="location" id="nvdizi"></div>
                     <div class="location" id="shanmen"></div>
+                    <div class="location" id="gongtian"></div>
                     <div class="ink-decoration ink1"></div>
                     <div class="ink-decoration ink2"></div>
                 </div>
@@ -288,6 +289,17 @@
                         <!-- <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button> -->
                     </div>
                 </div>
+
+                <div id="gongtian-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
+                    <div class="scene-title">公田</div>
+                    <div class="npc-container" id="gongtian-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('耕种', 'gongtian')">耕种</button>
+                    </div>
+                </div>
+
                 <!-- 弹窗 -->
                 <div id="modal" class="modal">
                     <div class="modal-content">
@@ -309,6 +321,13 @@
                 <div id="battle-modal" class="battle-modal">
                     <div class="battle-container">
                         <iframe id="battle-iframe" class="battle-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- 农场游戏iframe弹窗 -->
+                <div id="farm-modal" class="farm-modal">
+                    <div class="farm-container">
+                        <iframe id="farm-iframe" class="farm-iframe"></iframe>
                     </div>
                 </div>
             </div>
@@ -1032,6 +1051,16 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                     actionPoints = 3;
                     userLocation = "tianshanpai";
                     
+                    // 更新季节
+                    const newSeason = calculateSeason(currentWeek);
+                    if (newSeason !== seasonStatus) {
+                        seasonStatus = newSeason;
+                        console.log(`季节更新为：${seasonStatus}`);
+                    }
+                    
+                    // 更新场景背景
+                    updateSceneBackgrounds();
+                    
                     // 重置所有NPC的送礼状态
                     Object.keys(npcGiftGiven).forEach(npcId => {
                         npcGiftGiven[npcId] = false;
@@ -1073,6 +1102,30 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 updateAllDisplays();
                 
                 showBlackjackGame();
+                
+                if (!actionPointConsumed) {
+                    window.pendingMindMessage = true;
+                }
+                return;
+            }
+
+            if (action === '耕种') {
+                // if (actionPoints < 1) {
+                //     showModal('行动点不足，无法进行此操作！');
+                //     return;
+                // }
+                
+                // let actionPointConsumed = true;
+                // const mindChance = playerTalents.心性 / 2;
+                // if (Math.random() * 100 < mindChance) {
+                //     actionPointConsumed = false;
+                // } else {
+                //     actionPoints--;
+                // }
+                // checkAllValueRanges();
+                // updateAllDisplays();
+                
+                showFarmGame();
                 
                 if (!actionPointConsumed) {
                     window.pendingMindMessage = true;
@@ -1124,8 +1177,9 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 successText = '成果斐然！';
                 moodCost = 0;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 90);
-                    statChange.体力 = '+90';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 90);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 1000;
                 } else if (config.affects === '声望') {
@@ -1138,8 +1192,9 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 successText = '收获颇丰。';
                 moodCost = 5;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 60);
-                    statChange.体力 = '+60';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 60);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 500;
                 } else if (config.affects === '声望') {
@@ -1152,8 +1207,9 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 successText = '平平无奇。';
                 moodCost = 10;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 45);
-                    statChange.体力 = '+45';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 45);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 100;
                 } else if (config.affects === '声望') {
@@ -1166,8 +1222,9 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 successText = '事与愿违...';
                 moodCost = 15;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 30);
-                    statChange.体力 = '+30';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 30);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -500;
                 } else if (config.affects === '声望') {
@@ -1180,8 +1237,9 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 successText = '惨不忍睹！';
                 moodCost = 20;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 30);
-                    statChange.体力 = '+30';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 30);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -1000;
                 } else if (config.affects === '声望') {
@@ -1216,7 +1274,15 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 changeText += '<br>行动点: -0（心性判定成功）';
             }
 
+            // 检查并更新季节（以防某些行动改变了周数）
+            const newSeason = calculateSeason(currentWeek);
+            if (newSeason !== seasonStatus) {
+                seasonStatus = newSeason;
+                updateSceneBackgrounds();
+            }
+            
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
                 `地点：${locationNames[location]}<br>` +
                 `{{user}}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
@@ -1255,7 +1321,8 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                 tiejiangpu: 0,
                 nandizi: 0,
                 nvdizi: 0,
-                shanmen: 0
+                shanmen: 0,
+                gongtian: 0
             };
             
             // 如果有当前位置，先统计该位置的NPC数量
@@ -1390,6 +1457,7 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
             const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
             
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
                 `地点：${locationNames[location]}<br>` +
                 `{{user}}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
@@ -2218,6 +2286,11 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
         window.onload = async function() {
             await loadOrInitGameData();
             checkAllValueRanges();
+            // 初始化季节
+            seasonStatus = calculateSeason(currentWeek);
+            
+            // 更新场景背景
+            updateSceneBackgrounds();
             updateAllDisplays();
             setupLocationEvents();
             setupMessageListeners();
@@ -2280,6 +2353,15 @@ const mainText = `清晨的第一缕阳光洒在天山雪峰上，你站在外�
                     
                     currentBattleType = null;
                     currentBattleReward = null;
+                }
+            }
+        });
+
+        document.getElementById('farm-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要退出农场吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('farm-iframe').src = '';
                 }
             }
         });

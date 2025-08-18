@@ -44,6 +44,8 @@ let userLocation = "houshan";
 let playerTalents = { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 };
 let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50 };
+let dayNightStatus = 'daytime';  // 新增：昼夜状况
+let seasonStatus = 'winter';      // 新增：四季状况
 let playerMood = 100;
 let martialArts = {
     "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
@@ -126,6 +128,8 @@ function syncVariablesFromGameData() {
     npcFavorability,
     actionPoints,
     currentWeek,
+    dayNightStatus,  // 新增
+    seasonStatus,
     npcLocations: currentNpcLocations,
     GameMode,
     difficulty,
@@ -168,6 +172,8 @@ function syncGameDataFromVariables() {
     gameData.npcSparred = npcSparred;    // 添加npcSparred
     gameData.inventory = inventory;
     gameData.equipment = equipment;
+    gameData.dayNightStatus = dayNightStatus;
+    gameData.seasonStatus = seasonStatus; 
 }
 
 // 深度合并函数

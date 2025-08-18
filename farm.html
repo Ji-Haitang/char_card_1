@@ -7,16 +7,31 @@
   <link rel="icon" type="image/png" href="assets/image/icon/favicon.png" />
   <style>
     :root {
-      /* Responsive tile size: scales between phones and desktop */
-      --tile-size: clamp(44px, 12vw, 72px);
-      --gap: 8px;
-      --radius: 8px;
-      --bg: #000000; /* 背景黑色 */
-      --panel-bg: #0b0b0bcc;
-      --text: #e6e6e6; /* 文字更亮以适配黑色背景 */
-      --accent: rgba(0,0,0,0.7); /* 主按钮也用黑色半透明 */
-      --danger: #d9534f;
+        /* 响应式tile-size：基于视口宽度计算 */
+        --tile-size: calc(100vw / 12); /* 12列占满整个视口宽度 */
+        --gap: 6px;
+        --radius: 8px;
+        --bg: #000000;
+        --panel-bg: #0b0b0bcc;
+        --text: #e6e6e6;
+        --accent: rgba(0,0,0,0.7);
+        --danger: #d9534f;
     }
+    
+    /* 限制最大tile尺寸，避免在超大屏幕上过大 */
+    @media (min-width: 1200px) {
+        :root {
+            --tile-size: 100px; /* 最大100px */
+        }
+    }
+    
+    /* 在较小屏幕上调整 */
+    @media (max-width: 600px) {
+        :root {
+            --tile-size: calc(100vw / 12); /* 保持12列 */
+        }
+    }
+    
     * { box-sizing: border-box; }
     body {
       margin: 0;
@@ -36,11 +51,10 @@
     .money { font-weight: 700; color: #ffffff; }
     .money img { width: 18px; vertical-align: -3px; margin-right: 6px; }
     .header-actions { display: flex; gap: 8px; align-items: center; }
-    /* removed week-badge styles */
     button {
       padding: 8px 12px; 
       border-radius: 6px; 
-      border: 1px solid #ffffff; /* 改为白色边框 */
+      border: 1px solid #ffffff;
       background: #000000;
       color: #ffffff;
       cursor: pointer; 
@@ -48,23 +62,22 @@
       font-weight: 600;
     }
     button:active { transform: translateY(1px); }
-    /* button.primary { background: rgba(0,0,0,0.7); color: #ffffff; border: 1px solid rgba(255,255,255,0.22); } */
-    button.danger { background: var(--danger); color: white; border: 1px solid #ffffff; /* 添加白色边框 */ }
+    button.danger { background: var(--danger); color: white; border: 1px solid #ffffff; }
     button:hover {
-      background: #1a1a1a; /* 悬停时稍微变亮 */
+      background: #1a1a1a;
     }
 
     button.primary { 
-      background: #000000; /* 改为纯黑色 */
+      background: #000000;
       color: #ffffff; 
-      border: 1px solid #ffffff; /* 改为白色边框 */
+      border: 1px solid #ffffff;
     }
 
     button.primary:hover {
       background: #1a1a1a;
     }
     button:disabled {
-      background: #333333; /* 深灰色表示禁用 */
+      background: #333333;
       color: #999999;
       cursor: not-allowed;
       opacity: 0.6;
@@ -81,13 +94,22 @@
       display: grid;
       grid-template-columns: repeat(12, var(--tile-size));
       grid-template-rows: repeat(9, var(--tile-size));
-      gap: 0; /* no gaps between tiles */
+      gap: 0;
       padding: 0;
       background: rgba(0,0,0,0.25);
       border-radius: var(--radius);
-      width: max-content;
-      position: relative; /* allow absolute-positioned trees */
+      width: calc(12 * var(--tile-size)); /* 明确设置宽度 */
+      position: relative;
+      margin: 0 auto; /* 居中 */
     }
+    
+    /* 在大屏幕上限制最大宽度 */
+    @media (min-width: 1200px) {
+        #grid {
+            width: 1200px; /* 12 * 100px */
+        }
+    }
+    
     #decorLayer {
       position: absolute;
       inset: 0;
@@ -96,9 +118,10 @@
     }
     .tile {
       position: relative;
-      width: var(--tile-size); height: var(--tile-size);
-      border-radius: 0; /* 取消单个格子的圆角 */
-      overflow: visible; /* 允许3x3树跨格显示 */
+      width: var(--tile-size); 
+      height: var(--tile-size);
+      border-radius: 0;
+      overflow: visible;
       box-shadow: 0 2px 6px #0000001a inset, 0 1px 0 #ffffff59 inset;
       background: #6bbf6b;
       cursor: pointer;
@@ -109,7 +132,6 @@
     }
     .tile .ground { position: absolute; inset: 0; object-fit: cover; width: 100%; height: 100%; }
     .tile .crop { position: absolute; inset: 0; object-fit: contain; width: 100%; height: 100%; padding: 6px; }
-    /* decorative overlay image on non-farm tiles */
     .decor { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; padding: 6px; pointer-events: none; }
     .tree3x3 { 
       position: absolute; 
@@ -171,7 +193,7 @@
       border-radius: 8px; 
       padding: 10px; 
       text-align: center; 
-      color: #000000; /* 添加黑色文字 */
+      color: #000000;
     }
     .shop .card img { height: 64px; max-width: 100%; object-fit: contain; }
     .card-controls { 
@@ -199,21 +221,20 @@
     .bar > span { display:block; height: 100%; background: linear-gradient(90deg, #48bb78, #38b2ac); width: 0%; }
     .bar-row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 8px; }
     .bar-row small { 
-      opacity: 1; /* 改为不透明 */
-      color: #000000; /* 改为黑色 */
+      opacity: 1;
+      color: #000000;
     }
     .muted {
-      color: #000000; /* 改为黑色 */
+      color: #000000;
     }
 
-    /* 成熟高亮闪烁效果（使用 drop-shadow，围绕透明 PNG 边缘发光） */
+    /* 成熟高亮闪烁效果 */
     @keyframes glowPulseFilter {
       0% { filter: drop-shadow(0 0 0 rgba(255,215,0,0)) drop-shadow(0 0 0 rgba(255,255,200,0)); }
       50% { filter: drop-shadow(0 0 14px rgba(255,215,0,0.9)) drop-shadow(0 0 8px rgba(255,255,200,0.8)); }
       100% { filter: drop-shadow(0 0 0 rgba(255,215,0,0)) drop-shadow(0 0 0 rgba(255,255,200,0)); }
     }
 
-    /* 新增：带灰度的高亮动画 */
     @keyframes glowPulseFilterGray {
       0% { filter: grayscale(1) brightness(0.85) drop-shadow(0 0 0 rgba(255,215,0,0)) drop-shadow(0 0 0 rgba(255,255,200,0)); }
       50% { filter: grayscale(1) brightness(0.85) drop-shadow(0 0 14px rgba(255,215,0,0.9)) drop-shadow(0 0 8px rgba(255,255,200,0.8)); }
@@ -231,95 +252,131 @@
       z-index: 3;
     }
 
-    /* 新增：灰度状态的高亮类 */
     .crop-glow.gray {
       animation: glowPulseFilterGray 1.2s infinite;
     }
 
-    /* --- Responsive --- */
+    /* 移动端优化 */
     @media (max-width: 640px) {
-      header { flex-wrap: wrap; row-gap: 8px; }
-      .money { width: 100%; }
-      /* .header-actions { width: 100%; justify-content: space-between; } */
-      button { padding: 12px 14px; font-size: 16px; }
-      .header-actions { 
-        width: 100%; 
-        justify-content: space-between; 
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-      .header-actions button {
-        flex: 1;
-        min-width: calc(33% - 4px);
-        padding: 10px 8px;
-        font-size: 14px;
-      }
-      /* Shop responsive improvements */
-      #shopOverlay { padding: 0; }
-      .shop { 
-        width: 100%; 
-        height: 100vh; 
-        max-height: 100vh;
-        border-radius: 0;
-      }
-      .shop-header {
-        flex-wrap: wrap;
-        gap: 10px;
-      }
-      .shop-header strong {
-        width: 100%;
-      }
-      .shop-header-right {
-        width: 100%;
-        justify-content: space-between;
-      }
-      .shop-header-right .money {
-        width: auto;
-      }
-      .shop .items { grid-template-columns: 1fr; }
-      .card-controls {
-        flex-wrap: wrap;
-      }
-      .card-controls button {
-        flex: 1;
-        min-width: calc(33% - 4px);
-      }
-      
-      .popover .choices { grid-template-columns: repeat(2, 1fr); }
+        header {
+            padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px 10px;
+        }
+        
+        .header-actions {
+            gap: 4px;
+        }
+        
+        .header-actions button {
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        
+        main {
+            padding-top: calc(60px + env(safe-area-inset-top, 0px));
+        }
+        
+        /* 移动端保持网格完整显示 */
+        #grid {
+            transform: none; /* 移除缩放 */
+        }
+        
+        .dropdown-wrapper {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        #btnBatchProcess {
+            width: 100%;
+            padding: 8px 10px;
+            font-size: 13px;
+        }
+        
+        .batch-dropdown {
+            min-width: 100%;
+            max-width: 200px;
+        }
+        
+        .dropdown-item {
+            padding: 8px 12px;
+            font-size: 13px;
+        }
+        
+        /* 商店移动端适配 */
+        #shopOverlay { padding: 0; }
+        .shop { 
+            width: 100%; 
+            height: 100vh; 
+            max-height: 100vh;
+            border-radius: 0;
+        }
+        .shop-header {
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .shop-header strong {
+            width: 100%;
+        }
+        .shop-header-right {
+            width: 100%;
+            justify-content: space-between;
+        }
+        .shop-header-right .money {
+            width: auto;
+        }
+        .shop .items { grid-template-columns: 1fr; }
+        .card-controls {
+            flex-wrap: wrap;
+        }
+        .card-controls button {
+            flex: 1;
+            min-width: calc(33% - 4px);
+        }
+        
+        .popover .choices { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    /* 特别小的手机 */
+    @media (max-width: 380px) {
+        .header-actions button {
+            padding: 6px 8px;
+            font-size: 12px;
+        }
+        
+        .dropdown-item {
+            padding: 6px 10px;
+            font-size: 12px;
+        }
+        
+        .money {
+            font-size: 14px;
+        }
+        
+        .money img {
+            width: 16px;
+        }
+    }
+
+    /* 横屏优化 */
+    @media (orientation: landscape) and (max-height: 500px) {
+        header {
+            padding: 5px 10px;
+        }
+        
+        main {
+            padding-top: 50px;
+        }
+        
+        .header-actions button {
+            padding: 5px 10px;
+            font-size: 12px;
+        }
+        
+        .dropdown-item {
+            padding: 5px 8px;
+            font-size: 11px;
+        }
     }
     
-    /* Small phones */
-    @media (max-width: 380px) {
-      .shop-header {
-        padding: 12px;
-      }
-      .shop-header strong {
-        font-size: 16px;
-      }
-      .shop-header-right button {
-        padding: 8px 12px;
-        font-size: 14px;
-      }
-      .money {
-        font-size: 14px;
-      }
-      .money img {
-        width: 16px;
-      }
-      .header-actions { 
-        width: 100%; 
-        justify-content: space-between; 
-        flex-wrap: wrap;
-        gap: 6px;
-      }
-      .header-actions button {
-        flex: 1;
-        min-width: calc(33% - 4px);
-        padding: 10px 8px;
-        font-size: 14px;
-      }
-    }
-    /* 随机事件弹窗样式 */
     .event-overlay {
       position: fixed;
       inset: 0;
@@ -438,7 +495,7 @@
       background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%);
     }
 
-    /* 移动端适配 */
+    /* 移动端事件弹窗适配 */
     @media (max-width: 640px) {
       .event-popup {
         padding: 30px 20px;
@@ -453,19 +510,73 @@
         font-size: 16px;
       }
     }
+
+    /* 下拉菜单样式 */
+    .dropdown-wrapper {
+        position: relative;
+    }
+
+    .batch-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        margin-top: 4px;
+        min-width: 120px;
+        background: #000000;
+        border: 1px solid #ffffff;
+        border-radius: 6px;
+        overflow: hidden;
+        z-index: 100;
+    }
+
+    .batch-dropdown.show {
+        display: block;
+    }
+
+    .dropdown-item {
+        width: 100%;
+        padding: 10px 16px;
+        text-align: left;
+        background: #000000;
+        color: #ffffff;
+        border: none;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        font-size: 14px;
+    }
+
+    .dropdown-item:last-child {
+        border-bottom: none;
+    }
+
+    .dropdown-item:hover {
+        background: #1a1a1a;
+    }
+
+    #btnBatchProcess::after {
+        content: " ▼";
+        font-size: 12px;
+        margin-left: 4px;
+    }
   </style>
 </head>
 <body>
   <header>
     <div class="money"><img src="assets/image/icon/money_icon.png" alt="money" /> <span id="money">500</span></div>
     <div class="header-actions">
-      <button id="btnSkip" class="primary" aria-label="跳过这一周（前进一周）">跳过这一周</button>
-      <button id="btnBatchDeworm" aria-label="统一除虫">统一除虫</button>
-      <button id="btnBatchWater" aria-label="统一浇水">统一浇水</button>
-      <button id="btnBatchFertilize" aria-label="统一施肥">统一施肥</button>
-      <button id="btnShop">商店</button>
+        <div class="dropdown-wrapper">
+            <button id="btnBatchProcess" class="primary">统一处理</button>
+            <div id="batch-dropdown" class="batch-dropdown">
+                <button class="dropdown-item" id="btnBatchWater">统一浇水</button>
+                <button class="dropdown-item" id="btnBatchDeworm">统一除虫</button>
+                <button class="dropdown-item" id="btnBatchFertilize">统一施肥</button>
+            </div>
+        </div>
+        <button id="btnShop">商店</button>
+        <button id="btnExitFarm" class="danger">退出耕种</button>
     </div>
-  </header>
+</header>
   <main>
     <section>
       <div id="grid" aria-label="4x3 农场网格" role="grid"></div>
@@ -481,7 +592,7 @@
     </div>
   </div>
 
-  <!-- Shop overlay (同页内"跳转"到商店视图) -->
+  <!-- Shop overlay -->
   <div id="shopOverlay">
     <div class="shop">
       <header class="shop-header">
@@ -499,7 +610,6 @@
 
   <!-- Contextual popup -->
   <div id="popup"></div>
-
 
   <script>
     // --- Assets and crop config ---
@@ -522,7 +632,7 @@
       }
     };
     
-    // Embedded layout: edit this to change initial surrounding decor
+    // Embedded layout
     const EMBEDDED_LAYOUT = {
       scene: { rows: 9, cols: 12 },
       farm: { rows: 3, cols: 4 },
@@ -595,13 +705,36 @@
     };
 
     // --- Game state ---
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialMoney = parseInt(urlParams.get('money')) || 500;
+    const initialWeek = parseInt(urlParams.get('week')) || 1;
+    const lastFarmWeek = parseInt(urlParams.get('lastFarmWeek')) || 1;
+
+    const initialSeeds = {
+        wheat: parseInt(urlParams.get('wheat')) || 0,
+        eggplant: parseInt(urlParams.get('eggplant')) || 0,
+        melon: parseInt(urlParams.get('melon')) || 0,
+        sugarcane: parseInt(urlParams.get('sugarcane')) || 0
+    };
+
+    let savedGrid = [];
+    try {
+        const gridParam = urlParams.get('farmGrid');
+        if (gridParam) {
+            savedGrid = JSON.parse(gridParam);
+        }
+    } catch (e) {
+        console.error('Failed to parse farm grid:', e);
+    }
+
     const state = {
-      week: 1,
-      money: 500,
-      inventory: { wheat: 0, melon: 0, eggplant: 0, sugarcane: 0 },
-      grid: [], // 3x4 farm plots
-      selected: null, // {r,c}
-      decor: { trees: [], singles: [] } // store surrounding random decorations
+        week: initialWeek,
+        money: initialMoney,
+        inventory: initialSeeds,
+        grid: savedGrid.length > 0 ? savedGrid : [],
+        selected: null,
+        decor: { trees: [], singles: [] },
+        eventQueue: [] // 新增：事件队列
     };
 
     function createEmptyPlot() {
@@ -618,32 +751,37 @@
     // --- DOM refs ---
     const elGrid = document.getElementById('grid');
     const elMoney = document.getElementById('money');
-    const elWeek = null; // week badge removed
+    const elWeek = null;
     const elShopOverlay = document.getElementById('shopOverlay');
     const elShopItems = document.getElementById('shopItems');
     const elShopMoney = document.getElementById('shopMoney');
 
-    // --- Initialize grid (no random decor) ---
+    // --- Initialize grid ---
     async function initGrid() {
-      // Build a 12x9 scene with a centered 4x3 farmable area.
       const sceneRows = 9, sceneCols = 12;
       const farmRows = 3, farmCols = 4;
       const farmTop = Math.floor((sceneRows - farmRows) / 2);
       const farmLeft = Math.floor((sceneCols - farmCols) / 2);
 
-      // state.grid will be 3x4 to store farm plots
-      state.grid = Array.from({ length: farmRows }, () => Array.from({ length: farmCols }, () => createEmptyPlot()));
+      if (savedGrid.length > 0) {
+          state.grid = savedGrid;
+      } else {
+          state.grid = Array.from({ length: farmRows }, () => 
+              Array.from({ length: farmCols }, () => createEmptyPlot())
+          );
+      }
 
       elGrid.innerHTML = '';
       state.decor = { trees: [], singles: [] };
-      // Create a layer for large decorations to avoid interfering with tile indexing
       window.__decorLayerEl = document.createElement('div');
       __decorLayerEl.id = 'decorLayer';
+      
       for (let r = 0; r < sceneRows; r++) {
         for (let c = 0; c < sceneCols; c++) {
           const tile = document.createElement('div');
           tile.className = 'tile';
-          tile.dataset.sceneR = r; tile.dataset.sceneC = c;
+          tile.dataset.sceneR = r; 
+          tile.dataset.sceneC = c;
 
           const isFarm = r >= farmTop && r < farmTop + farmRows && c >= farmLeft && c < farmLeft + farmCols;
 
@@ -655,37 +793,55 @@
           if (isFarm) {
             tile.classList.add('farm');
             const crop = document.createElement('img');
-            crop.className = 'crop'; crop.style.display = 'none';
+            crop.className = 'crop'; 
+            crop.style.display = 'none';
             tile.appendChild(crop);
 
             const farmR = r - farmTop;
             const farmC = c - farmLeft;
-            tile.dataset.r = farmR; tile.dataset.c = farmC;
+            tile.dataset.r = farmR; 
+            tile.dataset.c = farmC;
             tile.setAttribute('role', 'gridcell');
             tile.setAttribute('tabindex', '0');
             tile.addEventListener('click', onTileClick);
-            tile.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); onTileClick({ currentTarget: tile }); } });
-          } else {
-            // Non-farm tiles: decor will be applied from embedded layout below
+            tile.addEventListener('keydown', (ev) => { 
+              if (ev.key === 'Enter' || ev.key === ' ') { 
+                ev.preventDefault(); 
+                onTileClick({ currentTarget: tile }); 
+              } 
+            });
           }
 
           elGrid.appendChild(tile);
         }
       }
-      // Append overlay layer last so it visually sits above ground tiles but below popups
+      
       elGrid.appendChild(__decorLayerEl);
-      // Apply embedded layout and render
       applyLayoutData(EMBEDDED_LAYOUT);
       renderDecorFromState();
+      
+      const weeksToSkip = initialWeek - lastFarmWeek;
+      if (weeksToSkip > 0) {
+          for (let i = 0; i < weeksToSkip; i++) {
+              skipWeek();
+          }
+          // 处理事件队列
+          processEventQueue();
+      }
+      
       renderAll();
-      // Recalculate tree positions on viewport changes (resize/orientation)
-      window.addEventListener('resize', recalcTreePositions);
-      window.addEventListener('orientationchange', recalcTreePositions);
+      window.addEventListener('resize', handleResize);
+      window.addEventListener('orientationchange', handleResize);
+    }
+
+    // 合并处理resize和树木位置计算
+    function handleResize() {
+      recalcTreePositions();
     }
 
     function onTileClick(e) {
       const tile = e.currentTarget;
-      if (tile.dataset.r == null || tile.dataset.c == null) return; // ignore non-farm tiles
+      if (tile.dataset.r == null || tile.dataset.c == null) return;
       const r = Number(tile.dataset.r), c = Number(tile.dataset.c);
       state.selected = { r, c };
       openTilePopup(tile, r, c);
@@ -694,7 +850,6 @@
     // --- Rendering ---
     function renderAll() {
       elMoney.textContent = state.money;
-      // week badge removed
 
       const sceneRows = 9, sceneCols = 12;
       const farmRows = 3, farmCols = 4;
@@ -716,14 +871,12 @@
 
     function renderTile(r, c, farmTop, farmLeft, sceneCols) {
       const plot = state.grid[r][c];
-      // Query by farm coordinates to avoid index issues caused by overlay elements
       const tile = elGrid.querySelector(`.tile.farm[data-r="${r}"][data-c="${c}"]`);
       const cropImg = tile.querySelector('.crop');
       if (plot.planted) {
         const idx = stageIndexFor(plot);
         cropImg.src = CROPS[plot.cropId].images[idx];
         cropImg.style.display = '';
-        // 保持灰度与高亮可共存：灰度直接应用于作物 img，发光使用额外的 overlay img
         cropImg.style.filter = plot.health < 50 ? 'grayscale(1) brightness(0.85)' : 'none';
         const cfg = CROPS[plot.cropId];
         const mature = plot.maturity >= cfg.maturityRequired;
@@ -736,7 +889,6 @@
           }
           glow.src = cropImg.src;
           glow.style.display = '';
-          // 修复：使用class切换而不是直接设置style.filter
           if (plot.health < 50) {
             glow.classList.add('gray');
           } else {
@@ -752,10 +904,7 @@
       }
     }
 
-    // Prevent tree placement overlapping the farm bounding box
     function canPlaceTree3x3(r, c, sceneRows, sceneCols, farmTop, farmLeft, farmRows, farmCols) {
-      // Anchor will be the bottom-center of the 3x3 area at (r,c)
-      // The 3x3 spans rows r-2..r and cols c-1..c+1
       if (r - 2 < 0 || c - 1 < 0 || r >= sceneRows || c + 1 >= sceneCols) return false;
       const spanTop = r - 2;
       const spanBottom = r;
@@ -771,23 +920,34 @@
       const img = document.createElement('img');
       img.className = 'tree3x3';
       img.src = Math.random() < 0.5 ? 'assets/image/static/tree0.png' : 'assets/image/static/tree1.png';
-      // Save anchor for responsive repositioning
       img.dataset.r = String(r);
       img.dataset.c = String(c);
       positionTreeImage(img);
-      // Append to decor overlay layer so it does not affect tile indexing
       if (window.__decorLayerEl) __decorLayerEl.appendChild(img); else elGrid.appendChild(img);
     }
 
+    // 修复树木位置计算
     function positionTreeImage(img) {
       const r = Number(img.dataset.r);
       const c = Number(img.dataset.c);
-      const refTile = elGrid.children[0];
-      const tileSize = refTile ? refTile.getBoundingClientRect().width : parseFloat(getComputedStyle(elGrid).getPropertyValue('--tile-size')) || 64;
-      const leftPx = (c - 1) * tileSize;
-      const topPx = (r - 2) * tileSize;
-      img.style.left = leftPx + 'px';
-      img.style.top = topPx + 'px';
+      
+      // 直接找到对应位置的tile元素
+      const targetTile = elGrid.querySelector(`.tile[data-scene-r="${r}"][data-scene-c="${c}"]`);
+      if (!targetTile) return;
+      
+      const tileRect = targetTile.getBoundingClientRect();
+      const gridRect = elGrid.getBoundingClientRect();
+      
+      // 计算相对于grid的偏移
+      const relativeLeft = tileRect.left - gridRect.left;
+      const relativeTop = tileRect.top - gridRect.top;
+      
+      // 树木需要向左和向上偏移来覆盖3x3区域
+      const actualTileSize = tileRect.width;
+      img.style.left = (relativeLeft - actualTileSize) + 'px';
+      img.style.top = (relativeTop - actualTileSize * 2) + 'px';
+      img.style.width = (actualTileSize * 3) + 'px';
+      img.style.height = (actualTileSize * 3) + 'px';
     }
 
     function recalcTreePositions() {
@@ -798,18 +958,31 @@
     function recordTree(r, c) {
       state.decor.trees.push({ r, c, type: 'tree3x3' });
     }
+    
     function recordDecor(r, c, kind) {
       state.decor.singles.push({ r, c, type: kind });
     }
 
-    // 添加事件弹窗相关的函数
+    // 修改：将事件添加到队列而不是立即显示
+    function addEventToQueue(eventType, title, description) {
+      state.eventQueue.push({ eventType, title, description });
+    }
+
+    // 新增：处理事件队列
+    function processEventQueue() {
+      if (state.eventQueue.length === 0) return;
+      
+      const event = state.eventQueue.shift();
+      showEventPopup(event.eventType, event.title, event.description);
+    }
+
+    // 修改事件弹窗显示函数
     function showEventPopup(eventType, title, description) {
       const overlay = document.getElementById('eventOverlay');
       const icon = document.getElementById('eventIcon');
       const titleEl = document.getElementById('eventTitle');
       const descEl = document.getElementById('eventDesc');
       
-      // 设置不同事件的图标和样式
       const eventConfig = {
         rain: { icon: '🌧️', class: 'event-rain' },
         locust: { icon: '🦗', class: 'event-locust' },
@@ -819,52 +992,44 @@
       
       const config = eventConfig[eventType] || { icon: '📢', class: '' };
       
-      // 移除之前的类名
       overlay.className = 'event-overlay ' + config.class;
       
-      // 设置内容
       icon.textContent = config.icon;
       titleEl.textContent = title;
       descEl.innerHTML = description;
       
-      // 显示弹窗
       overlay.style.display = 'flex';
     }
 
-    // 绑定确认按钮
+    // 修改确认按钮事件
     document.getElementById('eventConfirm').addEventListener('click', () => {
       document.getElementById('eventOverlay').style.display = 'none';
+      // 处理下一个事件
+      processEventQueue();
     });
-    // --- Weekly tick ---
+
+    // 修改skipWeek函数
     function skipWeek() {
-      state.week++;
-      
-      // 随机事件系统
       const eventRoll = Math.random();
       let eventType = null;
-      let extraMaturity = 1; // 默认成熟度增加1
-      let extraHealthLoss = 0; // 额外健康损失
-      let extraQuality = 0; // 额外品质增加
+      let extraMaturity = 1;
+      let extraHealthLoss = 0;
+      let extraQuality = 0;
       
       if (eventRoll < 0.20) {
-        // 20%概率：雨水充沛
         eventType = 'rain';
         extraMaturity = 2;
-        showEventPopup('rain', '雨水充沛', '这一周雨水充沛，作物长势良好！<br>所有作物成熟度额外+1');
+        addEventToQueue('rain', '雨水充沛', '这一周雨水充沛，作物长势良好！<br>所有作物成熟度额外+1');
       } else if (eventRoll < 0.30) {
-        // 10%概率：蝗虫过境
         eventType = 'locust';
         extraHealthLoss = 30;
-        showEventPopup('locust', '蝗虫过境', '这一周蝗虫过境，作物遭到残害！<br>所有作物健康值额外-30');
+        addEventToQueue('locust', '蝗虫过境', '这一周蝗虫过境，作物遭到残害！<br>所有作物健康值额外-30');
       } else if (eventRoll < 0.40) {
-        // 10%概率：风和日丽
         eventType = 'sunny';
         extraQuality = 20;
-        showEventPopup('sunny', '风和日丽', '这一周风和日丽，作物丰收在望！<br>所有作物品质+20');
+        addEventToQueue('sunny', '风和日丽', '这一周风和日丽，作物丰收在望！<br>所有作物品质+20');
       } else if (eventRoll < 0.45) {
-        // 5%概率：野兽出没
         eventType = 'beast';
-        // 找出所有种植的作物
         const plantedPlots = [];
         for (let r = 0; r < 3; r++) {
           for (let c = 0; c < 4; c++) {
@@ -876,11 +1041,10 @@
         if (plantedPlots.length > 0) {
           const victim = plantedPlots[Math.floor(Math.random() * plantedPlots.length)];
           state.grid[victim.r][victim.c].health = 0;
-          showEventPopup('beast', '野兽出没', `这一周有野兽出没，田里一片狼藉！<br>位置(${victim.r+1},${victim.c+1})的作物被摧毁`);
+          addEventToQueue('beast', '野兽出没', `这一周有野兽出没，田里一片狼藉！<br>位置(${victim.r+1},${victim.c+1})的作物被摧毁`);
         }
       }
       
-      // 处理每个地块
       const farmRows = 3, farmCols = 4;
       for (let r = 0; r < farmRows; r++) {
         for (let c = 0; c < farmCols; c++) {
@@ -888,24 +1052,19 @@
           plot.interactedThisWeek = false;
           if (!plot.planted) continue;
           
-          // 应用事件效果
           plot.maturity += extraMaturity;
           
-          // 健康度下降（基础10-20 + 额外损失）
           plot.health = Math.max(0, plot.health - (10 + Math.floor(Math.random() * 11)) - extraHealthLoss);
           
-          // 品质增加（允许超过100）
           if (eventType === 'sunny') {
             plot.quality += extraQuality;
           }
           
-          // 检查是否死亡
           if (plot.health <= 0) {
             Object.assign(plot, createEmptyPlot());
             continue;
           }
           
-          // 检查是否过熟腐烂
           const cfg = CROPS[plot.cropId];
           if (plot.maturity > cfg.maturityRequired + 5) {
             Object.assign(plot, createEmptyPlot());
@@ -931,22 +1090,22 @@
       plot.interactedThisWeek = true;
       renderAll();
       closePopup();
-      // Reopen popup to show updated state
-      const tile = elGrid.children[state.selected.r * 5 + state.selected.c];
+      const tile = elGrid.querySelector(`.tile.farm[data-r="${state.selected.r}"][data-c="${state.selected.c}"]`);
       openTilePopup(tile, state.selected.r, state.selected.c);
     }
 
     function doWater() {
       withOneInteraction(plot => {
-        plot.maturity += 1; // extra growth
+        plot.maturity += 1;
       });
     }
+    
     function doDeworm() {
       withOneInteraction(plot => {
-        // 除虫恢复30-50健康（期望40）
         plot.health = Math.min(100, plot.health + 30 + Math.floor(Math.random() * 21));
       });
     }
+    
     function doFertilize() {
       const cost = 5;
       if (state.money < cost) {
@@ -956,7 +1115,6 @@
       
       withOneInteraction(plot => {
         state.money -= cost;
-        // 施肥增加10-30品质（可以超过100）
         plot.quality += 10 + Math.floor(Math.random() * 21);
         elMoney.textContent = state.money;
       });
@@ -974,7 +1132,6 @@
         alert('作物健康度过低（<50），不能收割！请先除虫。');
         return;
       }
-      // 售价公式：baseSell × (1 + min(quality,100)/100)
       const effectiveQuality = Math.min(100, plot.quality);
       const price = Math.round(cfg.baseSell * (1 + (effectiveQuality / 100)));
       state.money += price;
@@ -1008,21 +1165,32 @@
       Object.values(CROPS).forEach(cfg => {
         const card = document.createElement('div');
         card.className = 'card';
-        const img = document.createElement('img'); img.src = cfg.images[6]; img.alt = cfg.name;
-        const name = document.createElement('div'); name.textContent = cfg.name + '种子'; // 添加"种子"
-        const price = document.createElement('div'); price.className = 'muted'; price.textContent = `价格：$${cfg.basePrice}/包`;
+        const img = document.createElement('img'); 
+        img.src = cfg.images[6]; 
+        img.alt = cfg.name;
+        const name = document.createElement('div'); 
+        name.textContent = cfg.name + '种子';
+        const price = document.createElement('div'); 
+        price.className = 'muted'; 
+        price.textContent = `价格：$${cfg.basePrice}/包`;
         const controls = document.createElement('div'); 
         controls.className = 'card-controls';
         
-        const buy1 = document.createElement('button'); buy1.textContent = '买 1';
-        const buy5 = document.createElement('button'); buy5.textContent = '买 5';
-        const buy10 = document.createElement('button'); buy10.textContent = '买 10';
+        const buy1 = document.createElement('button'); 
+        buy1.textContent = '买 1';
+        const buy5 = document.createElement('button'); 
+        buy5.textContent = '买 5';
+        const buy10 = document.createElement('button'); 
+        buy10.textContent = '买 10';
         
         [buy1, buy5, buy10].forEach((btn, idx) => {
           const qty = [1,5,10][idx];
           btn.addEventListener('click', () => {
             const cost = cfg.basePrice * qty;
-            if (state.money < cost) { alert('金钱不足'); return; }
+            if (state.money < cost) { 
+              alert('金钱不足'); 
+              return; 
+            }
             state.money -= cost;
             state.inventory[cfg.id] += qty;
             elShopMoney.textContent = state.money;
@@ -1036,49 +1204,73 @@
       elShopOverlay.style.display = 'flex';
     }
 
-    function closeShop() { elShopOverlay.style.display = 'none'; }
+    function closeShop() { 
+      elShopOverlay.style.display = 'none'; 
+    }
 
     // --- Wire events ---
-    document.getElementById('btnSkip').addEventListener('click', skipWeek);
     document.getElementById('btnShop').addEventListener('click', openShop);
-    // document.getElementById('btnExport').addEventListener('click', exportLayout);
     document.getElementById('btnCloseShop').addEventListener('click', closeShop);
-    // 添加批量操作按钮的事件监听器
-    document.getElementById('btnBatchDeworm').addEventListener('click', batchDeworm);
-    document.getElementById('btnBatchWater').addEventListener('click', batchWater);
-    document.getElementById('btnBatchFertilize').addEventListener('click', batchFertilize);
+    
+    document.getElementById('btnBatchProcess').addEventListener('click', function(e) {
+        e.stopPropagation();
+        const dropdown = document.getElementById('batch-dropdown');
+        dropdown.classList.toggle('show');
+    });
+
+    document.addEventListener('click', function() {
+        const dropdown = document.getElementById('batch-dropdown');
+        dropdown.classList.remove('show');
+    });
+
+    document.getElementById('btnExitFarm').addEventListener('click', function() {
+        if (confirm('确定要退出农场吗？')) {
+            const returnData = {
+                type: 'farm-exit',
+                money: state.money,
+                seeds: {
+                    wheat: state.inventory.wheat,
+                    eggplant: state.inventory.eggplant,
+                    melon: state.inventory.melon,
+                    sugarcane: state.inventory.sugarcane
+                },
+                farmGrid: state.grid
+            };
+            
+            window.parent.postMessage(returnData, '*');
+        }
+    });
+    
+    document.getElementById('btnBatchWater').addEventListener('click', function(e) {
+        e.stopPropagation();
+        batchWater();
+        document.getElementById('batch-dropdown').classList.remove('show');
+    });
+
+    document.getElementById('btnBatchDeworm').addEventListener('click', function(e) {
+        e.stopPropagation();
+        batchDeworm();
+        document.getElementById('batch-dropdown').classList.remove('show');
+    });
+
+    document.getElementById('btnBatchFertilize').addEventListener('click', function(e) {
+        e.stopPropagation();
+        batchFertilize();
+        document.getElementById('batch-dropdown').classList.remove('show');
+    });
 
     // --- Kickoff ---
     initGrid();
     renderAll();
 
-    // ====== Export/Import helpers ======
-    function exportLayout() {
-      const data = {
-        scene: { rows: 9, cols: 12 },
-        farm: { rows: 3, cols: 4 },
-        decor: state.decor
-      };
-      const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      const ts = new Date().toISOString().replace(/[:.]/g, '-');
-      a.download = `layout-${ts}.json`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(url);
-    }
-
-    // 添加新的批量操作函数：
+    // --- Batch operations ---
     function batchDeworm() {
       let count = 0;
       for (let r = 0; r < 3; r++) {
         for (let c = 0; c < 4; c++) {
           const plot = state.grid[r][c];
           if (plot.planted && plot.health < 50 && !plot.interactedThisWeek) {
-            plot.health = Math.min(100, plot.health + 50);
+            plot.health = Math.min(100, plot.health + 30 + Math.floor(Math.random() * 21));
             plot.interactedThisWeek = true;
             count++;
           }
@@ -1139,7 +1331,6 @@
       
       state.money -= cost;
       eligiblePlots.forEach(plot => {
-        // 可以超过100
         plot.quality += 10 + Math.floor(Math.random() * 21);
         plot.interactedThisWeek = true;
         count++;
@@ -1157,7 +1348,6 @@
 
     function renderDecorFromState() {
       if (window.__decorLayerEl) __decorLayerEl.innerHTML = '';
-      // Singles
       state.decor.singles.forEach(({ r, c, type }) => {
         const tile = elGrid.querySelector(`.tile[data-scene-r="${r}"][data-scene-c="${c}"]`);
         if (!tile) return;
@@ -1166,11 +1356,10 @@
         decor.src = `assets/image/static/${type}.png`;
         tile.appendChild(decor);
       });
-      // Trees 3x3
       state.decor.trees.forEach(({ r, c }) => placeTree3x3(r, c));
     }
 
-    // ====== Popup helpers ======
+    // --- Popup helpers ---
     const popupRoot = document.getElementById('popup');
 
     function closePopup() {
@@ -1182,17 +1371,24 @@
       window.removeEventListener('scroll', handleViewportChange, true);
     }
 
-    function escCloseHandler(ev) { if (ev.key === 'Escape') closePopup(); }
+    function escCloseHandler(ev) { 
+      if (ev.key === 'Escape') closePopup(); 
+    }
+    
     function outsideClickHandler(ev) {
       if (!popupRoot.contains(ev.target)) closePopup();
     }
-    function handleViewportChange() { clampPopupToViewport(); recalcTreePositions(); }
+    
+    function handleViewportChange() { 
+      clampPopupToViewport(); 
+      recalcTreePositions(); 
+    }
 
     function openTilePopup(tile, r, c) {
       const plot = state.grid[r][c];
       const rect = tile.getBoundingClientRect();
       const x = rect.left + rect.width / 2;
-      const y = rect.top + rect.height + 6; // below tile
+      const y = rect.top + rect.height + 6;
       if (!plot.planted) {
         openSeedPopup({ x, y, r, c });
       } else {
@@ -1246,9 +1442,6 @@
         </div>
       `;
       showPopupAt(content, x, y);
-      // document.getElementById('btnBatchDeworm').addEventListener('click', batchDeworm);
-      // document.getElementById('btnBatchWater').addEventListener('click', batchWater);
-      // document.getElementById('btnBatchFertilize').addEventListener('click', batchFertilize);
       document.getElementById('pActWater').addEventListener('click', () => { doWater(); });
       document.getElementById('pActDeworm').addEventListener('click', () => { doDeworm(); });
       document.getElementById('pActFertilize').addEventListener('click', () => { doFertilize(); });
@@ -1281,9 +1474,8 @@
       const cfg = CROPS[plot.cropId];
       const mRatio = Math.min(1, plot.maturity / cfg.maturityRequired);
       const hRatio = Math.min(1, plot.health / 100);
-      const qRatio = Math.min(1, plot.quality / 100); // 进度条最多显示到100%
+      const qRatio = Math.min(1, plot.quality / 100);
       
-      // 添加过熟警告
       const overripeWarning = plot.maturity > cfg.maturityRequired ? 
         `<div class="hint" style="color: #d9534f;">警告：成熟度${plot.maturity}/${cfg.maturityRequired+5}，即将腐烂！</div>` : '';
       
@@ -1300,16 +1492,13 @@
       popupRoot.appendChild(contentEl);
       popupRoot.style.display = 'block';
       popupRoot.style.visibility = 'hidden';
-      // initial position
       popupRoot.style.left = `${x}px`;
       popupRoot.style.top = `${y}px`;
-      // measure
       requestAnimationFrame(() => {
         clampPopupToViewport(x, y);
         popupRoot.style.visibility = 'visible';
       });
       document.addEventListener('keydown', escCloseHandler);
-      // Defer outside click binding to avoid closing immediately on the opening click
       setTimeout(() => {
         document.addEventListener('click', outsideClickHandler, true);
       }, 0);
@@ -1323,16 +1512,13 @@
       const h = popupRoot.offsetHeight;
       let left = (x ?? parseFloat(popupRoot.style.left)) - w/2;
       let top = (y ?? parseFloat(popupRoot.style.top));
-      // If going out of bottom, flip above
       if (top + h + pad > window.innerHeight) {
         top = top - h - 16;
       }
-      // Clamp to viewport
       left = Math.max(pad, Math.min(window.innerWidth - w - pad, left));
       top = Math.max(pad, Math.min(window.innerHeight - h - pad, top));
       popupRoot.style.left = `${Math.round(left)}px`;
       popupRoot.style.top = `${Math.round(top)}px`;
-      // Reposition trees as viewport/tile size may change
       recalcTreePositions();
     }
   </script>

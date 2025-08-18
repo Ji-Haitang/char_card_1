@@ -179,6 +179,32 @@ function applyBattleReward(reward) {
 
 // 解析LLM响应
 function parseLLMResponse(response, mainTextContent) {
+    // 在函数开头添加时间解析
+    if (response && response.时间) {
+        const timeStr = response.时间;
+        console.log(`当前时间：${timeStr}`);
+        
+        // 解析时间格式 "HH:MM"
+        const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
+        if (timeMatch) {
+            const hour = parseInt(timeMatch[1]);
+            const minute = parseInt(timeMatch[2]);
+            
+            // 判断昼夜
+            if (hour >= 6 && hour < 18) {
+                dayNightStatus = 'daytime';
+            } else {
+                dayNightStatus = 'night';
+            }
+            
+            console.log(`昼夜状态更新为：${dayNightStatus}`);
+            
+            // 更新场景背景
+            updateSceneBackgrounds();
+        } else {
+            console.warn(`无法解析时间格式：${timeStr}`);
+        }
+    }
     // 检查是否为SLG模式
     if (GameMode === 1 && mainTextContent) {
         // SLG模式：解析特殊格式的输出
@@ -529,6 +555,7 @@ function setupMessageListeners() {
                 
                 // 基础信息
                 let resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
                                 `地点：${locationName}<br>` +
                                 `{{user}}行动选择：武艺切磋<br>` +
                                 `切磋对手：${currentBattleNpcName}<br>`;
@@ -582,6 +609,36 @@ function setupMessageListeners() {
             
             currentBattleType = null;
             currentBattleReward = null;
+        }
+        else if (event.data.type === 'farm-exit') {
+            // 更新金钱
+            playerStats.金钱 = event.data.money;
+            
+            // 更新种子数量
+            if (event.data.seeds) {
+                inventory['小麦种子'] = event.data.seeds.wheat || 0;
+                inventory['茄子种子'] = event.data.seeds.eggplant || 0;
+                inventory['甜瓜种子'] = event.data.seeds.melon || 0;
+                inventory['甘蔗种子'] = event.data.seeds.sugarcane || 0;
+                
+                // 清理数量为0的种子
+                Object.keys(inventory).forEach(key => {
+                    if (inventory[key] === 0) {
+                        delete inventory[key];
+                    }
+                });
+            }
+            
+            // 保存农场状态
+            gameData.lastFarmWeek = currentWeek;
+            gameData.farmGrid = event.data.farmGrid || [];
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            await saveGameData();  // 保存游戏数据
+            
+            document.getElementById('farm-modal').style.display = 'none';
+            document.getElementById('farm-iframe').src = '';
         }
     });
 }

@@ -92,6 +92,7 @@
                     <div class="location" id="nandizi"></div>
                     <div class="location" id="nvdizi"></div>
                     <div class="location" id="shanmen"></div>
+                    <div class="location" id="gongtian"></div>
                     <div class="ink-decoration ink1"></div>
                     <div class="ink-decoration ink2"></div>
                 </div>
@@ -278,6 +279,17 @@
                         <!-- <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button> -->
                     </div>
                 </div>
+
+                <div id="gongtian-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
+                    <div class="scene-title">公田</div>
+                    <div class="npc-container" id="gongtian-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('耕种', 'gongtian')">耕种</button>
+                    </div>
+                </div>
+
                 <!-- 弹窗 -->
                 <div id="modal" class="modal">
                     <div class="modal-content">
@@ -299,6 +311,13 @@
                 <div id="battle-modal" class="battle-modal">
                     <div class="battle-container">
                         <iframe id="battle-iframe" class="battle-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- 农场游戏iframe弹窗 -->
+                <div id="farm-modal" class="farm-modal">
+                    <div class="farm-container">
+                        <iframe id="farm-iframe" class="farm-iframe"></iframe>
                     </div>
                 </div>
             </div>
@@ -899,6 +918,16 @@
                     actionPoints = 3;
                     userLocation = "tianshanpai";
                     
+                    // 更新季节
+                    const newSeason = calculateSeason(currentWeek);
+                    if (newSeason !== seasonStatus) {
+                        seasonStatus = newSeason;
+                        console.log(`季节更新为：${seasonStatus}`);
+                    }
+                    
+                    // 更新场景背景
+                    updateSceneBackgrounds();
+                    
                     // 重置所有NPC的送礼状态
                     Object.keys(npcGiftGiven).forEach(npcId => {
                         npcGiftGiven[npcId] = false;
@@ -940,6 +969,30 @@
                 updateAllDisplays();
                 
                 showBlackjackGame();
+                
+                if (!actionPointConsumed) {
+                    window.pendingMindMessage = true;
+                }
+                return;
+            }
+
+            if (action === '耕种') {
+                // if (actionPoints < 1) {
+                //     showModal('行动点不足，无法进行此操作！');
+                //     return;
+                // }
+                
+                // let actionPointConsumed = true;
+                // const mindChance = playerTalents.心性 / 2;
+                // if (Math.random() * 100 < mindChance) {
+                //     actionPointConsumed = false;
+                // } else {
+                //     actionPoints--;
+                // }
+                // checkAllValueRanges();
+                // updateAllDisplays();
+                
+                showFarmGame();
                 
                 if (!actionPointConsumed) {
                     window.pendingMindMessage = true;
@@ -991,8 +1044,9 @@
                 successText = '成果斐然！';
                 moodCost = 0;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 90);
-                    statChange.体力 = '+90';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 90);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 1000;
                 } else if (config.affects === '声望') {
@@ -1005,8 +1059,9 @@
                 successText = '收获颇丰。';
                 moodCost = 5;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 60);
-                    statChange.体力 = '+60';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 60);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 500;
                 } else if (config.affects === '声望') {
@@ -1019,8 +1074,9 @@
                 successText = '平平无奇。';
                 moodCost = 10;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 45);
-                    statChange.体力 = '+45';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 45);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = 100;
                 } else if (config.affects === '声望') {
@@ -1033,8 +1089,9 @@
                 successText = '事与愿违...';
                 moodCost = 15;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 30);
-                    statChange.体力 = '+30';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 30);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -500;
                 } else if (config.affects === '声望') {
@@ -1047,8 +1104,9 @@
                 successText = '惨不忍睹！';
                 moodCost = 20;
                 if (action === '休息') {
-                    playerMood = Math.min(100, playerMood + 30);
-                    statChange.体力 = '+30';
+                    const oldMood = playerMood;
+                    playerMood = Math.min(100, playerMood + 30);  // 限制最多到100
+                    statChange.体力 = '+' + (playerMood - oldMood);  // 显示实际增加值
                 } else if (config.affects === '金钱') {
                     statChange[config.affects] = -1000;
                 } else if (config.affects === '声望') {
@@ -1093,6 +1151,13 @@
             updateAllDisplays();
             refreshNpcLocations();
             
+            // 检查并更新季节（以防某些行动改变了周数）
+            const newSeason = calculateSeason(currentWeek);
+            if (newSeason !== seasonStatus) {
+                seasonStatus = newSeason;
+                updateSceneBackgrounds();
+            }
+            
             await handleMessageOutput(resultMessage);
         }
 
@@ -1122,7 +1187,8 @@
                 tiejiangpu: 0,
                 nandizi: 0,
                 nvdizi: 0,
-                shanmen: 0
+                shanmen: 0,
+                gongtian: 0
             };
             
             // 如果有当前位置，先统计该位置的NPC数量
@@ -1503,6 +1569,15 @@
                     
                     currentBattleType = null;
                     currentBattleReward = null;
+                }
+            }
+        });
+
+        document.getElementById('farm-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要退出农场吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('farm-iframe').src = '';
                 }
             }
         });
@@ -2152,6 +2227,11 @@
         async function initializeOrSync() {
             await loadOrInitGameData();
             checkAllValueRanges();
+            // 初始化季节
+            seasonStatus = calculateSeason(currentWeek);
+            
+            // 更新场景背景
+            updateSceneBackgrounds();
             updateAllDisplays();
             setupLocationEvents();
 

@@ -45,7 +45,7 @@ const valueRanges = {
         攻击力: { min: 10, max: 300 },
         生命值: { min: 25, max: 600 }
     },
-    playerMood: { min: 0, max: 100 },
+    playerMood: { min: 0, max: 120 },
     npcFavorability: { min: 0, max: 100 },
     actionPoints: { min: 0, max: 3 },
     currentWeek: { min: 1, max: 9999 }
@@ -62,8 +62,16 @@ const locationNames = {
     nandizi: '男弟子房',
     nvdizi: '女弟子房',
     shanmen: '山门',
+    gongtian: '公田', 
     tianshanpai: '天山派',
     none: 'none'
+};
+
+const seasonNameMap = {
+    'spring': '春天',
+    'summer': '夏天',
+    'autumn': '秋天',
+    'winter': '冬天'
 };
 
 // NPC定义
@@ -80,7 +88,7 @@ const npcs = {
     },
     C: {
         name: "钱塘君",
-        description: "天山派内门弟子，洞庭君的妹妹。<br>16岁少女，苗条挺拔，英气逼人，银白长发编成双辫。<br>活泼俏丽，言行跳脱，没心没肺的狐朋狗友。",
+        description: "天山派内门弟子，洞庭君的妹妹。<br>19岁少女，苗条挺拔，英气逼人，银白长发编成双辫。<br>活泼俏丽，言行跳脱，没心没肺的狐朋狗友。",
         avatar: "C"
     },
     D: {
@@ -148,32 +156,32 @@ const npcNameToId = {
 
 // NPC立绘URL映射
 const npcPortraits = {
-    A: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.png',
-    B: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.png',
-    C: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.png',
-    D: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.png',
-    E: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png',
-    F: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.png',
-    G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png',
-    H: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.png',
-    I: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.png',
-    J: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.png',
-    K: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.png',
-    L: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.png'
+    A: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.webp',
+    B: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.webp',
+    C: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.webp',
+    D: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.webp',
+    E: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.webp',
+    F: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.webp',
+    G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.webp',
+    H: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.webp',
+    I: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.webp',
+    J: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.webp',
+    K: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.webp',
+    L: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.webp'
 };
 
 // 地点背景图映射
 const locationBackgrounds = {
-    yanwuchang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.png',
-    cangjingge: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.png',
-    huofang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.png',
-    houshan: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.png',
-    yishiting: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.png',
-    tiejiangpu: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.png',
-    nandizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.png',
-    nvdizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.png',
-    shanmen: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.png',
-    tianshanpai: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.png'
+    yanwuchang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.webp',
+    cangjingge: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.webp',
+    huofang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.webp',
+    houshan: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.webp',
+    yishiting: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.webp',
+    tiejiangpu: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.webp',
+    nandizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.webp',
+    nvdizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.webp',
+    shanmen: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.webp',
+    tianshanpai: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.webp'
 };
 
 // 互动配置
@@ -207,69 +215,74 @@ const npcSparRewards = {
 
 // NPC在各地点的出现概率
 const npcLocationProbability = {
-    A: {
+    A: {  // 破阵子 - 外务长老，需要视察公田
         yanwuchang: 0.15,
         cangjingge: 0.05,
         huofang: 0.05,
-        houshan: 0.20,
+        houshan: 0.15,
         yishiting: 0.20,
         tiejiangpu: 0.05,
         nandizi: 0.05,
         nvdizi: 0.00,
         shanmen: 0.05,
-        none: 0.2
+        gongtian: 0.10,  // 视察农业生产
+        none: 0.15
     },
-    B: {
+    B: {  // 洞庭君 - 刑罚长老，偶尔视察
         yanwuchang: 0.15,
         cangjingge: 0.10,
         huofang: 0.05,
         houshan: 0.05,
-        yishiting: 0.35,
+        yishiting: 0.30,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
+        gongtian: 0.05,  // 偶尔视察
         none: 0.05
     },
-    C: {
+    C: {  // 钱塘君 - 活泼好动，会去公田玩
         yanwuchang: 0.15,
         cangjingge: 0.05,
         huofang: 0.05,
-        houshan: 0.30,
+        houshan: 0.25,
         yishiting: 0.05,
-        tiejiangpu: 0.15,
+        tiejiangpu: 0.10,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
+        gongtian: 0.10,  // 去捣乱或帮忙
         none: 0.05
     },
-    D: {
+    D: {  // 萧白瑚 - 外门弟子，需要参与劳作
         yanwuchang: 0.20,
         cangjingge: 0.05,
-        huofang: 0.20,
-        houshan: 0.20,
+        huofang: 0.15,
+        houshan: 0.15,
         yishiting: 0.00,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.20,
         shanmen: 0.05,
+        gongtian: 0.10,  // 外门弟子劳作
         none: 0.05
     },
-    E: {
+    E: {  // 姬姒 - 贪吃，会去看有什么能吃的
         yanwuchang: 0.10,
         cangjingge: 0.10,
-        huofang: 0.30,
+        huofang: 0.25,
         houshan: 0.15,
         yishiting: 0.05,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
+        gongtian: 0.05,  // 看看有什么能吃的
         none: 0.05
     },
-    F: {
+    F: {  // 施延年 - 书呆子，很少去公田
         yanwuchang: 0.05,
-        cangjingge: 0.55,
+        cangjingge: 0.50,
         huofang: 0.05,
         houshan: 0.05,
         yishiting: 0.05,
@@ -277,11 +290,12 @@ const npcLocationProbability = {
         nandizi: 0.00,
         nvdizi: 0.10,
         shanmen: 0.05,
+        gongtian: 0.05,  // 偶尔去透透气
         none: 0.05
     },
-    G: {
+    G: {  // 呼延显 - 大师兄，可能指导劳作
         yanwuchang: 0.20,
-        cangjingge: 0.20,
+        cangjingge: 0.15,
         huofang: 0.05,
         houshan: 0.15,
         yishiting: 0.10,
@@ -289,83 +303,128 @@ const npcLocationProbability = {
         nandizi: 0.10,
         nvdizi: 0.00,
         shanmen: 0.05,
+        gongtian: 0.05,  // 偶尔指导
         none: 0.10
     },
-    H: {
+    H: {  // 雨烛 - 活泼小天使，会去玩耍
         yanwuchang: 0.15,
         cangjingge: 0.10,
-        huofang: 0.20,
-        houshan: 0.25,
+        huofang: 0.15,
+        houshan: 0.20,
         yishiting: 0.05,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
+        gongtian: 0.10,  // 去玩耍帮忙
         none: 0.00
     },
-    I: {
+    I: {  // 安慕 - 伙房主厨，需要新鲜食材
         yanwuchang: 0.05,
-        cangjingge: 0.05,
+        cangjingge: 0.00,
         huofang: 0.50,
         houshan: 0.15,
-        yishiting: 0.05,
+        yishiting: 0.00,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.10,
         shanmen: 0.05,
+        gongtian: 0.10,  // 不再需要去公田
         none: 0.00
     },
-    J: {
+    J: {  // 唐慕梨 - 商人，对农产品感兴趣
         yanwuchang: 0.10,
         cangjingge: 0.05,
         huofang: 0.10,
         houshan: 0.05,
-        yishiting: 0.20,
+        yishiting: 0.15,
         tiejiangpu: 0.10,
         nandizi: 0.00,
         nvdizi: 0.20,
         shanmen: 0.15,
+        gongtian: 0.05,  // 查看农产品商机
         none: 0.05
     },
-    K: {
+    K: {  // 洛潜幽 - 可能去采花装饰
         yanwuchang: 0.05,
         cangjingge: 0.10,
         huofang: 0.10,
         houshan: 0.15,
         yishiting: 0.15,
-        tiejiangpu: 0.05,
+        tiejiangpu: 0.00,
         nandizi: 0.00,
         nvdizi: 0.25,
         shanmen: 0.05,
+        gongtian: 0.05,  // 不需要劳作
         none: 0.10
     },
-    L: {
-        yanwuchang: 0.0125,
-        cangjingge: 0.0125,
-        huofang: 0.0125,
-        houshan: 0.0125,
-        yishiting: 0.0125,
-        tiejiangpu: 0.0125,
-        nandizi: 0.0125,
-        nvdizi: 0.0,
-        shanmen: 0.0125,
-        none: 0.9
+    L: {  // 神秘杂役 - 神秘出没
+        yanwuchang: 0.02,
+        cangjingge: 0.01,
+        huofang: 0.01,
+        houshan: 0.01,
+        yishiting: 0.01,
+        tiejiangpu: 0.01,
+        nandizi: 0.01,
+        nvdizi: 0.00,
+        shanmen: 0.01,
+        gongtian: 0.01,  // 偶尔在公田出现
+        none: 0.90
     }
 };
 
 const item_list = {
     "小麦种子": {
-      "描述": "小麦的种子，可以在田地里种植",
-      "可交易": true,
-      "买入价格": 75,
-      "卖出价格": 37,
-      "可使用": false,
-      "影响属性": null,
-      "影响数值": null,
-      "可装备": false,
-      "装备类型": null,
-      "装备属性": null,
-      "装备数值": null
+        "描述": "小麦的种子，可以在田地里种植",
+        "可交易": true,
+        "买入价格": 75,
+        "卖出价格": 37,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "茄子种子": {
+        "描述": "茄子的种子，可以在田地里种植",
+        "可交易": true,
+        "买入价格": 115,
+        "卖出价格": 57,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "甜瓜种子": {
+        "描述": "甜瓜的种子，可以在田地里种植",
+        "可交易": true,
+        "买入价格": 165,
+        "卖出价格": 82,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "甘蔗种子": {
+        "描述": "甘蔗的种子，可以在田地里种植",
+        "可交易": true,
+        "买入价格": 240,
+        "卖出价格": 120,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
     },
     "胡饼": {
       "描述": "西域风味的烤饼，香脆可口，便于携带",
@@ -699,16 +758,21 @@ const defaultGameData = {
     npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0},
     actionPoints: 3,
     currentWeek: 1,
+    dayNightStatus: 'daytime',  // 新增：昼夜状况 'daytime' 或 'night'
+    seasonStatus: 'winter',      // 新增：四季状况 'spring', 'summer', 'autumn', 'winter'
     npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang","J":"tiejiangpu","K":"nvdizi","L":"none"},
     GameMode: 0,  // 游戏模式，0=普通模式，1=SLG模式
     difficulty: 'normal', // 默认难度 
     npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true}, // 新增：NPC是否显示
     npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已送礼
     npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已切磋
+    lastFarmWeek: 1,  // 新增：上次耕种的周数
+    farmGrid: [],     // 新增：农场地块状态
     inventory: {
         "胡饼": 5,
         "制式铁剑": 1,
         "普通弟子服": 1,
+        "小麦种子": 5
     },
     equipment: {
         "武器": null,

@@ -49,7 +49,12 @@ function updateDateDisplay() {
 
 // 更新体力显示
 function updateMoodDisplay() {
-    document.getElementById('mood-display').textContent = `体力: ${playerMood}`;
+    const moodText = `体力: ${playerMood}`;
+    if (playerMood > 100) {
+        document.getElementById('mood-display').innerHTML = `<span style="color: #4ecdc4;">${moodText}</span>`;
+    } else {
+        document.getElementById('mood-display').textContent = moodText;
+    }
 }
 
 // 更新行动点显示
@@ -286,7 +291,7 @@ function updateStoryText(text) {
     updateStoryDisplay();
 }
 
- // emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}_${pageData.emotion}.png`;
+ // emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}_${pageData.emotion}.webp`;
 // 修改 updateStoryDisplay 函数
 function updateStoryDisplay() {
     const storyElement = document.getElementById('story-text');
@@ -354,7 +359,7 @@ function updateStoryDisplay() {
                 const sceneLayer = document.createElement('div');
                 sceneLayer.className = 'slg-layer slg-scene-layer';
                 const sceneImg = document.createElement('img');
-                sceneImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${pageData.scene}.png`;
+                sceneImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${pageData.scene}.webp`;
                 sceneImg.alt = pageData.scene;
                 sceneLayer.appendChild(sceneImg);
                 layerContainer.appendChild(sceneLayer);
@@ -367,7 +372,7 @@ function updateStoryDisplay() {
                     const emotionLayer = document.createElement('div');
                     emotionLayer.className = 'slg-layer slg-emotion-layer';
                     const emotionImg = document.createElement('img');
-                    emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.png`;
+                    emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.webp`;
                     emotionImg.alt = `${pageData.npc} - ${pageData.emotion}`;
                     emotionLayer.appendChild(emotionImg);
                     layerContainer.appendChild(emotionLayer);
@@ -379,7 +384,7 @@ function updateStoryDisplay() {
                 const cgLayer = document.createElement('div');
                 cgLayer.className = 'slg-layer slg-cg-layer';
                 const cgImg = document.createElement('img');
-                cgImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/CG/${pageData.cg}.png`;
+                cgImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/CG/${pageData.cg}.webp`;
                 cgImg.alt = pageData.cg;
                 cgLayer.appendChild(cgImg);
                 layerContainer.appendChild(cgLayer);

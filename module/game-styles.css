@@ -83,88 +83,24 @@ body {
 
 /* 地图场景 */
 #map-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.png');
+    /* background-image将通过JS动态设置 */
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
     background-color: #e8e8e8;
 }
 
-/* 演武场场景 */
-#yanwuchang-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 藏经阁场景 */
-#cangjingge-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 伙房场景 */
-#huofang-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 后山场景 */
-#houshan-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 议事厅场景 */
-#yishiting-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 铁匠铺场景 */
-#tiejiangpu-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 男弟子房场景 */
-#nandizi-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 女弟子房场景 */
-#nvdizi-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.png');
-    background-size: cover;
-    background-position: center;
-    background-repeat: no-repeat;
-    background-color: #f8f8f8;
-}
-
-/* 山门场景 */
-#shanmen-scene {
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.png');
+/* 各个场景的背景图片都将通过JS动态设置 */
+#yanwuchang-scene,
+#cangjingge-scene,
+#huofang-scene,
+#houshan-scene,
+#yishiting-scene,
+#tiejiangpu-scene,
+#nandizi-scene,
+#nvdizi-scene,
+#shanmen-scene,
+#gongtian-scene {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -350,6 +286,7 @@ body {
 #nandizi { top: 30%; left: 67%; }
 #nvdizi { top: 30%; left: 40%; }
 #shanmen { top: 80%; left: 37%; }
+#gongtian { top: 55%; left: 15%; }
 
 /* 悬浮提示框 - 响应式改进 */
 .tooltip {
@@ -2453,4 +2390,30 @@ body {
     font-size: 18px;
     font-weight: bold;
     color: #4ecdc4;
+}
+
+/* 农场游戏iframe弹窗 */
+.farm-modal {
+    display: none;
+    position: absolute;
+    z-index: 3000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.7);
+}
+
+.farm-container {
+    width: 100%;
+    height: 100%;
+    margin: 0;
+    position: relative;
+}
+
+.farm-iframe {
+    width: 100%;
+    height: 100%;
+    border: none;
+    border-radius: 10px;
 }

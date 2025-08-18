@@ -80,6 +80,9 @@ function showBattleGame(battleData) {
         backgroundUrl = locationBackgrounds[sceneName] || locationBackgrounds.tianshanpai;
     }
     
+    // 获取当前难度
+    const currentDifficulty = difficulty || 'normal';
+
     const params = new URLSearchParams({
         playerName: battleData.player.name,
         playerAttack: battleData.player.attack,
@@ -87,10 +90,41 @@ function showBattleGame(battleData) {
         enemyName: battleData.enemy.name,
         enemyMaxHealth: battleData.enemy.maxHealth,
         enemyBasicDamage: battleData.enemy.basicDamage,
-        backgroundUrl: backgroundUrl
+        backgroundUrl: backgroundUrl,
+        difficulty: currentDifficulty
     });
     
     const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
+    // const gameUrl = `turn-based-battle.html?${params.toString()}`;
+    iframe.src = gameUrl;
+    
+    modal.style.display = 'block';
+}
+
+// 显示农场游戏
+function showFarmGame() {
+    const modal = document.getElementById('farm-modal');
+    const iframe = document.getElementById('farm-iframe');
+    
+    // 准备种子数据 - 确保从inventory中正确读取
+    const seedCounts = {
+        wheat: inventory['小麦种子'] || 0,
+        eggplant: inventory['茄子种子'] || 0,
+        melon: inventory['甜瓜种子'] || 0,
+        sugarcane: inventory['甘蔗种子'] || 0
+    };
+    
+    // 构建URL参数
+    const params = new URLSearchParams({
+        money: playerStats.金钱,
+        week: currentWeek,
+        lastFarmWeek: gameData.lastFarmWeek || 1,  // 传递上次耕种周数
+        farmGrid: JSON.stringify(gameData.farmGrid || []),  // 传递农场状态
+        ...seedCounts
+    });
+    
+    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/farm.html?${params.toString()}`;
+    // const gameUrl = `farm.html?${params.toString()}`;
     iframe.src = gameUrl;
     
     modal.style.display = 'block';
@@ -450,7 +484,7 @@ async function useItem(itemName) {
     if (!item || !item.可使用 || inventory[itemName] <= 0) return;
     
     if (item.影响属性 === 'playerMood') {
-        playerMood = Math.min(100, playerMood + item.影响数值);
+        playerMood = Math.min(120, playerMood + item.影响数值);  // 从100改为120
     }
     
     inventory[itemName]--;
@@ -562,4 +596,56 @@ async function unequipItem(itemName) {
     
     closeItemDetailModal();
     showEquipment();
+}
+
+// 根据周数计算季节
+function calculateSeason(week) {
+    const year = Math.floor((week - 1) / 48) + 1;
+    const remainingWeeks = (week - 1) % 48;
+    const month = Math.floor(remainingWeeks / 4) + 1;
+    
+    if (month === 12 || month === 1 || month === 2) {
+        return 'winter';
+    } else if (month >= 3 && month <= 5) {
+        return 'spring';
+    } else if (month >= 6 && month <= 8) {
+        return 'summer';
+    } else {  // 9, 10, 11月
+        return 'autumn';
+    }
+}
+
+// 更新场景背景（根据昼夜和季节）
+function updateSceneBackgrounds() {
+    // 更新地图场景背景
+    const mapScene = document.getElementById('map-scene');
+    if (mapScene) {
+        const seasonMap = {
+            'spring': '春',
+            'summer': '夏',
+            'autumn': '秋',
+            'winter': '冬'
+        };
+        const dayNightMap = {
+            'daytime': '昼',
+            'night': '夜'
+        };
+        
+        const season = seasonMap[seasonStatus] || '冬';
+        const dayNight = dayNightMap[dayNightStatus] || '昼';
+        
+        mapScene.style.backgroundImage = `url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp')`;
+    }
+    
+    // 更新其他场景背景
+    const sceneNames = ['yanwuchang', 'cangjingge', 'huofang', 'houshan', 'yishiting', 'tiejiangpu', 'nandizi', 'nvdizi', 'shanmen', 'gongtian'];
+    const dayNight = dayNightStatus === 'night' ? '夜' : '昼';
+    
+    sceneNames.forEach(sceneName => {
+        const scene = document.getElementById(`${sceneName}-scene`);
+        if (scene) {
+            const locationName = locationNames[sceneName];
+            scene.style.backgroundImage = `url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${locationName}_${dayNight}.webp')`;
+        }
+    });
 }

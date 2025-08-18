@@ -938,23 +938,40 @@ const genericNPCPortraits = [
 
 // 解析敌方信息的函数
 function parseEnemyInfo(text) {
-    // 提取
+    // 提取名称
     const nameMatch = text.match(/name:\s*([^\n]+)/);
     const npcName = nameMatch ? nameMatch[1].trim() : '';
     clearEnemyPortrait();
+    
+    // 获取难度参数
+    const currentDifficulty = urlParams.get('difficulty') || 'normal';
+    
     // 优先查找常见NPC
     if (npcName && commonNPCs[npcName]) {
         const npc = commonNPCs[npcName];
         // 更新敌人立绘
         updateEnemyPortrait(npc.portrait);
+        
+        // 根据难度调整属性
+        let maxHealth = npc.maxHealth;
+        let basicDamage = npc.basicDamage;
+        
+        if (currentDifficulty === 'normal') {
+            maxHealth = Math.round(maxHealth * 1.25);
+            basicDamage = Math.round(basicDamage * 1.25);
+        } else if (currentDifficulty === 'hard') {
+            maxHealth = Math.round(maxHealth * 1.5);
+            basicDamage = Math.round(basicDamage * 1.5);
+        }
+        
         return {
             name: npc.name,
-            maxHealth: npc.maxHealth,
-            currentHealth: npc.maxHealth,
+            maxHealth: maxHealth,
+            currentHealth: maxHealth,
             energy: 0,
             maxEnergy: 10,
             selectedAction: null,
-            basicDamage: npc.basicDamage,
+            basicDamage: basicDamage,
             style: npc.style
         };
     }
@@ -967,14 +984,26 @@ function parseEnemyInfo(text) {
     const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
     const basicDamageMatch = text.match(/basicDamage:\s*([^\n]+)/);
     
+    let baseHealth = maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80;
+    let baseDamage = basicDamageMatch ? damageMap[basicDamageMatch[1].trim()] || 30 : 30;
+    
+    // 根据难度调整属性
+    if (currentDifficulty === 'normal') {
+        baseHealth = Math.round(baseHealth * 1.25);
+        baseDamage = Math.round(baseDamage * 1.25);
+    } else if (currentDifficulty === 'hard') {
+        baseHealth = Math.round(baseHealth * 1.5);
+        baseDamage = Math.round(baseDamage * 1.5);
+    }
+    
     return {
         name: npcName,
-        maxHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
-        currentHealth: maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80,
+        maxHealth: baseHealth,
+        currentHealth: baseHealth,
         energy: 0,
         maxEnergy: 10,
         selectedAction: null,
-        basicDamage: basicDamageMatch ? damageMap[basicDamageMatch[1].trim()] || 30 : 30,
+        basicDamage: baseDamage,
         style: styles[Math.floor(Math.random() * styles.length)]
     };
 }
