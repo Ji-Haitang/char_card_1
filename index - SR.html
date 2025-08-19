@@ -743,6 +743,12 @@
         window.updateTemplateVariables = function(vars) {
             if (!vars) return;
             
+            /* 1. 如果初始化尚未结束，先把 vars 缓存起来 —— 只保留最后一次 */
+            if (!window.__initDone) {
+                window.__pendingTemplateVars = vars;
+                return;
+            }
+
             let hasUpdate = false;
             
             if (vars.MAIN_TEXT !== undefined) {
@@ -2232,6 +2238,7 @@
 
         async function initializeOrSync() {
             await loadOrInitGameData();
+            console.log('初始化完成');
             checkAllValueRanges();
             // 初始化季节
             seasonStatus = calculateSeason(currentWeek);
@@ -2255,6 +2262,13 @@
             }
             // 新增：初始化时更新SLG返回按钮显示
             updateSLGReturnButton();
+            /* === 新增 === */
+            window.__initDone = true;
+            if (window.__pendingTemplateVars) {
+                const cached = window.__pendingTemplateVars;
+                window.__pendingTemplateVars = null;
+                updateTemplateVariables(cached);   // 现在再解析一次，绝不会被 sync 覆盖
+            }
         }
 
         try {

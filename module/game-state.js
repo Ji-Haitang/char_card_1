@@ -35,6 +35,8 @@
  * - 依赖 game-utils.js 中的渲染环境检测函数
  */
 
+window.__initDone            = false;  // 是否已经完成 loadOrInitGameData → sync
+window.__pendingTemplateVars = null;   // 在此之前收到的 vars 临时缓存
 // 游戏数据
 let gameData = structuredClone(defaultGameData);
 let currentNpcLocations = {};
