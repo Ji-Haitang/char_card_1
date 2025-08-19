@@ -496,13 +496,25 @@ function parseLLMResponse(response, mainTextContent) {
         hideRandomEvent();
         hideBattleEvent();
     }
-    
+    console.log(`NPC好感度 ${npcFavorability}`);
     // 更新关系显示（如果在关系界面）
     const activeScene = document.querySelector('.scene.active');
     if (activeScene && activeScene.id === 'relationships-scene') {
         updateRelationshipsDisplay();
     }
-    
+    console.log(`currentNpcLocations ${currentNpcLocations}`);
+    console.log(`npcLocationA ${npcLocationA}`);
+    console.log(`npcLocationB ${npcLocationB}`);
+    console.log(`npcLocationC ${npcLocationC}`);
+    console.log(`npcLocationD ${npcLocationD}`);
+    console.log(`npcLocationE ${npcLocationE}`);
+    console.log(`npcLocationF ${npcLocationF}`);
+    console.log(`npcLocationG ${npcLocationG}`);
+    console.log(`npcLocationH ${npcLocationH}`);
+    console.log(`npcLocationI ${npcLocationI}`);
+    console.log(`npcLocationJ ${npcLocationJ}`);
+    console.log(`npcLocationK ${npcLocationK}`);
+    console.log(`npcLocationL ${npcLocationL}`);
     // 更新当前场景的NPC显示
     if (activeScene && activeScene.id !== 'map-scene' && 
         activeScene.id !== 'player-stats-scene' && 
