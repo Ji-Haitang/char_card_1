@@ -1,4 +1,4 @@
-<%_ const favor_js = GameData.npcFavorability.E; _%>
+<%_ const favor_js = gameDate.npcFavorability.E; _%>
 姬姒:
   基本信息:
     性别: 女性

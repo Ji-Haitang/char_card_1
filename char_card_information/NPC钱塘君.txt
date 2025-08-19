@@ -1,4 +1,4 @@
-<%_ const favor_qtj = GameData.npcFavorability.C; _%>
+<%_ const favor_qtj = gameDate.npcFavorability.C; _%>
 钱塘君:
   基本信息:
     性别: 女性
