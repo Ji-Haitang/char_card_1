@@ -282,7 +282,6 @@
 
                 <div id="gongtian-scene" class="scene">
                     <button class="back-btn" onclick="backToMap()">返回</button>
-                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
                     <div class="scene-title">公田</div>
                     <div class="npc-container" id="gongtian-npcs"></div>
                     <div class="scene-actions">
@@ -747,13 +746,17 @@
             let hasUpdate = false;
             
             if (vars.MAIN_TEXT !== undefined) {
+                console.log(`成功捕捉到正文`);
                 localState.currentStoryText = vars.MAIN_TEXT;
                 updateStoryText(localState.currentStoryText);
                 //hasUpdate = true;
             }
             
+            console.log(`vars.SIDE_NOTE为：${vars.SIDE_NOTE}`);
+            console.log(`localState.turnUpdateApplied为：${localState.turnUpdateApplied}`);
             if (vars.SIDE_NOTE !== undefined && !localState.turnUpdateApplied) {
                 try {
+                    console.log(`成功捕捉到JSON`);
                     let llmResponse = vars.SIDE_NOTE;
                     if (typeof llmResponse === 'string') {
                         llmResponse = JSON.parse(llmResponse);
@@ -1530,7 +1533,7 @@
                 switchScene(userLocation);
             }
             
-            parseLLMResponse(llmResponse, mainText);
+            // parseLLMResponse(llmResponse, mainText);
         };
         
         // 自由行动输入框事件
