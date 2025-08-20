@@ -750,7 +750,61 @@
             }
 
             let hasUpdate = false;
-            
+
+            // 新增：处理SLG_MODE内容（包括脏标签的情况）
+            let slgModeContent = null;
+
+            // 方法1：标准化属性名查找
+            for (const key in vars) {
+                // 移除所有空格、下划线，并转为大写
+                const normalizedKey = key.replace(/[\s_]/g, '').toUpperCase();
+                if (normalizedKey === 'SLGMODE') {
+                    slgModeContent = vars[key];
+                    break;
+                }
+            }
+                
+            // 如果找到了SLG_MODE内容（无论标签写法如何）
+            if (slgModeContent !== null && slgModeContent !== undefined) {
+                // 提取正文：从第一个汉字、# 或 * 开始到第一个<为止
+                // 扩展的Unicode范围支持更多中文字符（包括繁体）
+                const mainTextMatch = slgModeContent.match(/[#*\u4e00-\u9fff\u3400-\u4dbf\u20000-\u2a6df\u2a700-\u2b73f\u2b740-\u2b81f\u2b820-\u2ceaf\u2ceb0-\u2ebef][^<]*/);
+                if (mainTextMatch) {
+                    const startIndex = slgModeContent.indexOf(mainTextMatch[0]);
+                    const endIndex = slgModeContent.indexOf('<', startIndex);
+                    const mainText = endIndex > -1 
+                        ? slgModeContent.substring(startIndex, endIndex) 
+                        : slgModeContent.substring(startIndex);
+                    
+                    console.log(`成功捕捉到正文（通过汉字/#/*特征）`);
+                    localState.currentStoryText = mainText.trim();
+                    updateStoryText(localState.currentStoryText);
+                }
+                
+                // 提取JSON：从第一个{开始到下一个<为止（如果没有<则到结尾）
+                const jsonStartIndex = slgModeContent.indexOf('{');
+                if (jsonStartIndex > -1 && !localState.turnUpdateApplied) {
+                    const jsonEndIndex = slgModeContent.indexOf('<', jsonStartIndex);
+                    const jsonText = jsonEndIndex > -1 
+                        ? slgModeContent.substring(jsonStartIndex, jsonEndIndex)
+                        : slgModeContent.substring(jsonStartIndex);
+                    
+                    try {
+                        console.log(`成功捕捉到JSON（通过{特征）`);
+                        let llmResponse = jsonText.trim();
+                        console.log(`提取的JSON文本：${llmResponse}`);
+                        
+                        if (typeof llmResponse === 'string') {
+                            llmResponse = JSON.parse(llmResponse);
+                        }
+                        parseLLMResponse(llmResponse, localState.currentStoryText);
+                        hasUpdate = true;
+                    } catch (error) {
+                        console.error('解析SIDE_NOTE失败:', error);
+                    }
+                }
+            }
+
             if (vars.MAIN_TEXT !== undefined) {
                 console.log(`成功捕捉到正文`);
                 localState.currentStoryText = vars.MAIN_TEXT;
