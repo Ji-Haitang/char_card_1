@@ -1,4 +1,4 @@
-<%_ const favor_js = gameDate.npcFavorability.E; _%>
+<%_ const favor_js = gameData.npcFavorability.E; _%>
 姬姒:
   基本信息:
     性别: 女性
@@ -97,7 +97,7 @@
       江湖骗子：
         - 专门有个骗子团伙盯着她，因为她太好骗了
         - 骗完还会请她吃顿饭
-    对{{user}}的态度:
+    姬姒对{{user}}的态度:
       <%_ if (favor_js <= 10) { _%>
       行为逻辑:
         日常: 将{{user}}视为普通后辈，保持适当的师姐弟距离，偶尔关心其饮食起居

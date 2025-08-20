@@ -1,4 +1,4 @@
-<%_ const favor_qtj1 = gameDate.npcFavorability.C; _%>
+<%_ const favor_qtj1 = gameData.npcFavorability.C; _%>
 <%_ const favor_dtj = gameData.npcFavorability.B; _%>
 洞庭君:
   基本信息:
