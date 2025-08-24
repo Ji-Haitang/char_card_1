@@ -1214,9 +1214,18 @@
                 updateSceneBackgrounds();
             }
 
+            let locationInfo = '';
+            if (userLocation === userLocation_old) {
+                locationInfo = `地点：${locationNames[location]}<br>`;
+            } else {
+                const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                const newLocationName = locationNames[userLocation] || locationNames[location];
+                locationInfo = `地点：从${oldLocationName}来到${newLocationName}<br>`;
+            }
+
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
-                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
-                `地点：${locationNames[location]}<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                locationInfo +  // 使用新的地点信息
                 `{{user}}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
                 `选择结果：${successLevel} - ${successText}<br><br>` +
@@ -1389,9 +1398,18 @@
             const npc = npcs[currentInteractionNpc];
             const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
             
+            let locationInfo = '';
+            if (userLocation === userLocation_old) {
+                locationInfo = `地点：${locationNames[location]}<br>`;
+            } else {
+                const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                const newLocationName = locationNames[userLocation] || locationNames[location];
+                locationInfo = `地点：从${oldLocationName}来到${newLocationName}<br>`;
+            }
+
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
-                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
-                `地点：${locationNames[location]}<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                locationInfo +  // 使用新的地点信息
                 `{{user}}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
@@ -1502,6 +1520,11 @@
             const inputElement = document.getElementById('free-action-input');
             const actionContent = inputElement.value.trim();
             
+            const year = Math.floor((currentWeek - 1) / 48) + 1;
+            const remainingWeeks = (currentWeek - 1) % 48;
+            const month = Math.floor(remainingWeeks / 4) + 1;
+            const week = remainingWeeks % 4 + 1;
+
             if (!actionContent) {
                 alert('请输入自由行动内容！');
                 return;
@@ -1511,27 +1534,30 @@
             let currentLocation = '';
             let npcsPresent = '无';
             
+            let locationInfo = '';
             if (activeScene.id === 'map-scene') {
-                currentLocation = '天山派（地图）';
-                npcsPresent = '无在场NPC';
+                // 地图场景特殊处理
+                if (userLocation === userLocation_old) {
+                    locationInfo = `地点：天山派（地图）<br>`;
+                } else {
+                    const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                    locationInfo = `地点：从${oldLocationName}来到天山派（地图）<br>`;
+                }
             } else {
                 const sceneName = activeScene.id.replace('-scene', '');
-                currentLocation = locationNames[sceneName] || sceneName;
+                const currentLocationName = locationNames[sceneName] || sceneName;
                 
-                const npcsAtLocation = getNpcsAtLocation(sceneName);
-                if (npcsAtLocation.length > 0) {
-                    npcsPresent = npcsAtLocation.map(npc => npc.name).join('、');
+                if (userLocation === userLocation_old) {
+                    locationInfo = `地点：${currentLocationName}<br>`;
+                } else {
+                    const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                    locationInfo = `地点：从${oldLocationName}来到${currentLocationName}<br>`;
                 }
             }
-            
-            const year = Math.floor((currentWeek - 1) / 48) + 1;
-            const remainingWeeks = (currentWeek - 1) % 48;
-            const month = Math.floor(remainingWeeks / 4) + 1;
-            const week = remainingWeeks % 4 + 1;
-            
+
             const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
-                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
-                `地点：${currentLocation}<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                locationInfo +  // 使用新的地点信息
                 `{{user}}自由行动："${actionContent}"<br>` +
                 `在场NPC：${npcsPresent}`;
             

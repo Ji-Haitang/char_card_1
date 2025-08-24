@@ -1,13 +1,17 @@
 <%_ const randomNum = Math.floor(Math.random() * 100) + 1; _%>
 在用户的本轮行动中，追加格式要求:
 <%_ if (randomNum < 50) { _%>
-要求: 在XML标签<SIDE_NOTE></SIDE_NOTE>中的json的顶部，"主要NPC"之前添加"随机事件"字段
+要求: 在XML标签<SIDE_NOTE></SIDE_NOTE>中的json的顶部，"用户"之前添加"随机事件"字段
 格式:
   <SLG_MODE>
 
   <MAIN_TEXT>
   ......
   </MAIN_TEXT>
+
+  <SUMMARY>
+  ......
+  </SUMMARY>
 
   <SIDE_NOTE>
   {
@@ -55,13 +59,17 @@
         - 10%到90%的百分数
         - 根据选项的数值奖励大小合理安排，奖励数值越大，成功率越低
 <%_ } else { _%>
-要求: 在XML标签<SIDE_NOTE></SIDE_NOTE>中的json的顶部，"主要NPC"之前添加"随机事件"字段
+要求: 在XML标签<SIDE_NOTE></SIDE_NOTE>中的json的顶部，"用户"之前添加"随机事件"字段
 格式:
   <SLG_MODE>
 
   <MAIN_TEXT>
   ......
   </MAIN_TEXT>
+
+  <SUMMARY>
+  ......
+  </SUMMARY>
 
   <SIDE_NOTE>
   {

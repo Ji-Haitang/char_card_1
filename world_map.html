@@ -1,0 +1,630 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>西域世界地图</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', '微软雅黑', sans-serif;
+            overflow: hidden;
+            background: #0a0a0a;
+        }
+
+        .map-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+        }
+
+        /* 地图背景 */
+        .map-background {
+            position: relative;
+            width: 90vw;
+            height: calc(90vw * 832 / 1216);
+            max-width: calc(90vh * 1216 / 832);
+            max-height: 90vh;
+            background-image: url('https://files.catbox.moe/u5pdt5.png');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-position: center;
+            filter: brightness(0.8) contrast(1.1) saturate(1);
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            border-radius: 2vh;
+        }
+
+        /* 地图标记 */
+        .map-marker {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        /* 光标样式 - 白色圆点 */
+        .marker-pin {
+            width: 1vw;
+            height: 1vw;
+            min-width: 8px;
+            min-height: 8px;
+            max-width: 12px;
+            max-height: 12px;
+            background: #ffffff;
+            border: 2px solid #000000;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.6), 
+                        0 0 20px rgba(255, 255, 255, 0.3),
+                        0 2px 4px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .marker-pin::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 150%;
+            height: 150%;
+            background: radial-gradient(circle, 
+                rgba(255, 255, 255, 0.2) 0%,
+                transparent 60%);
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(2); opacity: 0; }
+        }
+
+        /* 地名标签 */
+        .marker-label {
+            position: absolute;
+            bottom: 100%;
+            left: 50%;
+            transform: translateX(-50%);
+            margin-bottom: 0.5vh;
+            background: rgba(0, 0, 0, 0.85);
+            color: #ffffff;
+            padding: 0.6vh 1.2vw;
+            border-radius: 0.6vh;
+            font-size: clamp(12px, 1.4vw, 15px);
+            white-space: nowrap;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+            font-weight: 500;
+        }
+
+        .map-marker:hover .marker-pin {
+            transform: scale(1.2);
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.9), 
+                        0 0 30px rgba(255, 255, 255, 0.5),
+                        0 2px 6px rgba(0, 0, 0, 0.7);
+        }
+
+        .map-marker:hover .marker-label {
+            background: rgba(0, 0, 0, 0.95);
+            border-color: rgba(255, 255, 255, 0.4);
+        }
+
+        /* 弹窗 */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            backdrop-filter: blur(8px);
+        }
+
+        .modal-content {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 80vw;
+            max-width: 600px;
+            height: 70vh;
+            max-height: 500px;
+            border-radius: 1.5vh;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* 动态背景图片 */
+        .modal-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+            z-index: 0;
+        }
+
+        /* 毛玻璃遮罩层 */
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.7);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1;
+        }
+
+        /* 确保内容在遮罩层之上 */
+        .modal-inner {
+            position: relative;
+            z-index: 2;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        /* 弹窗标题 - 优化样式 */
+        .modal-header {
+            padding: 2.5vh 3vw;
+            text-align: center;
+            background: linear-gradient(180deg, 
+                rgba(0, 0, 0, 0.8) 0%, 
+                rgba(0, 0, 0, 0.4) 100%);
+            border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+        }
+
+        .modal-header h2 {
+            color: #ffffff;
+            font-size: clamp(18px, 2.5vw, 22px);
+            font-weight: 600;
+            margin: 0;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 弹窗上部内容区 */
+        .modal-body {
+            flex: 1;
+            padding: 2.5vh 3vw;
+            overflow-y: auto;
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        .modal-body p {
+            line-height: 1.8;
+            margin-bottom: 1.5vh;
+            font-size: clamp(13px, 1.8vw, 15px);
+            color: rgba(255, 255, 255, 0.85);
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        /* 弹窗底部按钮区 */
+        .modal-footer {
+            height: 20%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.6);
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 2vh;
+        }
+
+        .btn {
+            padding: 1.5vh 4vw;
+            background: #4ECDC4;
+            color: #000000;
+            border: none;
+            border-radius: 0.8vh;
+            font-size: clamp(14px, 2vw, 16px);
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(78, 205, 196, 0.3);
+            min-width: 120px;
+        }
+
+        .btn:hover {
+            background: #45B7B8;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(78, 205, 196, 0.5);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        /* NPC列表样式 */
+        .npc-list {
+            display: grid;
+            gap: 1.2vh;
+            margin-top: 1.5vh;
+        }
+
+        .npc-item {
+            display: flex;
+            align-items: center;
+            padding: 1.2vh 2vw;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.6vh;
+            transition: all 0.3s ease;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .npc-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: rgba(78, 205, 196, 0.5);
+        }
+
+        .npc-checkbox {
+            width: 2vw;
+            height: 2vw;
+            min-width: 16px;
+            min-height: 16px;
+            max-width: 20px;
+            max-height: 20px;
+            margin-right: 2vw;
+            accent-color: #4ECDC4;
+            cursor: pointer;
+        }
+
+        .npc-name {
+            flex: 1;
+            font-size: clamp(13px, 1.8vw, 15px);
+            color: rgba(255, 255, 255, 0.9);
+        }
+
+        /* 关闭按钮 - 修复z-index问题 */
+        .close-btn {
+            position: absolute;
+            top: 1.5vh;
+            right: 1.5vw;
+            width: 3vw;
+            height: 3vw;
+            min-width: 30px;
+            min-height: 30px;
+            max-width: 36px;
+            max-height: 36px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.8);
+            font-size: clamp(18px, 2.5vw, 24px);
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            z-index: 10;
+        }
+
+        .close-btn:hover {
+            color: #ffffff;
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            transform: rotate(90deg);
+        }
+
+        /* 提示文本样式 */
+        .tip-text {
+            text-align: center;
+            color: rgba(255, 255, 255, 0.6);
+            font-size: clamp(12px, 1.6vw, 14px);
+            margin-bottom: 2vh;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .modal-content {
+                width: 90vw;
+                height: 80vh;
+            }
+            
+            .marker-label {
+                font-size: 11px;
+                padding: 0.5vh 1vw;
+            }
+
+            .btn {
+                min-width: 100px;
+                padding: 1.2vh 3vw;
+            }
+        }
+
+        /* 滚动条美化 */
+        .modal-body::-webkit-scrollbar {
+            width: 0.4vw;
+            min-width: 4px;
+            max-width: 6px;
+        }
+
+        .modal-body::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 0.2vw;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb {
+            background: rgba(78, 205, 196, 0.5);
+            border-radius: 0.2vw;
+        }
+
+        .modal-body::-webkit-scrollbar-thumb:hover {
+            background: rgba(78, 205, 196, 0.7);
+        }
+
+        /* 结果展示样式 */
+        .result-message {
+            text-align: center;
+            padding: 4vh 2vw;
+        }
+
+        .result-message h3 {
+            color: #4ECDC4;
+            font-size: clamp(16px, 2.2vw, 20px);
+            margin-bottom: 2vh;
+            font-weight: 600;
+        }
+
+        .result-message p {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: clamp(14px, 1.8vw, 16px);
+            line-height: 1.8;
+        }
+    </style>
+</head>
+<body>
+    <div class="map-container">
+        <div class="map-background" id="mapBackground"></div>
+    </div>
+
+    <!-- 弹窗 -->
+    <div class="modal" id="locationModal">
+        <div class="modal-content">
+            <div class="modal-bg" id="modalBg"></div>
+            <div class="modal-overlay"></div>
+            <button class="close-btn" onclick="closeModal()">×</button>
+            <div class="modal-inner">
+                <div class="modal-body" id="modalBody"></div>
+                <div class="modal-footer" id="modalFooter">
+                    <button class="btn" id="actionBtn" onclick="showNPCList()">出行</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ========== 统一的地点数据管理 ==========
+        // 所有地点信息集中在这里，方便编辑和管理
+        const locationDatabase = {
+            '天山总坛': {
+                position: { top: '20%', left: '25%' },
+                description: '天山派总坛位于天山深处的隐秘山谷，是归义军后裔建立的江湖门派。这里云雾缭绕，四季如春，是西域汉人的精神家园。总坛依山而建，雄伟壮观，守护着数千难民百姓。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '博格达峰': {
+                position: { top: '25%', left: '35%' },
+                description: '博格达峰乃天山东段最高峰，终年积雪，被当地人称为"圣山"。山中多有雪莲等珍贵药材，也是天山派弟子修炼内功的绝佳之地。传说山顶有前辈高人留下的剑痕。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '吐鲁番盆地': {
+                position: { top: '30%', left: '30%' },
+                description: '西域著名的"火洲"，盛产葡萄瓜果。这里是丝路重镇，商旅云集，各族混居。天山派在此设有秘密据点，暗中保护过往汉商。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '哈密绿洲': {
+                position: { top: '35%', left: '45%' },
+                description: '丝绸之路上的重要驿站，哈密瓜闻名天下。此地水草丰美，是西域少有的宜居之地。但近年来党项势力渗透，局势日渐紧张。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '敦煌': {
+                position: { top: '40%', left: '55%' },
+                description: '河西走廊的明珠，佛教圣地。莫高窟千佛洞举世闻名。虽名义上归宋朝管辖，实则被各方势力觊觎，天山派在此有不少暗桩。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '凉州': {
+                position: { top: '45%', left: '65%' },
+                description: '河西重镇，曾是归义军的重要据点。如今被党项占领，汉人备受欺凌。天山派经常派人潜入救援难民。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '甘州': {
+                position: { top: '40%', left: '70%' },
+                description: '甘州回鹘的都城，商业繁荣。最近被李元昊攻占，成为西夏东进的桥头堡。城中仍有不少汉人商户艰难求生。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '肃州': {
+                position: { top: '35%', left: '60%' },
+                description: '河西走廊西端要塞，扼守通往西域的咽喉。城池坚固，易守难攻。目前在各方势力的争夺中保持中立。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '于阗古国': {
+                position: { top: '50%', left: '20%' },
+                description: '西域南道的佛教国家，盛产美玉。虽已衰落，但文化底蕴深厚。天山派与当地僧侣往来密切，共同对抗邪教势力。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '龟兹遗址': {
+                position: { top: '40%', left: '15%' },
+                description: '昔日龟兹国都城遗址，现已成废墟。据说废墟中埋藏着龟兹国的宝藏，吸引无数探宝者。天山派偶尔会来此搜寻古籍。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '楼兰古城': {
+                position: { top: '55%', left: '35%' },
+                description: '传说中的楼兰国遗址，掩埋在黄沙之下。相传城中有神秘力量，夜晚常有鬼火出没。只有最勇敢的冒险者才敢深入探索。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '火焰山': {
+                position: { top: '25%', left: '50%' },
+                description: '形如烈焰的赤色山脉，地表温度极高。山中有罕见的火属性矿石，是打造神兵利器的上等材料。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '昆仑派': {
+                position: { top: '60%', left: '25%' },
+                description: '西域名门正派，与天山派交好。昆仑派武学博大精深，尤以剑法著称。两派经常交流武学心得，共同维护西域和平。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '崆峒山': {
+                position: { top: '50%', left: '75%' },
+                description: '崆峒派所在地，地势险要。崆峒派以拳法闻名江湖，门下弟子行侠仗义。与天山派守望相助，曾联手击退西夏军队。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '白驼山': {
+                position: { top: '15%', left: '40%' },
+                description: '西域邪派巢穴，以贩卖人口为生。白驼山主欧阳锋武功高强，心狠手辣。与天山派势不两立，经常发生冲突。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            }
+        };
+
+        // NPC列表 [[11]]
+        const npcList = [
+            '洞庭君', '钱塘君', '萧白瑚', '姬姒', '破阵子',
+            '呼延显', '施延年', '雨烛', '安慕', '唐慕梨', '洛潜幽'
+        ];
+
+        let currentLocation = '';
+        let selectedNPCs = [];
+
+        // 初始化地图标记
+        function initializeMap() {
+            const mapBackground = document.getElementById('mapBackground');
+            
+            for (const [locationName, locationInfo] of Object.entries(locationDatabase)) {
+                const marker = document.createElement('div');
+                marker.className = 'map-marker';
+                marker.style.top = locationInfo.position.top;
+                marker.style.left = locationInfo.position.left;
+                marker.setAttribute('data-location', locationName);
+                
+                marker.innerHTML = `
+                    <div class="marker-pin"></div>
+                    <div class="marker-label">${locationName}</div>
+                `;
+                
+                marker.addEventListener('click', function() {
+                    currentLocation = locationName;
+                    showLocationInfo(locationName);
+                });
+                
+                mapBackground.appendChild(marker);
+            }
+        }
+
+        // 显示地点信息
+        function showLocationInfo(location) {
+            const modal = document.getElementById('locationModal');
+            const modalBody = document.getElementById('modalBody');
+            const modalFooter = document.getElementById('modalFooter');
+            const modalBg = document.getElementById('modalBg');
+            
+            // 设置背景图片
+            modalBg.style.backgroundImage = `url('${locationDatabase[location].backgroundImage}')`;
+            
+            modalBody.innerHTML = `
+                <div class="modal-header">
+                    <h2>${location}</h2>
+                </div>
+                <div style="padding: 2vh 0;">
+                    <p>${locationDatabase[location].description}</p>
+                </div>
+            `;
+            
+            modalFooter.innerHTML = '<button class="btn" onclick="showNPCList()">出行</button>';
+            
+            modal.style.display = 'block';
+        }
+
+        // 显示NPC列表
+        function showNPCList() {
+            const modalBody = document.getElementById('modalBody');
+            const modalFooter = document.getElementById('modalFooter');
+            
+            let npcHTML = `
+                <div class="modal-header">
+                    <h2>选择同行旅伴</h2>
+                </div>
+                <div style="padding: 2vh 0;">
+                    <p class="tip-text">请选择要一起前往${currentLocation}的同伴</p>
+                    <div class="npc-list">
+            `;
+            
+            npcList.forEach(npc => {
+                npcHTML += `
+                    <div class="npc-item">
+                        <input type="checkbox" class="npc-checkbox" id="npc-${npc}" value="${npc}">
+                        <label class="npc-name" for="npc-${npc}">${npc}</label>
+                    </div>
+                `;
+            });
+            
+            npcHTML += '</div></div>';
+            modalBody.innerHTML = npcHTML;
+            
+            modalFooter.innerHTML = '<button class="btn" onclick="goToLocation()">前往</button>';
+        }
+
+        // 前往地点
+        function goToLocation() {
+            selectedNPCs = [];
+            document.querySelectorAll('.npc-checkbox:checked').forEach(checkbox => {
+                selectedNPCs.push(checkbox.value);
+            });
+            
+            const modalBody = document.getElementById('modalBody');
+            const modalFooter = document.getElementById('modalFooter');
+            
+            let message = '';
+            if (selectedNPCs.length > 0) {
+                message = `
+                    <div class="result-message">
+                        <h3>启程</h3>
+                        <p>和${selectedNPCs.join('、')}一起前往${currentLocation}</p>
+                    </div>
+                `;
+            } else {
+                message = `
+                    <div class="result-message">
+                        <h3>启程</h3>
+                        <p>独自前往${currentLocation}</p>
+                    </div>
+                `;
+            }
+            
+            modalBody.innerHTML = message;
+            modalFooter.innerHTML = '<button class="btn" onclick="closeModal()">确定</button>';
+        }
+
+        // 关闭弹窗
+        function closeModal() {
+            document.getElementById('locationModal').style.display = 'none';
+            selectedNPCs = [];
+        }
+
+        // 点击背景关闭弹窗
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('locationModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+        });
+
+        // 页面加载完成后初始化地图
+        window.addEventListener('DOMContentLoaded', initializeMap);
+    </script>
+</body>
+</html>

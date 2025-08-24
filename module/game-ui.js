@@ -225,6 +225,10 @@ function hideTooltip() {
 function updateStoryText(text) {
     const storyElement = document.getElementById('story-text');
     currentStoryText = text;
+
+    // 保存当前页码和展开状态
+    const previousPage = currentPage;
+    const previousExpanded = isStoryExpanded;
     
     // 检查是否为SLG模式
     if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
@@ -284,8 +288,22 @@ function updateStoryText(text) {
         storyPages = paragraphs;
     }
     
-    currentPage = 0;
-    isStoryExpanded = false;
+    // 智能恢复页码：
+    // 1. 如果之前是展开状态，保持展开
+    if (previousExpanded) {
+        isStoryExpanded = true;
+        currentPage = 0;  // 展开模式不需要页码
+    } 
+    // 2. 如果新的页数能容纳之前的页码，保持原页码
+    else if (previousPage < storyPages.length) {
+        currentPage = previousPage;
+        isStoryExpanded = false;
+    } 
+    // 3. 默认情况
+    else {
+        currentPage = 0;
+        isStoryExpanded = false;
+    }
     
     // 更新显示
     updateStoryDisplay();

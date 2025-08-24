@@ -205,6 +205,49 @@ function parseLLMResponse(response, mainTextContent) {
             console.warn(`无法解析时间格式：${timeStr}`);
         }
     }
+
+    // 解析用户位置变动
+    if (response && response.用户 && response.用户.位置变动) {
+        const userNewLocation = response.用户.位置变动;
+        console.log(`用户位置变动：${userNewLocation}`);
+        
+        // 查找对应的地点ID
+        let userLocationId = null;
+        for (const [locId, locName] of Object.entries(locationNames)) {
+            if (locName === userNewLocation.trim()) {
+                userLocationId = locId;
+                break;
+            }
+        }
+        
+        if (userLocationId) {
+            // 更新用户位置
+            userLocation = userLocationId;
+            userLocation_old = userLocation;
+            gameData.userLocation = userLocationId;
+            
+            console.log(`用户移动到：${userNewLocation} (${userLocationId})`);
+            
+            // 切换到新场景（如果不在特殊界面）
+            const activeScene = document.querySelector('.scene.active');
+            if (activeScene && 
+                activeScene.id !== 'player-stats-scene' && 
+                activeScene.id !== 'relationships-scene' &&
+                activeScene.id !== 'map-scene') {
+                
+                // 如果用户位置改变，切换场景
+                const currentSceneId = activeScene.id.replace('-scene', '');
+                if (currentSceneId !== userLocationId) {
+                    switchScene(userLocationId);
+                    // 在新场景显示NPC
+                    displayNpcs(userLocationId);
+                }
+            }
+        } else {
+            console.warn(`未找到位置 "${userNewLocation}" 的ID映射`);
+        }
+    }
+
     // 检查是否为SLG模式
     if (GameMode === 1 && mainTextContent) {
         // SLG模式：解析特殊格式的输出
@@ -317,8 +360,10 @@ function parseLLMResponse(response, mainTextContent) {
                 }
                 
                 // 处理位置变动
-                if (npcData.位置变动 && npcData.位置变动.includes('|')) {
-                    const [fromLocation, toLocation] = npcData.位置变动.split('|');
+                if (npcData.位置变动) {
+                    // 支持多种格式："演武场|议事厅|后山" 或 "伙房"
+                    const locations = npcData.位置变动.split('|').map(loc => loc.trim());
+                    const toLocation = locations[locations.length - 1]; // 取最后一个位置
                     
                     let toLocationId = null;
                     for (const [locId, locName] of Object.entries(locationNames)) {
@@ -443,8 +488,10 @@ function parseLLMResponse(response, mainTextContent) {
                     }
                 }
                 
-                if (npcData.位置变动 && npcData.位置变动.includes('|')) {
-                    const [fromLocation, toLocation] = npcData.位置变动.split('|');
+                if (npcData.位置变动) {
+                    // 支持多种格式："演武场|议事厅|后山" 或 "伙房"
+                    const locations = npcData.位置变动.split('|').map(loc => loc.trim());
+                    const toLocation = locations[locations.length - 1]; // 取最后一个位置
                     
                     let toLocationId = null;
                     for (const [locId, locName] of Object.entries(locationNames)) {
@@ -568,10 +615,19 @@ function setupMessageListeners() {
                 const locationId = activeScene.id.replace('-scene', '');
                 const locationName = locationNames[locationId] || '未知地点';
                 
+                // 构建地点信息
+                let locationInfo = '';
+                if (userLocation === userLocation_old) {
+                    locationInfo = `地点：${locationName}<br>`;
+                } else {
+                    const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                    locationInfo = `地点：从${oldLocationName}来到${locationName}<br>`;
+                }
+                
                 // 基础信息
                 let resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
-                                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +  // 新增季节信息
-                                `地点：${locationName}<br>` +
+                                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                                locationInfo +  // 使用新的地点信息
                                 `{{user}}行动选择：武艺切磋<br>` +
                                 `切磋对手：${currentBattleNpcName}<br>`;
                 

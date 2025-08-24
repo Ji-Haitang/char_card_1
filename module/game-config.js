@@ -746,7 +746,7 @@ const item_list = {
 };
 // 默认游戏数据
 const defaultGameData = {
-    userLocation: "houshan",
+    userLocation: "shanmen",
     playerTalents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
     playerStats:   { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 },
     combatStats:   { "攻击力": 20, "生命值": 50 },

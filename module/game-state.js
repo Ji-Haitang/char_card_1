@@ -42,7 +42,8 @@ let gameData = structuredClone(defaultGameData);
 let currentNpcLocations = {};
 
 // 游戏状态变量
-let userLocation = "houshan";
+let userLocation = "shanmen";
+let userLocation_old = "shanmen";
 let playerTalents = { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 };
 let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50 };
@@ -153,6 +154,7 @@ function syncVariablesFromGameData() {
     npcLocationJ = currentNpcLocations.J;
     npcLocationK = currentNpcLocations.K;
     npcLocationL = currentNpcLocations.L;
+    userLocation_old = userLocation;
 }
 
 // 修改 syncGameDataFromVariables 函数
