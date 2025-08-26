@@ -34,7 +34,8 @@
             height: calc(90vw * 832 / 1216);
             max-width: calc(90vh * 1216 / 832);
             max-height: 90vh;
-            background-image: url('https://files.catbox.moe/u5pdt5.png');
+            /* background-image: url('https://files.catbox.moe/u5pdt5.png'); */
+            background-image: url('img/location/世界地图.png');
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
@@ -414,81 +415,91 @@
         // ========== 统一的地点数据管理 ==========
         // 所有地点信息集中在这里，方便编辑和管理
         const locationDatabase = {
-            '天山总坛': {
-                position: { top: '20%', left: '25%' },
+            '天山派外堡': {
+                position: { top: '17%', left: '57%' },
                 description: '天山派总坛位于天山深处的隐秘山谷，是归义军后裔建立的江湖门派。这里云雾缭绕，四季如春，是西域汉人的精神家园。总坛依山而建，雄伟壮观，守护着数千难民百姓。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
             '博格达峰': {
-                position: { top: '25%', left: '35%' },
+                position: { top: '13%', left: '80%' },
                 description: '博格达峰乃天山东段最高峰，终年积雪，被当地人称为"圣山"。山中多有雪莲等珍贵药材，也是天山派弟子修炼内功的绝佳之地。传说山顶有前辈高人留下的剑痕。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '吐鲁番盆地': {
-                position: { top: '30%', left: '30%' },
+            '伊州': {
+                position: { top: '28%', left: '60%' },
                 description: '西域著名的"火洲"，盛产葡萄瓜果。这里是丝路重镇，商旅云集，各族混居。天山派在此设有秘密据点，暗中保护过往汉商。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
             '哈密绿洲': {
-                position: { top: '35%', left: '45%' },
+                position: { top: '40%', left: '80%' },
                 description: '丝绸之路上的重要驿站，哈密瓜闻名天下。此地水草丰美，是西域少有的宜居之地。但近年来党项势力渗透，局势日渐紧张。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '敦煌': {
-                position: { top: '40%', left: '55%' },
+            '高昌': {
+                position: { top: '10%', left: '23%' },
                 description: '河西走廊的明珠，佛教圣地。莫高窟千佛洞举世闻名。虽名义上归宋朝管辖，实则被各方势力觊觎，天山派在此有不少暗桩。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '凉州': {
-                position: { top: '45%', left: '65%' },
-                description: '河西重镇，曾是归义军的重要据点。如今被党项占领，汉人备受欺凌。天山派经常派人潜入救援难民。',
+            '迪坎儿村': {
+                position: { top: '15%', left: '33%' },
+                description: '楼兰遗迹。河西重镇，曾是归义军的重要据点。如今被党项占领，汉人备受欺凌。天山派经常派人潜入救援难民。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '甘州': {
-                position: { top: '40%', left: '70%' },
+            '大沙海': {
+                position: { top: '30%', left: '40%' },
                 description: '甘州回鹘的都城，商业繁荣。最近被李元昊攻占，成为西夏东进的桥头堡。城中仍有不少汉人商户艰难求生。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '肃州': {
-                position: { top: '35%', left: '60%' },
+            '博斯坦村': {
+                position: { top: '35%', left: '68%' },
                 description: '河西走廊西端要塞，扼守通往西域的咽喉。城池坚固，易守难攻。目前在各方势力的争夺中保持中立。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '于阗古国': {
-                position: { top: '50%', left: '20%' },
+            '沙州': {
+                position: { top: '70%', left: '65%' },
                 description: '西域南道的佛教国家，盛产美玉。虽已衰落，但文化底蕴深厚。天山派与当地僧侣往来密切，共同对抗邪教势力。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '龟兹遗址': {
-                position: { top: '40%', left: '15%' },
+            '瓜州': {
+                position: { top: '68%', left: '80%' },
+                description: '西域南道的佛教国家，盛产美玉。虽已衰落，但文化底蕴深厚。天山派与当地僧侣往来密切，共同对抗邪教势力。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '龟兹': {
+                position: { top: '25%', left: '10%' },
+                description: '西域南道的佛教国家，盛产美玉。虽已衰落，但文化底蕴深厚。天山派与当地僧侣往来密切，共同对抗邪教势力。',
+                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            },
+            '崆峒派': {
+                position: { top: '60%', left: '93%' },
                 description: '昔日龟兹国都城遗址，现已成废墟。据说废墟中埋藏着龟兹国的宝藏，吸引无数探宝者。天山派偶尔会来此搜寻古籍。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '楼兰古城': {
-                position: { top: '55%', left: '35%' },
+            '昆仑派': {
+                position: { top: '55%', left: '40%' },
                 description: '传说中的楼兰国遗址，掩埋在黄沙之下。相传城中有神秘力量，夜晚常有鬼火出没。只有最勇敢的冒险者才敢深入探索。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '火焰山': {
-                position: { top: '25%', left: '50%' },
+            '拜火教总坛': {
+                position: { top: '35%', left: '30%' },
                 description: '形如烈焰的赤色山脉，地表温度极高。山中有罕见的火属性矿石，是打造神兵利器的上等材料。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '昆仑派': {
-                position: { top: '60%', left: '25%' },
+            '白驼山庄': {
+                position: { top: '69%', left: '17%' },
                 description: '西域名门正派，与天山派交好。昆仑派武学博大精深，尤以剑法著称。两派经常交流武学心得，共同维护西域和平。',
                 backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
             },
-            '崆峒山': {
-                position: { top: '50%', left: '75%' },
-                description: '崆峒派所在地，地势险要。崆峒派以拳法闻名江湖，门下弟子行侠仗义。与天山派守望相助，曾联手击退西夏军队。',
-                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
-            },
-            '白驼山': {
-                position: { top: '15%', left: '40%' },
-                description: '西域邪派巢穴，以贩卖人口为生。白驼山主欧阳锋武功高强，心狠手辣。与天山派势不两立，经常发生冲突。',
-                backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
-            }
+            // '崆峒山': {
+            //     position: { top: '50%', left: '75%' },
+            //     description: '崆峒派所在地，地势险要。崆峒派以拳法闻名江湖，门下弟子行侠仗义。与天山派守望相助，曾联手击退西夏军队。',
+            //     backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            // },
+            // '白驼山': {
+            //     position: { top: '15%', left: '40%' },
+            //     description: '西域邪派巢穴，以贩卖人口为生。白驼山主欧阳锋武功高强，心狠手辣。与天山派势不两立，经常发生冲突。',
+            //     backgroundImage: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门_昼.webp'
+            // }
         };
 
         // NPC列表 [[11]]
