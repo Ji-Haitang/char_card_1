@@ -62,7 +62,10 @@ let difficulty = 'normal';
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
-
+let lastUserMessage = "";
+let worldBookName = "";
+let summaryEntryUID = "";
+let currentSummary = "";
 // 独立的NPC位置变量
 let npcLocationA = "none";
 let npcLocationB = "yishiting";
@@ -131,7 +134,7 @@ function syncVariablesFromGameData() {
     npcFavorability,
     actionPoints,
     currentWeek,
-    dayNightStatus,  // 新增
+    dayNightStatus,
     seasonStatus,
     npcLocations: currentNpcLocations,
     GameMode,
@@ -140,7 +143,11 @@ function syncVariablesFromGameData() {
     npcGiftGiven,
     npcSparred,
     inventory,
-    equipment } = gameData);  // 添加新变量,，
+    equipment,
+    lastUserMessage,
+    worldBookName,      // 新增
+    summaryEntryUID,    // 新增
+    currentSummary } = gameData);  // 新增
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -173,11 +180,15 @@ function syncGameDataFromVariables() {
     gameData.difficulty = difficulty;
     gameData.npcVisibility = npcVisibility;
     gameData.npcGiftGiven = npcGiftGiven;
-    gameData.npcSparred = npcSparred;    // 添加npcSparred
+    gameData.npcSparred = npcSparred;
     gameData.inventory = inventory;
     gameData.equipment = equipment;
     gameData.dayNightStatus = dayNightStatus;
-    gameData.seasonStatus = seasonStatus; 
+    gameData.seasonStatus = seasonStatus;
+    gameData.lastUserMessage = lastUserMessage;
+    gameData.worldBookName = worldBookName;        // 新增
+    gameData.summaryEntryUID = summaryEntryUID;    // 新增
+    gameData.currentSummary = currentSummary;      // 新增
 }
 
 // 深度合并函数

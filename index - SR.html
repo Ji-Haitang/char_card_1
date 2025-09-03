@@ -321,18 +321,7 @@
                 </div>
             </div>
         </div>
-        
-        <!-- 自由行动输入框 -->
-        <div class="free-action-container">
-            <textarea 
-                class="free-action-input" 
-                id="free-action-input" 
-                placeholder="输入自由行动内容"
-                rows="1"
-            ></textarea>
-            <button class="free-action-send-btn" onclick="sendFreeAction()">发送</button>
-        </div>
-        
+         
         <!-- 中间控制按钮 -->
         <div class="control-buttons">
             <!-- 属性查看下拉菜单 -->
@@ -361,8 +350,30 @@
                 </div>
             </div>
             
+            <!-- 新增：历史信息下拉菜单 -->
+            <div class="dropdown-wrapper">
+                <button class="control-btn dropdown-toggle" onclick="toggleDropdown('history-dropdown')">
+                    历史信息 ▲
+                </button>
+                <div id="history-dropdown" class="dropdown-menu">
+                    <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
+                    <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
+                </div>
+            </div>
+            
             <button class="control-btn" id="skip-week-btn" onclick="skipWeek()">跳过这一周</button>
             <button class="control-btn" id="slg-return-btn" onclick="returnFromSLG()" style="display: none;">返回天山派</button>
+        </div>
+
+        <!-- 自由行动输入框 -->
+        <div class="free-action-container">
+            <textarea 
+                class="free-action-input" 
+                id="free-action-input" 
+                placeholder="输入自由行动内容"
+                rows="1"
+            ></textarea>
+            <button class="free-action-send-btn" onclick="sendFreeAction()">发送</button>
         </div>
 
         <!-- 难度设置弹窗 -->
@@ -542,6 +553,29 @@
                 <div class="modal-buttons">
                     <button class="modal-btn" onclick="saveCheatValues()">保存</button>
                     <button class="modal-btn cancel" onclick="closeCheatModal()">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 汗青集弹窗 -->
+        <div id="history-summary-modal" class="modal viewport-overlay">
+            <div class="modal-content" style="max-width: 90%; max-height: 80%; display: flex; flex-direction: column;">
+                <h3>汗青集</h3>
+                <div id="history-summary-content" style="
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 20px;
+                    background: #f5f5f5;
+                    border-radius: 8px;
+                    margin: 20px 0;
+                    white-space: pre-wrap;
+                    line-height: 1.8;
+                    font-size: 14px;
+                ">
+                    载入中...
+                </div>
+                <div class="modal-buttons">
+                    <button class="modal-btn cancel" onclick="closeHistorySummaryModal()">关闭</button>
                 </div>
             </div>
         </div>
@@ -782,6 +816,54 @@
                     localState.currentStoryText = mainText.trim();
                     console.log(`${localState.currentStoryText}`);
                     updateStoryText(localState.currentStoryText);
+                }
+
+                // 新增：提取SUMMARY内容
+                // const summaryMatch = slgModeContent.match(/<SUMMARY>([\s\S]*?)<\/SUMMARY>/);
+                const summaryRegex = /<[\s_]*[Ss][Uu][Mm][Mm][Aa][Rr][Yy][\s_]*>([\s\S]*?)<[\s_]*\/[\s_]*[Ss][Uu][Mm][Mm][Aa][Rr][Yy][\s_]*>/;
+                const summaryMatch = slgModeContent.match(summaryRegex);
+                if (summaryMatch && summaryMatch[1]) {
+                    const summaryContent = summaryMatch[1].trim();
+                    console.log('成功捕捉到SUMMARY内容：', summaryContent);
+                    
+                    // 保存到gameData
+                    gameData.currentSummary = summaryContent;
+                    currentSummary = summaryContent;
+                    
+                    console.log('SUMMARY已保存到gameData.currentSummary');
+                } else {
+                    // 如果没有找到SUMMARY标签，尝试更鲁棒的方法
+                    // 从第一个{符号往前找汉字，再回溯到>符号
+                    const jsonStartIndex = slgModeContent.indexOf('{');
+                    if (jsonStartIndex > -1) {
+                        // 从{往前搜索，找到可能的SUMMARY结束位置
+                        let searchStart = jsonStartIndex - 1;
+                        while (searchStart >= 0) {
+                            const char = slgModeContent[searchStart];
+                            // 检查是否是汉字或其他有意义的字符
+                            if (/[\u4e00-\u9fff\u3400-\u4dbf\w]/.test(char)) {
+                                // 找到了有意义的字符，现在向前找>符号
+                                let summaryStartSearch = searchStart;
+                                while (summaryStartSearch >= 0 && slgModeContent[summaryStartSearch] !== '>') {
+                                    summaryStartSearch--;
+                                }
+                                
+                                if (summaryStartSearch >= 0) {
+                                    // 找到了>符号，提取这段内容
+                                    const potentialSummary = slgModeContent.substring(summaryStartSearch + 1, searchStart + 1).trim();
+                                    
+                                    // 检查是否包含SUMMARY相关内容
+                                    if (potentialSummary.length > 0 && !potentialSummary.includes('<MAIN_TEXT>')) {
+                                        console.log('通过鲁棒方法捕捉到可能的SUMMARY内容：', potentialSummary);
+                                        gameData.currentSummary = potentialSummary;
+                                        currentSummary = potentialSummary;
+                                    }
+                                }
+                                break;
+                            }
+                            searchStart--;
+                        }
+                    }
                 }
                 
                 // 提取JSON：从第一个{开始到下一个<为止（如果没有<则到结尾）
@@ -2320,10 +2402,81 @@
             currentShopItem = null;
         }
 
+        function showLastUserInput() {
+            // 关闭下拉菜单
+            toggleDropdown('history-dropdown');
+            
+            // 获取储存的消息
+            const lastMessage = gameData.lastUserMessage || '暂无历史输入记录';
+            
+            // 构建HTML内容
+            const htmlContent = `
+                <h3 style="margin-bottom: 20px;">上轮输入内容</h3>
+                <div style="
+                    background: #f5f5f5;
+                    padding: 15px;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    font-size: 14px;
+                    line-height: 1.6;
+                    max-height: 400px;
+                    overflow-y: auto;
+                    text-align: left;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                ">${lastMessage}</div>
+            `;
+            
+            // 复用showModal显示内容
+            showModal(htmlContent);
+        }
+
+        // 显示汗青集（聊天总结记录）
+        async function showHistorySummary() {
+            // 关闭下拉菜单
+            toggleDropdown('history-dropdown');
+            
+            // 关闭其他弹窗
+            closeAllSpecialModals();
+            
+            // 显示弹窗
+            const modal = document.getElementById('history-summary-modal');
+            modal.style.display = 'block';
+            
+            // 获取并显示总结内容
+            const contentDiv = document.getElementById('history-summary-content');
+            contentDiv.textContent = '正在读取聊天总结...';
+            
+            try {
+                const summaryContent = await getWorldBookSummary();
+                contentDiv.textContent = summaryContent;
+            } catch (error) {
+                contentDiv.textContent = '读取总结内容时出错';
+                console.error('显示汗青集失败：', error);
+            }
+            
+            // 延迟一帧后调整位置
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+        }
+
+        // 关闭汗青集弹窗
+        function closeHistorySummaryModal() {
+            const modal = document.getElementById('history-summary-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
         async function initializeOrSync() {
             await loadOrInitGameData();
             console.log('初始化完成');
             checkAllValueRanges();
+
+            // 初始化世界书（新增）
+            await initializeWorldBook();
+
             // 初始化季节
             seasonStatus = calculateSeason(currentWeek);
             
@@ -2418,6 +2571,9 @@
         window.showShopItemDetail = showShopItemDetail;
         window.buyItemFromDetail = buyItemFromDetail;
         window.closeShopDetailModal = closeShopDetailModal;
+        window.showLastUserInput = showLastUserInput;
+        window.showHistorySummary = showHistorySummary;
+        window.closeHistorySummaryModal = closeHistorySummaryModal;
         initializeOrSync();
     });
     </script>

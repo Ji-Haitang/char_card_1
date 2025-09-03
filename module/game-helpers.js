@@ -37,16 +37,26 @@
 
 // 处理消息输出
 async function handleMessageOutput(message) {
+    // 保存构造的消息到gameData
+    gameData.lastUserMessage = message;
+    
+    // 如果有待添加的总结内容，添加到世界书
+    if (currentSummary && currentSummary.trim()) {
+        await updateWorldBookSummary(currentSummary);
+        currentSummary = ""; // 清空已添加的内容
+    }
+    
     await saveGameData();
     
     if (isInRenderEnvironment()) {
         const renderFunc = getRenderFunction();
         try {
-            await renderFunc(`/send at={{lastMessageId}}+1 ${message}`);
+            // 使用inject命令隐式注入user输入
+            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ephemeral=true ${message}`);
             await renderFunc('/trigger');
-            console.log('Message sent:', message);
+            console.log('Message injected:', message);
         } catch (error) {
-            console.error('Error sending message:', error);
+            console.error('Error injecting message:', error);
             const message_error = `发生失败降级为弹窗<br>` + message;
             showModal(message_error);
         }
@@ -679,4 +689,118 @@ function updateSceneBackgrounds() {
             scene.style.backgroundImage = `url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${locationName}_${dayNight}.webp')`;
         }
     });
+}
+
+// 初始化世界书
+async function initializeWorldBook() {
+    if (!isInRenderEnvironment()) {
+        console.log('非SillyTavern环境，跳过世界书初始化');
+        return;
+    }
+    
+    const renderFunc = getRenderFunction();
+    if (!renderFunc) return;
+    
+    try {
+        // 获取或创建聊天绑定的世界书
+        let bookName = await renderFunc('/getchatbook');
+        if (bookName) {
+            // 如果bookName不同于已保存的，说明是新聊天或切换了聊天
+            if (bookName !== worldBookName) {
+                worldBookName = bookName;
+                summaryEntryUID = ""; // 重置UID，需要重新查找或创建
+                console.log('世界书名称：', worldBookName);
+            }
+            
+            // 检查是否已有"聊天小总结"条目
+            if (!summaryEntryUID) {
+                // 先尝试查找已存在的条目
+                let uid = await renderFunc(`/findentry file="${worldBookName}" field=key 聊天小总结`);
+                
+                if (!uid || uid === "") {
+                    // 如果不存在，创建新条目
+                    uid = await renderFunc(`/createentry file="${worldBookName}" key="聊天小总结,总结,summary" 本次聊天的重要事件总结`);
+                    console.log('创建聊天小总结条目，UID：', uid);
+                } else {
+                    console.log('找到已存在的聊天小总结条目，UID：', uid);
+                }
+                
+                if (uid) {
+                    summaryEntryUID = uid;
+                    
+                    // 设置条目的其他属性
+                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=constant 1`);
+                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=position 0`);
+                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=depth 10`);
+                }
+            }
+            
+            // 保存世界书信息到gameData
+            await saveGameData();
+        }
+    } catch (error) {
+        console.error('初始化世界书失败：', error);
+    }
+}
+
+// 更新世界书总结内容
+async function updateWorldBookSummary(summaryText) {
+    if (!isInRenderEnvironment() || !worldBookName || !summaryEntryUID) {
+        console.log('无法更新世界书总结：环境或条目不存在');
+        return;
+    }
+    
+    const renderFunc = getRenderFunction();
+    if (!renderFunc) return;
+    
+    try {
+        // 获取现有内容
+        let existingContent = await renderFunc(`/getentryfield file="${worldBookName}" field=content ${summaryEntryUID}`);
+        
+        // 如果existingContent是字符串形式的"null"或undefined，将其转换为空字符串
+        if (!existingContent || existingContent === "null" || existingContent === "undefined") {
+            existingContent = "";
+        }
+        
+        // 构建新内容（保留历史，添加时间戳）
+        const year = Math.floor((currentWeek - 1) / 48) + 1;
+        const remainingWeeks = (currentWeek - 1) % 48;
+        const month = Math.floor(remainingWeeks / 4) + 1;
+        const week = remainingWeeks % 4 + 1;
+        
+        const timestamp = `[第${year}年第${month}月第${week}周]`;
+        const newContent = existingContent 
+            ? `${existingContent}\n\n${timestamp}\n${summaryText}`
+            : `${timestamp}\n${summaryText}`;
+        
+        // 更新条目内容
+        await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=content ${newContent}`);
+        console.log('世界书总结已更新');
+        
+    } catch (error) {
+        console.error('更新世界书总结失败：', error);
+    }
+}
+
+// 获取世界书总结内容
+async function getWorldBookSummary() {
+    if (!isInRenderEnvironment() || !worldBookName || !summaryEntryUID) {
+        return "暂无聊天总结记录";
+    }
+    
+    const renderFunc = getRenderFunction();
+    if (!renderFunc) return "无法获取总结内容";
+    
+    try {
+        const content = await renderFunc(`/getentryfield file="${worldBookName}" field=content ${summaryEntryUID}`);
+        
+        if (!content || content === "null" || content === "undefined") {
+            return "暂无聊天总结记录";
+        }
+        
+        return content;
+    } catch (error) {
+        console.error('获取世界书总结失败：', error);
+        return "获取总结内容时出错";
+    }
 }

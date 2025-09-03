@@ -777,5 +777,9 @@ const defaultGameData = {
         "防具": null,
         "饰品1": null,
         "饰品2": null
-    }
+    },
+    lastUserMessage: "",     // 已存在：储存上轮用户输入
+    worldBookName: "",       // 新增：储存世界书名称
+    summaryEntryUID: "",     // 新增：储存"聊天小总结"条目的UID
+    currentSummary: ""       // 新增：储存当前的SUMMARY内容
 };
