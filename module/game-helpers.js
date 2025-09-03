@@ -38,7 +38,7 @@
 // 处理消息输出
 async function handleMessageOutput(message) {
     // 保存构造的消息到gameData
-    gameData.lastUserMessage = message;
+    lastUserMessage = message;
     
     // 如果有待添加的总结内容，添加到世界书
     if (currentSummary && currentSummary.trim()) {
@@ -693,25 +693,28 @@ function updateSceneBackgrounds() {
 
 // 初始化世界书
 async function initializeWorldBook() {
+    console.log('进入初始化世界书函数');
     if (!isInRenderEnvironment()) {
         console.log('非SillyTavern环境，跳过世界书初始化');
         return;
     }
-    
+    console.log('SillyTavern环境，开始初始化世界书');
     const renderFunc = getRenderFunction();
     if (!renderFunc) return;
-    
+    console.log('获取渲染函数成功，准备开始获取或者创建世界书');
     try {
         // 获取或创建聊天绑定的世界书
+        console.log('获取世界书名称');
         let bookName = await renderFunc('/getchatbook');
         if (bookName) {
+            console.log('获取世界书名称成功：', bookName);
             // 如果bookName不同于已保存的，说明是新聊天或切换了聊天
             if (bookName !== worldBookName) {
                 worldBookName = bookName;
                 summaryEntryUID = ""; // 重置UID，需要重新查找或创建
                 console.log('世界书名称：', worldBookName);
             }
-            
+            console.log('检查是否已有"聊天小总结"条目');
             // 检查是否已有"聊天小总结"条目
             if (!summaryEntryUID) {
                 // 先尝试查找已存在的条目
@@ -719,7 +722,7 @@ async function initializeWorldBook() {
                 
                 if (!uid || uid === "") {
                     // 如果不存在，创建新条目
-                    uid = await renderFunc(`/createentry file="${worldBookName}" key="聊天小总结,总结,summary" 本次聊天的重要事件总结`);
+                    uid = await renderFunc(`/createentry file="${worldBookName}" key="聊天小总结" 本次聊天的重要事件总结`);
                     console.log('创建聊天小总结条目，UID：', uid);
                 } else {
                     console.log('找到已存在的聊天小总结条目，UID：', uid);
@@ -727,19 +730,21 @@ async function initializeWorldBook() {
                 
                 if (uid) {
                     summaryEntryUID = uid;
-                    
+                    console.log('设置条目的其他属性', uid);
                     // 设置条目的其他属性
                     await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=constant 1`);
                     await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=position 0`);
                     await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=depth 10`);
                 }
             }
-            
+            await renderFunc(' /echo ✅ 世界书初始化完成！')
             // 保存世界书信息到gameData
+            console.log('保存世界书信息', uid);
             await saveGameData();
         }
     } catch (error) {
         console.error('初始化世界书失败：', error);
+        await renderFunc(' /echo 🚫 世界书初始化失败！')
     }
 }
 

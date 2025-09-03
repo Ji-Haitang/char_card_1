@@ -232,8 +232,7 @@ function parseLLMResponse(response, mainTextContent) {
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && 
                 activeScene.id !== 'player-stats-scene' && 
-                activeScene.id !== 'relationships-scene' &&
-                activeScene.id !== 'map-scene') {
+                activeScene.id !== 'relationships-scene' ) {
                 
                 // 如果用户位置改变，切换场景
                 const currentSceneId = activeScene.id.replace('-scene', '');

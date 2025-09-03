@@ -60,7 +60,8 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-styles.css">
+    <!-- <script>
         // Git commit编号配置 - 修改这里即可更新所有引用
         const GIT_COMMIT_ID = 'fe3f916';
         
@@ -69,7 +70,7 @@
         cssLink.rel = 'stylesheet';
         cssLink.href = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@${GIT_COMMIT_ID}/module/game-styles.css`;
         document.head.appendChild(cssLink);
-    </script>
+    </script> -->
 </head>
 <body>
     <div class="container">
@@ -762,9 +763,16 @@
 
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
+    <!-- 从GitHub加载游戏模块 -->
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@fe3f916/module/game-events.js"></script>
     
     <!-- 动态加载游戏模块 -->
-    <script>
+    <!-- <script>
         // 游戏模块列表
         const gameModules = [
             'game-config.js',
@@ -781,7 +789,7 @@
             script.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@${GIT_COMMIT_ID}/module/${module}`;
             document.body.appendChild(script);
         });
-    </script>
+    </script> -->
     
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -2514,7 +2522,14 @@
             }
             
             if (userLocation === 'tianshanpai'){
+                // 先移除所有场景的active类
+                const scenes = document.querySelectorAll('.scene');
+                scenes.forEach(scene => {
+                    scene.classList.remove('active');
+                });
+                // 然后只激活地图场景
                 document.getElementById('map-scene').classList.add('active');
+                //switchScene('map');
             }else{
                 switchScene(userLocation);
             }
