@@ -737,14 +737,14 @@ async function initializeWorldBook() {
                     await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=depth 10`);
                 }
             }
-            await renderFunc(' /echo ✅ 世界书初始化完成！')
+            await renderFunc('/echo ✅世界书初始化完成')
             // 保存世界书信息到gameData
             console.log('保存世界书信息', uid);
             await saveGameData();
         }
     } catch (error) {
         console.error('初始化世界书失败：', error);
-        await renderFunc(' /echo 🚫 世界书初始化失败！')
+        await renderFunc('/echo 🚫世界书初始化失败')
     }
 }
 
