@@ -712,6 +712,7 @@ async function initializeWorldBook() {
             if (bookName !== worldBookName) {
                 worldBookName = bookName;
                 summaryEntryUID = ""; // 重置UID，需要重新查找或创建
+                let nullid = await renderFunc(`/createentry file="${worldBookName}" key="占位" 纯占位`);
                 console.log('世界书名称：', worldBookName);
             }
             console.log('检查是否已有"聊天小总结"条目');
@@ -732,14 +733,12 @@ async function initializeWorldBook() {
                     summaryEntryUID = uid;
                     console.log('设置条目的其他属性', uid);
                     // 设置条目的其他属性
-                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=constant 1`);
-                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=position 0`);
-                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=depth 10`);
+                    await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=disable 1`);
                 }
             }
             await renderFunc('/echo ✅世界书初始化完成')
             // 保存世界书信息到gameData
-            console.log('保存世界书信息', uid);
+            console.log('保存世界书信息');
             await saveGameData();
         }
     } catch (error) {
