@@ -990,11 +990,22 @@
                     const summaryContent = summaryMatch[1].trim();
                     console.log('成功捕捉到SUMMARY内容：', summaryContent);
                     
-                    // 保存到gameData
-                    gameData.currentSummary = summaryContent;
-                    currentSummary = summaryContent;
+                    // 追加到summary_Small（带时间戳）
+                    const year = Math.floor((currentWeek - 1) / 48) + 1;
+                    const remainingWeeks = (currentWeek - 1) % 48;
+                    const month = Math.floor(remainingWeeks / 4) + 1;
+                    const week = remainingWeeks % 4 + 1;
                     
-                    console.log('SUMMARY已保存到gameData.currentSummary');
+                    const timestamp = `[第${year}年第${month}月第${week}周]`;
+                    
+                    if (summary_Small) {
+                        summary_Small += `\n\n${timestamp}\n${summaryContent}`;
+                    } else {
+                        summary_Small = `${timestamp}\n${summaryContent}`;
+                    }
+                    
+                    // gameData.summary_Small = summary_Small;
+                    console.log('SUMMARY已追加到summary_Small');
                 } else {
                     // 如果没有找到SUMMARY标签，尝试更鲁棒的方法
                     // 从第一个{符号往前找汉字，再回溯到>符号
@@ -1019,8 +1030,21 @@
                                     // 检查是否包含SUMMARY相关内容
                                     if (potentialSummary.length > 0 && !potentialSummary.includes('<MAIN_TEXT>')) {
                                         console.log('通过鲁棒方法捕捉到可能的SUMMARY内容：', potentialSummary);
-                                        gameData.currentSummary = potentialSummary;
-                                        currentSummary = potentialSummary;
+                                        // 追加到summary_Small
+                                        const year = Math.floor((currentWeek - 1) / 48) + 1;
+                                        const remainingWeeks = (currentWeek - 1) % 48;
+                                        const month = Math.floor(remainingWeeks / 4) + 1;
+                                        const week = remainingWeeks % 4 + 1;
+                                        
+                                        const timestamp = `[第${year}年第${month}月第${week}周]`;
+                                        
+                                        if (summary_Small) {
+                                            summary_Small += `\n\n${timestamp}\n${potentialSummary}`;
+                                        } else {
+                                            summary_Small = `${timestamp}\n${potentialSummary}`;
+                                        }
+                                        
+                                        // gameData.summary_Small = summary_Small;
                                     }
                                 }
                                 break;
@@ -2498,14 +2522,12 @@
             
             // 获取并显示总结内容
             const contentDiv = document.getElementById('history-summary-content');
-            contentDiv.textContent = '正在读取聊天总结...';
             
-            try {
-                const summaryContent = await getWorldBookSummary();
-                contentDiv.textContent = summaryContent;
-            } catch (error) {
-                contentDiv.textContent = '读取总结内容时出错';
-                console.error('显示汗青集失败：', error);
+            // 直接从summary_Small读取内容
+            if (summary_Small && summary_Small.trim()) {
+                contentDiv.textContent = summary_Small;
+            } else {
+                contentDiv.textContent = '暂无聊天总结记录';
             }
             
             // 延迟一帧后调整位置
@@ -2526,9 +2548,6 @@
         window.onload = async function() {
             await loadOrInitGameData();
             checkAllValueRanges();
-
-            // 初始化世界书（新增）
-            await initializeWorldBook();
             
             // 初始化季节
             seasonStatus = calculateSeason(currentWeek);
