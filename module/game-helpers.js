@@ -39,7 +39,8 @@
 async function handleMessageOutput(message) {
     // 保存构造的消息到gameData
     lastUserMessage = message;
-    
+    console.log('user消息存入变量lastMessage_jxz');
+    await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
     // 如果有待添加的总结内容，添加到世界书
     if (currentSummary && currentSummary.trim()) {
         await updateWorldBookSummary(currentSummary);
@@ -712,7 +713,7 @@ async function initializeWorldBook() {
             if (bookName !== worldBookName) {
                 worldBookName = bookName;
                 summaryEntryUID = ""; // 重置UID，需要重新查找或创建
-                let nullid = await renderFunc(`/createentry file="${worldBookName}" key="占位" 纯占位`);
+                let nullid = await renderFunc(`/createentry file="${worldBookName}" key="占位锟斤拷烫烫烫" 纯占位`);
                 console.log('世界书名称：', worldBookName);
             }
             console.log('检查是否已有"聊天小总结"条目');
@@ -735,8 +736,8 @@ async function initializeWorldBook() {
                     // 设置条目的其他属性
                     await renderFunc(`/setentryfield file="${worldBookName}" uid=${summaryEntryUID} field=disable 1`);
                 }
+                await renderFunc('/echo ✅世界书条目初始化完成')
             }
-            await renderFunc('/echo ✅世界书初始化完成')
             // 保存世界书信息到gameData
             console.log('保存世界书信息');
             await saveGameData();

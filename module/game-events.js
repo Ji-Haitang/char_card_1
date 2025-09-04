@@ -207,7 +207,7 @@ function parseLLMResponse(response, mainTextContent) {
     }
 
     // 解析用户位置变动
-    if (response && response.用户 && response.用户.位置变动) {
+    if (response && response.用户 && response.用户.位置变动 && response.用户.位置变动 !== 'none') {
         const userNewLocation = response.用户.位置变动;
         console.log(`用户位置变动：${userNewLocation}`);
         
