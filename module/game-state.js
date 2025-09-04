@@ -108,12 +108,14 @@ let equipment = {
 
 // 流式版本的本地状态
 let localState = {
-    turnUpdateApplied: false
+    turnUpdateApplied: false,
+    summarySmallUpdateApplied: false
 };
 
 // 重置流式状态
 function resetLocalState() {
     localState.turnUpdateApplied = false;
+    localState.summarySmallUpdateApplied = false;
 }
 
 // 获取流式状态
