@@ -37,14 +37,15 @@
 
 // 处理消息输出
 async function handleMessageOutput(message) {
-    // 保存构造的消息到gameData
-    lastUserMessage = message;
-    console.log('user消息存入变量lastMessage_jxz');
-    await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
-    
-    await saveGameData();
-    
+
     if (isInRenderEnvironment()) {
+        // 保存构造的消息到gameData
+        lastUserMessage = message;
+        console.log('user消息存入变量lastMessage_jxz');
+        await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
+        
+        await saveGameData();
+        
         const renderFunc = getRenderFunction();
         try {
             // 使用inject命令隐式注入user输入
