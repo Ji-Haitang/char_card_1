@@ -39,6 +39,8 @@
 async function handleMessageOutput(message) {
 
     if (isInRenderEnvironment()) {
+        const renderFunc = getRenderFunction();
+        
         // 保存构造的消息到gameData
         lastUserMessage = message;
         console.log('user消息存入变量lastMessage_jxz');
@@ -46,7 +48,6 @@ async function handleMessageOutput(message) {
         
         await saveGameData();
         
-        const renderFunc = getRenderFunction();
         try {
             // 使用inject命令隐式注入user输入
             await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ephemeral=true ${message}`);
