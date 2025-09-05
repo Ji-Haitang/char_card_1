@@ -49,10 +49,40 @@ async function handleMessageOutput(message) {
         await saveGameData();
         
         try {
-            // 使用inject命令隐式注入user输入
-            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ephemeral=true ${message}`);
-            await renderFunc('/trigger');
-            console.log('Message injected:', message);
+            // 显示用户输入信息（仅展示，不等待确认）
+            const modalHTML = `
+                <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">
+                    正在发送以下内容
+                </div>
+                <div style="
+                    background: #f5f5f5;
+                    padding: 15px;
+                    border-radius: 8px;
+                    max-height: 400px;
+                    overflow-y: auto;
+                    text-align: left;
+                    white-space: pre-wrap;
+                    word-break: break-word;
+                ">${message}</div>
+                <div style="
+                    margin-top: 15px;
+                    color: #666;
+                    font-size: 14px;
+                    text-align: center;
+                ">自动发送中...</div>
+            `;
+            
+            // 使用普通的showModal显示信息
+            showModal(modalHTML);
+            
+            // 短暂延迟后自动关闭弹窗并发送
+            setTimeout(async () => {
+                // closeModal();
+                // 使用inject命令隐式注入user输入
+                await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${message}`);
+                await renderFunc('/trigger');
+                console.log('Message injected:', message);
+            }, 500); // 1.5秒后自动发送
         } catch (error) {
             console.error('Error injecting message:', error);
             const message_error = `发生失败降级为弹窗<br>` + message;

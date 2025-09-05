@@ -2487,30 +2487,62 @@
             // 关闭下拉菜单
             toggleDropdown('history-dropdown');
             
-            // 获取储存的消息
-            const lastMessage = gameData.lastUserMessage || '暂无历史输入记录';
+            // 关闭其他弹窗
+            closeAllSpecialModals();
             
-            // 构建HTML内容
-            const htmlContent = `
-                <h3 style="margin-bottom: 20px;">上轮输入内容</h3>
-                <div style="
-                    background: #f5f5f5;
-                    padding: 15px;
-                    border-radius: 8px;
-                    margin-bottom: 20px;
-                    font-size: 14px;
-                    line-height: 1.6;
-                    max-height: 400px;
-                    overflow-y: auto;
-                    text-align: left;
-                    white-space: pre-wrap;
-                    word-break: break-word;
-                ">${lastMessage}</div>
+            // 创建专门的弹窗（不使用普通的modal）
+            const modal = document.createElement('div');
+            modal.className = 'modal viewport-overlay';
+            modal.id = 'last-input-modal';
+            modal.innerHTML = `
+                <div class="modal-content" style="max-width: 600px;">
+                    <h3 style="margin-bottom: 20px;">上轮输入内容</h3>
+                    <div id="last-input-display" style="
+                        background: #f5f5f5;
+                        padding: 15px;
+                        border-radius: 8px;
+                        margin-bottom: 20px;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        max-height: 300px;
+                        overflow-y: auto;
+                        text-align: left;
+                        white-space: pre-wrap;
+                        word-break: break-word;
+                    ">${lastUserMessage || '暂无历史输入记录'}</div>
+                    <textarea id="last-input-edit" style="
+                        display: none;
+                        width: 100%;
+                        min-height: 150px;
+                        max-height: 300px;
+                        padding: 15px;
+                        border-radius: 8px;
+                        border: 1px solid #ddd;
+                        font-size: 14px;
+                        line-height: 1.6;
+                        resize: vertical;
+                        font-family: inherit;
+                        margin-bottom: 20px;
+                    ">${lastUserMessage || ''}</textarea>
+                    <div class="modal-buttons">
+                        <button class="modal-btn" id="edit-input-btn" onclick="toggleEditMode()">编辑</button>
+                        <button class="modal-btn" id="save-input-btn" style="display:none;" onclick="saveEditedInput()">保存</button>
+                        <button class="modal-btn" id="cancel-edit-btn" style="display:none;" onclick="cancelEdit()">取消编辑</button>
+                        <button class="modal-btn cancel" onclick="closeLastInputModal()">关闭</button>
+                    </div>
+                </div>
             `;
             
-            // 复用showModal显示内容
-            showModal(htmlContent);
+            document.body.appendChild(modal);
+            modal.style.display = 'block';
+            
+            // 延迟一帧后调整位置
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
         }
+
 
         // 显示汗青集（聊天总结记录）
         async function showHistorySummary() {
@@ -2546,6 +2578,77 @@
             const modal = document.getElementById('history-summary-modal');
             modal.style.display = 'none';
             modal._unbindFit && modal._unbindFit();
+        }
+
+        // 切换编辑模式
+        function toggleEditMode() {
+            const displayDiv = document.getElementById('last-input-display');
+            const editArea = document.getElementById('last-input-edit');
+            const editBtn = document.getElementById('edit-input-btn');
+            const saveBtn = document.getElementById('save-input-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            
+            displayDiv.style.display = 'none';
+            editArea.style.display = 'block';
+            editBtn.style.display = 'none';
+            saveBtn.style.display = 'inline-block';
+            cancelBtn.style.display = 'inline-block';
+            
+            // 自动聚焦并选中文本
+            editArea.focus();
+            editArea.select();
+        }
+
+        // 保存编辑的输入
+        async function saveEditedInput() {
+            const editArea = document.getElementById('last-input-edit');
+            const newMessage = editArea.value.trim();
+            
+            if (newMessage) {
+                // 更新本地变量
+                lastUserMessage = newMessage;
+                gameData.lastUserMessage = newMessage;
+                
+                // 保存到SillyTavern变量
+                const renderFunc = getRenderFunction();
+                if (renderFunc) {
+                    await renderFunc(`/setvar key=lastMessage_jxz ${newMessage}`);
+                    await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${newMessage}`);
+                    await saveGameData();
+                }
+                
+                showModal('上轮输入内容已更新！');
+            }
+            
+            closeLastInputModal();
+        }
+
+        // 取消编辑
+        function cancelEdit() {
+            const displayDiv = document.getElementById('last-input-display');
+            const editArea = document.getElementById('last-input-edit');
+            const editBtn = document.getElementById('edit-input-btn');
+            const saveBtn = document.getElementById('save-input-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            
+            displayDiv.style.display = 'block';
+            editArea.style.display = 'none';
+            editBtn.style.display = 'inline-block';
+            saveBtn.style.display = 'none';
+            cancelBtn.style.display = 'none';
+            
+            // 恢复原始值
+            editArea.value = lastUserMessage || '';
+        }
+
+        // 关闭上轮输入弹窗
+        function closeLastInputModal() {
+            const modal = document.getElementById('last-input-modal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal._unbindFit && modal._unbindFit();
+                modal.remove();
+            }
         }
 
         // ========== 初始化 ==========
