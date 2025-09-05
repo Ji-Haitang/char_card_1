@@ -187,8 +187,8 @@ function showFarmGame() {
     const params = new URLSearchParams({
         money: playerStats.金钱,
         week: currentWeek,
-        lastFarmWeek: gameData.lastFarmWeek || 1,  // 传递上次耕种周数
-        farmGrid: JSON.stringify(gameData.farmGrid || []),  // 传递农场状态
+        lastFarmWeek: lastFarmWeek || 1,  // 传递上次耕种周数
+        farmGrid: JSON.stringify(farmGrid || []),  // 传递农场状态
         ...seedCounts
     });
     
@@ -563,7 +563,7 @@ async function useItem(itemName) {
     
     checkAllValueRanges();
     updateAllDisplays();
-    await saveGameData();
+    // await saveGameData();
     
     // showModal(`使用了${itemName}！<br>体力 +${item.影响数值}`);
     
@@ -624,7 +624,7 @@ async function equipItem(itemName) {
     
     checkAllValueRanges();
     updateAllDisplays();
-    await saveGameData();
+    // await saveGameData();
     
     // showModal(`装备了${itemName}！<br>${item.装备属性} +${item.装备数值}`);
     
@@ -659,7 +659,7 @@ async function unequipItem(itemName) {
     
     checkAllValueRanges();
     updateAllDisplays();
-    await saveGameData();
+    // await saveGameData();
     
     // showModal(`卸下了${itemName}！`);
     

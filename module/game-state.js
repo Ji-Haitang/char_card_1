@@ -93,7 +93,8 @@ let currentBattleNpcId = null;  // 记录当前战斗的NPC ID
 // let storyPages = [];  // 存储分页后的文本
 // let currentPage = 0;  // 当前页码
 // let isStoryExpanded = false;  // 是否展开显示全文
-
+let lastFarmWeek = 1;  // 新增：上次耕种的周数
+let farmGrid = [];     // 新增：农场地块状态
 let inventory = {
     "肉包子": 5,
     "制式铁剑": 1
@@ -142,6 +143,8 @@ function syncVariablesFromGameData() {
     npcVisibility,
     npcGiftGiven,
     npcSparred,
+    lastFarmWeek,  
+    farmGrid,     
     inventory,
     equipment,
     lastUserMessage,
@@ -179,12 +182,18 @@ function syncGameDataFromVariables() {
     gameData.npcVisibility = npcVisibility;
     gameData.npcGiftGiven = npcGiftGiven;
     gameData.npcSparred = npcSparred;
+    gameData.lastFarmWeek = lastFarmWeek;
+    gameData.farmGrid = farmGrid;
     gameData.inventory = inventory;
     gameData.equipment = equipment;
     gameData.dayNightStatus = dayNightStatus;
     gameData.seasonStatus = seasonStatus;
     gameData.lastUserMessage = lastUserMessage;
     gameData.summary_Small = summary_Small;
+}
+
+function syncGameDatalastUserMessage() {
+    gameData.lastUserMessage = lastUserMessage;
 }
 
 // 深度合并函数
@@ -261,5 +270,13 @@ async function saveGameData() {
     const renderFunc = getRenderFunction();
     if (!renderFunc) return;
     syncGameDataFromVariables();
+    await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
+}
+
+
+async function saveLastUserMessage() {
+    const renderFunc = getRenderFunction();
+    if (!renderFunc) return;
+    syncGameDatalastUserMessage();
     await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
 }

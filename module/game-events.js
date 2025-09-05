@@ -224,7 +224,7 @@ function parseLLMResponse(response, mainTextContent) {
             // 更新用户位置
             userLocation = userLocationId;
             userLocation_old = userLocation;
-            gameData.userLocation = userLocationId;
+            // gameData.userLocation = userLocationId;
             
             console.log(`用户移动到：${userNewLocation} (${userLocationId})`);
             
@@ -700,8 +700,8 @@ function setupMessageListeners() {
             }
             
             // 保存农场状态
-            gameData.lastFarmWeek = currentWeek;
-            gameData.farmGrid = event.data.farmGrid || [];
+            lastFarmWeek = currentWeek;
+            farmGrid = event.data.farmGrid || [];
             
             checkAllValueRanges();
             updateAllDisplays();

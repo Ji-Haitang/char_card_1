@@ -1174,7 +1174,7 @@
             }
             
             // 保存游戏数据
-            saveGameData();
+            // saveGameData();
         }
 
         // 送礼函数
@@ -2025,7 +2025,7 @@
             difficulty = selectedDifficulty;
             
             // 保存到SillyTavern变量
-            await saveGameData();
+            // await saveGameData();
             
             // 显示确认信息
             const difficultyNames = {
@@ -2143,7 +2143,7 @@
             }
             
             // 保存到SillyTavern
-            await saveGameData();
+            // await saveGameData();
             
             // 显示确认信息
             showModal('数值已修改并保存！');
@@ -2354,7 +2354,7 @@
             
             checkAllValueRanges();
             updateAllDisplays();
-            await saveGameData();
+            // await saveGameData();
             
             // 不显示弹窗，直接刷新交易界面
             showTrading(currentTradingType);
@@ -2380,7 +2380,7 @@
             
             checkAllValueRanges();
             updateAllDisplays();
-            await saveGameData();
+            // await saveGameData();
             
             // 不显示弹窗，直接刷新交易界面
             showTrading(currentTradingType);
@@ -2469,7 +2469,7 @@
             
             checkAllValueRanges();
             updateAllDisplays();
-            await saveGameData();
+            // await saveGameData();
             
             showModal(`购买了${currentShopItem}！<br>花费: ${item.买入价格}金`);
             
@@ -2561,7 +2561,7 @@
             
             // 直接从summary_Small读取内容
             if (summary_Small && summary_Small.trim()) {
-                contentDiv.textContent = gameData.summary_Small;
+                contentDiv.textContent = summary_Small;
             } else {
                 contentDiv.textContent = '暂无聊天总结记录';
             }
@@ -2607,14 +2607,14 @@
             if (newMessage) {
                 // 更新本地变量
                 lastUserMessage = newMessage;
-                gameData.lastUserMessage = newMessage;
+                // gameData.lastUserMessage = newMessage;
                 
                 // 保存到SillyTavern变量
                 const renderFunc = getRenderFunction();
                 if (renderFunc) {
                     await renderFunc(`/setvar key=lastMessage_jxz ${newMessage}`);
                     await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${newMessage}`);
-                    await saveGameData();
+                    await saveLastUserMessage();
                 }
                 
                 showModal('上轮输入内容已更新！');
