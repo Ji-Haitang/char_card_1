@@ -275,9 +275,9 @@ function parseLLMResponse(response, mainTextContent) {
         }
         
         // 处理response中的NPC数据（如果有）
-        if (response && response.主要NPC && typeof response.主要NPC === 'object') {
-            for (const npcName in response.主要NPC) {
-                const npcData = response.主要NPC[npcName];
+        if (response && response.当前NPC && typeof response.当前NPC === 'object') {
+            for (const npcName in response.当前NPC) {
+                const npcData = response.当前NPC[npcName];
                 let npcId = npcNameToId[npcName];
                 
                 if (!npcId) {
@@ -403,10 +403,10 @@ function parseLLMResponse(response, mainTextContent) {
             updateStoryText(currentStoryText);
         }
         
-        // 处理主要NPC
-        if (response.主要NPC && typeof response.主要NPC === 'object') {
-            for (const npcName in response.主要NPC) {
-                const npcData = response.主要NPC[npcName];
+        // 处理当前NPC
+        if (response.当前NPC && typeof response.当前NPC === 'object') {
+            for (const npcName in response.当前NPC) {
+                const npcData = response.当前NPC[npcName];
                 
                 let npcId = npcNameToId[npcName];
                 
@@ -705,7 +705,7 @@ function setupMessageListeners() {
             
             checkAllValueRanges();
             updateAllDisplays();
-            await saveGameData();  // 保存游戏数据
+            // await saveGameData();  // 保存游戏数据
             
             document.getElementById('farm-modal').style.display = 'none';
             document.getElementById('farm-iframe').src = '';

@@ -1,5 +1,5 @@
 
-<!-- <NpcList> is the list of NPCs that appear in this LLM interactive game -->
+<!-- <NpcList> is the list of NPCs that appear in current story -->
 
 <NpcList>
 主要NPC名单：

@@ -1,5 +1,5 @@
 
-<!-- <SceneList> is the list of scenes that appear in this LLM interactive game -->
+<!-- <SceneList> is the list of scenes that appear in current story -->
 
 <SceneList>
 场景列表：
