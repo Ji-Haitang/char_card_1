@@ -95,6 +95,7 @@ let currentBattleNpcId = null;  // 记录当前战斗的NPC ID
 // let isStoryExpanded = false;  // 是否展开显示全文
 let lastFarmWeek = 1;  // 新增：上次耕种的周数
 let farmGrid = [];     // 新增：农场地块状态
+let newWeek = 0; 
 let inventory = {
     "肉包子": 5,
     "制式铁剑": 1
@@ -148,7 +149,8 @@ function syncVariablesFromGameData() {
     inventory,
     equipment,
     lastUserMessage,
-    summary_Small } = gameData);  // 新增
+    summary_Small,
+    newWeek } = gameData);  // 新增
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -190,10 +192,15 @@ function syncGameDataFromVariables() {
     gameData.seasonStatus = seasonStatus;
     gameData.lastUserMessage = lastUserMessage;
     gameData.summary_Small = summary_Small;
+    gameData.newWeek = newWeek;
 }
 
 function syncGameDatalastUserMessage() {
     gameData.lastUserMessage = lastUserMessage;
+}
+
+function syncGameDatanewWeek() {
+    gameData.newWeek = newWeek;
 }
 
 // 深度合并函数
@@ -278,5 +285,12 @@ async function saveLastUserMessage() {
     const renderFunc = getRenderFunction();
     if (!renderFunc) return;
     syncGameDatalastUserMessage();
+    await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
+}
+
+async function saveNewWeek() {
+    const renderFunc = getRenderFunction();
+    if (!renderFunc) return;
+    syncGameDatanewWeek();
     await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
 }

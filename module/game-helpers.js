@@ -45,8 +45,18 @@ async function handleMessageOutput(message) {
         lastUserMessage = message;
         console.log('user消息存入变量lastMessage_jxz');
         await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
-        
-        await saveGameData();
+
+        // 新增：检查是否是新的一周的消息
+        const newWeekPattern = /^新的一周开始了<br>当前第(\d+)周$/;
+        const match = message.match(newWeekPattern);
+
+        if (match) {
+            newWeek = 1;
+            console.log('检测到新的一周开始，newWeek设置为1');
+        } else {
+            newWeek = 0;
+            console.log('非新周消息，newWeek设置为0');
+        }
         
         try {
             // 显示用户输入信息（仅展示，不等待确认）
@@ -80,6 +90,7 @@ async function handleMessageOutput(message) {
                 // closeModal();
                 // 使用inject命令隐式注入user输入
                 await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${message}`);
+                await saveGameData();
                 await renderFunc('/trigger');
                 console.log('Message injected:', message);
             }, 500); // 1.5秒后自动发送

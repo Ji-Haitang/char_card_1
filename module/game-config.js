@@ -779,5 +779,6 @@ const defaultGameData = {
         "饰品2": null
     },
     lastUserMessage: "",     // 已存在：储存上轮用户输入
-    summary_Small: ""
+    summary_Small: "",
+    newWeek: 0
 };

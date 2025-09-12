@@ -2608,6 +2608,18 @@
                 // 更新本地变量
                 lastUserMessage = newMessage;
                 // gameData.lastUserMessage = newMessage;
+
+                // 新增：检查是否是新的一周的消息
+                const newWeekPattern = /^新的一周开始了<br>当前第(\d+)周$/;
+                const match = newMessage.match(newWeekPattern);
+
+                if (match) {
+                    newWeek = 1;
+                    console.log('检测到新的一周开始，newWeek设置为1');
+                } else {
+                    newWeek = 0;
+                    console.log('非新周消息，newWeek设置为0');
+                }
                 
                 // 保存到SillyTavern变量
                 const renderFunc = getRenderFunction();
@@ -2615,6 +2627,7 @@
                     await renderFunc(`/setvar key=lastMessage_jxz ${newMessage}`);
                     await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${newMessage}`);
                     await saveLastUserMessage();
+                    await saveNewWeek();
                 }
                 
                 showModal('上轮输入内容已更新！');
