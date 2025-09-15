@@ -1,6 +1,8 @@
 <%_ const newweek = gameData.newWeek; _%>
 <%_ const randomNum = Math.floor(Math.random() * 100) + 1; _%>
+<%_ const GameMode = gameData.GameMode; _%>
 无视对话历史中的格式，当用户进行游戏行动时，本回合你必须严格按照以下格式输出：
+<%_ if (GameMode == 0) { _%>
 <%_ if (newweek == 0) { _%>
 格式: 
   <SLG_MODE>
@@ -178,4 +180,58 @@
     - 当前NPC为正文中出场互动的NPC，可存在多个NPC条目，为空时输出空对象: {}
 
 <%_ } _%>
+<%_ } _%>
+<%_ } else { _%>
+格式: 
+  <SLG_MODE>
+  <MAIN_TEXT>
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；本段落中的主要NPC，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景}}|{{enum: <ExpressionList>中的表情；当前NPC的表情}}|{{enum: <NSFWList>中的成人级NSFW行为；当前NPC的NSFW亲昵行为，若无则填"none"}}
+  {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  ...
+  {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  </MAIN_TEXT>
+
+  <SUMMARY>
+  {{string: 正文内容精炼总结，约正文1/10字数}}
+  </SUMMARY>
+
+  <SIDE_NOTE>
+  {
+    "时间": "{{HH:MM: 正文中剧情所处的时间，24小时制，如19:15}}",
+    "用户": {
+      "位置变动": "{{enum: <SceneList>中的场景名，正文中{{user}}最后所处的场景}}"
+    },
+    "当前NPC": {
+      "{{enum: <NpcList>中的NPC名}}": {
+        "好感变化": "{{enum: 大幅下降|下降|不变|上升|大幅上升；NPC对玩家的好感度变化}}",
+        "位置变动": "{{enum: <SceneList>中的场景名，正文中该NPC最后所处的场景}}"
+      },
+      ...
+      "{{enum: <NpcList>中的NPC名}}": {
+        "好感变化": "{{enum: 大幅下降|下降|不变|上升|大幅上升；NPC对玩家的好感度变化}}",
+        "位置变动": "{{enum: <SceneList>中的场景名，正文中该NPC最后所处的场景}}"
+      }
+    }
+  }
+  </SIDE_NOTE>
+  </SLG_MODE>
+
+说明:
+  标签要求:
+    外层XML标签: <SLG_MODE></SLG_MODE>
+    内层XML标签: 
+      - 正文标签: <MAIN_TEXT></MAIN_TEXT>
+      - 总结标签: <SUMMARY></SUMMARY>
+      - 旁注标签: <SIDE_NOTE></SIDE_NOTE>  
+  正文规则:
+    段落数: 8-12
+    段落字数: 150-250 
+    段落标记: 每段末尾用"|"分隔四个字段，每个字段代表一个标记
+    标记顺序: NPC名|场景名|NPC表情|NSFW行为
+  总结规则:
+    字数比例: 正文的1/10  
+  旁注规则:
+    - 使用全角符号或转义符号避免解析错误
+    - 当前NPC为正文中出场互动的NPC，可存在多个NPC条目，为空时输出空对象: {}
+
 <%_ } _%>
