@@ -710,5 +710,75 @@ function setupMessageListeners() {
             document.getElementById('farm-modal').style.display = 'none';
             document.getElementById('farm-iframe').src = '';
         }
+        else if (event.data.type === 'worldmap-close') {
+            // 只关闭弹窗，不做任何其他操作
+            document.getElementById('worldmap-modal').style.display = 'none';
+            document.getElementById('worldmap-iframe').src = '';
+            return;  // 直接返回，不执行任何其他操作
+        }
+        else if (event.data.type === 'worldmap-exit') {
+            // 关闭世界地图弹窗
+            document.getElementById('worldmap-modal').style.display = 'none';
+            document.getElementById('worldmap-iframe').src = '';
+            
+            // 更新游戏状态
+            if (event.data.mapLocation) {
+                mapLocation = event.data.mapLocation;
+            }
+            if (event.data.companionNPC) {
+                companionNPC = event.data.companionNPC;
+            }
+            if (event.data.randomEvent !== undefined) {
+                randomEvent = event.data.randomEvent;
+            }
+            if (event.data.battleEvent !== undefined) {
+                battleEvent = event.data.battleEvent;
+            }
+            
+            // 构建返回消息
+            const year = Math.floor((currentWeek - 1) / 48) + 1;
+            const remainingWeeks = (currentWeek - 1) % 48;
+            const month = Math.floor(remainingWeeks / 4) + 1;
+            const week = remainingWeeks % 4 + 1;
+            
+            // 生成随行NPC名字列表
+            let companionNames = '无';
+            if (companionNPC && companionNPC.length > 0) {
+                // 将NPC名字转换为ID
+                const npcIds = companionNPC.map(name => {
+                    // 如果传递的是名字，转换为ID
+                    return npcNameToId[name] || name;
+                });
+                // 再从ID获取名字（确保格式正确）
+                companionNames = npcIds.map(id => npcs[id]?.name || id).join('、');
+            }
+            
+            // 构建事件信息
+            let eventInfo = '';
+            if (randomEvent === 1) {
+                eventInfo += '<br>特殊事件：发现随机事件';
+            }
+            if (battleEvent === 1) {
+                eventInfo += '<br>特殊事件：遭遇战斗';
+            }
+            
+            const resultMessage = 
+                `时间：第${year}年第${month}月第${week}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                `地点：山门<br>` +
+                `{{user}}行动选择：下山<br>` +
+                `目的地：${mapLocation}<br>` +
+                `随行NPC：${companionNames}` +
+                eventInfo;
+            
+            // 保存游戏数据
+            checkAllValueRanges();
+            updateAllDisplays();
+            // await saveGameData();
+            
+            // 发送消息
+            GameMode = 1;
+            await handleMessageOutput(resultMessage);
+        }
     });
 }

@@ -25,23 +25,21 @@
             justify-content: center;
             align-items: center;
             background: linear-gradient(180deg, #1a1a1a 0%, #0a0a0a 100%);
+            overflow: hidden;  /* 添加overflow: hidden确保内容不超出 */
         }
 
         /* 地图背景 */
         .map-background {
             position: relative;
-            width: 90vw;
-            height: calc(90vw * 832 / 1216);
-            max-width: calc(90vh * 1216 / 832);
-            max-height: 90vh;
+            width: 100vw;
+            height: 100vh;
             /* background-image: url('https://files.catbox.moe/u5pdt5.png'); */
             background-image: url('img/location/世界地图.png');
             background-size: cover;
             background-repeat: no-repeat;
             background-position: center;
             filter: brightness(0.8) contrast(1.1) saturate(1);
-            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
-            border-radius: 2vh;
+            /* 移除box-shadow和border-radius，因为现在是全屏 */
         }
 
         /* 地图标记 */
@@ -497,6 +495,39 @@
             justify-content: space-between;
         }
 
+        /* 地图关闭按钮 */
+        .map-close-btn {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.7);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: #ffffff;
+            font-size: 30px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            z-index: 1001;  /* 确保在地图标记之上 */
+            backdrop-filter: blur(5px);
+        }
+
+        .map-close-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.6);
+            transform: rotate(90deg);
+            color: #4ECDC4;
+        }
+
+        .map-close-btn:active {
+            transform: rotate(90deg) scale(0.95);
+        }
+
         /* 响应式调整 */
         @media (max-width: 768px) {
             .modal-content {
@@ -552,6 +583,14 @@
                 font-size: 11px;  /* 建议内容固定11px */
                 padding-left: 2vw;
             }
+
+            .map-close-btn {
+                width: 40px;
+                height: 40px;
+                font-size: 24px;
+                top: 15px;
+                right: 15px;
+            }
         }
 
         /* 针对更小屏幕的优化 */
@@ -568,6 +607,14 @@
             .advice-item {
                 font-size: 10px;  /* 最小可读字体 */
             }
+
+            .map-close-btn {
+                width: 35px;
+                height: 35px;
+                font-size: 20px;
+                top: 10px;
+                right: 10px;
+            }
         }
 
     </style>
@@ -575,6 +622,8 @@
 <body>
     <div class="map-container">
         <div class="map-background" id="mapBackground"></div>
+        <!-- 关闭按钮 -->
+        <button class="map-close-btn" onclick="exitMap()">×</button>
     </div>
 
     <!-- 弹窗 -->
@@ -944,6 +993,11 @@
 
         // 显示地点信息
         function showLocationInfo(location) {
+            // 隐藏地图关闭按钮
+            const closeBtn = document.querySelector('.map-close-btn');
+            if (closeBtn) {
+                closeBtn.style.display = 'none';
+            }
             const modal = document.getElementById('locationModal');
             const modalBody = document.getElementById('modalBody');
             const modalFooter = document.getElementById('modalFooter');
@@ -1065,6 +1119,11 @@
 
         // 前往地点
         function goToLocation() {
+            // 隐藏地图关闭按钮（因为已经在选择旅行了）
+            const closeBtn = document.querySelector('.map-close-btn');
+            if (closeBtn) {
+                closeBtn.style.display = 'none';
+            }
             selectedNPCs = [];
             document.querySelectorAll('.npc-checkbox:checked').forEach(checkbox => {
                 selectedNPCs.push(checkbox.value);
@@ -1072,23 +1131,28 @@
             
             // 检查当前地点是否有事件
             const events = locationEvents[currentLocation];
+            
+            // 重置事件标记
+            let newRandomEvent = 0;
+            let newBattleEvent = 0;
+            
             if (events) {
                 if (events.hasBattleEvent) {
-                    battleEvent = 1;  // 设置战斗事件标记
+                    newBattleEvent = 1;
                     console.log(`触发战斗事件！地点：${currentLocation}`);
                 } else if (events.hasRandomEvent) {
-                    randomEvent = 1;  // 设置随机事件标记
+                    newRandomEvent = 1;
                     console.log(`触发随机事件！地点：${currentLocation}`);
                 }
             }
             
+            // 显示确认信息
             const modalBody = document.getElementById('modalBody');
             const modalFooter = document.getElementById('modalFooter');
             
             let message = '';
             let eventWarning = '';
             
-            // 添加事件提示
             if (events && events.hasBattleEvent) {
                 eventWarning = '<p style="color: #FF4444; font-weight: bold;">⚠ 此地有战斗发生！</p>';
             } else if (events && events.hasRandomEvent) {
@@ -1114,13 +1178,44 @@
             }
             
             modalBody.innerHTML = message;
-            modalFooter.innerHTML = '<button class="btn" onclick="closeModal()">确定</button>';
+            modalFooter.innerHTML = '<button class="btn" onclick="confirmTravel()">确定</button>';
+        }
+
+        // 新增确认旅行函数
+        function confirmTravel() {
+            // 向父窗口发送数据
+            if (window.parent !== window) {
+                window.parent.postMessage({
+                    type: 'worldmap-exit',
+                    mapLocation: currentLocation,
+                    companionNPC: selectedNPCs,
+                    randomEvent: randomEvent,
+                    battleEvent: battleEvent
+                }, '*');
+            }
         }
 
         // 关闭弹窗
         function closeModal() {
             document.getElementById('locationModal').style.display = 'none';
             selectedNPCs = [];
+            
+            // 重新显示地图关闭按钮
+            const closeBtn = document.querySelector('.map-close-btn');
+            if (closeBtn) {
+                closeBtn.style.display = 'block';
+            }
+        }
+
+        function exitMap() {
+            // 不发送任何消息，直接关闭地图页面
+            // 如果是在iframe中，尝试通知父窗口关闭modal（不传递数据）
+            if (window.parent !== window) {
+                // 只是通知关闭，不传递任何游戏数据
+                window.parent.postMessage({
+                    type: 'worldmap-close'
+                }, '*');
+            }
         }
 
         // 点击背景关闭弹窗

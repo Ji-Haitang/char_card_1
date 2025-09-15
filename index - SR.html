@@ -60,7 +60,7 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-styles.css">
 </head>
 <body>
     <div class="container">
@@ -275,8 +275,8 @@
                     <div class="scene-title">山门</div>
                     <div class="npc-container" id="shanmen-npcs"></div>
                     <div class="scene-actions">
-                        <button class="scene-btn" disabled>下山</button>
-                        <!-- <button class="scene-btn" onclick="performAction('下山', 'shanmen')">下山</button> -->
+                        <!-- 修改这里：从disabled改为onclick -->
+                        <button class="scene-btn" onclick="showWorldMap()">下山</button>
                     </div>
                 </div>
 
@@ -317,6 +317,13 @@
                 <div id="farm-modal" class="farm-modal">
                     <div class="farm-container">
                         <iframe id="farm-iframe" class="farm-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- 世界地图iframe弹窗 - 添加在其他modal后面 -->
+                <div id="worldmap-modal" class="modal worldmap-modal" style="display: none; position: absolute; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
+                    <div class="worldmap-container" style="width: 100%; height: 100%; margin: 0; position: relative;">
+                        <iframe id="worldmap-iframe" class="worldmap-iframe" style="width: 100%; height: 100%; border: none; border-radius: 10px;"></iframe>
                     </div>
                 </div>
             </div>
@@ -754,12 +761,12 @@
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-state.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-ui.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@885d3c4/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-events.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -2553,6 +2560,18 @@
                 // 更新本地变量
                 lastUserMessage = newMessage;
                 // gameData.lastUserMessage = newMessage;
+
+                // 新增：检查是否是新的一周的消息
+                const newWeekPattern = /^新的一周开始了<br>当前第(\d+)周$/;
+                const match = newMessage.match(newWeekPattern);
+
+                if (match) {
+                    newWeek = 1;
+                    console.log('检测到新的一周开始，newWeek设置为1');
+                } else {
+                    newWeek = 0;
+                    console.log('非新周消息，newWeek设置为0');
+                }
                 
                 // 保存到SillyTavern变量
                 const renderFunc = getRenderFunction();
@@ -2560,6 +2579,7 @@
                     await renderFunc(`/setvar key=lastMessage_jxz ${newMessage}`);
                     await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${newMessage}`);
                     await saveLastUserMessage();
+                    await saveNewWeek();
                 }
                 
                 showModal('上轮输入内容已更新！');
@@ -2595,6 +2615,41 @@
                 modal.remove();
             }
         }
+
+        // 显示世界地图
+        function showWorldMap() {
+            const modal = document.getElementById('worldmap-modal');
+            const iframe = document.getElementById('worldmap-iframe');
+            
+            // 准备传递给世界地图的数据
+            const params = new URLSearchParams({
+                reputation: playerStats.声望,
+                mapLocation: mapLocation,
+                randomEvent: randomEvent,
+                battleEvent: battleEvent,
+                companionNPC: JSON.stringify(companionNPC),
+                // 传递所有NPC的好感度
+                npcFavorability: JSON.stringify(npcFavorability)
+            });
+            
+            // 构建世界地图URL（根据你的实际部署情况调整）
+            const gameUrl = `https://Ji-Haitang.github.io/char_card_1/world_map.html?${params.toString()}`;
+            // 本地测试时使用：
+            // const gameUrl = `world_map.html?${params.toString()}`;
+            
+            iframe.src = gameUrl;
+            modal.style.display = 'block';
+        }
+
+        // 添加世界地图弹窗的背景点击关闭事件
+        document.getElementById('worldmap-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要关闭世界地图吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('worldmap-iframe').src = '';
+                }
+            }
+        });
 
         async function initializeOrSync() {
             await loadOrInitGameData();
@@ -2710,6 +2765,7 @@
         window.saveEditedInput = saveEditedInput;
         window.cancelEdit = cancelEdit;
         window.closeLastInputModal = closeLastInputModal;
+        window.showWorldMap = showWorldMap;
         initializeOrSync();
     });
     </script>

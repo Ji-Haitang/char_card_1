@@ -96,6 +96,10 @@ let currentBattleNpcId = null;  // 记录当前战斗的NPC ID
 let lastFarmWeek = 1;  // 新增：上次耕种的周数
 let farmGrid = [];     // 新增：农场地块状态
 let newWeek = 0; 
+let randomEvent = 0;
+let battleEvent = 0;
+let companionNPC = [];
+let mapLocation = '天山派';
 let inventory = {
     "肉包子": 5,
     "制式铁剑": 1
@@ -150,7 +154,12 @@ function syncVariablesFromGameData() {
     equipment,
     lastUserMessage,
     summary_Small,
-    newWeek } = gameData);  // 新增
+    newWeek,
+    randomEvent,      // 新增
+    battleEvent,      // 新增
+    companionNPC,     // 新增
+    mapLocation      // 新增
+    } = gameData);
 
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
@@ -193,6 +202,10 @@ function syncGameDataFromVariables() {
     gameData.lastUserMessage = lastUserMessage;
     gameData.summary_Small = summary_Small;
     gameData.newWeek = newWeek;
+    gameData.randomEvent = randomEvent;
+    gameData.battleEvent = battleEvent;
+    gameData.companionNPC = companionNPC;
+    gameData.mapLocation = mapLocation;
 }
 
 function syncGameDatalastUserMessage() {
