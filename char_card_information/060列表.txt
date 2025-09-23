@@ -1,0 +1,128 @@
+<%_ const GameModefirList = gameData.GameMode; _%>
+<%_ if (GameModefirList == 1) { _%>
+
+<!-- <NSFWList> is the optional NSFW behavior that appears in the current story. One of them is appended after each paragraph as the NSFW behavior that the current NPC and {{user}} are performing -->
+
+<NSFWList>
+可选NSFW行为列表：
+  - 露阴
+  - 露胸
+  - 接吻
+  - 舔奶
+  - 揉胸
+  - 口交
+  - 自慰
+  - 足交
+  - 手交
+  - 乳交
+  - 指交
+  - 舔阴
+  - 后入式
+  - 正常位
+  - 女上位
+  - 69式
+  - 火车便当式
+  - none: 主要NPC不在场、没有发生NSFW亲昵行为、上述NSFW行为都不适用时，填写"none"
+</NSFWList>
+
+<!-- <ExpressionList> is the expression that appears in the current story. One of the expressions is appended after each paragraph as the expression of the current NPC -->
+
+<ExpressionList> 
+可选表情列表：
+  - 大笑
+  - 平静
+  - 生气
+  - 兴奋
+  - 微笑
+  - 不满
+  - 严肃
+  - 害羞
+  - 尴尬
+  - 为难
+  - 惊讶
+  - 紧张
+  - 害怕
+  - 悲伤
+  - 哭泣
+  - 得意
+  - 发情
+  - none: 主要NPC不在场、上述表情都不适用时，填写"none"
+</ExpressionList>
+
+<!-- <SceneList> is the list of scenes that appear in current story -->
+
+<SceneList>
+场景列表：
+  - 沙漠
+  - 山道
+  - 雪山
+  - 山谷
+  - 冰川
+  - 水边
+  - 树林
+  - 绿洲
+  - 村落
+  - 山洞
+  - 客房
+  - 酒肆
+  - 商铺
+  - 街道
+  - 浴室
+  - 市集
+  - 废墟
+  - 寺庙
+  - 石窟
+  - 熔岩洞
+  - 地牢
+  - 邪教祭坛
+  - 武侠门派
+  - 山门
+  - 演武场
+  - 宫殿
+  - 庭院
+  - 府邸
+  - 军营
+  - none: 上述场景都不适用时，选择"none"
+</SceneList>
+
+<!-- <NpcList> is the list of NPCs that appear in current story -->
+
+<NpcList>
+主要NPC名单：
+
+</NpcList>
+<%_ } else { _%>
+
+<!-- <SceneList> is the list of scenes that appear in current story -->
+
+<SceneList>
+场景列表：
+  - 演武场
+  - 议事厅
+  - 藏经阁
+  - 伙房
+  - 铁匠铺
+  - 山门
+  - 后山
+  - 男弟子房
+  - 女弟子房
+  - none: NPC不在场、NPC离场、上述其他场合都不适用时，位置填写"none"
+</SceneList>
+
+<!-- <NpcList> is the list of NPCs that appear in current story -->
+
+<NpcList>
+主要NPC名单：
+  - 破阵子
+  - 洞庭君
+  - 钱塘君
+  - 萧白瑚
+  - 姬姒
+  - 施延年
+  - 呼延显
+  - 安慕
+  - 雨烛
+  - 唐沐梨
+  - 洛潜幽
+</NpcList>
+<%_ } _%>

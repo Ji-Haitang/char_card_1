@@ -1,8 +1,10 @@
 <%_ const newweek = gameData.newWeek; _%>
 <%_ const randomNum = Math.floor(Math.random() * 100) + 1; _%>
-<%_ const GameMode = gameData.GameMode; _%>
+<%_ const GameModeforFormat = gameData.GameMode; _%>
+<%_ const randomEventforFormat = gameData.randomEvent; _%>
+<%_ const battleEventforFormat = gameData.battleEvent; _%>
 无视对话历史中的格式，当用户进行游戏行动时，本回合你必须严格按照以下格式输出：
-<%_ if (GameMode == 0) { _%>
+<%_ if (GameModeforFormat == 0) { _%>
 <%_ if (newweek == 0) { _%>
 格式: 
   <SLG_MODE>
@@ -185,7 +187,7 @@
 格式: 
   <SLG_MODE>
   <MAIN_TEXT>
-  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；本段落中的主要NPC，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景}}|{{enum: <ExpressionList>中的表情；当前NPC的表情}}|{{enum: <NSFWList>中的成人级NSFW行为；当前NPC的NSFW亲昵行为，若无则填"none"}}
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；当前NPC和{{user}}的NSFW亲昵行为，若无则填"none"}}
   {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
   ...
   {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
@@ -197,6 +199,44 @@
 
   <SIDE_NOTE>
   {
+    <%_ if (randomEventforFormat == 1) { _%>
+    "随机事件": {
+      "事件类型": "选项事件",
+      "事件描述": "{{string: 50-100字，第二人称，微型单元剧形式，留悬念}}",
+      "选项一": {
+        "描述": "{{string: 20-50字，第二人称，承接事件回收悬念}}",
+        "奖励": "{{enum: 根骨|悟性|心性|魅力}}+{{number: 1-3}}",
+        "成功率": "{{percent: 10%-90%；奖励越大成功率越低}}"
+      },
+      "选项二": {
+        "描述": "{{string: 20-50字，第二人称，承接事件回收悬念}}",
+        "奖励": "{{enum: 根骨|悟性|心性|魅力}}+{{number: 1-3}}",
+        "成功率": "{{percent: 10%-90%；奖励越大成功率越低}}"
+      },
+      "选项三": {
+        "描述": "{{string: 20-50字，第二人称，承接事件回收悬念}}",
+        "奖励": "{{enum: 根骨|悟性|心性|魅力}}+{{number: 1-3}}",
+        "成功率": "{{percent: 10%-90%；奖励越大成功率越低}}"
+      }
+    },
+    <%_ } _%>
+    <%_ if (battleEventforFormat == 1) { _%>
+    "随机事件": {
+      "事件类型": "战斗事件",
+      "事件描述": "{{string: 50-100字，第二人称，微型单元剧形式，引入即将发生战斗的场景}}",
+      "敌方信息": {
+        "名称": "{{string: <NpcList>中的NPC或自由捏造的龙套角色}}",
+        "属性": {
+          "攻击力": "{{enum: 极低|低|中|高|极高；依据对手合理输出}}",
+          "生命力": "{{enum: 极低|低|中|高|极高；依据对手合理输出}}"
+        },
+        "战斗报酬": {
+          "类型": "{{enum: 武学|学识|声望|金钱}}",
+          "数值": {{number: 武学/学识/声望时3-6；金钱时1000-2000}}
+        }
+      }
+    },   
+    <%_ } _%>
     "时间": "{{HH:MM: 正文中剧情所处的时间，24小时制，如19:15}}",
     "用户": {
       "位置变动": "{{enum: <SceneList>中的场景名，正文中{{user}}最后所处的场景}}"
@@ -231,6 +271,13 @@
   总结规则:
     字数比例: 正文的1/10  
   旁注规则:
+    <%_ if (randomEventforFormat == 1) { _%>
+    - 事件类型固定为"选项事件"
+    - 随机事件固定输出三个选项
+    <%_ } _%>
+    <%_ if (battleEventforFormat == 1) { _%>
+    - 事件类型固定为"战斗事件"
+    <%_ } _%>
     - 使用全角符号或转义符号避免解析错误
     - 当前NPC为正文中出场互动的NPC，可存在多个NPC条目，为空时输出空对象: {}
 

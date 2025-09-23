@@ -1,0 +1,23 @@
+
+<!-- <NSFWList> is the optional NSFW behavior that appears in the current story. One of them is appended after each paragraph as the NSFW behavior that the current NPC and {{user}} are performing -->
+
+<NSFWList>
+可选NSFW行为列表：
+  - 露阴
+  - 露胸
+  - 接吻
+  - 舔奶
+  - 揉胸
+  - 口交
+  - 自慰
+  - 足交
+  - 手交
+  - 乳交
+  - 指交
+  - 舔阴
+  - 后入式
+  - 正常位
+  - 女上位
+  - 69式
+  - 火车便当式
+</NSFWList> 

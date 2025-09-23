@@ -1635,49 +1635,95 @@
         async function sendFreeAction() {
             const inputElement = document.getElementById('free-action-input');
             const actionContent = inputElement.value.trim();
-            
+
             const year = Math.floor((currentWeek - 1) / 48) + 1;
             const remainingWeeks = (currentWeek - 1) % 48;
             const month = Math.floor(remainingWeeks / 4) + 1;
             const week = remainingWeeks % 4 + 1;
-
+            
             if (!actionContent) {
                 alert('请输入自由行动内容！');
                 return;
             }
             
-            const activeScene = document.querySelector('.scene.active');
-            let currentLocation = '';
-            
-            const npcsPresent = getNpcsAtLocation(userLocation).map(npc => npc.name).join('、') || '无';
-            
-            let locationInfo = '';
-            if (activeScene.id === 'map-scene') {
-                // 地图场景特殊处理
-                if (userLocation === userLocation_old) {
-                    locationInfo = `地点：天山派（地图）<br>`;
-                } else {
-                    const oldLocationName = locationNames[userLocation_old] || userLocation_old;
-                    locationInfo = `地点：从${oldLocationName}来到天山派（地图）<br>`;
-                }
-            } else {
-                const sceneName = activeScene.id.replace('-scene', '');
-                const currentLocationName = locationNames[sceneName] || sceneName;
+            // GameMode为1时的特殊处理
+            if (GameMode === 1) {
+                // 根据mapLocation的危险度进行事件判定
+                const dangerLevel = locationDangerLevels[mapLocation] || '低';
+                const eventChance = dangerEventChance[dangerLevel];
                 
-                if (userLocation === userLocation_old) {
-                    locationInfo = `地点：${currentLocationName}<br>`;
+                const eventRoll = Math.random() * 100;
+                
+                // 先判断战斗事件（优先级更高）
+                if (eventRoll < eventChance.battle) {
+                    battleEvent = 1;
+                    randomEvent = 0;
+                    console.log(`在${mapLocation}触发战斗事件！危险度：${dangerLevel}`);
+                } else if (eventRoll < (eventChance.battle + eventChance.random)) {
+                    // 战斗事件没触发时，再判断随机事件
+                    randomEvent = 1;
+                    battleEvent = 0;
+                    console.log(`在${mapLocation}触发随机事件！危险度：${dangerLevel}`);
                 } else {
-                    const oldLocationName = locationNames[userLocation_old] || userLocation_old;
-                    locationInfo = `地点：从${oldLocationName}来到${currentLocationName}<br>`;
+                    randomEvent = 0;
+                    battleEvent = 0;
                 }
-            }
+                
+                // 生成随行NPC名字列表
+                let companionNames = '无';
+                if (companionNPC && companionNPC.length > 0) {
+                    companionNames = companionNPC.join('、');
+                }
+                
+                // 构建事件信息
+                let eventInfo = '';
+                if (randomEvent === 1) {
+                    eventInfo += '<br>特殊事件：遭遇随机事件';
+                }
+                if (battleEvent === 1) {
+                    eventInfo += '<br>特殊事件：遭遇战斗';
+                }
+                
+                const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                    `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                    `地点：${mapLocation}<br>` +
+                    `{{user}}自由行动："${actionContent}"<br>` +
+                    `随行NPC：${companionNames}` +
+                    eventInfo;
+            } else {
+                // 原有的GameMode为0的逻辑
+                const activeScene = document.querySelector('.scene.active');
+                let currentLocation = '';
+                
+                const npcsPresent = getNpcsAtLocation(userLocation).map(npc => npc.name).join('、') || '无';
+                
+                let locationInfo = '';
+                if (activeScene.id === 'map-scene') {
+                    // 地图场景特殊处理
+                    if (userLocation === userLocation_old) {
+                        locationInfo = `地点：天山派<br>`;
+                    } else {
+                        const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                        locationInfo = `地点：从${oldLocationName}来到天山派<br>`;
+                    }
+                } else {
+                    const sceneName = activeScene.id.replace('-scene', '');
+                    const currentLocationName = locationNames[sceneName] || sceneName;
+                    
+                    if (userLocation === userLocation_old) {
+                        locationInfo = `地点：${currentLocationName}<br>`;
+                    } else {
+                        const oldLocationName = locationNames[userLocation_old] || userLocation_old;
+                        locationInfo = `地点：从${oldLocationName}来到${currentLocationName}<br>`;
+                    }
+                }
 
-            const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
-                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
-                locationInfo +  // 使用新的地点信息
-                `{{user}}自由行动："${actionContent}"<br>` +
-                `在场NPC：${npcsPresent}`;
-            
+                const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                    `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                    locationInfo +
+                    `{{user}}自由行动："${actionContent}"<br>` +
+                    `在场NPC：${npcsPresent}`;
+            }
             inputElement.value = '';
             inputElement.style.height = 'auto';
             
@@ -1826,6 +1872,12 @@
             // 重置游戏模式
             GameMode = 0;
             slgModeData = [];
+
+            // 重置下山相关的变量
+            randomEvent = 0;
+            battleEvent = 0;
+            companionNPC = [];
+            mapLocation = '天山派';
             
             // 清除SLG图层
             const viewport = document.getElementById('main-viewport');
