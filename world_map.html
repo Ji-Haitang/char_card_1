@@ -816,7 +816,7 @@
             '洞庭君': 999,
             '钱塘君': 0,
             '萧白瑚': 999,
-            '姬姒': 10,
+            '姬姒': 50,
             '破阵子': 999,
             '呼延显': 999,
             '施延年': 999,
@@ -944,6 +944,52 @@
 
         let currentLocation = '';
         let selectedNPCs = [];
+
+        const idToName = {
+        'A': '破阵子','B': '洞庭君','C': '钱塘君','D': '萧白瑚','E': '姬姒','F': '施延年',
+        'G': '呼延显','H': '雨烛','I': '安慕','J': '唐沐梨','K': '洛潜幽','L': '神秘杂役'
+        };
+
+        function hydrateFromParentQuery() {
+            const q = new URLSearchParams(window.location.search);
+
+            // 1) 声望
+            const rep = parseInt(q.get('reputation'), 10);
+            if (!Number.isNaN(rep)) {
+                playerReputation = rep; // 影响可出行判断和可邀请人数[[17]]
+            }
+
+            // 2) 传入的当前地图、事件标记（可选，主要用于回显/保持状态）
+            const ml = q.get('mapLocation');
+            if (ml) {
+                // 可按需用于默认选中/滚动到该地点，这里先存一份
+                window._incomingMapLocation = ml;
+            }
+            const re = parseInt(q.get('randomEvent'), 10);
+            if (!Number.isNaN(re)) randomEvent = re;
+            const be = parseInt(q.get('battleEvent'), 10);
+            if (!Number.isNaN(be)) battleEvent = be;
+
+            // 3) 随行NPC（可选，用于默认勾选）
+            try {
+                const comp = JSON.parse(q.get('companionNPC') || '[]');
+                if (Array.isArray(comp)) {
+                window._incomingCompanions = comp; // 可在 showNPCList 里用来默认勾选
+                }
+            } catch (e) {}
+
+            // 4) 好感度：父页传的是以ID为键的对象，这里转成“中文名”为键
+            try {
+                const favorRaw = JSON.parse(q.get('npcFavorability') || '{}');
+                const favorByName = {};
+                Object.entries(favorRaw).forEach(([id, val]) => {
+                const name = idToName[id] || id;
+                favorByName[name] = val;
+                });
+                // 用传入数据覆盖默认的 npcCurrentFavor
+                npcCurrentFavor = { ...npcCurrentFavor, ...favorByName };
+            } catch (e) {}
+        }
 
         // 初始化地图标记
         function initializeMap() {
@@ -1135,7 +1181,6 @@
             // 重置事件标记
             let newRandomEvent = 0;
             let newBattleEvent = 0;
-            
             if (events) {
                 if (events.hasBattleEvent) {
                     newBattleEvent = 1;
@@ -1145,6 +1190,10 @@
                     console.log(`触发随机事件！地点：${currentLocation}`);
                 }
             }
+
+            // 把局部结果写回全局，供 confirmTravel 回传
+            randomEvent = newRandomEvent;
+            battleEvent = newBattleEvent;
             
             // 显示确认信息
             const modalBody = document.getElementById('modalBody');
@@ -1227,7 +1276,10 @@
         });
 
         // 页面加载完成后初始化地图
-        window.addEventListener('DOMContentLoaded', initializeMap);
+        window.addEventListener('DOMContentLoaded', () => {
+        hydrateFromParentQuery();   // 先吃掉父页传入的数据
+        initializeMap();            // 再初始化地图（会用到 playerReputation 等）
+        });
     </script>
 </body>
 </html>

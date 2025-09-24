@@ -59,6 +59,7 @@ let actionPoints = 3;
 let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
 let difficulty = 'normal';
+let cgContentEnabled = false;   // 新增：CG内容开关运行时变量（默认false）
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
@@ -79,6 +80,7 @@ let npcLocationK = "nvdizi";
 let npcLocationL = "none";
 
 // 临时状态变量
+let randIdx = 0;
 let currentInteractionNpc = null;
 let currentInteractionLocation = null;
 let currentRandomEvent = null;
@@ -158,7 +160,8 @@ function syncVariablesFromGameData() {
     randomEvent,      // 新增
     battleEvent,      // 新增
     companionNPC,     // 新增
-    mapLocation      // 新增
+    mapLocation,      // 新增
+    cgContentEnabled  // 新增
     } = gameData);
 
     npcLocationA = currentNpcLocations.A;
@@ -174,6 +177,7 @@ function syncVariablesFromGameData() {
     npcLocationK = currentNpcLocations.K;
     npcLocationL = currentNpcLocations.L;
     userLocation_old = userLocation;
+    randIdx = Math.floor(Math.random() * 4) + 1;
 }
 
 // 修改 syncGameDataFromVariables 函数
@@ -206,6 +210,7 @@ function syncGameDataFromVariables() {
     gameData.battleEvent = battleEvent;
     gameData.companionNPC = companionNPC;
     gameData.mapLocation = mapLocation;
+    gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
 }
 
 function syncGameDatalastUserMessage() {

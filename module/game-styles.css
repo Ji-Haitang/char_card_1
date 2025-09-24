@@ -2417,3 +2417,15 @@ body {
     border: none;
     border-radius: 10px;
 }
+
+.slg-emotion-layer img {
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    height: 85%;
+    width: auto;
+    max-width: 90%;              /* 可选：防止极端宽图超出 */
+    object-fit: contain;         /* 覆盖全局的 cover */
+    object-position: bottom center;
+  }

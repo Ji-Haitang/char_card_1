@@ -353,6 +353,7 @@
                     <button class="dropdown-item" onclick="saveGame()">存档</button>
                     <button class="dropdown-item" onclick="loadGame()">读档</button>
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
+                    <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容（关）</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
                 </div>
             </div>
@@ -2703,6 +2704,29 @@
             }
         });
 
+        // 根据当前开关刷新按钮文案
+        function updateCgToggleLabel() {
+            const btn = document.getElementById('toggle-cg-btn');
+            if (btn) btn.textContent = `CG内容（${cgContentEnabled ? '开' : '关'}）`;
+        }
+
+        // 切换CG内容开关（仅切开关，不改 slgCGOptions）
+        async function toggleCgContent() {
+            cgContentEnabled = !cgContentEnabled;
+
+            // 立即刷新当前页面展示（关闭时隐藏CG层，开启时显示）
+            if (GameMode === 1) {
+                updateStoryDisplay();
+            }
+
+            // 保存到存档（可选）
+            try { await saveGameData(); } catch (e) {}
+
+            // 更新按钮文案并收起菜单
+            updateCgToggleLabel();
+            toggleDropdown('system-dropdown');
+        }
+
         async function initializeOrSync() {
             await loadOrInitGameData();
             console.log('初始化完成');
@@ -2738,6 +2762,7 @@
             }
             // 新增：初始化时更新SLG返回按钮显示
             updateSLGReturnButton();
+            updateCgToggleLabel();
             /* === 新增 === */
             window.__initDone = true;
             if (window.__pendingTemplateVars) {
@@ -2818,6 +2843,7 @@
         window.cancelEdit = cancelEdit;
         window.closeLastInputModal = closeLastInputModal;
         window.showWorldMap = showWorldMap;
+        window.toggleCgContent = toggleCgContent;
         initializeOrSync();
     });
     </script>

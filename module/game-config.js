@@ -425,16 +425,28 @@ const slgSceneOptions = [
     '宫殿',
     '庭院',
     '府邸',
-    '军营',
-    'none'
+    '军营'
 ];
 
 // SLG模式可选CG配置
 const slgCGOptions = [
-    '拥抱',
-    '亲吻',
-    '牵手',
-    '散步',
+    '露阴',
+    '露胸',
+    '接吻',
+    '舔奶',
+    '揉胸',
+    '口交',
+    '自慰',
+    '足交',
+    '手交',
+    '乳交',
+    '指交',
+    '舔阴',
+    '后入式',
+    '正常位',
+    '女上位',
+    '69式',
+    '火车便当式',
     'none'
 ];
 
@@ -879,5 +891,6 @@ const defaultGameData = {
     randomEvent: 0,       // 随机事件标记
     battleEvent: 0,       // 战斗事件标记
     companionNPC: [],     // 随行NPC数组
-    mapLocation: '天山派' // 地图位置
+    mapLocation: '天山派', // 地图位置
+    cgContentEnabled: false  // 新增：CG内容开关（默认关）
 };

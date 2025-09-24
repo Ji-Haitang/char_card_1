@@ -367,47 +367,79 @@ function updateStoryDisplay() {
             }
             
             const pageData = slgModeData[currentPage];
-            
-            // 创建图层容器
+            const dayNightCN = (dayNightStatus === 'night') ? '夜' : '昼';
+            const locName = mapLocation || '天山派外堡'; // 当前地图位置（如 天山派） [[11],[14]]
             const layerContainer = document.createElement('div');
             layerContainer.className = 'slg-layer-container';
-            
-            // 1. 场景图层（最底层）
-            if (pageData.scene && pageData.scene !== '无') {
+
+            // 1) 场景图层
+            if (pageData.scene && pageData.scene !== 'none') {
                 const sceneLayer = document.createElement('div');
                 sceneLayer.className = 'slg-layer slg-scene-layer';
                 const sceneImg = document.createElement('img');
-                sceneImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${pageData.scene}.webp`;
-                sceneImg.alt = pageData.scene;
+
+                const sceneName = pageData.scene; // 例如 演武场 / 山门 / 公田…
+                // https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene/{{当前mapLocation}}/{{昼or夜}}/{{pageData.scene}}.jpg
+                const sceneUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene/${locName}/${dayNightCN}/${sceneName}.jpg`;
+                sceneImg.src = sceneUrl;
+                sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
+
+                // // 发生 404 时回退到旧的本地背景规则
+                // sceneImg.onerror = function () {
+                //     this.onerror = null;
+                //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${sceneName}_${dayNightCN}.webp`;
+                // };
+
                 sceneLayer.appendChild(sceneImg);
                 layerContainer.appendChild(sceneLayer);
             }
-            
-            // 2. NPC表情图层（中层）
-            if (pageData.npc && pageData.emotion && pageData.emotion !== '无') {
-                const npcId = npcNameToId[pageData.npc];
+
+            // 2) NPC表情图层
+            if (pageData.npc && pageData.npc !== 'none') {
+                const npcId = npcNameToId[pageData.npc]; // 名字->ID 映射已在配置里 [[14]]
                 if (npcId) {
                     const emotionLayer = document.createElement('div');
                     emotionLayer.className = 'slg-layer slg-emotion-layer';
                     const emotionImg = document.createElement('img');
-                    emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.webp`;
-                    emotionImg.alt = `${pageData.npc} - ${pageData.emotion}`;
+
+                    const emotion = (pageData.emotion && pageData.emotion !== 'none') ? pageData.emotion : '平静';
+                    // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/表情差分/{{pageData.emotion}}.png
+                    const emoUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/${pageData.npc}/表情差分/${emotion}.png`;
+                    emotionImg.src = emoUrl;
+                    emotionImg.alt = `${pageData.npc}-${emotion}`;
+
+                    // // 404 回退：用原始 NPC 立绘
+                    // emotionImg.onerror = function () {
+                    //     this.onerror = null;
+                    //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.webp`;
+                    // };
+
                     emotionLayer.appendChild(emotionImg);
                     layerContainer.appendChild(emotionLayer);
                 }
             }
-            
-            // 3. 特殊CG图层（最顶层）
-            if (pageData.cg && pageData.cg !== '无') {
+
+            // 3) 特殊CG图层
+            if (cgContentEnabled && pageData.cg && pageData.cg !== 'none' && pageData.npc && pageData.npc !== 'none') {
                 const cgLayer = document.createElement('div');
                 cgLayer.className = 'slg-layer slg-cg-layer';
                 const cgImg = document.createElement('img');
-                cgImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/CG/${pageData.cg}.webp`;
-                cgImg.alt = pageData.cg;
+
+                // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/色图/{{pageData.cg + 随机1~4的数字后缀}}.png
+                // const randIdx = Math.floor(Math.random() * 4) + 1; // 1~4
+                const cgUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/${pageData.npc}/色图/${pageData.cg}${randIdx}.png`;
+                cgImg.src = cgUrl;
+                cgImg.alt = `${pageData.npc}-${pageData.cg}${randIdx}`;
+
+                // // 404 时直接隐藏本层
+                // cgImg.onerror = function () {
+                //     cgLayer.remove();
+                // };
+
                 cgLayer.appendChild(cgImg);
                 layerContainer.appendChild(cgLayer);
             }
-            
+     
             // 将图层容器添加到viewport
             viewport.appendChild(layerContainer);
         }

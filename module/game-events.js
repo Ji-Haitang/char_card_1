@@ -207,7 +207,7 @@ function parseLLMResponse(response, mainTextContent) {
     }
 
     // 解析用户位置变动
-    if (response && response.用户 && response.用户.位置变动 && response.用户.位置变动 !== 'none') {
+    if (GameMode === 0 && response && response.用户 && response.用户.位置变动 && response.用户.位置变动 !== 'none') {
         const userNewLocation = response.用户.位置变动;
         console.log(`用户位置变动：${userNewLocation}`);
         
@@ -247,29 +247,126 @@ function parseLLMResponse(response, mainTextContent) {
         }
     }
 
-    // 检查是否为SLG模式
+    // ====== SLG模式：鲁棒分页解析（严格遵守5段结构 + 校验 + 合并策略）======
     if (GameMode === 1 && mainTextContent) {
-        // SLG模式：解析特殊格式的输出
         const lines = mainTextContent.trim().split('\n');
         slgModeData = [];
-        
-        // 解析每一行
-        lines.forEach(line => {
-            if (line.trim()) {
-                const parts = line.split('|').map(part => part.trim());
+
+        // 仅保留中文、英文字母、阿拉伯数字
+        const cleanToken = (str) => (str || '').replace(/[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9]/g, '').trim();
+
+        // 规范化 none：支持 None/NONE/无/空字符串 -> 'none'
+        const normalizeNone = (str) => {
+            const cleaned = cleanToken(str);
+            if (!cleaned) return 'none';
+            if (cleaned === '无') return 'none';
+            if (cleaned.toLowerCase && cleaned.toLowerCase() === 'none') return 'none';
+            return cleaned;
+        };
+
+        // 验证 npc 是否在随行列表中（companionNPC 里可能是中文名或ID，做双向兼容）
+        const isNpcAllowed = (npcNameOrId) => {
+            if (npcNameOrId === 'none') return true;
+            const pool = new Set(companionNPC || []);
+            // 1) 直接命中（中文名或ID）
+            if (pool.has(npcNameOrId)) return true;
+            // 2) 名 -> ID
+            const id = npcNameToId[npcNameOrId];
+            if (id && (pool.has(id) || pool.has(npcs[id]?.name))) return true;
+            // 3) 传入是ID -> 名
+            if (npcs[npcNameOrId]?.name && pool.has(npcs[npcNameOrId].name)) return true;
+            return false;
+        };
+
+        const isSceneAllowed = (scene) => slgSceneOptions.includes(scene);
+        const isEmotionAllowed = (emo) => emo === 'none' || slgEmotionOptions.includes(emo);
+        // const isCgAllowed = (cg) => cg === 'none' || slgCGOptions.includes(cg);
+
+        let currentTextBlock = [];         // 累积“格式不完整或校验失败”的纯正文
+        let lastValidDisplay = null;       // 记录“最近一次通过校验的显示配置”（npc/scene/emotion/cg）
+
+        for (let i = 0; i < lines.length; i++) {
+            const rawLine = lines[i];
+            if (!rawLine || !rawLine.trim()) continue;
+
+            const parts = rawLine.split('|');
+
+            // 规则：必须恰好5段（正文|npc|scene|emotion|cg），缺一不可
+            if (parts.length !== 5) {
+                // 不完整 → 仅保留正文，等待与后面有效行合并
+                const textOnly = (parts[0] || rawLine).trim();
+                if (textOnly) currentTextBlock.push(textOnly);
+                continue;
+            }
+
+            // 拿到5段
+            const textPart = (parts[0] || '').trim();
+
+            // 对 npc/scene/emotion/cg 进行预处理：仅保留中英数，并做 none 规范化
+            const npcRaw = normalizeNone(parts[1]);
+            const sceneRaw = normalizeNone(parts[2]);
+            const emotionRaw = normalizeNone(parts[3]);
+            const cgRaw = normalizeNone(parts[4]);
+
+            // 规则：任意一项校验失败 → 此行“仅保留正文”，并入下一段
+            const npcOk = isNpcAllowed(npcRaw);
+            const sceneOk = isSceneAllowed(sceneRaw);
+            const emoOk = isEmotionAllowed(emotionRaw);
+            const cgOk = cgRaw !== '';  // 非空即通过
+            const normalizedCG = slgCGOptions.includes(cgRaw) ? cgRaw : 'none';  // 不在数组里则归一为 'none'
+
+            if (!(npcOk && sceneOk && emoOk && cgOk)) {
+                if (textPart) currentTextBlock.push(textPart);
+                continue;
+            }
+
+            // 到这里：本行结构完整且4项校验全部通过
+            // 按规则1：把之前累积的无效文本并入本行的正文中，一起作为同一页
+            let mergedText = textPart;
+            if (currentTextBlock.length > 0) {
+                mergedText = currentTextBlock.join('\n\n') + (textPart ? '\n\n' + textPart : '');
+                currentTextBlock = [];
+            }
+
+            const pageData = {
+                text: mergedText,
+                npc: npcRaw,
+                scene: sceneRaw,
+                emotion: emotionRaw,
+                cg: normalizedCG
+            };
+            slgModeData.push(pageData);
+            // 记录“上一次有效展示配置”（无论是否全为 none，都记录为可用配置）
+            lastValidDisplay = { npc: npcRaw, scene: sceneRaw, emotion: emotionRaw, cg: normalizedCG };
+        }
+
+        // 末尾还有残留纯文本：规则4
+        // 若存在最后的累积文本且当前行/最后一行未能形成有效页，
+        // 则把这段文本单独落盘，并“附加上一次有效页的展示配置”，否则使用 none 兜底
+        if (currentTextBlock.length > 0) {
+            const tailText = currentTextBlock.join('\n\n');
+            if (lastValidDisplay) {
                 slgModeData.push({
-                    text: parts[0] || '',
-                    npc: parts[1] || '',
-                    scene: parts[2] || '',
-                    emotion: parts[3] || '',
-                    cg: parts[4] || '无'
+                    text: tailText,
+                    npc: lastValidDisplay.npc,
+                    scene: lastValidDisplay.scene,
+                    emotion: lastValidDisplay.emotion,
+                    cg: lastValidDisplay.cg
+                });
+            } else {
+                slgModeData.push({
+                    text: tailText,
+                    npc: 'none',
+                    scene: 'none',
+                    emotion: 'none',
+                    cg: 'none'
                 });
             }
-        });
-        
-        // 使用slgModeData中的文本更新显示
+        }
+
+        // 使用 slgModeData 更新文本显示（updateStoryText 会基于 slgModeData 重新分页）
         if (slgModeData.length > 0) {
-            const allText = slgModeData.map(data => data.text).join('\n');
+            const allText = slgModeData.map(d => d.text).join('\n');
             currentStoryText = allText;
             updateStoryText(allText);
         }
@@ -359,38 +456,38 @@ function parseLLMResponse(response, mainTextContent) {
                 }
                 
                 // 处理位置变动
-                if (npcData.位置变动) {
-                    // 支持多种格式："演武场|议事厅|后山" 或 "伙房"
-                    const locations = npcData.位置变动.split('|').map(loc => loc.trim());
-                    const toLocation = locations[locations.length - 1]; // 取最后一个位置
+                // if (npcData.位置变动) {
+                //     // 支持多种格式："演武场|议事厅|后山" 或 "伙房"
+                //     const locations = npcData.位置变动.split('|').map(loc => loc.trim());
+                //     const toLocation = locations[locations.length - 1]; // 取最后一个位置
                     
-                    let toLocationId = null;
-                    for (const [locId, locName] of Object.entries(locationNames)) {
-                        if (locName === toLocation.trim()) {
-                            toLocationId = locId;
-                            break;
-                        }
-                    }
+                //     let toLocationId = null;
+                //     for (const [locId, locName] of Object.entries(locationNames)) {
+                //         if (locName === toLocation.trim()) {
+                //             toLocationId = locId;
+                //             break;
+                //         }
+                //     }
                     
-                    if (toLocationId) {
-                        currentNpcLocations[npcId] = toLocationId;
+                //     if (toLocationId) {
+                //         currentNpcLocations[npcId] = toLocationId;
                         
-                        switch(npcId) {
-                            case 'A': npcLocationA = toLocationId; break;
-                            case 'B': npcLocationB = toLocationId; break;
-                            case 'C': npcLocationC = toLocationId; break;
-                            case 'D': npcLocationD = toLocationId; break;
-                            case 'E': npcLocationE = toLocationId; break;
-                            case 'F': npcLocationF = toLocationId; break;
-                            case 'G': npcLocationG = toLocationId; break;
-                            case 'H': npcLocationH = toLocationId; break;
-                            case 'I': npcLocationI = toLocationId; break;
-                            case 'J': npcLocationJ = toLocationId; break;
-                            case 'K': npcLocationK = toLocationId; break;
-                            case 'L': npcLocationL = toLocationId; break;
-                        }
-                    }
-                }
+                //         switch(npcId) {
+                //             case 'A': npcLocationA = toLocationId; break;
+                //             case 'B': npcLocationB = toLocationId; break;
+                //             case 'C': npcLocationC = toLocationId; break;
+                //             case 'D': npcLocationD = toLocationId; break;
+                //             case 'E': npcLocationE = toLocationId; break;
+                //             case 'F': npcLocationF = toLocationId; break;
+                //             case 'G': npcLocationG = toLocationId; break;
+                //             case 'H': npcLocationH = toLocationId; break;
+                //             case 'I': npcLocationI = toLocationId; break;
+                //             case 'J': npcLocationJ = toLocationId; break;
+                //             case 'K': npcLocationK = toLocationId; break;
+                //             case 'L': npcLocationL = toLocationId; break;
+                //         }
+                //     }
+                // }
             }
         }
         
@@ -568,7 +665,7 @@ function parseLLMResponse(response, mainTextContent) {
         const locationName = activeScene.id.replace('-scene', '');
         displayNpcs(locationName);
     }
-
+    
     checkAllValueRanges();
     updateAllDisplays();
 }
@@ -765,9 +862,8 @@ function setupMessageListeners() {
             const resultMessage = 
                 `时间：第${year}年第${month}月第${week}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
-                `地点：山门<br>` +
-                `{{user}}行动选择：下山<br>` +
-                `目的地：${mapLocation}<br>` +
+                `{{user}}行动选择：下山游历<br>` +
+                `抵达目的地：${mapLocation}<br>` +
                 `随行NPC：${companionNames}` +
                 eventInfo;
             
