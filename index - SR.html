@@ -1646,7 +1646,7 @@
                 alert('请输入自由行动内容！');
                 return;
             }
-            
+            let resultMessage = '';
             // GameMode为1时的特殊处理
             if (GameMode === 1) {
                 // 根据mapLocation的危险度进行事件判定
@@ -1685,7 +1685,7 @@
                     eventInfo += '<br>特殊事件：遭遇战斗';
                 }
                 
-                const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     `地点：${mapLocation}<br>` +
                     `{{user}}自由行动："${actionContent}"<br>` +
@@ -1719,7 +1719,7 @@
                     }
                 }
 
-                const resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
+                resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     locationInfo +
                     `{{user}}自由行动："${actionContent}"<br>` +
@@ -1730,7 +1730,6 @@
             
             await handleMessageOutput(resultMessage);
         }
-
         // 发起战斗
         function startBattle() {
             if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
