@@ -180,6 +180,8 @@ function applyBattleReward(reward) {
 // 解析LLM响应
 function parseLLMResponse(response, mainTextContent) {
     // 在函数开头添加时间解析
+    randomEvent = 0;
+    battleEvent = 0;
     if (response && response.时间) {
         const timeStr = response.时间;
         console.log(`当前时间：${timeStr}`);

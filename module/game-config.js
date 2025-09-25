@@ -468,6 +468,7 @@ const slgEmotionOptions = [
     '悲伤',
     '哭泣',
     '得意',
+    '发情',
     'none'
 ];
 
