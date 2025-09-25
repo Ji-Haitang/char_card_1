@@ -37,6 +37,110 @@ let currentPage = 0;  // 当前页码
 let isStoryExpanded = false;  // 是否展开显示全文
 let slgModeData = [];  // 新增：存储SLG模式的数据
 
+// 新增：将 SLG 主体文本按“正文|npc|scene|emotion|cg”解析为 slgModeData（支持流式未完文本）
+function parseSlgMainText(mainText) {
+    if (!mainText || typeof mainText !== 'string') return [];
+
+    const lines = mainText.trim().split('\n');
+    const result = [];
+
+    const cleanToken = (str) => (str || '').replace(/[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9]/g, '').trim();
+    const normalizeNone = (str) => {
+        const cleaned = cleanToken(str);
+        if (!cleaned) return 'none';
+        if (cleaned === '无') return 'none';
+        if (cleaned.toLowerCase && cleaned.toLowerCase() === 'none') return 'none';
+        return cleaned;
+    };
+
+    const isNpcAllowed = (npcNameOrId) => {
+        if (npcNameOrId === 'none') return true;
+        const pool = new Set(companionNPC || []);
+        if (pool.has(npcNameOrId)) return true;                 // 直接命中（可能是中文名或ID）
+        const id = npcNameToId[npcNameOrId];
+        if (id && (pool.has(id) || pool.has(npcs[id]?.name))) return true;  // 名 -> ID
+        if (npcs[npcNameOrId]?.name && pool.has(npcs[npcNameOrId].name)) return true; // ID -> 名
+        return false;
+    };
+    const isSceneAllowed = (scene) => slgSceneOptions.includes(scene);
+    const isEmotionAllowed = (emo) => emo === 'none' || slgEmotionOptions.includes(emo);
+
+    let currentTextBlock = [];
+    let lastValidDisplay = null;
+
+    for (let i = 0; i < lines.length; i++) {
+        const rawLine = lines[i];
+        if (!rawLine || !rawLine.trim()) continue;
+
+        const parts = rawLine.split('|');
+
+        // 需要恰好5段（正文|npc|scene|emotion|cg）
+        if (parts.length !== 5) {
+            const textOnly = (parts[0] || rawLine).trim();
+            if (textOnly) currentTextBlock.push(textOnly);
+            continue;
+        }
+
+        const textPart = (parts[0] || '').trim();
+        const npcRaw = normalizeNone(parts[1]);
+        const sceneRaw = normalizeNone(parts[2]);
+        const emotionRaw = normalizeNone(parts[3]);
+        const cgRaw = normalizeNone(parts[4]);
+
+        const npcOk = isNpcAllowed(npcRaw);
+        const sceneOk = isSceneAllowed(sceneRaw);
+        const emoOk = isEmotionAllowed(emotionRaw);
+        const cgOk = cgRaw !== '';
+        const normalizedCG = slgCGOptions.includes(cgRaw) ? cgRaw : 'none';
+
+        if (!(npcOk && sceneOk && emoOk && cgOk)) {
+            if (textPart) currentTextBlock.push(textPart);
+            continue;
+        }
+
+        // 合并前面累积的正文为同一页
+        let mergedText = textPart;
+        if (currentTextBlock.length > 0) {
+            mergedText = currentTextBlock.join('\n\n') + (textPart ? '\n\n' + textPart : '');
+            currentTextBlock = [];
+        }
+
+        result.push({
+            text: mergedText,
+            npc: npcRaw,
+            scene: sceneRaw,
+            emotion: emotionRaw,
+            cg: normalizedCG
+        });
+
+        lastValidDisplay = { npc: npcRaw, scene: sceneRaw, emotion: emotionRaw, cg: normalizedCG };
+    }
+
+    // 末尾残留：用上一次有效展示配置兜底，否则全 none
+    if (currentTextBlock.length > 0) {
+        const tailText = currentTextBlock.join('\n\n');
+        if (lastValidDisplay) {
+            result.push({
+                text: tailText,
+                npc: lastValidDisplay.npc,
+                scene: lastValidDisplay.scene,
+                emotion: lastValidDisplay.emotion,
+                cg: lastValidDisplay.cg
+            });
+        } else {
+            result.push({
+                text: tailText,
+                npc: 'none',
+                scene: 'none',
+                emotion: 'none',
+                cg: 'none'
+            });
+        }
+    }
+
+    return result;
+}
+
 // 更新日期显示
 function updateDateDisplay() {
     const year = Math.floor((currentWeek - 1) / 48) + 1;
@@ -231,20 +335,32 @@ function updateStoryText(text) {
     const previousExpanded = isStoryExpanded;
     
     // 检查是否为SLG模式
-    if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
-        // SLG模式：使用slgModeData中的文本
-        storyPages = slgModeData.map(data => {
-            // 提取文本内容（第一个|之前的部分）
-            const textContent = data.text || '';
+    if (GameMode === 1) {
+        // 流式：每次都根据当前 mainText 重新解析 slgModeData
+        const parsed = parseSlgMainText(text);
+        if (parsed && parsed.length > 0) {
+            slgModeData = parsed;
+
             const md = window.markdownit({
                 html: true,
                 breaks: true,
                 linkify: true,
                 typographer: true
             }).disable('strikethrough');
-            
-            return md.render(textContent);
-        });
+
+            storyPages = slgModeData.map(data => md.render(data.text || ''));
+        } else {
+            // 解析不到有效页时，回退到普通文本渲染，避免显示空白
+            let processedText = text.replace(/\n+/g, '\n').replace(/(\r\n)+/g, '\n').replace(/\r+/g, '\n');
+            const md = window.markdownit({
+                html: true,
+                breaks: true,
+                linkify: true,
+                typographer: true
+            }).disable('strikethrough');
+            const htmlContent = md.render(processedText);
+            storyPages = [htmlContent];
+        }
     } else {
         // 普通模式：原有的分段逻辑
         let processedText = text.replace(/\n+/g, '\n');

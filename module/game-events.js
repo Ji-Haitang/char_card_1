@@ -249,194 +249,30 @@ function parseLLMResponse(response, mainTextContent) {
         }
     }
 
-    // ====== SLG模式：鲁棒分页解析（严格遵守5段结构 + 校验 + 合并策略）======
+    // ====== SLG模式：把 MAIN_TEXT 交给 UI 侧的解析（支持流式增量）======
     if (GameMode === 1 && mainTextContent) {
-        const lines = mainTextContent.trim().split('\n');
-        slgModeData = [];
-
-        // 仅保留中文、英文字母、阿拉伯数字
-        const cleanToken = (str) => (str || '').replace(/[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9]/g, '').trim();
-
-        // 规范化 none：支持 None/NONE/无/空字符串 -> 'none'
-        const normalizeNone = (str) => {
-            const cleaned = cleanToken(str);
-            if (!cleaned) return 'none';
-            if (cleaned === '无') return 'none';
-            if (cleaned.toLowerCase && cleaned.toLowerCase() === 'none') return 'none';
-            return cleaned;
-        };
-
-        // 验证 npc 是否在随行列表中（companionNPC 里可能是中文名或ID，做双向兼容）
-        const isNpcAllowed = (npcNameOrId) => {
-            if (npcNameOrId === 'none') return true;
-            const pool = new Set(companionNPC || []);
-            // 1) 直接命中（中文名或ID）
-            if (pool.has(npcNameOrId)) return true;
-            // 2) 名 -> ID
-            const id = npcNameToId[npcNameOrId];
-            if (id && (pool.has(id) || pool.has(npcs[id]?.name))) return true;
-            // 3) 传入是ID -> 名
-            if (npcs[npcNameOrId]?.name && pool.has(npcs[npcNameOrId].name)) return true;
-            return false;
-        };
-
-        const isSceneAllowed = (scene) => slgSceneOptions.includes(scene);
-        const isEmotionAllowed = (emo) => emo === 'none' || slgEmotionOptions.includes(emo);
-        // const isCgAllowed = (cg) => cg === 'none' || slgCGOptions.includes(cg);
-
-        let currentTextBlock = [];         // 累积“格式不完整或校验失败”的纯正文
-        let lastValidDisplay = null;       // 记录“最近一次通过校验的显示配置”（npc/scene/emotion/cg）
-
-        for (let i = 0; i < lines.length; i++) {
-            const rawLine = lines[i];
-            if (!rawLine || !rawLine.trim()) continue;
-
-            const parts = rawLine.split('|');
-
-            // 规则：必须恰好5段（正文|npc|scene|emotion|cg），缺一不可
-            if (parts.length !== 5) {
-                // 不完整 → 仅保留正文，等待与后面有效行合并
-                const textOnly = (parts[0] || rawLine).trim();
-                if (textOnly) currentTextBlock.push(textOnly);
-                continue;
-            }
-
-            // 拿到5段
-            const textPart = (parts[0] || '').trim();
-
-            // 对 npc/scene/emotion/cg 进行预处理：仅保留中英数，并做 none 规范化
-            const npcRaw = normalizeNone(parts[1]);
-            const sceneRaw = normalizeNone(parts[2]);
-            const emotionRaw = normalizeNone(parts[3]);
-            const cgRaw = normalizeNone(parts[4]);
-
-            // 规则：任意一项校验失败 → 此行“仅保留正文”，并入下一段
-            const npcOk = isNpcAllowed(npcRaw);
-            const sceneOk = isSceneAllowed(sceneRaw);
-            const emoOk = isEmotionAllowed(emotionRaw);
-            const cgOk = cgRaw !== '';  // 非空即通过
-            const normalizedCG = slgCGOptions.includes(cgRaw) ? cgRaw : 'none';  // 不在数组里则归一为 'none'
-
-            if (!(npcOk && sceneOk && emoOk && cgOk)) {
-                if (textPart) currentTextBlock.push(textPart);
-                continue;
-            }
-
-            // 到这里：本行结构完整且4项校验全部通过
-            // 按规则1：把之前累积的无效文本并入本行的正文中，一起作为同一页
-            let mergedText = textPart;
-            if (currentTextBlock.length > 0) {
-                mergedText = currentTextBlock.join('\n\n') + (textPart ? '\n\n' + textPart : '');
-                currentTextBlock = [];
-            }
-
-            const pageData = {
-                text: mergedText,
-                npc: npcRaw,
-                scene: sceneRaw,
-                emotion: emotionRaw,
-                cg: normalizedCG
-            };
-            slgModeData.push(pageData);
-            // 记录“上一次有效展示配置”（无论是否全为 none，都记录为可用配置）
-            lastValidDisplay = { npc: npcRaw, scene: sceneRaw, emotion: emotionRaw, cg: normalizedCG };
-        }
-
-        // 末尾还有残留纯文本：规则4
-        // 若存在最后的累积文本且当前行/最后一行未能形成有效页，
-        // 则把这段文本单独落盘，并“附加上一次有效页的展示配置”，否则使用 none 兜底
-        if (currentTextBlock.length > 0) {
-            const tailText = currentTextBlock.join('\n\n');
-            if (lastValidDisplay) {
-                slgModeData.push({
-                    text: tailText,
-                    npc: lastValidDisplay.npc,
-                    scene: lastValidDisplay.scene,
-                    emotion: lastValidDisplay.emotion,
-                    cg: lastValidDisplay.cg
-                });
-            } else {
-                slgModeData.push({
-                    text: tailText,
-                    npc: 'none',
-                    scene: 'none',
-                    emotion: 'none',
-                    cg: 'none'
-                });
-            }
-        }
-
-        // 使用 slgModeData 更新文本显示（updateStoryText 会基于 slgModeData 重新分页）
-        if (slgModeData.length > 0) {
-            const allText = slgModeData.map(d => d.text).join('\n');
-            currentStoryText = allText;
-            updateStoryText(allText);
-        }
-        
-        // 处理response中的NPC数据（如果有）
+        currentStoryText = mainTextContent;
+        updateStoryText(mainTextContent);   // 内部会调用 parseSlgMainText 并即时渲染3层图
+        // 下面保留：处理 response 中的NPC好感等数值变动（如有）
         if (response && response.当前NPC && typeof response.当前NPC === 'object') {
             for (const npcName in response.当前NPC) {
                 const npcData = response.当前NPC[npcName];
                 let npcId = npcNameToId[npcName];
-                
                 if (!npcId) {
                     console.warn(`未找到NPC "${npcName}" 的ID映射`);
                     continue;
                 }
-                
-                // 处理好感变化
+                // 好感变化（保持你原有的难度调整和魅力判定逻辑）
                 if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
                     let changeValue = 0;
-    
-                    // 根据难度调整好感度变化值
                     const currentDifficulty = difficulty || 'normal';
-                    
                     switch (npcData.好感变化) {
-                        case '大幅下降':
-                            if (currentDifficulty === 'easy') {
-                                changeValue = -2;  // 简单：保持原状
-                            } else if (currentDifficulty === 'normal') {
-                                changeValue = -2;  // 普通：大幅下降变为-2
-                            } else if (currentDifficulty === 'hard') {
-                                changeValue = -4;  // 困难：大幅下降-4
-                            }
-                            break;
-                            
-                        case '下降':
-                            if (currentDifficulty === 'easy') {
-                                changeValue = -1;  // 简单：保持原状
-                            } else if (currentDifficulty === 'normal') {
-                                changeValue = -1;  // 普通：下降变为-1
-                            } else if (currentDifficulty === 'hard') {
-                                changeValue = -2;  // 困难：下降-2
-                            }
-                            break;
-                            
-                        case '不变':
-                            changeValue = 0;  // 所有难度都是0
-                            break;
-                            
-                        case '上升':
-                            if (currentDifficulty === 'easy') {
-                                changeValue = 2;   // 简单：保持原状
-                            } else if (currentDifficulty === 'normal') {
-                                changeValue = 1;   // 普通：上升变为+1
-                            } else if (currentDifficulty === 'hard') {
-                                changeValue = 1;   // 困难：上升+1
-                            }
-                            break;
-                            
-                        case '大幅上升':
-                            if (currentDifficulty === 'easy') {
-                                changeValue = 4;   // 简单：保持原状
-                            } else if (currentDifficulty === 'normal') {
-                                changeValue = 2;   // 普通：大幅上升变为+2
-                            } else if (currentDifficulty === 'hard') {
-                                changeValue = 2;   // 困难：大幅上升+2
-                            }
-                            break;
+                        case '大幅下降': changeValue = (currentDifficulty === 'hard') ? -4 : -2; break;
+                        case '下降': changeValue = (currentDifficulty === 'hard') ? -2 : -1; break;
+                        case '不变': changeValue = 0; break;
+                        case '上升': changeValue = (currentDifficulty === 'easy') ? 2 : 1; break;
+                        case '大幅上升': changeValue = (currentDifficulty === 'easy') ? 4 : 2; break;
                     }
-                    
                     let finalChangeValue = changeValue;
                     let charmMessageShown = false;
                     if (changeValue > 0) {
@@ -446,53 +282,16 @@ function parseLLMResponse(response, mainTextContent) {
                             charmMessageShown = true;
                         }
                     }
-                    
                     npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
                     checkAllValueRanges();
-                    
                     if (charmMessageShown) {
                         setTimeout(() => {
                             showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
                         }, 100);
                     }
                 }
-                
-                // 处理位置变动
-                // if (npcData.位置变动) {
-                //     // 支持多种格式："演武场|议事厅|后山" 或 "伙房"
-                //     const locations = npcData.位置变动.split('|').map(loc => loc.trim());
-                //     const toLocation = locations[locations.length - 1]; // 取最后一个位置
-                    
-                //     let toLocationId = null;
-                //     for (const [locId, locName] of Object.entries(locationNames)) {
-                //         if (locName === toLocation.trim()) {
-                //             toLocationId = locId;
-                //             break;
-                //         }
-                //     }
-                    
-                //     if (toLocationId) {
-                //         currentNpcLocations[npcId] = toLocationId;
-                        
-                //         switch(npcId) {
-                //             case 'A': npcLocationA = toLocationId; break;
-                //             case 'B': npcLocationB = toLocationId; break;
-                //             case 'C': npcLocationC = toLocationId; break;
-                //             case 'D': npcLocationD = toLocationId; break;
-                //             case 'E': npcLocationE = toLocationId; break;
-                //             case 'F': npcLocationF = toLocationId; break;
-                //             case 'G': npcLocationG = toLocationId; break;
-                //             case 'H': npcLocationH = toLocationId; break;
-                //             case 'I': npcLocationI = toLocationId; break;
-                //             case 'J': npcLocationJ = toLocationId; break;
-                //             case 'K': npcLocationK = toLocationId; break;
-                //             case 'L': npcLocationL = toLocationId; break;
-                //         }
-                //     }
-                // }
             }
         }
-        
     } else {
         // 原有的解析逻辑（普通模式）
         slgModeData = [];  // 清空SLG模式数据
