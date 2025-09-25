@@ -567,7 +567,7 @@
 
         <!-- 汗青集弹窗 -->
         <div id="history-summary-modal" class="modal viewport-overlay">
-            <div class="modal-content" style="max-width: 90%; max-height: 80%; display: flex; flex-direction: column;">
+            <div class="modal-content" style="max-width: 90%; display: flex; flex-direction: column;">
                 <h3>汗青集</h3>
                 <div id="history-summary-content" style="
                     flex: 1;
@@ -578,7 +578,6 @@
                     margin: 20px 0;
                     white-space: pre-wrap;
                     line-height: 1.8;
-                    font-size: 14px;
                 ">
                     载入中...
                 </div>
@@ -2552,25 +2551,24 @@
         async function showHistorySummary() {
             // 关闭下拉菜单
             toggleDropdown('history-dropdown');
-            
             // 关闭其他弹窗
             closeAllSpecialModals();
-            
-            // 显示弹窗
+
             const modal = document.getElementById('history-summary-modal');
-            modal.style.display = 'block';
-            
-            // 获取并显示总结内容
-            const contentDiv = document.getElementById('history-summary-content');
-            
-            // 直接从summary_Small读取内容
-            if (summary_Small && summary_Small.trim()) {
-                contentDiv.textContent = summary_Small;
-            } else {
-                contentDiv.textContent = '暂无聊天总结记录';
+
+            // 关键：把汗青集弹窗搬到 body，避免受 #main-viewport 的裁剪/层级影响
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
             }
-            
-            // 延迟一帧后调整位置
+
+            // 显示弹窗并填充内容
+            modal.style.display = 'block';
+            const contentDiv = document.getElementById('history-summary-content');
+            contentDiv.textContent = (summary_Small && summary_Small.trim())
+                ? summary_Small
+                : '暂无聊天总结记录';
+
+            // 一帧后适配尺寸并绑定自动适配
             requestAnimationFrame(() => {
                 fitModalToViewport(modal);
                 bindModalAutoFit(modal);

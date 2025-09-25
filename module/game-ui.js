@@ -685,23 +685,47 @@ function updateSLGReturnButton() {
     }
 }
 
-/* 工具：把指定 modal 精准套到 #main-viewport */
 function fitModalToViewport(modal) {
     const vp = document.getElementById('main-viewport');
+    if (!vp) return;
+
     const vpRect = vp.getBoundingClientRect();
-    
-    // 使用fixed定位时，直接使用getBoundingClientRect的值即可
+
+    // 缺省：对齐到 #main-viewport，大小=1×viewport
+    let targetLeft = vpRect.left;
+    let targetTop = vpRect.top;
+    let targetWidth = vpRect.width;
+    let targetHeight = vpRect.height;
+    let allowScroll = false;
+
+    // 汗青集：高度改为“container底边 - viewport顶边”，并允许在遮罩内滚动
+    if (modal.id === 'history-summary-modal') {
+        const container = document.querySelector('.container') || document.body;
+        const containerRect = container.getBoundingClientRect();
+
+        // 从 #main-viewport 顶边开始，覆盖到整页 container 底边
+        const desiredHeight = Math.max(
+            vpRect.height,                            // 至少不小于viewport
+            containerRect.bottom - vpRect.top        // 覆盖到container底边
+        );
+
+        targetHeight = Math.max(0, Math.floor(desiredHeight));
+        allowScroll = true;
+    }
+
+    // 统一定位（固定定位，锚到#main-viewport在视口中的位置）
     Object.assign(modal.style, {
-        left: vpRect.left + 'px',
-        top: vpRect.top + 'px',
-        width: vpRect.width + 'px',
-        height: vpRect.height + 'px',
         position: 'fixed',
+        left: targetLeft + 'px',
+        top: targetTop + 'px',
+        width: targetWidth + 'px',
+        height: targetHeight + 'px',
         margin: '0',
-        transform: 'none'
+        transform: 'none',
+        overflow: allowScroll ? 'auto' : 'hidden',
+        zIndex: modal.style.zIndex || 2500
     });
-    
-    // 同时设置modal-content的大小
+
     const content = modal.querySelector('.modal-content');
     if (content) {
         Object.assign(content.style, {
@@ -711,7 +735,8 @@ function fitModalToViewport(modal) {
             maxHeight: 'none',
             left: '0',
             top: '0',
-            transform: 'none'
+            transform: 'none',
+            overflow: 'auto' // 内容区域可滚动
         });
     }
 }

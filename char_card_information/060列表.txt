@@ -89,7 +89,8 @@
 
 <NpcList>
 主要NPC名单：
-
+  - <%- gameData.companionNPC %>
+  - none: 上述NPC不在场、不适用时，选择"none"
 </NpcList>
 <%_ } else { _%>
 

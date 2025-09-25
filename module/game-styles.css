@@ -2429,3 +2429,19 @@ body {
     object-fit: contain;         /* 覆盖全局的 cover */
     object-position: bottom center;
   }
+
+  /* 汗青集正文字号与故事正文一致 */
+#history-summary-content {
+    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+    line-height: 1.8;
+}
+
+/* 汗青集弹窗：允许遮罩本身滚动；内容填满遮罩 */
+#history-summary-modal.modal.viewport-overlay {
+    overflow: auto;   /* 覆盖通用的 overflow: hidden，仅此弹窗生效 */
+}
+
+#history-summary-modal .modal-content {
+    height: 100% !important;
+    max-height: none !important;
+}
