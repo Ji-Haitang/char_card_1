@@ -641,6 +641,11 @@
             }
         }
 
+        /* 追加：禁用按钮样式 */
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
     </style>
 </head>
 <body>
@@ -1128,80 +1133,122 @@
             modal.style.display = 'block';
         }
 
-        // 显示NPC列表
+        // 显示NPC列表（必须至少选择1人才能出行）
         function showNPCList() {
             const modalBody = document.getElementById('modalBody');
             const modalFooter = document.getElementById('modalFooter');
-            
+
             // 获取可邀请的NPC（满足好感度要求的）
-            const availableNPCs = npcList.filter(npc => 
+            const availableNPCs = npcList.filter(npc =>
                 npcCurrentFavor[npc] >= npcFavorThreshold[npc]
             );
-            
             const maxCount = getMaxNPCCount();
-            
+
             let npcHTML = `
                 <div class="modal-header">
                     <h2>选择同行旅伴</h2>
                 </div>
                 <div style="padding: 2vh 0;">
-                    <p class="tip-text">请选择要一起前往${currentLocation}的同伴（最多可选${maxCount}人）</p>
+                    <p class="tip-text">请选择要一起前往${currentLocation}的同伴（最多可选${maxCount}人，至少1人）</p>
                     <div class="npc-list">
             `;
-            
+
             if (availableNPCs.length > 0) {
                 availableNPCs.forEach(npc => {
                     npcHTML += `
                         <div class="npc-item">
                             <input type="checkbox" class="npc-checkbox" id="npc-${npc}" value="${npc}" onchange="checkNPCLimit()">
-                            <label class="npc-name" for="npc-${npc}">${npc} </label>
+                            <label class="npc-name" for="npc-${npc}">${npc}</label>
                         </div>
                     `;
                 });
             } else {
                 npcHTML += '<p style="text-align: center; color: rgba(255,255,255,0.5);">暂无可邀请的同伴（好感度不足）</p>';
             }
-            
+
             npcHTML += '</div></div>';
             modalBody.innerHTML = npcHTML;
-            
-            modalFooter.innerHTML = '<button class="btn" onclick="goToLocation()">前往</button>';
+
+            // 出行按钮：默认禁用；若无可邀请同伴则显示“无法出行”
+            const travelBtnLabel = availableNPCs.length > 0 ? '前往' : '无法出行';
+            modalFooter.innerHTML = `<button class="btn" id="travelBtn" onclick="goToLocation()" disabled>${travelBtnLabel}</button>`;
+
+            // 如父页传来默认同行人，尽量预勾选（不超过maxCount）
+            if (availableNPCs.length > 0 && Array.isArray(window._incomingCompanions) && window._incomingCompanions.length) {
+                let count = 0;
+                const preset = new Set(window._incomingCompanions);
+                availableNPCs.forEach(npc => {
+                    if (count >= maxCount) return;
+                    if (preset.has(npc)) {
+                        const cb = document.getElementById(`npc-${npc}`);
+                        if (cb) {
+                            cb.checked = true;
+                            count++;
+                        }
+                    }
+                });
+            }
+
+            // 应用人数上限与按钮可用状态
+            checkNPCLimit();
         }
 
-        // 检查NPC选择数量限制
+        // 检查NPC选择数量限制 + 切换“前往”按钮可用状态（至少1人）
         function checkNPCLimit() {
             const checkboxes = document.querySelectorAll('.npc-checkbox');
             const checkedCount = document.querySelectorAll('.npc-checkbox:checked').length;
             const maxCount = getMaxNPCCount();
-            
+
+            // 达到上限时，未勾选的禁用；否则全部解禁
             if (checkedCount >= maxCount) {
                 checkboxes.forEach(checkbox => {
-                    if (!checkbox.checked) {
-                        checkbox.disabled = true;
-                    }
+                    if (!checkbox.checked) checkbox.disabled = true;
                 });
             } else {
                 checkboxes.forEach(checkbox => {
-                    checkbox.disabled = false;
+                    if (!checkbox.classList.contains('force-disabled')) {
+                        checkbox.disabled = false;
+                    }
                 });
+            }
+
+            // 至少选择1人方可出行
+            const travelBtn = document.getElementById('travelBtn');
+            if (travelBtn) {
+                const canTravel = checkedCount >= 1;
+                travelBtn.disabled = !canTravel;
+                travelBtn.textContent = canTravel ? '前往' : '请选择同伴';
             }
         }
 
-        // 前往地点
+        // 前往地点（至少1名同行NPC）
         function goToLocation() {
             // 隐藏地图关闭按钮（因为已经在选择旅行了）
             const closeBtn = document.querySelector('.map-close-btn');
             if (closeBtn) {
                 closeBtn.style.display = 'none';
             }
+
             selectedNPCs = [];
             document.querySelectorAll('.npc-checkbox:checked').forEach(checkbox => {
                 selectedNPCs.push(checkbox.value);
             });
-            
+
+            // 强制校验：至少选择1人
+            if (selectedNPCs.length < 1) {
+                const tip = document.querySelector('.tip-text');
+                if (tip) {
+                    tip.style.color = '#FF6B6B';
+                    tip.textContent = '请至少选择一位同行旅伴后再出行';
+                }
+                const travelBtn = document.getElementById('travelBtn');
+                if (travelBtn) travelBtn.disabled = true;
+                return;
+            }
+
             // 检查当前地点是否有事件
             const events = locationEvents[currentLocation];
-            
+
             // 重置事件标记
             let newRandomEvent = 0;
             let newBattleEvent = 0;
@@ -1218,38 +1265,26 @@
             // 把局部结果写回全局，供 confirmTravel 回传
             randomEvent = newRandomEvent;
             battleEvent = newBattleEvent;
-            
+
             // 显示确认信息
             const modalBody = document.getElementById('modalBody');
             const modalFooter = document.getElementById('modalFooter');
-            
-            let message = '';
+
             let eventWarning = '';
-            
             if (events && events.hasBattleEvent) {
                 eventWarning = '<p style="color: #FF4444; font-weight: bold;">⚠ 此地有战斗发生！</p>';
             } else if (events && events.hasRandomEvent) {
                 eventWarning = '<p style="color: #FFD700; font-weight: bold;">✦ 此地有特殊事件！</p>';
             }
-            
-            if (selectedNPCs.length > 0) {
-                message = `
-                    <div class="result-message">
-                        <h3>启程</h3>
-                        ${eventWarning}
-                        <p>和${selectedNPCs.join('、')}一起前往${currentLocation}</p>
-                    </div>
-                `;
-            } else {
-                message = `
-                    <div class="result-message">
-                        <h3>启程</h3>
-                        ${eventWarning}
-                        <p>独自前往${currentLocation}</p>
-                    </div>
-                `;
-            }
-            
+
+            const message = `
+                <div class="result-message">
+                    <h3>启程</h3>
+                    ${eventWarning}
+                    <p>和${selectedNPCs.join('、')}一起前往${currentLocation}</p>
+                </div>
+            `;
+
             modalBody.innerHTML = message;
             modalFooter.innerHTML = '<button class="btn" onclick="confirmTravel()">确定</button>';
         }
