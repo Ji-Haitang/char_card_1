@@ -370,7 +370,7 @@ function updateStoryText(text) {
             storyPages = [htmlContent];
         }
     } else {
-        // 普通模式：原有的分段逻辑
+        // 普通模式：按自然段分页，并丢弃每段“|”分隔的补充信息
         let processedText = text.replace(/\n+/g, '\n');
         processedText = processedText.replace(/(\r\n)+/g, '\n');
         processedText = processedText.replace(/\r+/g, '\n');
@@ -382,34 +382,19 @@ function updateStoryText(text) {
             typographer: true
         }).disable('strikethrough');
         
-        const htmlContent = md.render(processedText);
+        const rawParagraphs = processedText.split('\n').filter(part => part.trim());
+        const cleanedParagraphs = rawParagraphs.map(part => part.split('|')[0].trim()).filter(p => p.length > 0);
         
-        let paragraphs = [];
-        const textParts = processedText.split('\n');
-        
-        if (textParts.length > 1) {
-            paragraphs = textParts
-                .filter(part => part.trim())
-                .map(part => {
-                    const renderedPart = md.render(part);
-                    return `<div class="story-paragraph">${renderedPart}</div>`;
-                });
+        if (cleanedParagraphs.length > 0) {
+            storyPages = cleanedParagraphs.map(p => {
+                const rendered = md.render(p);
+                return `<div class="story-paragraph">${rendered}</div>`;
+            });
         } else {
-            const htmlParts = htmlContent.split(/<br\s*\/?>/);
-            if (htmlParts.length > 1) {
-                paragraphs = htmlParts
-                    .filter(part => part.trim())
-                    .map(part => `<div class="story-paragraph">${part}</div>`);
-            } else {
-                paragraphs = [htmlContent];
-            }
+            const stripped = processedText.split('\n').map(line => line.split('|')[0].trim()).join('\n');
+            const rendered = md.render(stripped);
+            storyPages = [rendered];
         }
-        
-        if (paragraphs.length === 0) {
-            paragraphs = [htmlContent];
-        }
-        
-        storyPages = paragraphs;
     }
     
     // 智能恢复页码：
