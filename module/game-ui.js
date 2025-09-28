@@ -19,10 +19,18 @@
  * - updateStatsDisplay(): 更新角色属性面板（天赋、数值、战斗属性等）
  * - updateRelationshipsDisplay(): 更新人际关系界面
  * - updateStoryText(text): 使用Markdown渲染并更新故事文本
+ * - updateStoryDisplay(): 刷新故事区域（分页/展开、页码指示、SLG图层）
+ * - doGoToPage(pageNum) / doPrevPage() / doNextPage(): 文本翻页
+ * - doToggleStoryExpand(): 展开/收起全文
  * - showModal(text): 显示普通弹窗
  * - showConfirmModal(title, message, onConfirm): 显示确认弹窗
  * - showTooltip(event, text): 显示悬浮提示框
  * - hideTooltip(): 隐藏悬浮提示框
+ * - fitModalToViewport(modal) / bindModalAutoFit(modal): 弹窗适配当前视口
+ * - closeAllSpecialModals(): 一键关闭背包/装备/难度/金手指/交易等弹窗
+ * - updateEquipmentSlot(slotId, itemName): 刷新装备槽UI
+ * - showItemDetail(itemName) / getItemEffectText(item) / closeItemDetailModal(): 道具详情
+ * - updateSLGReturnButton(): 根据模式切换显示“返回天山派/跳过一周”
  * 
  * 依赖关系：
  * - 依赖 game-state.js 中的状态变量

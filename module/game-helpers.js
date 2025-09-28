@@ -7,7 +7,7 @@
  * 
  * 主要功能：
  * 1. 处理消息输出（支持SillyTavern环境和普通弹窗）
- * 2. 管理小游戏iframe（21点、战斗）
+ * 2. 管理小游戏iframe（21点、战斗、农场）
  * 3. NPC相关功能（位置、显示、交互）
  * 4. 场景切换和地点管理
  * 
@@ -15,6 +15,7 @@
  * - handleMessageOutput(message): 智能处理消息输出（自动判断环境）
  * - showBlackjackGame(): 显示21点赌场游戏
  * - showBattleGame(battleData): 显示回合制战斗游戏
+ * - showFarmGame(): 显示农场游戏
  * - showInteractionInput(npcId, location): 显示NPC互动输入框
  * - getNpcsAtLocation(location): 获取指定地点的NPC列表
  * - getRandomLocation(npcId): 根据概率获取NPC的随机位置

@@ -23,12 +23,19 @@
  * - currentWeek: 当前周数
  * - currentNpcLocations: NPC当前位置
  * - 各种临时状态变量（currentInteractionNpc等）
+ * - summary_Small / summary_Week / newWeek：剧情总结（流式滚动/周度归档/新周标记）
+ * - randomEvent / battleEvent：世界地图或SLG中的事件标记
+ * - companionNPC / mapLocation：下山随行与目的地
+ * - cgContentEnabled：CG内容显示开关
+ * - localState：{ turnUpdateApplied, summarySmallUpdateApplied, defaultExpandApplied }
  * 
  * 对外暴露的主要函数：
  * - loadOrInitGameData(): 加载或初始化游戏数据
  * - saveGameData(): 保存游戏数据到SillyTavern变量
  * - syncVariablesFromGameData(): 从gameData同步到独立变量
  * - syncGameDataFromVariables(): 从独立变量同步到gameData
+ * - saveLastUserMessage() / saveNewWeek(): 局部快速持久化
+ * - mergeWithDefaults(): 存档与默认数据的深度合并（版本兼容）
  * 
  * 依赖关系：
  * - 依赖 game-config.js 中的 defaultGameData

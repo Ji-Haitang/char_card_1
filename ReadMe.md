@@ -69,6 +69,10 @@
 - `inventory` - 背包物品
 - `equipment` - 装备栏
 - `GameMode` - 游戏模式（0=普通，1=SLG）
+ - `summary_Small` / `summary_Week` / `newWeek` - 剧情总结（滚动/周度/新周标记）
+ - `randomEvent` / `battleEvent` - 事件标记
+ - `companionNPC` / `mapLocation` - 下山随行与目的地
+ - `cgContentEnabled` - CG显示开关
 
 **主要函数**：
 - `loadOrInitGameData()` - 加载或初始化游戏数据
@@ -76,6 +80,7 @@
 - `syncVariablesFromGameData()` - 从gameData同步到独立变量
 - `syncGameDataFromVariables()` - 从独立变量同步到gameData
 - `mergeWithDefaults()` - 深度合并数据，支持版本更新
+ - `saveLastUserMessage()` / `saveNewWeek()` - 局部字段快速保存
 
 ### 4. game-ui.js - UI更新和显示函数
 **功能概述**：负责所有用户界面的更新和显示逻辑，管理各种弹窗和界面元素。
@@ -92,7 +97,7 @@
 
 **文本和分页**：
 - `updateStoryText(text)` - 使用Markdown渲染并更新故事文本
-- `updateStoryDisplay()` - 更新故事显示（支持SLG模式图层）
+- `updateStoryDisplay()` - 更新故事显示（分页/展开、页码指示、SLG三层图）
 - `doGoToPage()` / `doPrevPage()` / `doNextPage()` - 翻页功能
 - `doToggleStoryExpand()` - 展开/收起全文
 
@@ -118,6 +123,7 @@
 - `handleMessageOutput(message)` - 智能处理消息输出
 - `showBlackjackGame()` - 显示21点赌场游戏
 - `showBattleGame(battleData)` - 显示回合制战斗游戏
+- `showFarmGame()` - 显示农场游戏
 
 **NPC管理**：
 - `showInteractionInput(npcId, location)` - 显示NPC互动输入框
@@ -143,7 +149,7 @@
 - `displayRandomEvent(event)` - 显示随机事件界面
 - `displayBattleEvent(event)` - 显示战斗事件界面
 - `parseLLMResponse(response, mainTextContent)` - 解析LLM返回的JSON响应
-- `setupMessageListeners()` - 设置iframe消息监听器
+- `setupMessageListeners()` - 设置iframe消息监听器（21点/战斗/农场/世界地图）
 - `applyBattleReward(reward)` - 应用战斗胜利奖励
 - `handleEventOption()` - 处理事件选项选择
 - `applyEventReward()` - 应用事件奖励
