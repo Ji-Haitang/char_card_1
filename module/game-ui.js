@@ -421,6 +421,16 @@ function updateStoryText(text) {
         isStoryExpanded = false;
     }
     
+    // 覆盖：当 newWeek===1 时，默认展开全文一次（随后保持用户选择）
+    try {
+        const ls = (typeof getLocalState === 'function') ? getLocalState() : null;
+        if (typeof newWeek === 'number' && newWeek === 1 && ls && !ls.defaultExpandApplied) {
+            isStoryExpanded = true;
+            currentPage = 0;
+            ls.defaultExpandApplied = true;
+        }
+    } catch (e) {}
+
     // 更新显示
     updateStoryDisplay();
 }

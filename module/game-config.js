@@ -888,6 +888,7 @@ const defaultGameData = {
     },
     lastUserMessage: "",     // 已存在：储存上轮用户输入
     summary_Small: "",
+    summary_Week: "",
     newWeek: 0,
     randomEvent: 0,       // 随机事件标记
     battleEvent: 0,       // 战斗事件标记

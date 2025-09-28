@@ -65,6 +65,7 @@ let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F":
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let lastUserMessage = "";
 let summary_Small = "";
+let summary_Week = "";
 // 独立的NPC位置变量
 let npcLocationA = "none";
 let npcLocationB = "yishiting";
@@ -117,13 +118,15 @@ let equipment = {
 // 流式版本的本地状态
 let localState = {
     turnUpdateApplied: false,
-    summarySmallUpdateApplied: false
+    summarySmallUpdateApplied: false,
+    defaultExpandApplied: false
 };
 
 // 重置流式状态
 function resetLocalState() {
     localState.turnUpdateApplied = false;
     localState.summarySmallUpdateApplied = false;
+    localState.defaultExpandApplied = false;
 }
 
 // 获取流式状态
@@ -156,6 +159,7 @@ function syncVariablesFromGameData() {
     equipment,
     lastUserMessage,
     summary_Small,
+    summary_Week,
     newWeek,
     randomEvent,      // 新增
     battleEvent,      // 新增
@@ -205,6 +209,7 @@ function syncGameDataFromVariables() {
     gameData.seasonStatus = seasonStatus;
     gameData.lastUserMessage = lastUserMessage;
     gameData.summary_Small = summary_Small;
+    gameData.summary_Week = summary_Week;
     gameData.newWeek = newWeek;
     gameData.randomEvent = randomEvent;
     gameData.battleEvent = battleEvent;

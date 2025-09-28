@@ -832,24 +832,31 @@
                     if (summaryMatch && summaryMatch[1]) {
                         const summaryContent = summaryMatch[1].trim();
                         console.log('成功捕捉到SUMMARY内容：', summaryContent);
-                        
-                        // 追加到summary_Small（带时间戳）
+
                         const year = Math.floor((currentWeek - 1) / 48) + 1;
                         const remainingWeeks = (currentWeek - 1) % 48;
                         const month = Math.floor(remainingWeeks / 4) + 1;
                         const week = remainingWeeks % 4 + 1;
-                        
+
                         const timestamp = `[第${year}年第${month}月第${week}周]`;
-                        
-                        if (summary_Small) {
-                            summary_Small += `\n\n${timestamp}\n${summaryContent}`;
+
+                        if (newWeek === 1) {
+                            if (summary_Week) {
+                                summary_Week += `\n\n${timestamp}\n${summaryContent}`;
+                            } else {
+                                summary_Week = `${timestamp}\n${summaryContent}`;
+                            }
+                            summary_Small = "";
                         } else {
-                            summary_Small = `${timestamp}\n${summaryContent}`;
+                            if (summary_Small) {
+                                summary_Small += `\n\n${timestamp}\n${summaryContent}`;
+                            } else {
+                                summary_Small = `${timestamp}\n${summaryContent}`;
+                            }
                         }
-                        
-                        //gameData.summary_Small = summary_Small;
+
                         localState.summarySmallUpdateApplied = true;
-                        console.log('SUMMARY已追加到summary_Small');
+                        console.log('SUMMARY已根据newWeek规则更新');
                     } else {
                         // 如果没有找到SUMMARY标签，尝试更鲁棒的方法
                         // 从第一个{符号往前找汉字，再回溯到>符号
@@ -874,21 +881,28 @@
                                         // 检查是否包含SUMMARY相关内容
                                         if (potentialSummary.length > 0 && !potentialSummary.includes('<MAIN_TEXT>')) {
                                             console.log('通过鲁棒方法捕捉到可能的SUMMARY内容：', potentialSummary);
-                                            // 追加到summary_Small
                                             const year = Math.floor((currentWeek - 1) / 48) + 1;
                                             const remainingWeeks = (currentWeek - 1) % 48;
                                             const month = Math.floor(remainingWeeks / 4) + 1;
                                             const week = remainingWeeks % 4 + 1;
-                                            
+
                                             const timestamp = `[第${year}年第${month}月第${week}周]`;
-                                            
-                                            if (summary_Small) {
-                                                summary_Small += `\n\n${timestamp}\n${potentialSummary}`;
+
+                                            if (newWeek === 1) {
+                                                if (summary_Week) {
+                                                    summary_Week += `\n\n${timestamp}\n${potentialSummary}`;
+                                                } else {
+                                                    summary_Week = `${timestamp}\n${potentialSummary}`;
+                                                }
+                                                summary_Small = "";
                                             } else {
-                                                summary_Small = `${timestamp}\n${potentialSummary}`;
+                                                if (summary_Small) {
+                                                    summary_Small += `\n\n${timestamp}\n${potentialSummary}`;
+                                                } else {
+                                                    summary_Small = `${timestamp}\n${potentialSummary}`;
+                                                }
                                             }
-                                            
-                                            // gameData.summary_Small = summary_Small;
+
                                             localState.summarySmallUpdateApplied = true;
                                         }
                                     }
