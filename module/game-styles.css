@@ -1076,11 +1076,7 @@ body {
 }
 
 .event-description {
-    font-size: clamp(0.875rem, 2vw, 1rem);
-    color: #fff;
-    margin-bottom: clamp(12px, 3vw, 20px);
-    line-height: 1.5;
-    text-align: center;
+    display: none; /* 事件描述移至正文最后一页，这里隐藏 */
 }
 
 .event-options {
@@ -1160,9 +1156,7 @@ body {
         margin-bottom: 5px;
     }
     
-    .event-description {
-        margin-bottom: 8px;
-    }
+    .event-description { display: none; }
     
     .event-options {
         gap: 5px;
@@ -1204,6 +1198,65 @@ body {
     display: block;
 }
 
+/* 当事件容器被放置到主视窗(#main-viewport)内时的定位与层级（覆盖默认样式） */
+#main-viewport > #random-event-container,
+#main-viewport > #battle-event-container {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    bottom: clamp(10px, 3vw, 16px);
+    width: calc(100% - clamp(16px, 4vw, 24px));
+    max-width: 900px;
+    z-index: 1500; /* 高于SLG遮罩层(z-index:5)与普通层，低于全屏modal */
+    max-height: calc(100% - clamp(80px, 12vw, 120px)); /* 不超过主视窗范围 */
+    overflow-y: auto; /* 容器自身滚动 */
+}
+
+/* 事件框滚动条样式（Chrome/Edge/Safari） */
+#main-viewport > #random-event-container::-webkit-scrollbar,
+#main-viewport > #battle-event-container::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+#main-viewport > #random-event-container::-webkit-scrollbar-track,
+#main-viewport > #battle-event-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+
+/* 随机事件：青色拇指 */
+#main-viewport > #random-event-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(78,205,196,0.95), rgba(78,205,196,0.6));
+    border-radius: 8px;
+    border: 2px solid rgba(44,44,44,0.95);
+    transition: background 0.2s ease;
+}
+#main-viewport > #random-event-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #4ecdc4, rgba(78,205,196,0.75));
+}
+
+/* 战斗事件：粉红拇指 */
+#main-viewport > #battle-event-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(255,77,109,0.95), rgba(255,77,109,0.6));
+    border-radius: 8px;
+    border: 2px solid rgba(44,44,44,0.95);
+    transition: background 0.2s ease;
+}
+#main-viewport > #battle-event-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #ff6b87, rgba(255,77,109,0.75));
+}
+
+/* Firefox 滚动条配色 */
+#main-viewport > #random-event-container {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(78,205,196,0.9) rgba(255,255,255,0.08);
+}
+#main-viewport > #battle-event-container {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(255,77,109,0.9) rgba(255,255,255,0.08);
+}
+
 .battle-event-title {
     font-size: clamp(1rem, 2.5vw, 1.25rem);
     font-weight: bold;
@@ -1213,11 +1266,7 @@ body {
 }
 
 .battle-event-description {
-    font-size: clamp(0.875rem, 2vw, 1rem);
-    color: #fff;
-    margin-bottom: clamp(12px, 3vw, 20px);
-    line-height: 1.5;
-    text-align: center;
+    display: none; /* 事件描述移至正文最后一页，这里隐藏 */
 }
 
 .battle-enemy-info {
@@ -1225,6 +1274,8 @@ body {
     padding: clamp(10px, 2vw, 15px);
     border-radius: 8px;
     margin-bottom: clamp(10px, 2vw, 15px);
+    max-height: 100%;
+    overflow-y: auto;
 }
 
 .enemy-info-item {
@@ -1244,6 +1295,8 @@ body {
     border-radius: 6px;
     margin-bottom: clamp(12px, 3vw, 20px);
     text-align: center;
+    max-height: 100%;
+    overflow-y: auto;
 }
 
 .battle-reward-text {

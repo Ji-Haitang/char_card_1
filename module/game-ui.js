@@ -429,6 +429,18 @@ function updateStoryText(text) {
         isStoryExpanded = false;
     }
     
+    // 在正文后追加“事件描述页”（若存在随机/战斗事件）
+    try {
+        const activeEvent = (typeof currentBattleEvent !== 'undefined' && currentBattleEvent) 
+            ? currentBattleEvent 
+            : ((typeof currentRandomEvent !== 'undefined' && currentRandomEvent) ? currentRandomEvent : null);
+        if (activeEvent && activeEvent.事件描述) {
+            const mdAppend = window.markdownit({ html: true, breaks: true, linkify: true, typographer: true }).disable('strikethrough');
+            const eventHtml = mdAppend.render(activeEvent.事件描述);
+            storyPages.push(`<div class="story-paragraph">${eventHtml}</div>`);
+        }
+    } catch (e) {}
+
     // 覆盖：当 newWeek===1 时，默认展开全文一次（随后保持用户选择）
     try {
         const ls = (typeof getLocalState === 'function') ? getLocalState() : null;
@@ -485,8 +497,12 @@ function updateStoryDisplay() {
         storyElement.classList.remove('expanded');
         if (expandBtn) expandBtn.innerHTML = '▼ 展开全文';
         
-        // 如果是SLG模式，显示对应的图片
-        if (GameMode === 1 && slgModeData && slgModeData[currentPage]) {
+        // 如果是SLG模式，显示对应的图片（事件页使用“最后验证有效”的图层）
+        if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
+            const effectiveIndex = Math.min(currentPage, slgModeData.length - 1);
+            const pageData = slgModeData[effectiveIndex];
+            // 记录最后一次有效的图层索引，供其他模块使用（如战斗背景）
+            try { window.__lastValidSlgIndex = effectiveIndex; } catch (e) {}
             // 检查当前场景，只在需要遮罩的场景添加遮罩
             const activeScene = document.querySelector('.scene.active');
             const needsMask = activeScene && 
@@ -500,7 +516,6 @@ function updateStoryDisplay() {
                 viewport.appendChild(interactionMask);
             }
             
-            const pageData = slgModeData[currentPage];
             const dayNightCN = (dayNightStatus === 'night') ? '夜' : '昼';
             const locName = mapLocation || '天山派外堡'; // 当前地图位置（如 天山派） [[11],[14]]
             const layerContainer = document.createElement('div');
@@ -517,6 +532,7 @@ function updateStoryDisplay() {
                 const sceneUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene/${locName}/${dayNightCN}/${sceneName}.jpg`;
                 sceneImg.src = sceneUrl;
                 sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
+                try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {}
 
                 // // 发生 404 时回退到旧的本地背景规则
                 // sceneImg.onerror = function () {
@@ -541,6 +557,7 @@ function updateStoryDisplay() {
                     const emoUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/${pageData.npc}/表情差分/${emotion}.png`;
                     emotionImg.src = emoUrl;
                     emotionImg.alt = `${pageData.npc}-${emotion}`;
+                    try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {}
 
                     // // 404 回退：用原始 NPC 立绘
                     // emotionImg.onerror = function () {
@@ -564,6 +581,7 @@ function updateStoryDisplay() {
                 const cgUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/${pageData.npc}/色图/${pageData.cg}${randIdx}.png`;
                 cgImg.src = cgUrl;
                 cgImg.alt = `${pageData.npc}-${pageData.cg}${randIdx}`;
+                try { window.__lastValidCgUrl = cgUrl; } catch (e) {}
 
                 // // 404 时直接隐藏本层
                 // cgImg.onerror = function () {
@@ -624,6 +642,33 @@ function updateStoryDisplay() {
             if (nextBtn) nextBtn.style.display = 'none';
         }
     }
+
+    // 确保事件容器位于 main-viewport 下，并按模式控制显示
+    try {
+        const viewportEl = document.getElementById('main-viewport');
+        const randomContainer = document.getElementById('random-event-container');
+        const battleContainer = document.getElementById('battle-event-container');
+
+        if (viewportEl && randomContainer && randomContainer.parentElement !== viewportEl) {
+            viewportEl.appendChild(randomContainer);
+        }
+        if (viewportEl && battleContainer && battleContainer.parentElement !== viewportEl) {
+            viewportEl.appendChild(battleContainer);
+        }
+
+        const hasBattle = (typeof currentBattleEvent !== 'undefined') && !!currentBattleEvent;
+        const hasRandom = !hasBattle && (typeof currentRandomEvent !== 'undefined') && !!currentRandomEvent;
+        const shouldShowByMode = isStoryExpanded 
+            ? (hasBattle || hasRandom) 
+            : ((storyPages && storyPages.length > 0) && currentPage === storyPages.length - 1 && (hasBattle || hasRandom));
+
+        if (randomContainer) {
+            randomContainer.classList.toggle('show', shouldShowByMode && hasRandom);
+        }
+        if (battleContainer) {
+            battleContainer.classList.toggle('show', shouldShowByMode && hasBattle);
+        }
+    } catch (e) {}
     
     storyElement.style.opacity = '0';
     setTimeout(() => {

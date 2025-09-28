@@ -122,43 +122,32 @@ function showBattleGame(battleData) {
     const modal = document.getElementById('battle-modal');
     const iframe = document.getElementById('battle-iframe');
     
-    const activeScene = document.querySelector('.scene.active');
+    // 优先使用 SLG 模式下最后验证有效的场景图作为背景
     let backgroundUrl = '';
-    
-    // 根据当前场景和昼夜状态构建正确的背景URL
-    if (activeScene && activeScene.id !== 'map-scene') {
-        const sceneName = activeScene.id.replace('-scene', '');
-        const locationName = locationNames[sceneName];
-        const dayNight = dayNightStatus === 'night' ? '夜' : '昼';
-        
-        if (locationName) {
-            backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${locationName}_${dayNight}.webp`;
+    if (typeof window !== 'undefined' && window.__lastValidSceneUrl) {
+        backgroundUrl = window.__lastValidSceneUrl;
+    } else {
+        const activeScene = document.querySelector('.scene.active');
+        // 兜底为旧逻辑
+        if (activeScene && activeScene.id !== 'map-scene') {
+            const sceneName = activeScene.id.replace('-scene', '');
+            const locationName = locationNames[sceneName];
+            const dayNight = dayNightStatus === 'night' ? '夜' : '昼';
+            
+            if (locationName) {
+                backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${locationName}_${dayNight}.webp`;
+            } else {
+                const seasonMap = { 'spring': '春', 'summer': '夏', 'autumn': '秋', 'winter': '冬' };
+                const season = seasonMap[seasonStatus] || '冬';
+                backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp`;
+            }
         } else {
-            // 默认使用天山派地图背景
-            const seasonMap = {
-                'spring': '春',
-                'summer': '夏',
-                'autumn': '秋',
-                'winter': '冬'
-            };
+            const seasonMap = { 'spring': '春', 'summer': '夏', 'autumn': '秋', 'winter': '冬' };
+            const dayNightMap = { 'daytime': '昼', 'night': '夜' };
             const season = seasonMap[seasonStatus] || '冬';
+            const dayNight = dayNightMap[dayNightStatus] || '昼';
             backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp`;
         }
-    } else {
-        // 如果在地图场景，使用地图背景
-        const seasonMap = {
-            'spring': '春',
-            'summer': '夏',
-            'autumn': '秋',
-            'winter': '冬'
-        };
-        const dayNightMap = {
-            'daytime': '昼',
-            'night': '夜'
-        };
-        const season = seasonMap[seasonStatus] || '冬';
-        const dayNight = dayNightMap[dayNightStatus] || '昼';
-        backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp`;
     }
     
     // 获取当前难度

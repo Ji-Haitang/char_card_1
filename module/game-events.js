@@ -41,10 +41,9 @@
 // 显示随机事件
 function displayRandomEvent(event) {
     const container = document.getElementById('random-event-container');
-    const description = document.getElementById('event-description');
     const options = document.getElementById('event-options');
     
-    description.textContent = event.事件描述;
+    // 不再在事件框中显示事件描述，描述已作为最后一页附加到正文
     options.innerHTML = '';
     
     const optionKeys = ['选项一', '选项二', '选项三'];
@@ -132,7 +131,8 @@ function displayBattleEvent(event) {
     
     currentBattleEvent = event;
     
-    description.textContent = event.事件描述;
+    // 不在事件框中显示事件描述，正文最后一页已显示
+    if (description) description.textContent = '';
     
     if (event.敌方信息) {
         enemyName.textContent = event.敌方信息.名称 || '未知敌人';
@@ -436,6 +436,13 @@ function parseLLMResponse(response, mainTextContent) {
             displayRandomEvent(currentRandomEvent);
             hideBattleEvent();
         }
+
+        // 确保事件描述作为最后一页追加到正文后
+        try {
+            if (typeof updateStoryText === 'function' && typeof currentStoryText === 'string') {
+                updateStoryText(currentStoryText);
+            }
+        } catch (e) {}
     } else {
         hideRandomEvent();
         hideBattleEvent();
