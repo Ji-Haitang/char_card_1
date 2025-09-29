@@ -349,16 +349,16 @@ body {
 }
 
 /* 地点位置 */
-#yanwuchang { top: 53%; left: 48%; }
-#cangjingge { top: 30%; left: 20%; }
-#huofang { top: 55%; left: 65%; }
+#yanwuchang { top: 53%; left: 44%; }
+#cangjingge { top: 25%; left: 14%; }
+#huofang { top: 55%; left: 62%; }
 #houshan { top: 35%; left: 90%; }
-#yishiting { top: 15%; left: 58%; }
-#tiejiangpu { top: 60%; left: 85%; }
-#nandizi { top: 32%; left: 67%; }
-#nvdizi { top: 30%; left: 40%; }
-#shanmen { top: 80%; left: 37%; }
-#gongtian { top: 51%; left: 16%; }
+#yishiting { top: 15%; left: 55%; }
+#tiejiangpu { top: 60%; left: 82%; }
+#nandizi { top: 32%; left: 63%; }
+#nvdizi { top: 30%; left: 38%; }
+#shanmen { top: 85%; left: 33%; }
+#gongtian { top: 50%; left: 14%; }
 
 /* 悬浮提示框 - 响应式改进 */
 .tooltip {
@@ -2451,6 +2451,59 @@ body {
         font-size: 11px;
     }
 }
+
+/* 地点标签样式（替换原先的圆点光标） */
+.location {
+    width: 9% !important;                 /* 约等于 main-viewport 宽度的 9% */
+    height: auto !important;
+    aspect-ratio: 2.5;                     /* 略增高：宽:高 = 2.5:1 -> 高 ≈ 3.6% 视窗宽度 */
+    min-height: clamp(24px, 3.4vw, 44px);  /* 防止双行时内容溢出 */
+    box-sizing: border-box;
+    padding: 0 clamp(4px, 0.6vw, 8px) !important;  /* 只有水平内边距，不影响高度 */
+    border-radius: 6px !important;
+    background: rgba(0, 0, 0, 0.7) !important;
+    color: #fff !important;
+    border: 1px solid rgba(255,255,255,0.25) !important;
+    font-size: clamp(10px, 1.1vw, 16px) !important; /* 自适应字体 */
+    font-weight: bold;
+    white-space: nowrap;
+    display: flex;                          /* 垂直水平居中 */
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.35) !important;
+    flex-direction: column;                 /* 两行布局 */
+}
+
+.location:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.4) !important;
+}
+
+/* 地点标签内部两行样式 */
+.location .location-label-text {
+    line-height: 1.1;
+}
+
+.location .location-label-divider {
+    width: 80%;
+    height: 0;
+    border-top: 1px solid rgba(255,255,255,0.4);
+    margin: clamp(2px, 0.4vw, 4px) 0;      /* 两行之间的间距 */
+}
+
+.location .location-people {
+    line-height: 1;
+    font-size: clamp(10px, 1.1vw, 16px);   /* 与标题一致，视觉统一 */
+}
+
+/* 竖屏手机：提高高度（更小的宽高比） */
+@media (max-width: 600px) and (orientation: portrait) {
+    .location {
+        aspect-ratio: 1.5;  /* PC/平板 2.5 → 竖屏手机 1.5 */
+    }
+}
+
 
 /* 空状态提示 */
 .trading-empty {

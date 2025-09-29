@@ -474,6 +474,13 @@ function parseLLMResponse(response, mainTextContent) {
         displayNpcs(locationName);
     }
     
+    // 同步更新地图地点标签人数显示
+    try {
+        if (typeof updateLocationHeadcountLabels === 'function') {
+            updateLocationHeadcountLabels();
+        }
+    } catch (e) {}
+    
     checkAllValueRanges();
     updateAllDisplays();
 }

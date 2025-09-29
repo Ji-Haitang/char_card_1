@@ -520,41 +520,82 @@ function closeLocationInfo(e) {
 function setupLocationEvents() {
     const locations = document.querySelectorAll('.location');
 
-    locations.forEach(location => {
-        let touchTimer = null;
-        
-        location.addEventListener('mouseenter', function(e) {
-            if (!('ontouchstart' in window)) {
-                showLocationInfo(this.id, e);
-            }
-        });
+    // 渲染“地名 + 分隔线 + 人数Emoji”结构；不绑定点击/悬停事件
+    try {
+        locations.forEach(el => {
+            const id = el.id;
+            const label = (id && typeof locationNames === 'object') ? (locationNames[id] || id) : (id || '');
 
-        location.addEventListener('mouseleave', function() {
-            if (!('ontouchstart' in window)) {
-                // PC端不自动关闭
-            }
-        });
+            // 清空并重建两行结构
+            el.innerHTML = '';
 
-        location.addEventListener('touchstart', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            
-            if (touchTimer) {
-                clearTimeout(touchTimer);
-            }
-            
-            showLocationInfo(this.id, e);
-        });
+            const nameEl = document.createElement('span');
+            nameEl.className = 'location-label-text';
+            nameEl.textContent = label;
 
-        location.addEventListener('click', function(e) {
-            if (!('ontouchstart' in window)) {
-                e.preventDefault();
-                e.stopPropagation();
-                showLocationInfo(this.id, e);
-            }
+            const dividerEl = document.createElement('span');
+            dividerEl.className = 'location-label-divider';
+
+            const peopleEl = document.createElement('span');
+            peopleEl.className = 'location-people';
+            peopleEl.textContent = '';
+
+            el.appendChild(nameEl);
+            el.appendChild(dividerEl);
+            el.appendChild(peopleEl);
         });
-    });
+    } catch (e) {}
+
+    // 初始化一次人数显示
+    if (typeof updateLocationHeadcountLabels === 'function') {
+        updateLocationHeadcountLabels();
+    }
 }
+
+// 更新地图地点标签上的👤人数显示
+function updateLocationHeadcountLabels() {
+    try {
+        const countByLocation = {
+            yanwuchang: 0,
+            cangjingge: 0,
+            huofang: 0,
+            houshan: 0,
+            yishiting: 0,
+            tiejiangpu: 0,
+            nandizi: 0,
+            nvdizi: 0,
+            shanmen: 0,
+            gongtian: 0
+        };
+
+        if (currentNpcLocations && typeof currentNpcLocations === 'object') {
+            Object.keys(currentNpcLocations).forEach(npcId => {
+                const loc = currentNpcLocations[npcId];
+                if (loc && countByLocation.hasOwnProperty(loc)) {
+                    countByLocation[loc] += 1;
+                }
+            });
+        }
+
+        Object.keys(countByLocation).forEach(locId => {
+            const el = document.getElementById(locId);
+            if (!el) return;
+            const peopleEl = el.querySelector('.location-people');
+            const dividerEl = el.querySelector('.location-label-divider');
+            if (peopleEl) {
+                const n = countByLocation[locId];
+                peopleEl.textContent = n > 0 ? '👤'.repeat(n) : '';
+            }
+            if (dividerEl) {
+                // 当没有人时可淡化分隔线（可选）
+                dividerEl.style.opacity = countByLocation[locId] > 0 ? '1' : '0.35';
+            }
+        });
+    } catch (e) {}
+}
+
+// 暴露到全局（供页面中其他脚本调用）
+window.updateLocationHeadcountLabels = updateLocationHeadcountLabels;
 
 // 使用道具
 async function useItem(itemName) {

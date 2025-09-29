@@ -1605,6 +1605,11 @@ const outPut = `
                 const locationName = activeScene.id.replace('-scene', '');
                 displayNpcs(locationName);
             }
+
+            // 更新地图地点标签上的👤人数
+            if (typeof updateLocationHeadcountLabels === 'function') {
+                updateLocationHeadcountLabels();
+            }
         }
 
         // 修改 backToMap 函数
@@ -1646,6 +1651,16 @@ const outPut = `
 
                 document.getElementById('map-scene').classList.add('active');
                 userLocation = 'tianshanpai';
+
+                // 取消地图高亮与弹窗
+                try {
+                    const svg = document.getElementById('map-hit-areas');
+                    if (svg) {
+                        svg.querySelectorAll('polygon.active').forEach(n => n.classList.remove('active'));
+                    }
+                    const locPopup = document.getElementById('location-info-popup');
+                    if (locPopup) locPopup.classList.remove('show');
+                } catch (e) {}
             }
         }
 
