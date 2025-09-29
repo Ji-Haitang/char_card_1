@@ -161,12 +161,20 @@ function updateDateDisplay() {
 
 // 更新体力显示
 function updateMoodDisplay() {
-    const moodText = `体力: ${playerMood}`;
-    if (playerMood > 100) {
-        document.getElementById('mood-display').innerHTML = `<span style="color: #4ecdc4;">${moodText}</span>`;
-    } else {
-        document.getElementById('mood-display').textContent = moodText;
-    }
+    const container = document.getElementById('mood-display');
+    if (!container) return;
+    const over = playerMood > 100;
+    const base = Math.max(0, Math.min(100, playerMood));
+    const overcap = over ? playerMood - 100 : 0;
+    const fillWidth = base;
+
+    container.innerHTML = `
+        <span class="mood-text">体力 ${playerMood}</span>
+        <div class="mood-bar${over ? ' overcap' : ''}">
+            <div class="mood-fill" style="width: ${fillWidth}%;"></div>
+        </div>
+        ${over ? `<span class="mood-badge">+${overcap}</span>` : ''}
+    `;
 }
 
 // 更新行动点显示

@@ -111,28 +111,100 @@ body {
 /* 状态显示 - 响应式改进 */
 .status-display {
     position: absolute;
-    top: clamp(10px, 3%, 30px);
-    left: clamp(10px, 3%, 30px);
-    color: #1a1a1a;
-    text-shadow: 1px 1px 2px rgba(0,0,0,0.2);
-    background: rgba(255, 255, 255, 0.85);
-    padding: clamp(8px, 2vw, 15px);
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-    font-size: clamp(0.75rem, 2vw, 1rem);
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* 高度 ≈ main-viewport 宽度的 5%（viewport 宽高比≈1.46 => 0.05*1.46 ≈ 7.3% 高度） */
+    height: clamp(24px, 7.3%, 56px);
+    background: rgba(0, 0, 0, 0.7);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: clamp(8px, 2vw, 20px);
+    padding: 0 clamp(10px, 2vw, 20px);
+    font-size: clamp(0.8rem, 1.6vw, 1.2rem);
+    text-shadow: none;
+    border-radius: 0;
+    box-shadow: none;
+    z-index: 20;
+}
+
+/* 状态栏内部布局与分隔线 */
+.status-display > div {
+    display: flex;
+    align-items: center;
+}
+.status-display .date-display { flex: 0 0 auto; }
+.status-display .mood-display { flex: 1 1 auto; min-width: clamp(140px, 28vw, 360px); }
+.status-display .action-points-display { flex: 0 0 auto; }
+.status-display > div:not(:last-child) {
+    position: relative;
+    padding-right: clamp(10px, 2vw, 20px);
+    margin-right: clamp(10px, 2vw, 20px);
+}
+.status-display > div:not(:last-child)::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 1px;
+    height: 60%;
+    background: rgba(255,255,255,0.35);
 }
 
 .date-display {
-    font-size: clamp(0.875rem, 2.5vw, 1.25rem);
+    font-size: clamp(0.95rem, 2vw, 1.5rem);
     font-weight: bold;
-    margin-bottom: 5px;
+    margin: 0;
 }
 
 .mood-display,
 .action-points-display {
-    font-size: clamp(0.8rem, 2.2vw, 1.125rem);
+    font-size: inherit;
     font-weight: bold;
-    margin-top: 3px;
+    margin: 0;
+}
+
+/* 体力进度槽 */
+.mood-display { gap: clamp(6px, 1.2vw, 12px); }
+.mood-bar {
+    width: 100%;
+    height: clamp(8px, 1.2vw, 14px);
+    background: rgba(255,255,255,0.25);
+    border-radius: 999px;
+    position: relative;
+    overflow: hidden;
+    min-width: clamp(100px, 20vw, 240px);
+    max-width: clamp(200px, 32vw, 480px);
+}
+.mood-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #66bb6a, #4ecdc4);
+    border-radius: 999px;
+}
+.mood-bar.overcap::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,0.18) 0 8px, rgba(255,255,255,0.05) 8px 16px);
+    animation: moodStripes 1.2s linear infinite;
+}
+@keyframes moodStripes {
+    from { background-position: 0 0; }
+    to { background-position: 32px 0; }
+}
+.mood-text { white-space: nowrap; }
+.mood-badge { color: #4ecdc4; margin-left: 6px; }
+
+/* 行动点图标 */
+.action-points-display::before {
+    content: '⚡';
+    margin-right: 6px;
+    color: #ffd54f;
+    filter: drop-shadow(0 0 2px rgba(255,213,79,0.6));
 }
 
 /* 刷新NPC按钮 - 响应式改进 */
@@ -280,7 +352,7 @@ body {
 #yanwuchang { top: 53%; left: 48%; }
 #cangjingge { top: 30%; left: 20%; }
 #huofang { top: 55%; left: 65%; }
-#houshan { top: 35%; left: 77%; }
+#houshan { top: 35%; left: 90%; }
 #yishiting { top: 15%; left: 58%; }
 #tiejiangpu { top: 60%; left: 85%; }
 #nandizi { top: 32%; left: 67%; }

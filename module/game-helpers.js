@@ -505,6 +505,14 @@ function closeLocationInfo(e) {
     if (!popup.contains(e.target)) {
         popup.classList.remove('show');
         document.removeEventListener('click', closeLocationInfo);
+        // 关闭弹窗时，取消地图建筑的高亮状态
+        try {
+            const svg = document.getElementById('map-hit-areas');
+            if (svg) {
+                const actives = svg.querySelectorAll('polygon.active');
+                actives.forEach(n => n.classList.remove('active'));
+            }
+        } catch (err) {}
     }
 }
 
