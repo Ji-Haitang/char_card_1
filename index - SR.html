@@ -1139,7 +1139,11 @@
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
-                    await handleMessageOutput('新的一周开始了<br>当前第' + currentWeek + '周');
+                    const year = Math.floor((currentWeek - 1) / 48) + 1;
+                    const remainingWeeks = (currentWeek - 1) % 48;
+                    const month = Math.floor(remainingWeeks / 4) + 1;
+                    const week = remainingWeeks % 4 + 1;
+                    await handleMessageOutput('新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
                 }
             );
         }
@@ -2595,9 +2599,10 @@
             // 显示弹窗并填充内容
             modal.style.display = 'block';
             const contentDiv = document.getElementById('history-summary-content');
-            contentDiv.textContent = (summary_Small && summary_Small.trim())
-                ? summary_Small
-                : '暂无聊天总结记录';
+            const combinedSummary = [summary_Week, summary_Small]
+                .filter(s => s && s.trim())
+                .join('\n\n');
+            contentDiv.textContent = combinedSummary || '暂无聊天总结记录';
 
             // 一帧后适配尺寸并绑定自动适配
             requestAnimationFrame(() => {
@@ -2642,8 +2647,8 @@
                 lastUserMessage = newMessage;
                 // gameData.lastUserMessage = newMessage;
 
-                // 新增：检查是否是新的一周的消息
-                const newWeekPattern = /^新的一周开始了<br>当前第(\d+)周$/;
+                // 新增：检查是否是新的一周的消息（新版：年/月/周）
+                const newWeekPattern = /^新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
                 const match = newMessage.match(newWeekPattern);
 
                 if (match) {

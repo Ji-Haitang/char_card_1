@@ -47,8 +47,8 @@ async function handleMessageOutput(message) {
         console.log('user消息存入变量lastMessage_jxz');
         await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
 
-        // 新增：检查是否是新的一周的消息
-        const newWeekPattern = /^新的一周开始了<br>当前第(\d+)周$/;
+    // 新增：检查是否是新的一周的消息（新版：年/月/周）
+    const newWeekPattern = /^新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
         const match = message.match(newWeekPattern);
 
         if (match) {
@@ -85,13 +85,14 @@ async function handleMessageOutput(message) {
             
             // 使用普通的showModal显示信息
             showModal(modalHTML);
+            await saveGameData();
             
             // 短暂延迟后自动关闭弹窗并发送
             setTimeout(async () => {
                 // closeModal();
                 // 使用inject命令隐式注入user输入
                 await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${message}`);
-                await saveGameData();
+                // await saveGameData();
                 await renderFunc('/trigger');
                 console.log('Message injected:', message);
             }, 500); // 1.5秒后自动发送
