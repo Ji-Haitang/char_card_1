@@ -95,6 +95,8 @@
                     <div class="location" id="gongtian"></div>
                     <div class="ink-decoration ink1"></div>
                     <div class="ink-decoration ink2"></div>
+                    <!-- 建筑轮廓与热区（SVG覆盖层） -->
+                    <svg id="map-hit-areas" viewBox="0 0 1000 1000" preserveAspectRatio="xMidYMid slice" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;"></svg>
                 </div>
 
                 <!-- 后续场景保持不变 -->
@@ -2750,6 +2752,9 @@
             updateSceneBackgrounds();
             updateAllDisplays();
             setupLocationEvents();
+            if (typeof setupMapHitAreas === 'function') {
+                setupMapHitAreas();
+            }
             setupMessageListeners();
 
             if (isInRenderEnvironment()) {
@@ -2767,6 +2772,9 @@
                 });
                 // 然后只激活地图场景
                 document.getElementById('map-scene').classList.add('active');
+                if (typeof setupMapHitAreas === 'function') {
+                    setupMapHitAreas();
+                }
                 //switchScene('map');
             }else{
                 switchScene(userLocation);
@@ -2857,6 +2865,153 @@
         window.toggleCgContent = toggleCgContent;
         initializeOrSync();
     });
+
+    // ========== 建筑轮廓与热区（SVG） ==========
+    function setupMapHitAreas() {
+        try {
+            const svg = document.getElementById('map-hit-areas');
+            if (!svg) return;
+
+            if (!document.getElementById('map-hit-areas-style')) {
+                const style = document.createElement('style');
+                style.id = 'map-hit-areas-style';
+                style.textContent = `
+                    #map-hit-areas { pointer-events: none; }
+                    #map-hit-areas polygon { fill: rgba(78,205,196,0.08); stroke: rgba(78,205,196,0.0); stroke-width: 3; vector-effect: non-scaling-stroke; pointer-events: auto; transition: stroke 120ms, fill 120ms, filter 120ms; }
+                    #map-hit-areas polygon:hover, #map-hit-areas polygon.active { stroke: #4ecdc4; fill: rgba(78,205,196,0.18); filter: drop-shadow(0 0 8px rgba(78,205,196,0.7)); cursor: pointer; }
+                    .scene.slg-mode #map-hit-areas { pointer-events: none; }
+                `;
+                document.head.appendChild(style);
+            }
+
+            setMapHitAreasViewBox();
+
+            const buildingPolygons = [
+                { id: 'yishiting', name: '议事厅', points: '788,236 792,203 807,193 798,184 813,173 821,161 827,152 828,133 823,123 814,118 807,113 818,112 828,107 837,100 844,89 849,81 844,71 850,65 853,74 860,80 868,80 881,83 894,86 908,83 912,76 915,68 921,73 920,80 917,84 920,91 928,97 933,102 943,104 949,106 946,112 941,119 937,125 927,132 924,144 925,152 933,158 941,158 949,158 943,167 940,178 938,188 937,193 949,193 951,196 951,204 950,217 949,223 943,233 940,239 936,249 928,251 920,251 891,251 859,246 844,246 827,242 810,242 798,242 786,242' },
+                { id: 'yanwuchang', name: '演武场', points: '776,721 537,630 705,400 876,445 778,714' },
+                { id: 'nandizi', name: '男弟子房', points: '911,419 917,385 888,377 917,301 923,294 928,283 940,248 937,239 957,239 963,219 960,207 996,196 998,183 1004,184 1006,196 1031,210 1041,209 1035,219 1037,245 1053,251 1064,248 1063,256 1069,306 1079,309 1070,320 1061,316 1073,404 1079,410 1070,413 1057,407 1047,407 1041,430 1037,439 978,430 918,420' },
+                { id: 'nvdizi', name: '女弟子房', points: '649,374 601,362 566,353 549,349 545,317 523,309 543,297 558,284 558,256 545,251 530,242 542,241 555,239 579,217 578,201 585,193 590,201 597,204 620,199 633,184 636,174 642,170 647,177 647,190 662,203 697,213 692,220 682,230 688,256 701,264 716,262 724,261 720,274 708,283 701,288 705,314 691,330 681,342 665,358 653,369' },
+                { id: 'cangjingge', name: '藏经阁', points: '220,410 213,368 194,361 213,355 219,346 222,338 202,329 190,323 187,317 202,311 200,307 190,301 205,298 215,291 219,288 218,269 202,262 196,254 209,255 218,251 219,242 210,238 207,232 216,230 222,223 222,213 218,204 207,193 205,184 215,191 225,201 248,193 264,193 286,187 299,183 309,180 312,168 317,173 316,181 315,188 319,199 329,203 341,207 349,210 358,210 346,216 342,225 344,233 349,236 358,233 362,230 358,238 352,245 355,262 364,265 372,265 383,259 384,268 378,281 384,287 393,285 399,285 393,291 386,296 393,303 401,303 407,300 412,296 412,303 413,310 420,320 427,320 435,320 427,327 425,335 422,340 416,346 419,356 419,364 422,368 423,379 425,390 422,395 413,401 404,406 388,416 377,424 367,430 357,430 341,427 331,420 325,416 319,420 312,424 297,424 270,417 248,414 228,410' },
+                { id: 'gongtian', name: '公田', points: '247,448 315,476 348,481 377,491 396,492 393,501 268,604 89,524 186,478 245,450' },
+                { id: 'tiejiangpu', name: '铁匠铺', points: '1226,691 1219,673 1215,659 1192,657 1179,615 1185,595 1200,591 1192,579 1212,540 1205,529 1212,529 1218,531 1250,524 1255,514 1263,511 1264,523 1264,531 1287,546 1299,576 1309,600 1321,618 1335,639 1345,647 1347,652 1334,653 1325,650 1315,663 1309,675 1302,688 1299,696 1293,702 1279,699 1250,694 1234,692' },
+                { id: 'huofang', name: '伙房', points: '879,704 888,639 868,630 869,618 882,618 915,459 909,453 912,449 933,450 954,445 975,433 991,450 1008,461 1030,471 1035,474 1033,478 1027,478 1027,511 1025,546 1027,586 1030,624 1030,653 1038,659 1041,672 1030,679 1012,672 998,731 885,707' },
+                { id: 'shanmen', name: '山门', points: '565,725 525,811 501,869 473,914 440,969 424,990 552,993 565,954 586,902 607,841 628,792 644,753 571,729' },
+                { id: 'houshan', name: '后山', points: '1457,141 1439,142 1429,149 1412,168 1406,184 1394,201 1387,214 1376,213 1368,228 1363,239 1354,245 1345,242 1342,236 1339,228 1339,219 1329,219 1322,219 1313,223 1310,230 1310,236 1310,245 1305,252 1300,255 1284,290 1274,300 1264,303 1258,317 1247,320 1232,351 1218,375 1199,407 1283,448 1368,450 1458,449 1458,148' }
+            ];
+
+            svg.innerHTML = '';
+            buildingPolygons.forEach(b => {
+                const p = document.createElementNS('http://www.w3.org/2000/svg','polygon');
+                p.setAttribute('points', b.points);
+                p.dataset.location = b.id;
+                p.addEventListener('click', (e) => {
+                    svg.querySelectorAll('polygon.active').forEach(n => n.classList.remove('active'));
+                    p.classList.add('active');
+                    if (typeof showLocationInfo === 'function') { showLocationInfo(b.id, e); }
+                    e.stopPropagation();
+                });
+                svg.appendChild(p);
+            });
+        } catch (e) { console.warn(e); }
+    }
+
+    function setMapHitAreasViewBox() {
+        const svg = document.getElementById('map-hit-areas');
+        const vp = document.getElementById('main-viewport');
+        if (!svg || !vp) return;
+        const rect = vp.getBoundingClientRect();
+        const ratio = rect.width / rect.height || 1.46;
+        const baseH = 1000;
+        const vbW = Math.max(1, Math.round(baseH * ratio));
+        svg.setAttribute('viewBox', `0 0 ${vbW} ${baseH}`);
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+        svg.dataset.vbWidth = vbW;
+        svg.dataset.vbHeight = baseH;
+    }
+
+    (function bindResizeForViewBox(){
+        let rafId = null;
+        const onResize = () => {
+            if (rafId) cancelAnimationFrame(rafId);
+            rafId = requestAnimationFrame(() => setMapHitAreasViewBox());
+        };
+        window.addEventListener('resize', onResize, { passive: true });
+    })();
+
+    window.enableMapPointPicker = function enableMapPointPicker() {
+        const svg = document.getElementById('map-hit-areas');
+        if (!svg) { console.warn('未找到 #map-hit-areas'); return; }
+        const ns = 'http://www.w3.org/2000/svg';
+        const pt = svg.createSVGPoint();
+        const toSvg = (e) => {
+            pt.x = e.clientX; pt.y = e.clientY;
+            return pt.matrixTransform(svg.getScreenCTM().inverse());
+        };
+
+        let points = [];
+        let dots = [];
+        let guide = svg.querySelector('#__guide_poly');
+        if (!guide) {
+            guide = document.createElementNS(ns, 'polyline');
+            guide.id = '__guide_poly';
+            guide.setAttribute('fill', 'rgba(255,255,0,0.12)');
+            guide.setAttribute('stroke', '#ffd400');
+            guide.setAttribute('stroke-width', '3');
+            guide.setAttribute('vector-effect', 'non-scaling-stroke');
+            guide.style.pointerEvents = 'none';
+            svg.appendChild(guide);
+        }
+
+        const redraw = () => { guide.setAttribute('points', points.map(p => `${p.x},${p.y}`).join(' ')); };
+        const addDot = (p) => {
+            const c = document.createElementNS(ns, 'circle');
+            c.setAttribute('cx', p.x); c.setAttribute('cy', p.y); c.setAttribute('r', 6);
+            c.setAttribute('fill', '#ffd400'); c.setAttribute('stroke', '#000');
+            c.setAttribute('vector-effect', 'non-scaling-stroke');
+            c.style.pointerEvents = 'none';
+            svg.appendChild(c);
+            dots.push(c);
+        };
+
+        const onClick = (e) => {
+            const p = toSvg(e);
+            const np = { x: Math.round(p.x), y: Math.round(p.y) };
+            points.push(np); addDot(np); redraw();
+        };
+        const onKey = (e) => {
+            if (e.key === 'z' || e.key === 'Z') { points.pop(); const d = dots.pop(); if (d) d.remove(); redraw(); }
+            else if (e.key === 'c' || e.key === 'C') { points = []; dots.forEach(d => d.remove()); dots = []; redraw(); console.log('已清空'); }
+            else if (e.key === 'Enter') {
+                if (points.length >= 3) { const out = points.map(p => `${p.x},${p.y}`).join(' '); console.log('复制到 buildingPolygons.points：\n', out); }
+                else { console.log('至少需要3个点'); }
+            }
+        };
+
+        const oldPointer = svg.style.pointerEvents;
+        svg.style.pointerEvents = 'auto';
+        svg.addEventListener('click', onClick);
+        window.addEventListener('keydown', onKey);
+        console.log('取点器就绪：点击添加点；Z 撤销，C 清空，Enter 输出 points。调用 window.disableMapPointPicker() 退出。');
+
+        window.disableMapPointPicker = function disableMapPointPicker() {
+            svg.removeEventListener('click', onClick);
+            window.removeEventListener('keydown', onKey);
+            svg.style.pointerEvents = oldPointer || '';
+            console.log('取点器已关闭');
+        };
+    };
+
+    (function wrapSwitchScene(){
+        const orig = window.switchScene;
+        if (typeof orig !== 'function') return;
+        window.switchScene = function(sceneName){
+            const ret = orig.apply(this, arguments);
+            if (sceneName === 'map' && typeof setupMapHitAreas === 'function') {
+                setupMapHitAreas();
+            }
+            return ret;
+        };
+    })();
     </script>
 </body>
 </html>
