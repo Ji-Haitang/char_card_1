@@ -889,10 +889,12 @@ const defaultGameData = {
     lastUserMessage: "",     // 已存在：储存上轮用户输入
     summary_Small: "",
     summary_Week: "",
+    summary_Backup: "",
     newWeek: 0,
     randomEvent: 0,       // 随机事件标记
     battleEvent: 0,       // 战斗事件标记
     companionNPC: ['姬姒','钱塘君'],     // 随行NPC数组
     mapLocation: '天山派外堡', // 地图位置
-    cgContentEnabled: false  // 新增：CG内容开关（默认关）
+    cgContentEnabled: false,  // 新增：CG内容开关（默认关）
+    compressSummary: false    // 新增：强力总结（默认关）
 };

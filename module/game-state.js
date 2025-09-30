@@ -67,12 +67,14 @@ let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
 let difficulty = 'normal';
 let cgContentEnabled = false;   // 新增：CG内容开关运行时变量（默认false）
+let compressSummary = false;    // 新增：强力总结运行时变量（默认false）
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let lastUserMessage = "";
 let summary_Small = "";
 let summary_Week = "";
+let summary_Backup = "";
 // 独立的NPC位置变量
 let npcLocationA = "none";
 let npcLocationB = "yishiting";
@@ -167,12 +169,14 @@ function syncVariablesFromGameData() {
     lastUserMessage,
     summary_Small,
     summary_Week,
+    summary_Backup,
     newWeek,
     randomEvent,      // 新增
     battleEvent,      // 新增
     companionNPC,     // 新增
     mapLocation,      // 新增
-    cgContentEnabled  // 新增
+    cgContentEnabled,  // 新增
+    compressSummary
     } = gameData);
 
     npcLocationA = currentNpcLocations.A;
@@ -217,12 +221,14 @@ function syncGameDataFromVariables() {
     gameData.lastUserMessage = lastUserMessage;
     gameData.summary_Small = summary_Small;
     gameData.summary_Week = summary_Week;
+    gameData.summary_Backup = summary_Backup;
     gameData.newWeek = newWeek;
     gameData.randomEvent = randomEvent;
     gameData.battleEvent = battleEvent;
     gameData.companionNPC = companionNPC;
     gameData.mapLocation = mapLocation;
     gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
+    gameData.compressSummary = compressSummary;    // 新增：写回存档
 }
 
 function syncGameDatalastUserMessage() {
