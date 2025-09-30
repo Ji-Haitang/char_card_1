@@ -2525,17 +2525,17 @@ body {
     box-sizing: border-box;
     padding: 0 clamp(4px, 0.6vw, 8px) !important;  /* 只有水平内边距，不影响高度 */
     border-radius: 6px !important;
-    background: rgba(0, 0, 0, 0.7) !important;
+    background: transparent !important;
     color: #fff !important;
-    border: 1px solid rgba(255,255,255,0.25) !important;
-    font-size: clamp(10px, 1.1vw, 16px) !important; /* 自适应字体 */
+    border: transparent !important;
+    font-size: clamp(10px, 2.2vw, 50px) !important; /* 自适应字体 */
     font-weight: bold;
     white-space: nowrap;
     display: flex;                          /* 垂直水平居中 */
     align-items: center;
     justify-content: center;
     text-align: center;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.35) !important;
+    box-shadow: none !important;
     flex-direction: column;                 /* 两行布局 */
 }
 
@@ -2547,6 +2547,18 @@ body {
 /* 地点标签内部两行样式 */
 .location .location-label-text {
     line-height: 1.1;
+    color: #ffffff !important;
+    /* 更清晰的黑色描边：无模糊的八向阴影 + webkit描边（自适应粗细） */
+    text-shadow:
+        1px 0 0 #000,
+       -1px 0 0 #000,
+        0 1px 0 #000,
+        0 -1px 0 #000,
+        1px 1px 0 #000,
+       -1px 1px 0 #000,
+        1px -1px 0 #000,
+       -1px -1px 0 #000;
+    -webkit-text-stroke: clamp(0.6px, 0.11vw, 1.2px) #000;
 }
 
 .location .location-label-divider {
@@ -2567,6 +2579,13 @@ body {
         aspect-ratio: 1.5;  /* PC/平板 2.5 → 竖屏手机 1.5 */
     }
 }
+
+/* 普通模式（GameMode=0）：门派地图的地名标签边框与底色透明，保留文字样式 */
+/* body:not(.slg-global) #map-scene .location {
+    background: transparent !important;
+    border-color: transparent !important;
+    box-shadow: none !important;
+} */
 
 
 /* 空状态提示 */

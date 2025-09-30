@@ -2953,8 +2953,27 @@ const outPut = `
                     style.id = 'map-hit-areas-style';
                     style.textContent = `
                         #map-hit-areas { pointer-events: none; }
-                        #map-hit-areas polygon { fill: rgba(78,205,196,0.08); stroke: rgba(78,205,196,0.0); stroke-width: 3; vector-effect: non-scaling-stroke; pointer-events: auto; transition: stroke 120ms, fill 120ms, filter 120ms; }
-                        #map-hit-areas polygon:hover, #map-hit-areas polygon.active { stroke: #4ecdc4; fill: rgba(78,205,196,0.18); filter: drop-shadow(0 0 8px rgba(78,205,196,0.7)); cursor: pointer; }
+                        /* 基础多边形：不填充，仅用于命中检测与状态切换 */
+                        #map-hit-areas polygon {
+                            fill: transparent;
+                            stroke: rgba(255,255,255,0);
+                            stroke-width: 2.5;
+                            vector-effect: non-scaling-stroke;
+                            pointer-events: all;
+                            transition: stroke 120ms, stroke-width 120ms, filter 120ms;
+                        }
+                        /* 悬停/高亮：仅边缘高亮为白色，中心保持透明，并添加向外发光 */
+                        #map-hit-areas polygon:hover,
+                        #map-hit-areas polygon.active {
+                            stroke: #4ecdc4; /* 与地点弹窗标题同款青色 */
+                            fill: transparent;
+                            filter: drop-shadow(0 0 6px rgba(78,205,196,0.55)) drop-shadow(0 0 12px rgba(78,205,196,0.35));
+                            cursor: pointer;
+                        }
+                        /* 小屏下描边更细 */
+                        @media (max-width: 600px) {
+                            #map-hit-areas polygon { stroke-width: 1.6; }
+                        }
                         .scene.slg-mode #map-hit-areas { pointer-events: none; }
                     `;
                     document.head.appendChild(style);
