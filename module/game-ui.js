@@ -445,7 +445,6 @@ function updateStoryText(text) {
     } catch (e) {}
 
     // 更新显示
-    // 初始化或保持通用加载图层（双模式均加载）；SLG模式时额外隐藏普通场景
     try {
         const viewport = document.getElementById('main-viewport');
         if (GameMode === 1) {
@@ -572,6 +571,10 @@ function updateStoryDisplay() {
                     const emotionImg = document.createElement('img');
 
                     const emotion = (pageData.emotion && pageData.emotion !== 'none') ? pageData.emotion : '平静';
+                    // 触发 enamor：首次遇到“发情”
+                    if (emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) {
+                        enamor = 1;
+                    }
                     // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/表情差分/{{pageData.emotion}}.png
                     const emoUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/${pageData.npc}/表情差分/${emotion}.png`;
                     emotionImg.src = emoUrl;

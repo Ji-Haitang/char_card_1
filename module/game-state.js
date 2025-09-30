@@ -75,6 +75,7 @@ let lastUserMessage = "";
 let summary_Small = "";
 let summary_Week = "";
 let summary_Backup = "";
+let enamor = 0;
 // 独立的NPC位置变量
 let npcLocationA = "none";
 let npcLocationB = "yishiting";
@@ -170,6 +171,7 @@ function syncVariablesFromGameData() {
     summary_Small,
     summary_Week,
     summary_Backup,
+    enamor,
     newWeek,
     randomEvent,      // 新增
     battleEvent,      // 新增
@@ -222,6 +224,7 @@ function syncGameDataFromVariables() {
     gameData.summary_Small = summary_Small;
     gameData.summary_Week = summary_Week;
     gameData.summary_Backup = summary_Backup;
+    gameData.enamor = enamor;
     gameData.newWeek = newWeek;
     gameData.randomEvent = randomEvent;
     gameData.battleEvent = battleEvent;
@@ -307,6 +310,7 @@ async function loadOrInitGameData() {
         }
     }
     syncVariablesFromGameData();
+    enamor = 0; // 每次初始化或加载完成后重置
 }
 
 async function saveGameData() {

@@ -1,0 +1,12 @@
+
+<%_ const compressSummaryforSummary = gameData.compressSummary; _%>
+<!-- <HistorySummary> is a brief summary of what has happened so far. Please read it to continue the story. -->
+
+<HistorySummary>
+<%_ if (compressSummaryforSummary == false) { _%>
+  <%- gameData.summary_Backup %>
+<%_ } else { _%>
+  <%- gameData.summary_Week %>
+<%_ } _%>
+  <%- gameData.summary_Small %>
+</HistorySummary>
