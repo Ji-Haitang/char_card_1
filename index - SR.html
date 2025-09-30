@@ -2763,6 +2763,30 @@
         async function initializeOrSync() {
             await loadOrInitGameData();
             console.log('初始化完成');
+            // 初始化：仅在SLG模式渲染加载图层兜底；普通模式移除SLG全局隐藏
+            try {
+                if (GameMode === 1) {
+                    try { document.body.classList.add('slg-global'); } catch (e) {}
+                    const viewport = document.getElementById('main-viewport');
+                    if (viewport && !viewport.querySelector('.slg-loading-layer')) {
+                        const loading = document.createElement('div');
+                        loading.className = 'slg-loading-layer';
+                        const spinner = document.createElement('div');
+                        spinner.className = 'slg-loading-spinner';
+                        const text = document.createElement('div');
+                        text.className = 'slg-loading-text';
+                        text.textContent = '场景加载中';
+                        loading.appendChild(spinner);
+                        loading.appendChild(text);
+                        viewport.insertBefore(loading, viewport.firstChild);
+                    }
+                } else {
+                    try { document.body.classList.remove('slg-global'); } catch (e) {}
+                    const viewport = document.getElementById('main-viewport');
+                    const old = viewport ? viewport.querySelector('.slg-loading-layer') : null;
+                    if (old) old.remove();
+                }
+            } catch (e) {}
             checkAllValueRanges();
 
             // 初始化季节

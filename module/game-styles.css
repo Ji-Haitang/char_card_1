@@ -1693,6 +1693,11 @@ body {
     z-index: 1;
 }
 
+/* SLG全局模式：隐藏普通场景（地图与各地点） */
+.slg-global .scene {
+    display: none !important;
+}
+
 .slg-layer {
     position: absolute;
     top: 0;
@@ -1776,6 +1781,65 @@ body {
     z-index: 10; /* 提高z-index */
 }
 
+/* SLG加载图层（位于场景图层之下，用于遮挡非SLG场景） */
+.slg-loading-layer {
+    z-index: 0;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    pointer-events: none; /* 不拦截交互 */
+}
+
+.slg-loading-spinner {
+    width: clamp(48px, 12vw, 140px);
+    height: clamp(48px, 12vw, 140px);
+    background-image: url('https://files.catbox.moe/37jfr9.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    animation: slgSpin 8s linear infinite;
+    opacity: 0.9;
+}
+
+@keyframes slgSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
+/* 加载文字与动态省略号 */
+.slg-loading-text {
+    margin-top: clamp(8px, 2vw, 16px);
+    font-size: clamp(12px, 2.2vw, 20px);
+    color: #222;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-align: center;
+}
+
+.slg-loading-text::after {
+    content: '.';
+    animation: slgDots 1.5s linear infinite;
+    display: inline-block;
+    width: 1.5em; /* 视觉占位，避免抖动 */
+    margin-left: 2px;
+}
+
+@keyframes slgDots {
+    0%   { content: '.'; }
+    16%  { content: '..'; }
+    33%  { content: '...'; }
+    50%  { content: '....'; }
+    66%  { content: '.....'; }
+    83%  { content: '......'; }
+    100% { content: '.'; }
+}
 /* 关系卡片控制区域 */
 .relationship-controls {
     margin-top: clamp(8px, 2vw, 12px);

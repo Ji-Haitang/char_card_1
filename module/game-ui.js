@@ -445,6 +445,29 @@ function updateStoryText(text) {
     } catch (e) {}
 
     // 更新显示
+    // 初始化或保持通用加载图层（双模式均加载）；SLG模式时额外隐藏普通场景
+    try {
+        const viewport = document.getElementById('main-viewport');
+        if (GameMode === 1) {
+            try { document.body.classList.add('slg-global'); } catch (e) {}
+            if (viewport && !viewport.querySelector('.slg-loading-layer')) {
+                const loading = document.createElement('div');
+                loading.className = 'slg-loading-layer';
+                const spinner = document.createElement('div');
+                spinner.className = 'slg-loading-spinner';
+                const text = document.createElement('div');
+                text.className = 'slg-loading-text';
+                text.textContent = '场景加载中';
+                loading.appendChild(spinner);
+                loading.appendChild(text);
+                viewport.insertBefore(loading, viewport.firstChild);
+            }
+        } else {
+            try { document.body.classList.remove('slg-global'); } catch (e) {}
+            const old = viewport ? viewport.querySelector('.slg-loading-layer') : null;
+            if (old) old.remove();
+        }
+    } catch (e) {}
     updateStoryDisplay();
 }
 
@@ -467,6 +490,9 @@ function updateStoryDisplay() {
         // 清除之前的SLG遮罩层
         const existingMask = viewport.querySelector('.slg-interaction-mask');
         if (existingMask) existingMask.remove();
+
+        // 退出SLG相关全局标记
+        try { if (GameMode !== 1) document.body.classList.remove('slg-global'); } catch (e) {}
     }
     
     storyElement.onclick = null;
