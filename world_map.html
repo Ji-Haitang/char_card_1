@@ -291,6 +291,19 @@
             color: rgba(255, 255, 255, 0.9);
         }
 
+        /* 新增：NPC置灰与提示样式 */
+        .npc-item.disabled {
+            opacity: 0.6;
+        }
+        .npc-name.disabled {
+            color: rgba(255, 255, 255, 0.5);
+        }
+        .npc-hint {
+            margin-left: 1vw;
+            font-size: clamp(11px, 1.3vw, 13px);
+            color: rgba(255, 255, 255, 0.55);
+        }
+
         /* 关闭按钮 - 修复z-index问题 */
         .close-btn {
             position: absolute;
@@ -851,7 +864,7 @@
             '施延年': 999,
             '雨烛': 999,
             '安慕': 999,
-            '唐慕梨': 999,
+            '唐沐梨': 999,
             '洛潜幽': 999
         };
 
@@ -866,7 +879,7 @@
             '施延年': 50,
             '雨烛': 60,
             '安慕': 45,
-            '唐慕梨': 15,
+            '唐沐梨': 15,
             '洛潜幽': 10
         };
 
@@ -968,7 +981,7 @@
         // NPC列表 [[11]]
         const npcList = [
             '洞庭君', '钱塘君', '萧白瑚', '姬姒', '破阵子',
-            '呼延显', '施延年', '雨烛', '安慕', '唐慕梨', '洛潜幽'
+            '呼延显', '施延年', '雨烛', '安慕', '唐沐梨', '洛潜幽'
         ];
 
         let currentLocation = '';
@@ -1138,10 +1151,14 @@
             const modalBody = document.getElementById('modalBody');
             const modalFooter = document.getElementById('modalFooter');
 
-            // 获取可邀请的NPC（满足好感度要求的）
-            const availableNPCs = npcList.filter(npc =>
-                npcCurrentFavor[npc] >= npcFavorThreshold[npc]
-            );
+            // 展示 npcFavorThreshold 内的所有 NPC
+            const allNPCs = Object.keys(npcFavorThreshold);
+            // 计算可邀请 NPC（好感达到且阈值不为999）
+            const eligibleNPCs = allNPCs.filter(npc => {
+                const threshold = npcFavorThreshold[npc];
+                const favor = (npcCurrentFavor[npc] || 0);
+                return threshold !== 999 && favor >= threshold;
+            });
             const maxCount = getMaxNPCCount();
 
             let npcHTML = `
@@ -1153,12 +1170,25 @@
                     <div class="npc-list">
             `;
 
-            if (availableNPCs.length > 0) {
-                availableNPCs.forEach(npc => {
+            if (allNPCs.length > 0) {
+                allNPCs.forEach(npc => {
+                    const threshold = npcFavorThreshold[npc];
+                    const favor = (npcCurrentFavor[npc] || 0);
+                    const isLocked = threshold === 999;
+                    const isEligible = !isLocked && favor >= threshold;
+                    const disabledAttr = isEligible ? '' : 'disabled';
+                    const forceDisabledClass = isEligible ? '' : 'force-disabled';
+                    const itemDisabledClass = isEligible ? '' : 'disabled';
+                    const nameDisabledClass = isEligible ? '' : 'disabled';
+                    const hintText = isEligible
+                        ? ''
+                        : (isLocked ? '随行功能等待后续更新解锁' : `需好感${threshold}（当前${favor}）`);
+
                     npcHTML += `
-                        <div class="npc-item">
-                            <input type="checkbox" class="npc-checkbox" id="npc-${npc}" value="${npc}" onchange="checkNPCLimit()">
-                            <label class="npc-name" for="npc-${npc}">${npc}</label>
+                        <div class="npc-item ${itemDisabledClass}">
+                            <input type="checkbox" class="npc-checkbox ${forceDisabledClass}" id="npc-${npc}" value="${npc}" onchange="checkNPCLimit()" ${disabledAttr}>
+                            <label class="npc-name ${nameDisabledClass}" for="npc-${npc}">${npc}</label>
+                            ${hintText ? `<span class="npc-hint">${hintText}</span>` : ''}
                         </div>
                     `;
                 });
@@ -1170,14 +1200,14 @@
             modalBody.innerHTML = npcHTML;
 
             // 出行按钮：默认禁用；若无可邀请同伴则显示“无法出行”
-            const travelBtnLabel = availableNPCs.length > 0 ? '前往' : '无法出行';
+            const travelBtnLabel = eligibleNPCs.length > 0 ? '前往' : '无法出行';
             modalFooter.innerHTML = `<button class="btn" id="travelBtn" onclick="goToLocation()" disabled>${travelBtnLabel}</button>`;
 
             // 如父页传来默认同行人，尽量预勾选（不超过maxCount）
-            if (availableNPCs.length > 0 && Array.isArray(window._incomingCompanions) && window._incomingCompanions.length) {
+            if (eligibleNPCs.length > 0 && Array.isArray(window._incomingCompanions) && window._incomingCompanions.length) {
                 let count = 0;
                 const preset = new Set(window._incomingCompanions);
-                availableNPCs.forEach(npc => {
+                eligibleNPCs.forEach(npc => {
                     if (count >= maxCount) return;
                     if (preset.has(npc)) {
                         const cb = document.getElementById(`npc-${npc}`);

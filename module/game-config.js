@@ -332,7 +332,7 @@ const npcLocationProbability = {
         gongtian: 0.10,  // 不再需要去公田
         none: 0.00
     },
-    J: {  // 唐慕梨 - 商人，对农产品感兴趣
+    J: {  // 唐沐梨 - 商人，对农产品感兴趣
         yanwuchang: 0.10,
         cangjingge: 0.05,
         huofang: 0.10,
