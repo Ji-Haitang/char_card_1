@@ -2561,6 +2561,22 @@ body {
     -webkit-text-stroke: clamp(0.6px, 0.11vw, 1.2px) #000;
 }
 
+@media (max-width: 600px) {
+	/* 移动端减小地名描边，避免描边过粗影响可读性 */
+	.location .location-label-text {
+		text-shadow:
+			0.5px 0 0 #000,
+			-0.5px 0 0 #000,
+			0 0.5px 0 #000,
+			0 -0.5px 0 #000,
+			0.5px 0.5px 0 #000,
+			-0.5px 0.5px 0 #000,
+			0.5px -0.5px 0 #000,
+			-0.5px -0.5px 0 #000;
+		-webkit-text-stroke: 0.3px #000;
+	}
+}
+
 .location .location-label-divider {
     width: 80%;
     height: 0;
