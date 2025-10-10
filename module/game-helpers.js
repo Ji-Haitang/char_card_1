@@ -521,7 +521,7 @@ function closeLocationInfo(e) {
 function setupLocationEvents() {
     const locations = document.querySelectorAll('.location');
 
-    // 渲染“地名 + 分隔线 + 人数Emoji”结构；不绑定点击/悬停事件
+    // 渲染“地名 + 分隔线 + 人数光点”结构；不绑定点击/悬停事件
     try {
         locations.forEach(el => {
             const id = el.id;
@@ -553,7 +553,7 @@ function setupLocationEvents() {
     }
 }
 
-// 更新地图地点标签上的👤人数显示
+// 更新地图地点标签上的人数显示（统一使用白色光点）
 function updateLocationHeadcountLabels() {
     try {
         const countByLocation = {
@@ -578,14 +578,23 @@ function updateLocationHeadcountLabels() {
             });
         }
 
-        Object.keys(countByLocation).forEach(locId => {
+		Object.keys(countByLocation).forEach(locId => {
             const el = document.getElementById(locId);
             if (!el) return;
             const peopleEl = el.querySelector('.location-people');
             const dividerEl = el.querySelector('.location-label-divider');
             if (peopleEl) {
-                const n = countByLocation[locId];
-                peopleEl.textContent = n > 0 ? '👤'.repeat(n) : '';
+				const n = countByLocation[locId];
+				// 清空现有内容
+				peopleEl.textContent = '';
+				peopleEl.innerHTML = '';
+				if (n > 0) {
+					for (let i = 0; i < n; i++) {
+						const dot = document.createElement('span');
+						dot.className = 'people-dot';
+						peopleEl.appendChild(dot);
+					}
+				}
             }
             if (dividerEl) {
                 // 当没有人时可淡化分隔线（可选）

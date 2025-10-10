@@ -349,16 +349,16 @@ body {
 }
 
 /* 地点位置 */
-#yanwuchang { top: 53%; left: 44%; }
+#yanwuchang { top: 51%; left: 44%; }
 #cangjingge { top: 25%; left: 14%; }
-#huofang { top: 55%; left: 62%; }
-#houshan { top: 35%; left: 90%; }
-#yishiting { top: 15%; left: 55%; }
-#tiejiangpu { top: 60%; left: 82%; }
-#nandizi { top: 32%; left: 63%; }
-#nvdizi { top: 30%; left: 38%; }
+#huofang { top: 50%; left: 62%; }
+#houshan { top: 25%; left: 90%; }
+#yishiting { top: 12%; left: 55%; }
+#tiejiangpu { top: 55%; left: 82%; }
+#nandizi { top: 27%; left: 63%; }
+#nvdizi { top: 25%; left: 38%; }
 #shanmen { top: 85%; left: 33%; }
-#gongtian { top: 50%; left: 14%; }
+#gongtian { top: 45%; left: 12.5%; }
 
 /* 悬浮提示框 - 响应式改进 */
 .tooltip {
@@ -2562,31 +2562,77 @@ body {
 }
 
 @media (max-width: 600px) {
-	/* 移动端减小地名描边，避免描边过粗影响可读性 */
+	/* 移动端进一步减小描边，仅保留四向阴影，提升清晰度 */
 	.location .location-label-text {
 		text-shadow:
-			0.5px 0 0 #000,
-			-0.5px 0 0 #000,
-			0 0.5px 0 #000,
-			0 -0.5px 0 #000,
-			0.5px 0.5px 0 #000,
-			-0.5px 0.5px 0 #000,
-			0.5px -0.5px 0 #000,
-			-0.5px -0.5px 0 #000;
-		-webkit-text-stroke: 0.3px #000;
+			0.35px 0 0 #000,
+			-0.35px 0 0 #000,
+			0 0.35px 0 #000,
+			0 -0.35px 0 #000;
+		-webkit-text-stroke: 0.2px #000;
+	}
+}
+
+/* 高分屏手机上进一步瘦身描边，避免次像素模糊 */
+@media (max-width: 600px) and (min-resolution: 2dppx) {
+	.location .location-label-text {
+		text-shadow:
+			0.25px 0 0 #000,
+			-0.25px 0 0 #000,
+			0 0.25px 0 #000,
+			0 -0.25px 0 #000;
+		-webkit-text-stroke: 0 #000;
 	}
 }
 
 .location .location-label-divider {
-    width: 80%;
+    width: 100%;
     height: 0;
-    border-top: 1px solid rgba(255,255,255,0.4);
-    margin: clamp(2px, 0.4vw, 4px) 0;      /* 两行之间的间距 */
+    border-top: 2px solid rgba(255,255,255,0.75);
+    margin: clamp(3px, 0.6vw, 6px) 0;      /* 两行之间的间距 */
+    box-shadow: 0 0 4px rgba(255,255,255,0.5);
 }
 
 .location .location-people {
     line-height: 1;
-    font-size: clamp(10px, 1.1vw, 16px);   /* 与标题一致，视觉统一 */
+    display: inline-flex;
+    gap: clamp(2px, 0.4vw, 4px);
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+}
+
+/* 手机端：以白色光点显示人数 */
+@media (max-width: 600px) {
+	.location .location-people .people-dot {
+		width: 8px;
+		height: 8px;
+		border-radius: 50%;
+		background: #fff;
+		box-shadow: 0 0 4px rgba(255,255,255,0.85);
+	}
+	.location .location-label-divider {
+		border-top-width: 1px;
+		border-top-color: rgba(255,255,255,0.85);
+		box-shadow: 0 0 6px rgba(255,255,255,0.6);
+	}
+}
+
+@media (max-width: 600px) and (min-resolution: 2dppx) {
+	.location .location-people .people-dot {
+		width: 6px;
+		height: 6px;
+		box-shadow: 0 0 2px rgba(255,255,255,0.85);
+	}
+}
+
+/* PC/平板通用光点尺寸（可与字体自适应）*/
+.location .location-people .people-dot {
+	width: clamp(6px, 0.9vw, 12px);
+	height: clamp(6px, 0.9vw, 12px);
+	border-radius: 50%;
+	background: #fff;
+	box-shadow: 0 0 4px rgba(255,255,255,0.85);
 }
 
 /* 竖屏手机：提高高度（更小的宽高比） */
