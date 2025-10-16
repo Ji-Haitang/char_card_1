@@ -1024,6 +1024,15 @@
                     window.updateTemplateVariables(vars);
                 }
             }
+            // 兜底：若跨域导致 sessionStorage 为空，尝试 window.name
+            if (!cached && window.name) {
+                try {
+                    const parsed = JSON.parse(window.name);
+                    if (parsed && typeof parsed === 'object' && parsed.SLGMODE && typeof window.updateTemplateVariables === 'function') {
+                        window.updateTemplateVariables(parsed);
+                    }
+                } catch (e) {}
+            }
         } catch (e) { console.warn('读取开场白失败', e); }
 
         // 修改 showRelationships 函数

@@ -278,9 +278,9 @@
     </main>
     
     <!-- 依赖脚本：工具、配置、状态管理（若不可用将自动降级为内存状态） -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@1b81a14/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@1b81a14/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@1b81a14/module/game-state.js"></script>
     <script>
     (function() {
         const $ = (sel) => document.querySelector(sel);
@@ -525,8 +525,12 @@
             try {
                 sessionStorage.setItem('__templateVarsFromStart', JSON.stringify({ SLGMODE: outPut }));
             } catch (e) { console.warn('缓存开场白失败', e); }
+            try {
+                window.name = JSON.stringify({ SLGMODE: outPut });
+            } catch (e) { console.warn('设置 window.name 失败', e); }
             // 跳转到主界面（可按需调整目标页）
-            window.location.href = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/index - SR.html';
+            // 固定到特定 commit 渲染（GitHack 提供正确的 text/html）
+            window.location.href = 'https://rawcdn.githack.com/Ji-Haitang/char_card_1/1b81a14/index%20-%20SR.html';
         });
 
         // 初始化
