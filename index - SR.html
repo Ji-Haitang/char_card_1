@@ -1014,6 +1014,18 @@
             }
         }
 
+        // 从开局页接收 SLGMODE 并触发渲染，测试开局界面，不对的话就取消这部分
+        try {
+            const cached = sessionStorage.getItem('__templateVarsFromStart');
+            if (cached) {
+                const vars = JSON.parse(cached);
+                sessionStorage.removeItem('__templateVarsFromStart');
+                if (typeof window.updateTemplateVariables === 'function') {
+                    window.updateTemplateVariables(vars);
+                }
+            }
+        } catch (e) { console.warn('读取开场白失败', e); }
+
         // 修改 showRelationships 函数
         function showRelationships() {
             // 只有当前场景不是角色属性或人际关系时才记录

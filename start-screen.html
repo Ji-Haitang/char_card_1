@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>姬侠传 · 开局</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
+        }
+
+        body {
+            font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+            background: #000;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* 背景墨色遮罩，提升对比度 */
+        .backdrop {
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(80% 80% at 50% 50%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.75) 100%);
+            pointer-events: none;
+        }
+
+        /* 中央框体：使用 aspect-ratio 保持比例，用 vw 控制尺寸 */
+        .frame {
+            position: relative;
+            width: 100vw; /* 默认优先拉满左右 */
+            height: auto;
+            aspect-ratio: 1213 / 836; /* 固定背景比例为 1213:836 */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* 水墨描边感 */
+            border: 2px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 12px 48px rgba(0,0,0,0.55);
+            backdrop-filter: blur(1.5px);
+            background:
+                linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35)),
+                url('姬侠传开局界面.jpg') center / cover no-repeat;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 新的旅程弹窗（80% 尺寸，黑色半透明） */
+        .modal {
+            position: absolute;
+            inset: 10%; /* 80% 尺寸 */
+            display: none;
+            flex-direction: column;
+            background: rgba(0,0,0,0.75);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            color: #fff;
+            overflow: hidden;
+        }
+
+        .modal.show { display: flex; }
+
+        .modal-header {
+            padding: clamp(8px, 1.8vw, 18px) clamp(10px, 2vw, 22px);
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: clamp(16px, 2.2vw, 28px);
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            text-align: center;
+        }
+
+        .modal-body {
+            flex: 1;
+            overflow: auto;
+            padding: clamp(10px, 2.2vw, 26px);
+            display: grid;
+            place-items: center;
+        }
+
+        .grid-select {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: clamp(8px, 1.8vw, 18px);
+            width: min(85%, 880px);
+        }
+
+        .choice-btn {
+            padding: clamp(10px, 1.8vw, 18px);
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 10px;
+            color: #fff;
+            cursor: pointer;
+            transition: transform 160ms ease, background 200ms ease, border-color 200ms ease;
+            font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+            font-size: clamp(14px, 1.6vw, 18px);
+            text-align: left;
+        }
+
+        .choice-btn:hover { transform: translateY(-2px); background: rgba(255,255,255,0.12); }
+
+        .choice-title { font-family: 'Ma Shan Zheng', cursive; font-size: clamp(16px, 2vw, 24px); margin-bottom: 6px; }
+        .choice-desc { opacity: 0.85; line-height: 1.5; }
+
+        .modal-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            padding: clamp(8px, 1.8vw, 18px) clamp(10px, 2vw, 22px);
+            border-top: 1px solid rgba(255,255,255,0.12);
+        }
+
+        .btn {
+            appearance: none;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 180ms ease;
+            font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+        }
+
+        .btn:hover { background: rgba(255,255,255,0.14); }
+        .btn.primary { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.18); }
+        .btn.primary:hover { background: rgba(255,255,255,0.24); }
+
+        /* 属性分配 */
+        .alloc-wrap { width: min(90%, 880px); display: grid; gap: 12px; }
+        .alloc-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.06); border-radius: 8px; }
+        .alloc-name { font-family: 'Ma Shan Zheng', cursive; font-size: clamp(16px, 1.8vw, 22px); }
+        .alloc-value { min-width: 4ch; text-align: right; font-size: clamp(14px, 1.6vw, 18px); }
+        .alloc-ops { display: flex; gap: 8px; }
+        .alloc-ops button { width: 36px; height: 36px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
+        .alloc-ops button:hover { background: rgba(255,255,255,0.16); }
+        .alloc-remaining { text-align: right; opacity: 0.9; margin-top: 4px; }
+
+        /* 标题（可选，暂不显示内容，仅保留结构以便后续扩展） */
+        .title {
+            position: absolute;
+            top: clamp(10px, 3vw, 28px);
+            left: 50%;
+            transform: translateX(-50%);
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: clamp(18px, 3.2vw, 42px);
+            letter-spacing: 0.08em;
+            color: #f2f2f2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.6), 0 0 12px rgba(255,255,255,0.08);
+            opacity: 0.95;
+        }
+
+        /* 菜单容器 */
+        .menu {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: clamp(6px, 1.8vw, 16px); /* 更靠拢 */
+            padding: clamp(10px, 3vw, 32px) clamp(8px, 2.4vw, 28px);
+            border-radius: 10px;
+            background: transparent; /* 全透明 */
+            box-shadow: none; /* 不可见 */
+            position: fixed; /* 固定定位，按页面定位 */
+            left: 50%;
+            bottom: 10vw; /* 距离页面底部约 10vw */
+            transform: translateX(-50%); /* 水平居中 */
+            z-index: 2;
+        }
+
+        /* 墨韵按钮 */
+        .menu-btn {
+            position: relative;
+            appearance: none;
+            border: none;
+            background: transparent;
+            color: #000; /* 黑色文字 */
+            cursor: pointer;
+            padding: clamp(8px, 1.6vw, 14px) clamp(16px, 3.2vw, 28px);
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: 3vw; /* 固定为 3% 的视口宽度 */
+            letter-spacing: 0.06em;
+            line-height: 1.2;
+            transition: transform 180ms ease, filter 200ms ease, color 200ms ease;
+            text-shadow:
+                1px 1px 0 rgba(0,0,0,0.65),
+                -1px 1px 0 rgba(0,0,0,0.45),
+                0 2px 6px rgba(0,0,0,0.5);
+        }
+
+        /* 墨迹下划线 */
+        .menu-btn::after {
+            content: "";
+            position: absolute;
+            left: 8%;
+            right: 8%;
+            bottom: clamp(2px, 0.6vw, 6px);
+            height: clamp(6px, 0.9vw, 10px);
+            background: radial-gradient(60% 100% at 50% 50%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.0) 100%);
+            opacity: 0.0;
+            transform: scaleX(0.8);
+            transition: opacity 200ms ease, transform 200ms ease;
+            filter: blur(0.6px);
+        }
+
+        /* 选中/悬停效果 */
+        .menu-btn:hover,
+        .menu-btn:focus-visible,
+        .menu-btn[aria-selected="true"] {
+            color: #000; /* 悬停与选中仍为黑色 */
+            transform: translateY(-2px) scale(1.035);
+            filter: drop-shadow(0 6px 16px rgba(0,0,0,0.35));
+        }
+
+        .menu-btn:hover::after,
+        .menu-btn:focus-visible::after,
+        .menu-btn[aria-selected="true"]::after {
+            opacity: 0.9;
+            transform: scaleX(1);
+        }
+
+        /* 纵横比分支：
+           - 窄屏/竖屏（小于内容比例）：宽度100vw，高度按比例
+           - 宽屏/带鱼屏（大于等于内容比例）：高度100vh，宽度按比例 */
+        @media (max-aspect-ratio: 1213/836) {
+            .frame { width: 100vw; height: calc(100vw * 836 / 1213); }
+            .menu { padding: clamp(8px, 2.8vw, 24px); gap: clamp(8px, 2vw, 18px); }
+        }
+
+        @media (min-aspect-ratio: 1213/836) {
+            .frame { height: 100vh; width: calc(100vh * 1213 / 836); max-width: 100vw; }
+            /* 带鱼/超宽屏：用 vh 控制菜单字体和位置，保持视觉一致 */
+            .menu { bottom: 14.52vh; }
+            .menu-btn { font-size: 4.36vh; }
+        }
+
+        @media (max-width: 480px) {
+            .menu-btn { font-size: clamp(16px, 6.2vw, 22px); }
+        }
+    </style>
+    <!-- 后续交互逻辑可在此处添加脚本 -->
+</head>
+<body>
+    <div class="backdrop"></div>
+    <main class="frame" role="application" aria-label="开局界面">
+        <nav class="menu" aria-label="主菜单">
+            <button class="menu-btn" type="button" data-action="new" aria-selected="true">新的旅程</button>
+            <button class="menu-btn" type="button" data-action="load">旧的回忆</button>
+            <button class="menu-btn" type="button" data-action="difficulty">难度选择</button>
+        </nav>
+
+        <!-- 新旅程弹窗 -->
+        <section id="new-journey-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true">
+            <header class="modal-header">新旅程 · 角色创建</header>
+            <div class="modal-body" id="modal-body"></div>
+            <footer class="modal-footer">
+                <div>
+                    <button class="btn" id="btn-back" type="button">上一步</button>
+                </div>
+                <div>
+                    <button class="btn" id="btn-cancel" type="button">取消</button>
+                    <button class="btn primary" id="btn-next" type="button">下一步</button>
+                    <button class="btn primary hidden" id="btn-confirm" type="button">确定</button>
+                </div>
+            </footer>
+        </section>
+    </main>
+    
+    <!-- 依赖脚本：工具、配置、状态管理（若不可用将自动降级为内存状态） -->
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-state.js"></script>
+    <script>
+    (function() {
+        const $ = (sel) => document.querySelector(sel);
+        const menu = document.querySelector('.menu');
+        const modal = $('#new-journey-modal');
+        const modalBody = $('#modal-body');
+        const btnBack = $('#btn-back');
+        const btnCancel = $('#btn-cancel');
+        const btnNext = $('#btn-next');
+        const btnConfirm = $('#btn-confirm');
+
+        const ORIGIN_PRESETS = {
+            "农家子弟": { "根骨": 20, "悟性": 15, "心性": 35, "魅力": 10 },
+            "府兵军户": { "根骨": 35, "悟性": 15, "心性": 20, "魅力": 10 },
+            "经史传家": { "根骨": 10, "悟性": 40, "心性": 15, "魅力": 15 },
+            "天潢贵胄": { "根骨": 10, "悟性": 15, "心性": 15, "魅力": 40 }
+        };
+        const DIFF_POINTS = { "简单": 60, "普通": 40, "困难": 20 };
+
+        const outPut = `
+        <SLG_MODE>
+
+        <MAIN_TEXT>
+        清晨，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天是你正式拜入天山派的日子——一个改变命运的神圣时刻。你却想着：「妈的，石阶怎么这么多，爬上去不得累死？」
+        「喂！你还在那里发什么呆！」一个清脆的声音把你拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」她顿了顿，小声嘀咕：「……虽然我自己也经常爬到一半想哭。」
+        你连忙点头，跟在这个只到你胸口的小师妹身后，开始了漫长的登山之路。山道蜿蜒曲折，两旁古松参天，偶尔能看到雪白的瀑布从崖壁倾泻而下，宛如天河倒挂，气势磅礴——然后你看到瀑布边有个师兄在撒尿。萧白瑚一边走一边叽叽喳喳：「这里是解剑池，登门上山的客人都要在这里暂存兵器，以前我们门派显赫的时候，这里都摆不下……」她突然压低声音：「不过现在基本没人来了，池子里养了王八。」「那边是温泉，冬天也不会结冰，师兄师姐们经常在那里……」「在那里干嘛？」「泡脚啊！你想什么呢！」
+        穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练——说是晨练，其实大半都在偷懒。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上，姿势之懒散，仿佛下一秒就要滑到地上。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意七分贱，灰色的狼耳懒洋洋地耷拉着。
+        「师兄！」萧白瑚立刻炸毛，狐尾都竖起来了，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着欠揍的笑容，「佛曰：相由心生。小师妹心中有『小』，所以听什么都是『小』」「你——！」「阿弥陀佛，生气会长不高的哦就像现在这样，永远需要踮脚才能打到我的膝盖~」「我打死你这个假和尚！」呼延显轻飘飘躲开萧白瑚的飞扑，笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄......」
+        话没说完，一个娇小的身影从天而降。砰。呼延显被砸趴在地。来人稳稳地站在他背上，看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，」她的声音稚嫩却带着不容置疑的威严，「不要教坏新来的弟子。」「是是是，洞庭师叔说得是~」呼延显脸贴着地面，声音闷闷的，「小僧这就去藏经阁抄经了~可以先让我起来吗？」「不急。」洞庭君淡淡道，「再躺会儿，反省一下。」她轻巧地从呼延显背上跳下，转身打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「因为她会踩人，你不会。」地上的呼延显幽幽道。「你说什么？」洞庭君回头，眼神危险。「没、没什么！」三人异口同声。
+        议事厅庄严肃穆，供奉着天山派历代掌门的牌位。洞庭君站在一旁，虽然需要微微踮起脚尖才能显得威严些，但她认真的表情让人不敢轻视——至少表面上不敢。你心里却想：「好可爱，好想摸摸龙角。」「跪下，向历代掌门行礼。」你恭恭敬敬地跪下，三叩九拜，膝盖真疼。「从今日起，你便是天山派外门弟子。当谨记门规，勤修武学，行侠仗义……」洞庭君一本正经地训话，你一本正经地走神。
+        就在这时——「砰！」议事厅的大门被人一脚踹开。「姐~我来找——」一个活泼的少女风风火火冲进来，看到跪在地上的你，眼睛瞬间亮了：「咦咦咦？这不是{{user}}吗！」你惊讶地看着面前的少女——那张俏丽的脸庞你再熟悉不过。是钱塘君，你打小就认识的损友！准确说是经常坑你的损友！「哈哈哈哈！」钱塘君笑得花枝乱颤，「你终于也爬上山来了！我还以为你会在山脚下哭鼻子呢！」
+        「钱塘君，」洞庭君皱眉，「我在举行入门仪式。」「哎呀姐姐~」钱塘君大大咧咧地走过来，一把搭住你的肩膀，差点把你压趴下，「仪式都快结束了嘛！再说了，这可是我从小一起长大的跟班呢！」「谁是你跟班了！」「诶？不是吗？」她眨眨眼，坏笑着凑到你耳边，「小时候谁哭着喊着要跟我一起玩？谁被我骗去偷鸡摸狗？谁——」「住口！」「哈哈哈！现在我先入门，你得叫我师姐哦~」她笑得更欢了，「来来来，叫一声听听？」「我……」「快点快点！」她的笑容突然变得『危险』起来，「不叫的话，我就把你小时候尿床的事告诉大家哦~」「我没有！」「还有你偷看寡妇洗——」「师姐！」你立刻改口，「师姐好！师姐最棒了！」「这还差不多~」钱塘君满意地拍拍你的头，像在摸狗。
+        「钱塘君！」洞庭君终于忍无可忍。「好啦好啦，我这就带新师弟去熟悉环境！」钱塘君拉起你就往外跑，力气大得吓人，「走！师姐带你去后山玩！那里可好玩了，有个特别深的悬崖！」「等等，什么悬崖——」「推人下去可好玩了！」「救命啊！」就这样，你还没来得及消化自己已经成为天山弟子的事实，就被儿时的恶霸拖出了议事厅。身后传来洞庭君无奈的叹息声。萧白瑚气呼呼的声音远远传来：「喂——！带新师弟参观明明是我的工作！钱塘君你个强盗——」「我不管我不管！」「还给我——」「不给！」「你们别抢了行吗，」你夹在中间，欲哭无泪......
+        </MAIN_TEXT>
+
+        <SUMMARY>
+        {{user}}正式拜师入门天山派，负责接引的师妹萧白瑚在登山途中介绍了门派现状——曾经显赫如今已经落寞。穿过山门到达演武场后，遇到了呼延显师兄，他调侃了一番萧白瑚的身高。随后洞庭君长老出现并引领{{user}}前往议事厅完成入门仪式。仪式到一半时，钱塘君突然闯入，她仗着先入门的身份，强迫{{user}}叫她师姐，还抢着要带{{user}}参观后山。
+        </SUMMARY>
+
+        <SIDE_NOTE>
+        {
+        "时间": "11:00",
+        "用户": {
+            "位置变动": "后山"
+        },
+        "当前NPC": {
+            "呼延显": {
+                "好感变化": "上升",
+                "位置变动": "藏经阁"
+            },
+            "萧白瑚": {
+                "好感变化": "上升",
+                "位置变动": "议事厅"
+            },
+            "洞庭君": {
+                "好感变化": "不变",
+                "位置变动": "议事厅"
+            },
+            "钱塘君": {
+                "好感变化": "大幅上升",
+                "位置变动": "后山"
+            }
+        }
+        }
+        </SIDE_NOTE>
+
+        </SLG_MODE>`;
+
+        const state = {
+            step: 'difficulty',
+            difficulty: null,
+            origin: null,
+            talents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
+            remaining: 0
+        };
+
+        async function initGame() {
+            try {
+                if (typeof loadOrInitGameData === 'function') {
+                    await loadOrInitGameData();
+                }
+            } catch (e) { console.warn('初始化 GameData 失败，使用默认值', e); }
+        }
+
+        function openModal() {
+            menu.classList.add('hidden');
+            modal.classList.add('show');
+            modal.setAttribute('aria-hidden', 'false');
+            state.step = 'difficulty';
+            renderStep();
+        }
+
+        function closeModal() {
+            modal.classList.remove('show');
+            modal.setAttribute('aria-hidden', 'true');
+            menu.classList.remove('hidden');
+        }
+
+        function renderStep() {
+            btnConfirm.classList.add('hidden');
+            btnNext.classList.remove('hidden');
+            btnBack.disabled = (state.step === 'difficulty');
+            if (state.step === 'difficulty') return renderDifficulty();
+            if (state.step === 'origin') return renderOrigin();
+            if (state.step === 'allocate') return renderAllocate();
+        }
+
+        function renderDifficulty() {
+            btnNext.textContent = '下一步';
+            modalBody.innerHTML = `
+                <div class="grid-select">
+                    ${['简单','普通','困难'].map(name => `
+                        <button class="choice-btn" data-diff="${name}">
+                            <div class="choice-title">${name}</div>
+                            <div class="choice-desc">可分配点数：${DIFF_POINTS[name]} 点</div>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            modalBody.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    state.difficulty = e.currentTarget.getAttribute('data-diff');
+                    try { if (window.gameData) window.gameData.difficulty = state.difficulty; } catch(_){}
+                    renderSelected(modalBody, e.currentTarget);
+                });
+            });
+        }
+
+        function renderOrigin() {
+            btnNext.textContent = '下一步';
+            modalBody.innerHTML = `
+                <div class="grid-select">
+                    ${Object.entries(ORIGIN_PRESETS).map(([name, attrs]) => `
+                        <button class="choice-btn" data-origin="${name}">
+                            <div class="choice-title">${name}</div>
+                            <div class="choice-desc">根骨 ${attrs['根骨']} · 悟性 ${attrs['悟性']} · 心性 ${attrs['心性']} · 魅力 ${attrs['魅力']}</div>
+                        </button>
+                    `).join('')}
+                </div>
+            `;
+            modalBody.querySelectorAll('.choice-btn').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const origin = e.currentTarget.getAttribute('data-origin');
+                    state.origin = origin;
+                    state.talents = { ...ORIGIN_PRESETS[origin] };
+                    renderSelected(modalBody, e.currentTarget);
+                });
+            });
+        }
+
+        function renderAllocate() {
+            btnNext.classList.add('hidden');
+            btnConfirm.classList.remove('hidden');
+            const points = DIFF_POINTS[state.difficulty] || 40;
+            // 初次进入时，若还未设置剩余点，则按难度赋值
+            if (typeof state._initAlloc === 'undefined') {
+                state.remaining = points;
+                state._initAlloc = true;
+            }
+            modalBody.innerHTML = `
+                <div class="alloc-wrap">
+                    ${['根骨','悟性','心性','魅力'].map(name => `
+                        <div class="alloc-row" data-name="${name}">
+                            <div class="alloc-name">${name}</div>
+                            <div class="alloc-value" data-val>${state.talents[name]}</div>
+                            <div class="alloc-ops">
+                                <button type="button" data-op="-">-</button>
+                                <button type="button" data-op="+">+</button>
+                            </div>
+                        </div>
+                    `).join('')}
+                    <div class="alloc-remaining">可分配点数：<span id="remain">${state.remaining}</span></div>
+                </div>
+            `;
+            modalBody.querySelectorAll('.alloc-row .alloc-ops button').forEach(btn => {
+                btn.addEventListener('click', (e) => {
+                    const row = e.currentTarget.closest('.alloc-row');
+                    const name = row.getAttribute('data-name');
+                    const op = e.currentTarget.getAttribute('data-op');
+                    if (op === '+') {
+                        if (state.remaining <= 0) return;
+                        state.talents[name] += 1;
+                        state.remaining -= 1;
+                    } else if (op === '-') {
+                        if (state.talents[name] <= 0) return;
+                        state.talents[name] -= 1;
+                        state.remaining += 1;
+                    }
+                    row.querySelector('[data-val]').textContent = state.talents[name];
+                    $('#remain').textContent = state.remaining;
+                });
+            });
+        }
+
+        function renderSelected(root, targetBtn) {
+            root.querySelectorAll('.choice-btn').forEach(x => x.style.outline = 'none');
+            targetBtn.style.outline = '2px solid rgba(255,255,255,0.55)';
+            targetBtn.style.outlineOffset = '2px';
+        }
+
+        // 事件
+        document.querySelector('[data-action="new"]').addEventListener('click', openModal);
+        document.querySelector('[data-action="load"]').addEventListener('click', () => {
+            // 旧的回忆：后续可接存档列表
+            alert('存档功能稍后接入');
+        });
+        document.querySelector('[data-action="difficulty"]').addEventListener('click', () => {
+            openModal();
+            state.step = 'difficulty';
+            renderStep();
+        });
+
+        btnCancel.addEventListener('click', closeModal);
+        btnBack.addEventListener('click', () => {
+            if (state.step === 'origin') state.step = 'difficulty';
+            else if (state.step === 'allocate') state.step = 'origin';
+            renderStep();
+        });
+        btnNext.addEventListener('click', () => {
+            if (state.step === 'difficulty') {
+                if (!state.difficulty) return; // 必须选择
+                state.remaining = DIFF_POINTS[state.difficulty] || 40;
+                state.step = 'origin';
+            } else if (state.step === 'origin') {
+                if (!state.origin) return;
+                state._initAlloc = undefined; // 进入分配时重置初始标志以按难度赋值
+                state.step = 'allocate';
+            }
+            renderStep();
+        });
+        btnConfirm.addEventListener('click', async () => {
+            try {
+                if (window.gameData) {
+                    window.gameData.difficulty = state.difficulty;
+                    window.gameData.playerTalents = { ...state.talents };
+                }
+                if (typeof saveGameData === 'function') {
+                    await saveGameData();
+                }
+            } catch (e) { console.warn('保存失败', e); }
+            // 传递开场白到目标页
+            try {
+                sessionStorage.setItem('__templateVarsFromStart', JSON.stringify({ SLGMODE: outPut }));
+            } catch (e) { console.warn('缓存开场白失败', e); }
+            // 跳转到主界面（可按需调整目标页）
+            window.location.href = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/index - SR.html';
+        });
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', initGame, { once: true });
+    })();
+    </script>
+</body>
+</html>
+
+
