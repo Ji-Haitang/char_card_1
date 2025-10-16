@@ -33,7 +33,7 @@
         .backdrop {
             position: fixed;
             inset: 0;
-            background: radial-gradient(80% 80% at 50% 50%, rgba(0,0,0,0.25) 0%, rgba(0,0,0,0.55) 60%, rgba(0,0,0,0.75) 100%);
+            background: none; /* 去除遮罩 */
             pointer-events: none;
         }
 
@@ -55,13 +55,11 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 水墨描边感 */
-            border: 2px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 0 0 1px rgba(255,255,255,0.04) inset, 0 12px 48px rgba(0,0,0,0.55);
-            backdrop-filter: blur(1.5px);
-            background:
-                linear-gradient(180deg, rgba(0,0,0,0.25), rgba(0,0,0,0.35)),
-                url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/姬侠传开局界面.jpg') center / cover no-repeat;
+            /* 去除描边与暗角，直显原图 */
+            border: none;
+            box-shadow: none;
+            backdrop-filter: none;
+            background: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/姬侠传开局界面.jpg') center / cover no-repeat;
         }
 
         /* 强制覆盖任何媒体查询内对 .frame 尺寸的修改，确保填满占位容器 */
@@ -298,7 +296,7 @@
 </head>
 <body>
     <div class="backdrop"></div>
-    <audio id="bgm" src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/music/主界面.mp3" autoplay loop></audio>
+    <audio id="bgm" src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/music/主界面.mp3" autoplay loop preload="auto" crossorigin="anonymous" playsinline></audio>
     <div class="viewport-box">
     <main class="frame" role="application" aria-label="开局界面">
         <nav class="menu" aria-label="主菜单">
@@ -604,6 +602,35 @@
             // 打开武林快报弹窗
             showBulletinModal();
         });
+        // BGM播放兜底：若自动播放被拦截，则在首次交互时启动
+        const bgmEl = document.getElementById('bgm');
+        function ensureBgm() {
+            if (!bgmEl) return;
+            if (!bgmEl.paused) return;
+            bgmEl.play().catch(() => {
+                const resume = () => { bgmEl.play().catch(()=>{}); cleanup(); };
+                const cleanup = () => {
+                    document.removeEventListener('pointerdown', resume);
+                    document.removeEventListener('keydown', resume);
+                };
+                document.addEventListener('pointerdown', resume, { once: true });
+                document.addEventListener('keydown', resume, { once: true });
+            });
+        }
+        // 页面加载尝试启动一次（立即播放，不做渐入）
+        ensureBgm();
+        // 媒体就绪事件再触发一次，保证加载后立即播放
+        if (bgmEl) {
+            ['loadedmetadata','loadeddata','canplay','canplaythrough'].forEach(evt => {
+                bgmEl.addEventListener(evt, () => { if (bgmEl.paused) bgmEl.play().catch(()=>{}); }, { once: true });
+            });
+        }
+        // 页面从后台切回前台时尝试播放
+        document.addEventListener('visibilitychange', () => {
+            if (!document.hidden && bgmEl && bgmEl.paused) bgmEl.play().catch(()=>{});
+        });
+        // 任意菜单交互时再兜底尝试
+        document.querySelectorAll('.menu-btn').forEach(btn => btn.addEventListener('click', ensureBgm));
 
         // 菜单选中状态管理：默认“新的旅程”为选中
         function setSelectedMenu(btn) {
