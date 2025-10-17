@@ -335,9 +335,9 @@
         }
     })();
     </script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c389e1e/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c389e1e/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c389e1e/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@87194ac/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@87194ac/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@87194ac/module/game-state.js"></script>
     <script>
     (function() {
         const $ = (sel) => document.querySelector(sel);
@@ -607,35 +607,29 @@
             // 打开武林快报弹窗
             showBulletinModal();
         });
-        // BGM播放兜底：若自动播放被拦截，则在首次交互时启动
+        // BGM播放：仅在初始未进入创建/快报弹窗时自动播放
         const bgmEl = document.getElementById('bgm');
+        const isCreationFlowOpen = () => !!(modal && modal.classList.contains('show'));
         function ensureBgm() {
             if (!bgmEl) return;
+            if (isCreationFlowOpen()) return; // 弹窗已打开时不播放
             if (!bgmEl.paused) return;
             bgmEl.play().catch(() => {
-                const resume = () => { bgmEl.play().catch(()=>{}); cleanup(); };
-                const cleanup = () => {
-                    document.removeEventListener('pointerdown', resume);
-                    document.removeEventListener('keydown', resume);
-                };
-                document.addEventListener('pointerdown', resume, { once: true });
-                document.addEventListener('keydown', resume, { once: true });
+                // 自动播放被策略拦截则忽略（不在交互时补播）
             });
         }
-        // 页面加载尝试启动一次（立即播放，不做渐入）
+        // 页面加载：尝试立即播放（仅初始状态）
         ensureBgm();
-        // 媒体就绪事件再触发一次，保证加载后立即播放
+        // 媒体就绪事件再次尝试（仍受弹窗状态约束）
         if (bgmEl) {
             ['loadedmetadata','loadeddata','canplay','canplaythrough'].forEach(evt => {
-                bgmEl.addEventListener(evt, () => { if (bgmEl.paused) bgmEl.play().catch(()=>{}); }, { once: true });
+                bgmEl.addEventListener(evt, () => { if (!isCreationFlowOpen() && bgmEl.paused) bgmEl.play().catch(()=>{}); }, { once: true });
             });
         }
-        // 页面从后台切回前台时尝试播放
+        // 页面从后台切回前台时尝试（仅初始状态）
         document.addEventListener('visibilitychange', () => {
-            if (!document.hidden && bgmEl && bgmEl.paused) bgmEl.play().catch(()=>{});
+            if (!document.hidden && !isCreationFlowOpen() && bgmEl && bgmEl.paused) bgmEl.play().catch(()=>{});
         });
-        // 任意菜单交互时再兜底尝试
-        document.querySelectorAll('.menu-btn').forEach(btn => btn.addEventListener('click', ensureBgm));
 
         // 菜单选中状态管理：默认“新的旅程”为选中
         function setSelectedMenu(btn) {
