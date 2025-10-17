@@ -54,6 +54,7 @@ let userLocation_old = "shanmen";
 let playerTalents = { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 };
 let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50 };
+let userBackground = "A"; // 新增：出身编码
 let dayNightStatus = 'daytime';  // 新增：昼夜状况
 let seasonStatus = 'winter';      // 新增：四季状况
 let playerMood = 100;
@@ -150,6 +151,7 @@ function syncVariablesFromGameData() {
     playerTalents,
     playerStats,
     combatStats,
+    userBackground,
     playerMood,
     martialArts,
     npcFavorability,
@@ -203,6 +205,7 @@ function syncGameDataFromVariables() {
     gameData.playerTalents = playerTalents;
     gameData.playerStats = playerStats;
     gameData.combatStats = combatStats;
+    gameData.userBackground = userBackground;
     gameData.playerMood = playerMood;
     gameData.martialArts = martialArts;
     gameData.npcFavorability = npcFavorability;

@@ -1,15 +1,29 @@
-<%_ const genGu = GameData.playerTalents.根骨; _%>
-<%_ const wuXing = GameData.playerTalents.悟性; _%>
-<%_ const xinXing = GameData.playerTalents.心性; _%>
-<%_ const meiLi = GameData.playerTalents.魅力; _%>
-<%_ const wuXue = GameData.playerStats.武学; _%>
-<%_ const xueShi = GameData.playerStats.学识; _%>
-<%_ const shengWang = GameData.playerStats.声望; _%>
+
+<!-- <UserInfo> is the information of user {{user}} -->
+<%_ const genGu = gameData.playerTalents.根骨; _%>
+<%_ const wuXing = gameData.playerTalents.悟性; _%>
+<%_ const xinXing = gameData.playerTalents.心性; _%>
+<%_ const meiLi = gameData.playerTalents.魅力; _%>
+<%_ const wuXue = gameData.playerStats.武学; _%>
+<%_ const xueShi = gameData.playerStats.学识; _%>
+<%_ const shengWang = gameData.playerStats.声望; _%>
+<%_ const userBackground = gameData.userBackground; _%>
+
+<UserInfo>
 以下是作为互动游戏主角的{{user}}的个人信息，请参照该信息，合理输出主角和其他角色之间的互动剧情
   主角名字: {{user}}
   主角性别: 男性
   主角民族: 汉族
   主角年龄: 18
+  <%_ if (userBackground === 'A') { _%>
+  主角概述: 出身自天山派外堡的少年，新晋的天山派第八代弟子。祖上世代务农，因党项军队劫掠，家园被毁，随难民潮逃至天山。父母在外堡开垦荒地，{{user}}从小帮忙农活，意志坚韧，质朴踏实。
+  <%_ } else if (userBackground === 'B') { _%>
+  主角概述: 出身自天山派外堡的少年，新晋的天山派第八代弟子。祖辈原为归义军下级军官，吕氏篡权后拒绝投降，带家眷投奔天山。{{user}}从小在父亲经营的镖局帮忙，打熬筋骨，体格强健。
+  <%_ } else if (userBackground === 'C') { _%>
+  主角概述: 出身自天山派外堡的少年，新晋的天山派第八代弟子。家中原为沙洲书香门第，因祖上不愿为吕氏伪政效力，举家避祸。{{user}}的父亲在外堡设私塾教书，{{user}}从小耳濡目染，聪慧过人。 
+  <%_ } else if (userBackground === 'D') { _%>
+  主角概述: 出身自天山派外堡的少年，新晋的天山派第八代弟子。{{user}}本是前朝皇室远支后裔，但几代前便已家业凋零。{{user}}几番曲折，孤身一人流落到天山派外堡，虽出身不凡却从不张扬，只想凭本事光耀门楣。
+  <%_ } _%>
   主角属性:
     根骨:
       定义: 一个人身体的基本构造和素质。它不仅仅是指骨骼的强壮程度，更体现了一个人的身体素质、承受力和健康状况。
@@ -172,3 +186,4 @@
       <%_ } else /*阶段max*/ { _%>
       当前水平: 武林神话，你的名字就是活着的传奇，是整个江湖共同敬仰的泰山北斗。
       <%_ } _%>
+</UserInfo>

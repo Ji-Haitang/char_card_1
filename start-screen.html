@@ -514,9 +514,14 @@
                     state.origin = origin;
                     state.talents = { ...ORIGIN_PRESETS[origin] };
                     state.baseTalents = { ...ORIGIN_PRESETS[origin] };
+                    // 出身编码映射
+                    const bgMap = { '农家子弟': 'A', '府兵军户': 'B', '经史传家': 'C', '天潢贵胄': 'D' };
+                    state.userBackground = bgMap[origin] || 'A';
                     try {
                         if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
                         if (window.gameData) window.gameData.playerTalents = { ...state.talents };
+                        if (typeof userBackground !== 'undefined') userBackground = state.userBackground;
+                        if (window.gameData) window.gameData.userBackground = state.userBackground;
                     } catch(_){ }
                     console.log('[StartScreen] origin selected', origin, state.talents);
                     renderSelected(modalBody, e.currentTarget);
@@ -664,10 +669,12 @@
                 // 先更新运行时全局变量（注意：这些是以 let 声明的全局，不在 window 上）
                 if (typeof difficulty !== 'undefined') difficulty = code;
                 if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
+                if (typeof userBackground !== 'undefined') userBackground = state.userBackground || 'A';
                 // 同步到 gameData（防止 sync 覆盖时回滚）
                 if (window.gameData) {
                     window.gameData.difficulty = code;
                     window.gameData.playerTalents = { ...state.talents };
+                    window.gameData.userBackground = state.userBackground || 'A';
                 }
                 if (typeof syncGameDataFromVariables === 'function') {
                     syncGameDataFromVariables();
