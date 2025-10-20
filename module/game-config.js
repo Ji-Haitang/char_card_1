@@ -856,6 +856,7 @@ const item_list = {
 const defaultGameData = {
     userLocation: "tianshanpai",
     userBackground: "A", // 新增：角色出身编码（A 农家子弟，B 府兵军户，C 经史传家，D 天潢贵胄）
+    textFontLevel: 2, // 新增：正文字体档位（1~5），默认第二档
     playerTalents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
     playerStats:   { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 },
     combatStats:   { "攻击力": 20, "生命值": 50 },

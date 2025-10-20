@@ -382,12 +382,13 @@
             <!-- 新增：历史信息下拉菜单 -->
             <div class="dropdown-wrapper">
                 <button class="control-btn dropdown-toggle" onclick="toggleDropdown('history-dropdown')">
-                    历史信息 ▲
+                    信息设置 ▲
                 </button>
                 <div id="history-dropdown" class="dropdown-menu">
                     <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
                     <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结（关）</button>
+                    <button class="dropdown-item" onclick="showFontSettings()">正文字体</button>
                 </div>
             </div>
             
@@ -2921,6 +2922,8 @@ const outPut = `
             // 新增：初始化时更新SLG返回按钮显示
             updateSLGReturnButton();
             updateCgToggleLabel();
+            // 初始化完成后应用字体档位
+            try { applyFontLevel((typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2); } catch(_){}
         };
         
         // 自由行动输入框事件
@@ -3166,6 +3169,81 @@ const outPut = `
                 return ret;
             };
         })();
+
+        // 字体设置弹窗
+        function showFontSettings(){
+            // 关闭下拉
+            toggleDropdown('history-dropdown');
+            // 若弹窗不存在，按需创建
+            let modal = document.getElementById('font-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'font-modal';
+                modal.className = 'modal viewport-overlay';
+                modal.style.display = 'none';
+                modal.innerHTML = '<div class="modal-content" style="max-width: 520px;">\
+                    <h3>正文字体大小</h3>\
+                    <p>拖动滑动条设置正文字体大小（1~5档）。</p>\
+                    <div class="font-range-row" style="display:flex;align-items:center;gap:12px;margin: 12px 0;">\
+                        <span>小</span>\
+                        <input id="font-range" type="range" min="1" max="5" step="1" value="2" style="flex:1;">\
+                        <span>大</span>\
+                    </div>\
+                    <div class="modal-buttons">\
+                        <button class="modal-btn cancel" onclick="closeFontModal()">关闭</button>\
+                    </div>\
+                </div>';
+                document.body.appendChild(modal);
+                // 注入灰色主题样式（仅一次）
+                if (!document.getElementById('font-range-style')) {
+                    const style = document.createElement('style');
+                    style.id = 'font-range-style';
+                    style.textContent = '\n#font-modal input[type="range"]{ -webkit-appearance: none; width:100%; background: transparent; }\n#font-modal input[type="range"]:focus{ outline: none; }\n#font-modal input[type="range"]::-webkit-slider-runnable-track{ height: 6px; background: #6b6b6b; border-radius: 4px; }\n#font-modal input[type="range"]::-webkit-slider-thumb{ -webkit-appearance: none; width: 16px; height:16px; border-radius:50%; background:#bfbfbf; border:1px solid #eaeaea; margin-top: -5px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }\n#font-modal input[type="range"]::-moz-range-track{ height:6px; background:#6b6b6b; border-radius:4px; }\n#font-modal input[type="range"]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#bfbfbf; border:1px solid #eaeaea; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }\n';
+                    document.head.appendChild(style);
+                }
+            }
+            const range = document.getElementById('font-range');
+            if (!range) { console.warn('font-range 未找到'); return; }
+            range.value = (typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2;
+            modal.style.display = 'block';
+            // 居中到主viewport并绑定自适应
+            try {
+                requestAnimationFrame(() => {
+                    if (typeof fitModalToViewport === 'function') fitModalToViewport(modal);
+                    if (typeof bindModalAutoFit === 'function') bindModalAutoFit(modal);
+                });
+            } catch (e) {}
+            // 绑定事件（只绑定一次）
+            if (!range._bound){
+                range.addEventListener('input', onFontLevelChange);
+                range._bound = true;
+            }
+            applyFontLevel(range.value|0);
+        }
+
+        function closeFontModal(){
+            const modal = document.getElementById('font-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
+        function onFontLevelChange(e){
+            const lvl = parseInt(e.target.value, 10) || 2;
+            applyFontLevel(lvl);
+            // 持久化到内存与存档
+            textFontLevel = lvl;
+            if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+            if (typeof saveGameData === 'function') { try { saveGameData(); } catch(_){} }
+        }
+
+        function applyFontLevel(level){
+            // 基于基础字号步进：14px为第二档的基准，±2px 步进
+            const base = 14; // 当前默认字号
+            const delta = (level - 2) * 2; // 每档±2px
+            const size = base + delta;
+            const story = document.getElementById('story-text');
+            if (story) story.style.fontSize = size + 'px';
+        }
     </script>
 </body>
 </html>

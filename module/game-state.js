@@ -55,6 +55,7 @@ let playerTalents = { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 };
 let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50 };
 let userBackground = "A"; // 新增：出身编码
+let textFontLevel = 2; // 新增：正文字体档位 1~5
 let dayNightStatus = 'daytime';  // 新增：昼夜状况
 let seasonStatus = 'winter';      // 新增：四季状况
 let playerMood = 100;
@@ -152,6 +153,7 @@ function syncVariablesFromGameData() {
     playerStats,
     combatStats,
     userBackground,
+    textFontLevel,
     playerMood,
     martialArts,
     npcFavorability,
@@ -216,6 +218,7 @@ function syncGameDataFromVariables() {
     gameData.difficulty = difficulty;
     gameData.npcVisibility = npcVisibility;
     gameData.npcGiftGiven = npcGiftGiven;
+    gameData.textFontLevel = textFontLevel;
     gameData.npcSparred = npcSparred;
     gameData.lastFarmWeek = lastFarmWeek;
     gameData.farmGrid = farmGrid;
