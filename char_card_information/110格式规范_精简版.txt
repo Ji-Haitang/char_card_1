@@ -187,7 +187,7 @@
 格式: 
   <SLG_MODE>
   <MAIN_TEXT>
-  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；当前NPC和{{user}}的NSFW亲昵行为，若无则填"none"}}
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；本段落中描写的NPC和{{user}}之间的NSFW成人级色情行为，若无则填"none"}}
   {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
   ...
   {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
@@ -268,7 +268,7 @@
     段落字数: 150-250 
     段落标记: 每段末尾用"|"分隔四个字段，每个字段代表一个标记
     标记顺序: 段落正文|NPC名|场景名|NPC表情|NSFW行为
-    NSFW行为规则: 回顾本段落的正文内容，如果NPC名对应的角色和{{user}}之前存在NSFW级别的亲昵行为(如接吻、前戏、性交等)，则从<NSFWList>选择一个最匹配的字段对该亲昵行为进行描述；如无NSFW级别的亲昵行为，则NSFW行为固定填写'none'
+    NSFW行为规则: 回顾本段落的正文内容，如果NPC名对应的角色和{{user}}之前存在NSFW级别的成人色情行为(如接吻、前戏、性交等)，则从<NSFWList>选择一个最匹配的字段对该色情行为进行描述；如无NSFW级别的成人色情行为，则NSFW行为固定填写'none'
   总结规则:
     字数比例: 正文的1/10  
   旁注规则:

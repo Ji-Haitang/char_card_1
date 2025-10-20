@@ -22,7 +22,7 @@
   - 女上位
   - 69式
   - 火车便当式
-  - none: 主要NPC不在场、没有发生NSFW亲昵行为、上述NSFW行为都不适用时，填写"none"
+  - none: 主要NPC不在场、没有发生NSFW成人级色情行为、上述NSFW行为都不适用时，填写"none"
 </NSFWList>
 
 <!-- <ExpressionList> is the expression that appears in the current story. One of the expressions is appended after each paragraph as the expression of the current NPC -->

@@ -1354,9 +1354,9 @@ const outPut = `
                 
                 showFarmGame();
                 
-                if (!actionPointConsumed) {
-                    window.pendingMindMessage = true;
-                }
+                // if (!actionPointConsumed) {
+                //     window.pendingMindMessage = true;
+                // }
                 return;
             }
 
@@ -2822,9 +2822,14 @@ const outPut = `
         });
 
         // 根据当前开关刷新按钮文案
+        // function updateCgToggleLabel() {
+        //     const btn = document.getElementById('toggle-cg-btn');
+        //     if (btn) btn.textContent = `CG内容（${cgContentEnabled ? '开' : '关'}）`;
+        // }
         function updateCgToggleLabel() {
             const btn = document.getElementById('toggle-cg-btn');
-            if (btn) btn.textContent = `CG内容（${cgContentEnabled ? '开' : '关'}）`;
+            const enabled = (typeof cgContentEnabled !== 'undefined') ? cgContentEnabled : false;
+            if (btn) btn.textContent = `CG内容（${enabled ? '开' : '关'}）`;
         }
 
         // 切换强力总结开关 + 刷新按钮

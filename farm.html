@@ -565,23 +565,44 @@
   <header>
     <div class="money"><img src="assets/image/icon/money_icon.png" alt="money" /> <span id="money">500</span></div>
     <div class="header-actions">
-        <div class="dropdown-wrapper">
-            <button id="btnBatchProcess" class="primary">统一处理</button>
-            <div id="batch-dropdown" class="batch-dropdown">
-                <button class="dropdown-item" id="btnBatchWater">统一浇水</button>
-                <button class="dropdown-item" id="btnBatchDeworm">统一除虫</button>
-                <button class="dropdown-item" id="btnBatchFertilize">统一施肥</button>
-            </div>
+      <div class="dropdown-wrapper">
+        <button id="btnBatchProcess" class="primary">统一处理</button>
+        <div id="batch-dropdown" class="batch-dropdown">
+          <button class="dropdown-item" id="btnBatchWater">统一浇水</button>
+          <button class="dropdown-item" id="btnBatchDeworm">统一除虫</button>
+          <button class="dropdown-item" id="btnBatchFertilize">统一施肥</button>
         </div>
-        <button id="btnShop">商店</button>
-        <button id="btnExitFarm" class="danger">退出耕种</button>
+      </div>
+      <button id="btnShop">商店</button>
+      <button id="btnExitFarm" class="danger">退出耕种</button>
     </div>
-</header>
+  </header>
   <main>
     <section>
       <div id="grid" aria-label="4x3 农场网格" role="grid"></div>
     </section>
   </main>
+  <!-- 退出耕种确认弹窗（全屏固定，移动端可见） -->
+  <style>
+    #exitOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; align-items: center; justify-content: center; z-index: 9999; padding: 16px; }
+    .exit-dialog { width: clamp(260px, 80vw, 420px); max-width: 90vw; border-radius: 12px; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.5); background: #111; color: #fff; border: 1px solid #444; }
+    .exit-dialog header { padding: 14px; font-weight: 700; text-align: center; border-bottom: 1px solid #333; background: #000; }
+    .exit-dialog .body { padding: 16px; text-align: center; line-height: 1.6; }
+    .exit-dialog .actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; background: #000; }
+    .exit-dialog .actions button { padding: 10px 14px; border-radius: 8px; border: 1px solid #666; background: #181818; color: #fff; font-weight: 600; }
+    .exit-dialog .actions button.confirm { background: #d9534f; border-color: #f0a4a2; }
+    .exit-dialog .actions button:hover { filter: brightness(1.1); }
+  </style>
+  <div id="exitOverlay" role="dialog" aria-modal="true" aria-label="确认退出耕种">
+    <div class="exit-dialog">
+      <header>确认退出</header>
+      <div class="body">确定要退出农场吗？</div>
+      <div class="actions">
+        <button id="exitCancel">取消</button>
+        <button id="exitConfirm" class="confirm">确认退出</button>
+      </div>
+    </div>
+  </div>
   <!-- Event popup -->
   <div id="eventOverlay" class="event-overlay">
     <div class="event-popup">
@@ -1223,22 +1244,26 @@
         dropdown.classList.remove('show');
     });
 
+    // 替换为自定义弹窗，保证手机端可见
+    const exitOverlay = document.getElementById('exitOverlay');
     document.getElementById('btnExitFarm').addEventListener('click', function() {
-        if (confirm('确定要退出农场吗？')) {
-            const returnData = {
-                type: 'farm-exit',
-                money: state.money,
-                seeds: {
-                    wheat: state.inventory.wheat,
-                    eggplant: state.inventory.eggplant,
-                    melon: state.inventory.melon,
-                    sugarcane: state.inventory.sugarcane
-                },
-                farmGrid: state.grid
-            };
-            
-            window.parent.postMessage(returnData, '*');
-        }
+      exitOverlay.style.display = 'flex';
+    });
+    document.getElementById('exitCancel').addEventListener('click', function(){ exitOverlay.style.display = 'none'; });
+    document.getElementById('exitConfirm').addEventListener('click', function(){
+      const returnData = {
+        type: 'farm-exit',
+        money: state.money,
+        seeds: {
+          wheat: state.inventory.wheat,
+          eggplant: state.inventory.eggplant,
+          melon: state.inventory.melon,
+          sugarcane: state.inventory.sugarcane
+        },
+        farmGrid: state.grid
+      };
+      try { exitOverlay.style.display = 'none'; } catch(_){}
+      window.parent.postMessage(returnData, '*');
     });
     
     document.getElementById('btnBatchWater').addEventListener('click', function(e) {

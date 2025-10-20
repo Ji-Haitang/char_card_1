@@ -60,7 +60,7 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-styles.css">
 </head>
 <body>
     <div class="container">
@@ -764,12 +764,12 @@
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-state.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-ui.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@06ec017/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@a512d91/module/game-events.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -1228,9 +1228,9 @@
                 
                 showFarmGame();
                 
-                if (!actionPointConsumed) {
-                    window.pendingMindMessage = true;
-                }
+                // if (!actionPointConsumed) {
+                //     window.pendingMindMessage = true;
+                // }
                 return;
             }
 
@@ -2771,9 +2771,14 @@
         });
 
         // 根据当前开关刷新按钮文案
+        // function updateCgToggleLabel() {
+        //     const btn = document.getElementById('toggle-cg-btn');
+        //     if (btn) btn.textContent = `CG内容（${cgContentEnabled ? '开' : '关'}）`;
+        // }
         function updateCgToggleLabel() {
             const btn = document.getElementById('toggle-cg-btn');
-            if (btn) btn.textContent = `CG内容（${cgContentEnabled ? '开' : '关'}）`;
+            const enabled = (typeof cgContentEnabled !== 'undefined') ? cgContentEnabled : false;
+            if (btn) btn.textContent = `CG内容（${enabled ? '开' : '关'}）`;
         }
 
         // 切换CG内容开关（仅切开关，不改 slgCGOptions）

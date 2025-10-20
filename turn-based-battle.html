@@ -691,6 +691,34 @@ body {
         top: 0;
     }
 }
+
+/* 统一的弹窗按钮风格 */
+.modal-actions { 
+    display: flex; 
+    gap: clamp(8px, 2vw, 14px); 
+    justify-content: center; 
+    padding: clamp(8px, 2vw, 14px);
+    background: rgba(0,0,0,0.4);
+    border-top: 1px solid rgba(255,255,255,0.18);
+}
+.modal-actions .btn {
+    min-width: clamp(90px, 20vw, 160px);
+    padding: clamp(8px, 1.8vw, 12px) clamp(14px, 2.8vw, 22px);
+    border-radius: clamp(6px, 1vw, 10px);
+    border: 1px solid rgba(255,255,255,0.25);
+    font-family: 'Ma Shan Zheng', cursive;
+    font-weight: bold;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+    transition: transform .15s ease, box-shadow .2s ease, filter .2s ease;
+}
+.modal-actions .btn:hover { transform: translateY(-2px); filter: brightness(1.05); box-shadow: 0 8px 18px rgba(0,0,0,0.45); }
+.modal-actions .btn:active { transform: translateY(0); }
+.modal-actions .btn.btn-cancel { background: linear-gradient(135deg, #2b2b2b 0%, #1a1a1a 100%); border-color: #555; }
+.modal-actions .btn.btn-danger { background: linear-gradient(135deg, #C62828 0%, #8E0000 100%); border-color: #ff6b6b; }
+.modal-actions .btn.btn-danger:hover { box-shadow: 0 8px 20px rgba(198,40,40,0.5); }
+
 </style>
 </head>
 <body>
@@ -786,15 +814,25 @@ body {
         <div id="confirm-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">确认行动</div>
-                <div class="modal-body">
-                    已选择: <span id="selected-action">无</span>
-                </div>
-                <div class="modal-footer">
-                    <button id="confirm-action">确认</button>
-                    <button id="cancel-action">取消</button>
+                <div class="modal-body" id="confirm-body">你确定要执行此操作吗？</div>
+                <div class="modal-actions" style="display:flex;gap:10px;justify-content:center;padding:10px;">
+                    <button onclick="closeConfirmModal()">取消</button>
+                    <button onclick="confirmAction()" class="primary">确认</button>
                 </div>
             </div>
         </div>
+
+        <!-- 退出战斗确认（全屏固定） -->
+        <div id="exit-battle-overlay" class="modal" style="z-index:1000;">
+            <div class="modal-content">
+                <div class="modal-header">确认退出</div>
+                <div class="modal-body">确定要退出战斗吗？</div>
+                <div class="modal-actions">
+                    <button class="btn btn-cancel" onclick="document.getElementById('exit-battle-overlay').style.display='none'">返回战斗</button>
+                    <button class="btn btn-danger" onclick="exitBattle('quit')">确认退出</button>
+                 </div>
+             </div>
+         </div>
 
         <!-- 游戏结束弹窗 -->
         <div id="game-over-modal" class="modal">
@@ -1033,9 +1071,8 @@ function exitBattle(result) {
 
 // //回合制系统集成更新 - 确认退出战斗
 function confirmExitBattle() {
-    if (confirm('确定要退出战斗吗？')) {
-        exitBattle('quit');
-    }
+    const ov = document.getElementById('exit-battle-overlay');
+    if (ov) { ov.style.display = 'flex'; }
 }
 
 const playerNameDisplay = document.getElementById('player-name');
