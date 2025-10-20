@@ -814,13 +814,16 @@ body {
         <div id="confirm-modal" class="modal">
             <div class="modal-content">
                 <div class="modal-header">确认行动</div>
-                <div class="modal-body" id="confirm-body">你确定要执行此操作吗？</div>
-                <div class="modal-actions" style="display:flex;gap:10px;justify-content:center;padding:10px;">
-                    <button onclick="closeConfirmModal()">取消</button>
-                    <button onclick="confirmAction()" class="primary">确认</button>
+                <div class="modal-body" id="confirm-body">
+                    你确定要执行此操作吗？
+                    <div id="selected-action" style="margin-top:8px;"></div>
                 </div>
-            </div>
-        </div>
+                <div class="modal-actions">
+                    <button id="cancel-action" class="btn btn-cancel">返回战斗</button>
+                    <button id="confirm-action" class="btn btn-danger">确认行动</button>
+                 </div>
+             </div>
+         </div>
 
         <!-- 退出战斗确认（全屏固定） -->
         <div id="exit-battle-overlay" class="modal" style="z-index:1000;">
@@ -1134,13 +1137,13 @@ function setupButtonEvents() {
     
     // 确认按钮事件
     confirmActionButton.addEventListener('click', () => {
-        confirmModal.style.display = 'none';
+        if (confirmModal) confirmModal.style.display = 'none';
         confirmAction();
     });
     
     // 取消按钮事件
     cancelActionButton.addEventListener('click', () => {
-        confirmModal.style.display = 'none';
+        if (confirmModal) confirmModal.style.display = 'none';
         gameState.player.selectedAction = null;
         updateDisplay();
     });

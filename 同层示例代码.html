@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>流式生成</title>
+    <style>
+        body { font-family: Arial; padding: 20px; background: white;}
+        .box { border: 1px solid #ccc; padding: 15px; margin: 10px 0; }
+        input { width: 300px; padding: 8px; }
+        button { padding: 8px 15px; margin: 5px; background: #007cba; color: white; border: none; }
+        .output { background: #f5f5f5; padding: 10px; height: 150px; overflow-y: auto; font-family: monospace; }
+    </style>
+</head>
+<body>
+    <h2>XB流式生成测试</h2>
+
+
+    <div class="box">
+        <h3>测试1: xbgenraw</h3>
+        <input id="input1" value="写个小故事" placeholder="输入提示词">
+        <button onclick="test1()">开始</button>
+        <button onclick="stop1()">停止</button>
+        <div class="output" id="output1">等待...</div>
+    </div>
+
+
+    <div class="box">
+        <h3>测试2: xbgen</h3>
+        <input id="input2" value="解释AI" placeholder="输入提示词">
+        <button onclick="test2()">开始</button>
+        <button onclick="stop2()">停止</button>
+        <div class="output" id="output2">等待...</div>
+    </div>
+
+
+    <script>
+        let timer1, timer2;
+
+
+        // 测试1: 使用xbgenraw，会话ID=1
+        async function test1() {
+            const prompt = document.getElementById('input1').value;
+            if (!prompt) return;
+            
+            document.getElementById('output1').textContent = '生成中...';
+            
+            // 执行命令
+            await STscript(`/xbgenraw as=system id=1 ${prompt}`);
+            
+            // 开始监控会话1
+            timer1 = setInterval(() => {
+                const text = window.parent.xiaobaixStreamingGeneration.getLastGeneration(1);
+                document.getElementById('output1').textContent = text || '生成中...';
+            }, 300);
+        }
+        
+        function stop1() {
+            clearInterval(timer1);
+            window.parent.xiaobaixStreamingGeneration.cancel(1);
+        }
+
+
+        // 测试2: 使用xbgen，会话ID=2  
+        async function test2() {
+            const prompt = document.getElementById('input2').value;
+            if (!prompt) return;
+            
+            document.getElementById('output2').textContent = '生成中...';
+            
+            // 执行命令
+            await STscript(`/xbgen id=2  ${prompt}`) ;
+            
+            // 开始监控会话2
+            timer2 = setInterval(() => {
+                const text = window.parent.xiaobaixStreamingGeneration.getLastGeneration('2');
+                document.getElementById('output2').textContent = text || '生成中...';
+            }, 300);
+        }
+        
+        function stop2() {
+            clearInterval(timer2);
+            window.parent.xiaobaixStreamingGeneration.cancel('2');
+        }
+
+
+        // 监听完成事件
+        window.addEventListener('message', (e) => {
+            if (e.data?.type === 'xiaobaix_streaming_completed') {
+                const id = e.data.payload.sessionId;
+                const text = e.data.payload.finalText;
+                
+                if (id === 1) {
+                    clearInterval(timer1);
+                    document.getElementById('output1').textContent = '完成!\n\n' + text;
+                }
+                if (id === '2') {
+                    clearInterval(timer2);
+                    document.getElementById('output2').textContent = '完成!\n\n' + text;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

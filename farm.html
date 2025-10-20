@@ -559,6 +559,10 @@
         font-size: 12px;
         margin-left: 4px;
     }
+    /* 通用弹窗覆盖 */
+    #uiOverlay { position: fixed; inset: 0; background: rgba(0,0,0,0.72); display: none; align-items: center; justify-content: center; z-index: 10000; padding: 16px; }
+    .ui-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 12px; background: #000; }
+    .ui-actions .full { grid-template-columns: 1fr; }
   </style>
 </head>
 <body>
@@ -600,6 +604,17 @@
       <div class="actions">
         <button id="exitCancel">取消</button>
         <button id="exitConfirm" class="confirm">确认退出</button>
+      </div>
+    </div>
+  </div>
+  <!-- 通用提示/确认弹窗 -->
+  <div id="uiOverlay" role="dialog" aria-modal="true" aria-label="提示">
+    <div class="exit-dialog">
+      <header id="uiTitle">提示</header>
+      <div class="body" id="uiBody">内容</div>
+      <div class="actions" id="uiActions">
+        <button id="uiCancel">取消</button>
+        <button id="uiOk" class="confirm">确定</button>
       </div>
     </div>
   </div>
@@ -1130,7 +1145,7 @@
     function doFertilize() {
       const cost = 5;
       if (state.money < cost) {
-        alert(`施肥需要 $${cost}，金钱不足！`);
+        showAlert(`浇水需要 $${cost}，金钱不足！`);
         return;
       }
       
@@ -1146,11 +1161,11 @@
       if (!plot || !plot.planted) return;
       const cfg = CROPS[plot.cropId];
       if (plot.maturity < cfg.maturityRequired) {
-        alert('尚未成熟，不能收割');
+        showAlert('尚未成熟，不能收割');
         return;
       }
       if (plot.health < 50) {
-        alert('作物健康度过低（<50），不能收割！请先除虫。');
+        showAlert('作物健康度过低（<50），不能收割！请先除虫。');
         return;
       }
       const effectiveQuality = Math.min(100, plot.quality);
@@ -1209,7 +1224,7 @@
           btn.addEventListener('click', () => {
             const cost = cfg.basePrice * qty;
             if (state.money < cost) { 
-              alert('金钱不足'); 
+              showAlert('金钱不足'); 
               return; 
             }
             state.money -= cost;
@@ -1229,6 +1244,52 @@
       elShopOverlay.style.display = 'none'; 
     }
 
+    // 通用UI弹窗
+    const uiOverlay = document.getElementById('uiOverlay');
+    const uiTitle = document.getElementById('uiTitle');
+    const uiBody = document.getElementById('uiBody');
+    const uiActions = document.getElementById('uiActions');
+    const uiOk = document.getElementById('uiOk');
+    const uiCancel = document.getElementById('uiCancel');
+    function showAlert(message, title='提示') {
+      uiTitle.textContent = title;
+      uiBody.innerHTML = message;
+      uiCancel.style.display = 'none';
+      uiOk.textContent = '知道了';
+      // 单按钮居中与黑底白框
+      uiActions.style.gridTemplateColumns = '1fr';
+      uiOk.classList.remove('confirm');
+      uiOk.style.background = '#000';
+      uiOk.style.border = '1px solid #fff';
+      uiOk.style.color = '#fff';
+      uiOk.style.justifySelf = 'center';
+      uiOverlay.style.display = 'flex';
+      const onOk = () => { uiOverlay.style.display = 'none'; cleanup(); };
+      function cleanup(){ uiOk.removeEventListener('click', onOk); }
+      uiOk.addEventListener('click', onOk);
+    }
+    function showConfirm(message, title='确认') {
+      return new Promise(resolve => {
+        uiTitle.textContent = title;
+        uiBody.innerHTML = message;
+        uiCancel.style.display = '';
+        uiOk.textContent = '确认';
+        // 恢复双按钮布局与默认样式
+        uiActions.style.gridTemplateColumns = '1fr 1fr';
+        uiOk.classList.add('confirm');
+        uiOk.style.background = '';
+        uiOk.style.border = '';
+        uiOk.style.color = '';
+        uiOk.style.justifySelf = '';
+        uiOverlay.style.display = 'flex';
+        const onOk = () => { uiOverlay.style.display = 'none'; cleanup(); resolve(true); };
+        const onCancel = () => { uiOverlay.style.display = 'none'; cleanup(); resolve(false); };
+        function cleanup(){ uiOk.removeEventListener('click', onOk); uiCancel.removeEventListener('click', onCancel); }
+        uiOk.addEventListener('click', onOk);
+        uiCancel.addEventListener('click', onCancel);
+      });
+    }
+
     // --- Wire events ---
     document.getElementById('btnShop').addEventListener('click', openShop);
     document.getElementById('btnCloseShop').addEventListener('click', closeShop);
@@ -1244,7 +1305,6 @@
         dropdown.classList.remove('show');
     });
 
-    // 替换为自定义弹窗，保证手机端可见
     const exitOverlay = document.getElementById('exitOverlay');
     document.getElementById('btnExitFarm').addEventListener('click', function() {
       exitOverlay.style.display = 'flex';
@@ -1303,9 +1363,9 @@
       }
       renderAll();
       if (count > 0) {
-        alert(`已对 ${count} 个作物执行除虫操作`);
+        showAlert(`已对 ${count} 个作物执行除虫操作`);
       } else {
-        alert('没有符合条件的作物需要除虫');
+        showAlert('没有符合条件的作物需要除虫');
       }
     }
 
@@ -1323,9 +1383,9 @@
       }
       renderAll();
       if (count > 0) {
-        alert(`已对 ${count} 个作物执行浇水操作`);
+        showAlert(`已对 ${count} 个作物执行浇水操作`);
       } else {
-        alert('没有符合条件的作物需要浇水');
+        showAlert('没有符合条件的作物需要浇水');
       }
     }
 
@@ -1345,12 +1405,12 @@
       const cost = 5 * eligiblePlots.length;
       
       if (eligiblePlots.length === 0) {
-        alert('没有符合条件的作物需要施肥');
+        showAlert('没有符合条件的作物需要施肥');
         return;
       }
       
       if (state.money < cost) {
-        alert(`统一施肥需要 $${cost}，金钱不足！`);
+        showAlert(`统一施肥需要 $${cost}，金钱不足！`);
         return;
       }
       
@@ -1362,7 +1422,7 @@
       });
       
       renderAll();
-      alert(`已对 ${count} 个作物执行施肥操作，花费 $${cost}`);
+      showAlert(`已对 ${count} 个作物执行施肥操作，花费 $${cost}`);
     }
 
     function applyLayoutData(data) {
