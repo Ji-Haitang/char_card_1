@@ -558,6 +558,10 @@
                                 <label>神秘杂役</label>
                                 <input type="number" id="cheat-npc-L" min="0" max="100">
                             </div>
+                            <div class="cheat-item">
+                                <label>新角色Z</label>
+                                <input type="number" id="cheat-npc-Z" min="0" max="100">
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1088,6 +1092,7 @@
                     case 'J': npcLocationJ = 'none'; break;
                     case 'K': npcLocationK = 'none'; break;
                     case 'L': npcLocationL = 'none'; break;
+                    case 'Z': npcLocationZ = 'none'; break;
                 }
                 
                 // 如果当前场景有该NPC，更新显示
@@ -1442,7 +1447,7 @@
             }
 
             // 只对不在当前位置的NPC进行重新分配
-            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'].filter(
+            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'Z'].filter(
                 npcId => !npcsAtCurrentLocation.includes(npcId)
             );
             const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
@@ -1497,6 +1502,7 @@
             npcLocationJ = currentNpcLocations.J;
             npcLocationK = currentNpcLocations.K;
             npcLocationL = currentNpcLocations.L;
+            npcLocationZ = currentNpcLocations.Z;
             
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id !== 'map-scene') {
@@ -2153,6 +2159,7 @@
             document.getElementById('cheat-npc-J').value = npcFavorability.J;
             document.getElementById('cheat-npc-K').value = npcFavorability.K;
             document.getElementById('cheat-npc-L').value = npcFavorability.L;
+            document.getElementById('cheat-npc-Z').value = npcFavorability.Z;
             
             const modal = document.getElementById('cheat-modal');
             modal.style.display = 'block';
@@ -2202,7 +2209,7 @@
             npcFavorability.J = parseInt(document.getElementById('cheat-npc-J').value);
             npcFavorability.K = parseInt(document.getElementById('cheat-npc-K').value);
             npcFavorability.L = parseInt(document.getElementById('cheat-npc-L').value);
-            
+            npcFavorability.Z = parseInt(document.getElementById('cheat-npc-Z').value);
             // 检查数值范围
             checkAllValueRanges();
             

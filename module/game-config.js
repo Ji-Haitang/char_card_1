@@ -135,6 +135,11 @@ const npcs = {
         name: "神秘杂役",
         description: "天山派杂役。<br>高大肥胖，从不以真面目示人。<br>名字身份来历都未知的神秘人物...",
         avatar: "L"
+    },
+    Z: {
+        name: "新角色Z",
+        description: "占位描述：这里填写该角色的背景与性格。",
+        avatar: "Z"
     }
 };
 
@@ -151,7 +156,8 @@ const npcNameToId = {
     "安慕": "I",
     "唐沐梨": "J",
     "洛潜幽": "K",
-    "神秘杂役": "L"
+    "神秘杂役": "L",
+    "新角色Z": "Z"
 };
 
 // NPC立绘URL映射
@@ -167,7 +173,8 @@ const npcPortraits = {
     I: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.webp',
     J: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.webp',
     K: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.webp',
-    L: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.webp'
+    L: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.webp',
+    Z: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.webp'
 };
 
 // 地点背景图映射
@@ -210,7 +217,8 @@ const npcSparRewards = {
     I: { type: '金钱', value: 300 },    // 安慕 - 金钱+500
     J: { type: '金钱', value: 1000 },      // 唐沐梨 - 魅力+1
     K: { type: '学识', value: 2 },      // 洛潜幽 - 学识+2
-    L: { type: '金钱', value: 3000 }   // 神秘杂役 - 金钱+1000
+    L: { type: '金钱', value: 3000 },   // 神秘杂役 - 金钱+1000
+    Z: { type: '声望', value: 1 }
 };
 
 // NPC在各地点的出现概率
@@ -370,6 +378,19 @@ const npcLocationProbability = {
         shanmen: 0.01,
         gongtian: 0.01,  // 偶尔在公田出现
         none: 0.90
+    },
+    Z: { // 新角色X - 占位：均衡分布
+        yanwuchang: 0.10,
+        cangjingge: 0.10,
+        huofang: 0.10,
+        houshan: 0.10,
+        yishiting: 0.10,
+        tiejiangpu: 0.10,
+        nandizi: 0.05,
+        nvdizi: 0.05,
+        shanmen: 0.10,
+        gongtian: 0.05,
+        none: 0.15
     }
 };
 
@@ -865,17 +886,17 @@ const defaultGameData = {
         "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
         "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
     },
-    npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0},
+    npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0, "Z": 0},
     actionPoints: 3,
     currentWeek: 1,
     dayNightStatus: 'daytime',  // 新增：昼夜状况 'daytime' 或 'night'
     seasonStatus: 'winter',      // 新增：四季状况 'spring', 'summer', 'autumn', 'winter'
-    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang","J":"tiejiangpu","K":"nvdizi","L":"none"},
+    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang","J":"tiejiangpu","K":"nvdizi","L":"none","Z":"none"},
     GameMode: 0,  // 游戏模式，0=普通模式，1=SLG模式
     difficulty: 'normal', // 默认难度 
-    npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true}, // 新增：NPC是否显示
-    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已送礼
-    npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false}, // 新增：本周是否已切磋
+    npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true, "Z": true}, // 新增：NPC是否显示
+    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, "Z": false}, // 新增：本周是否已送礼
+    npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, "Z": false}, // 新增：本周是否已切磋
     lastFarmWeek: 1,  // 新增：上次耕种的周数
     farmGrid: [],     // 新增：农场地块状态
     inventory: {

@@ -414,6 +414,7 @@ function parseLLMResponse(response, mainTextContent) {
                             case 'J': npcLocationJ = toLocationId; break;
                             case 'K': npcLocationK = toLocationId; break;
                             case 'L': npcLocationL = toLocationId; break;
+                            case 'Z': npcLocationZ = toLocationId; break;
                         }
                         
                         console.log(`${npcName} 移动到 ${toLocation}`);
@@ -466,6 +467,7 @@ function parseLLMResponse(response, mainTextContent) {
     console.log(`npcLocationJ ${npcLocationJ}`);
     console.log(`npcLocationK ${npcLocationK}`);
     console.log(`npcLocationL ${npcLocationL}`);
+    console.log(`npcLocationZ ${npcLocationZ}`);
     // 更新当前场景的NPC显示
     if (activeScene && activeScene.id !== 'map-scene' && 
         activeScene.id !== 'player-stats-scene' && 

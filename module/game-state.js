@@ -91,6 +91,7 @@ let npcLocationI = "huofang";
 let npcLocationJ = "tiejiangpu";
 let npcLocationK = "nvdizi";
 let npcLocationL = "none";
+let npcLocationZ = "none";
 
 // 临时状态变量
 let randIdx = 0;
@@ -197,6 +198,7 @@ function syncVariablesFromGameData() {
     npcLocationJ = currentNpcLocations.J;
     npcLocationK = currentNpcLocations.K;
     npcLocationL = currentNpcLocations.L;
+    npcLocationZ = currentNpcLocations.Z;
     userLocation_old = userLocation;
     randIdx = Math.floor(Math.random() * 4) + 1;
 }
