@@ -1,0 +1,1368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>修仙炼丹模拟器 - 紧凑水墨版</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --ink-black: #2b2b2b;
+            --ink-light: #5a5a5a;
+            --paper-bg: #f4f1e4;
+            --paper-dark: #e6e2d3;
+            --cinnabar: #8e1e20;
+            --jade: #4d6e6e;
+            --gold: #bfa36f;
+            
+            --base-spacing: 1%;
+            --border-thick: 0.3rem;
+            --border-thin: 0.15rem;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
+            background-color: var(--paper-bg);
+            background-image: 
+                radial-gradient(var(--paper-dark) 15%, transparent 16%),
+                radial-gradient(var(--paper-dark) 15%, transparent 16%);
+            background-size: 1rem 1rem;
+            background-position: 0 0, 0.5rem 0.5rem;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: var(--ink-black);
+            overflow-x: hidden;
+        }
+
+        .game-container {
+            background: rgba(255, 255, 255, 0.65);
+            border: var(--border-thick) double var(--ink-black);
+            width: 90vw;
+            max-width: 1216px;
+            aspect-ratio: 1216 / 832;
+            padding: 1%;
+            position: relative;
+            box-shadow: 1rem 1rem 0 rgba(43, 43, 43, 0.15);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .game-container::after { content: "❖"; position: absolute; top: 0.2rem; right: 0.2rem; color: var(--ink-light); opacity: 0.6; font-size: 0.8rem; }
+        .game-container::before { content: "❖"; position: absolute; bottom: 0.2rem; left: 0.2rem; color: var(--ink-light); opacity: 0.6; font-size: 0.8rem; }
+
+        /* ========== 开始炼丹按钮 - 响应式优化 ========== */
+        .start-alchemy-btn {
+            position: absolute;
+            bottom: 15.5%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 15%;
+            aspect-ratio: 1/1;
+            background: radial-gradient(circle, rgba(6, 116, 98, 0.95) 0%, rgba(6, 116, 98, 0.95) 70%);
+            border: 2px solid var(--ink-black);
+            border-radius: 50%;
+            color: #fff;
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(0.7rem, 2vw, 2rem);  /* 降低最小字体大小 */
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0 0 20px rgba(142, 30, 32, 0.5), 0.2rem 0.2rem 0.5rem rgba(0,0,0,0.3);
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation: btnPulse 2s infinite;
+            white-space: nowrap;  /* 防止文字换行 */
+            overflow: hidden;     /* 确保不会溢出 */
+        }
+        .start-alchemy-btn:hover {
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 0 30px rgba(142, 30, 32, 0.7), 0.3rem 0.3rem 0.6rem rgba(0,0,0,0.4);
+        }
+        .start-alchemy-btn.hidden {
+            display: none;
+        }
+        @keyframes btnPulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(142, 30, 32, 0.5), 0.2rem 0.2rem 0.5rem rgba(0,0,0,0.3); }
+            50% { box-shadow: 0 0 30px rgba(142, 30, 32, 0.8), 0.2rem 0.2rem 0.5rem rgba(0,0,0,0.3); }
+        }
+
+        /* ========== 消息提示 ========== */
+        .toast {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--paper-bg);
+            border: 2px solid var(--ink-black);
+            padding: clamp(1rem, 2vw, 1.5rem) clamp(1.5rem, 3vw, 2rem);
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            z-index: 10001;
+            box-shadow: 0.5rem 0.5rem 1rem rgba(0,0,0,0.3);
+            display: none;
+            text-align: center;
+            max-width: 80vw;
+        }
+        .toast.show {
+            display: block;
+            animation: toastFadeIn 0.3s;
+        }
+        .toast.success { border-color: var(--jade); color: var(--jade); }
+        .toast.error { border-color: var(--cinnabar); color: var(--cinnabar); }
+        @keyframes toastFadeIn {
+            from { opacity: 0; transform: translate(-50%, -60%); }
+            to { opacity: 1; transform: translate(-50%, -50%); }
+        }
+
+        /* ========== 顶部事件横幅 ========== */
+        .event-banner {
+            height: 10%;
+            min-height: 0;
+            margin-bottom: 1%;
+            display: flex;
+            flex-direction: column;
+            gap: 2%;
+            overflow: hidden;
+        }
+
+        .event-card {
+            background: var(--paper-dark);
+            border: 1px solid var(--ink-black);
+            padding: 0.5% 1%;
+            font-size: clamp(0.6rem, 1.2vw, 0.85rem);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            animation: slideIn 0.4s ease;
+            border-left: 0.2rem solid var(--ink-black);
+            min-height: 0;
+        }
+        .event-card.positive { border-left-color: var(--jade); }
+        .event-card.negative { border-left-color: var(--cinnabar); }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateY(-0.5rem); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ========== 核心区域：丹炉 + 纵向进度条 + 火焰 ========== */
+        .main-stage {
+            position: relative;
+            width: 100%;
+            height: 55%;
+            margin-bottom: 2%;
+            display: flex;
+            justify-content: center;
+        }
+
+        .furnace-container {
+            position: relative;
+            width: 60%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        /* 纵向进度条容器 */
+        .vertical-gauge {
+            position: absolute;
+            top: 3%;
+            bottom: 0;
+            width: 10%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-end;
+        }
+        
+        .vertical-gauge.left { left: 5%; }
+        .vertical-gauge.right { right: 5%; }
+
+        .gauge-label {
+            font-size: clamp(0.6rem, 1.2vw, 1rem);
+            font-family: 'Ma Shan Zheng';
+            margin-bottom: 2%;
+            writing-mode: vertical-rl;
+            letter-spacing: 0.1rem;
+        }
+
+        .gauge-value {
+            font-size: clamp(0.7rem, 1.5vw, 1.1rem);
+            font-family: 'Ma Shan Zheng';
+            font-weight: bold;
+            color: var(--ink-black);
+            margin-bottom: 5%;
+        }
+
+        .gauge-track {
+            width: 0.5rem;
+            height: 75%;
+            background: rgba(0,0,0,0.05);
+            border: 1px solid var(--ink-black);
+            position: relative;
+            border-radius: 1rem;
+            overflow: hidden;
+        }
+
+        .gauge-fill {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            transition: height 0.5s ease;
+        }
+
+        .fill-quality { background: var(--jade); }
+        .fill-completion { background: var(--ink-black); }
+
+        /* 火焰容器 */
+        .furnace-fire-wrapper {
+            position: absolute;
+            bottom: 7%;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 25%;
+            aspect-ratio: 1/1;
+            z-index: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .furnace-fire-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,100,0,0.6) 0%, transparent 70%);
+            filter: blur(8px);
+            animation: pulse 2s infinite;
+            transition: background 0.5s;
+        }
+
+        .temp-display {
+            position: relative;
+            z-index: 2;
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(1rem, 2.5vw, 2rem);
+            color: #fff;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-weight: bold;
+        }
+
+        .furnace-fire-bg.normal { background: radial-gradient(circle, rgba(255,160,50,0.6) 0%, transparent 70%); }
+        .furnace-fire-bg.hot { background: radial-gradient(circle, rgba(255,60,0,0.8) 0%, transparent 70%); }
+        .furnace-fire-bg.cold { background: radial-gradient(circle, rgba(100,200,200,0.5) 0%, transparent 70%); }
+        .furnace-fire-bg.danger { background: radial-gradient(circle, rgba(220,0,0,0.9) 0%, transparent 70%); animation: shake 0.5s infinite; }
+
+        @keyframes pulse { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.1); } }
+        @keyframes shake { 0%, 100% { transform: translate(0, 0) scale(1); } 25% { transform: translate(-2px, 2px) scale(1.1); } 75% { transform: translate(2px, -2px) scale(1.1); } }
+
+        .furnace-image {
+            position: relative;
+            width: 90%;
+            height: 100%;
+            background: url('assets/image/static/炼丹炉.png') no-repeat center bottom; 
+            background-size: contain;
+            z-index: 2;
+            pointer-events: none;
+        }
+        
+        .furnace-image:empty::after {
+            content: "丹炉"; display: flex; justify-content: center; align-items: center; width: 100%; height: 100%; opacity: 0.1; font-size: 2rem; font-family: 'Ma Shan Zheng';
+        }
+
+        /* ========== 信息栏 ========== */
+        .info-display {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 8%;
+            margin-bottom: 2%;
+            padding: 0.5% 0;
+            border-top: 1px solid rgba(0,0,0,0.1);
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        .info-item { text-align: center; flex: 1; }
+        
+        .info-label { 
+            font-size: clamp(0.5rem, 1vw, 0.7rem);
+            color: var(--ink-light); 
+        }
+        .info-value { 
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(0.8rem, 1.6vw, 1.2rem);
+            color: var(--ink-black); 
+        }
+        .info-value.danger-text { color: var(--cinnabar); }
+
+        /* ========== 控制按钮 ========== */
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 1%;
+            height: 10%;
+            margin-bottom: 2%;
+        }
+
+        .control-btn {
+            background: #fff;
+            border: var(--border-thin) solid var(--ink-black);
+            color: var(--ink-black);
+            padding: 0;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.2s;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0.1rem 0.1rem 0 rgba(0,0,0,0.1);
+            min-height: 0;
+        }
+
+        .control-btn:hover:not(:disabled) { transform: translate(-1px, -1px); box-shadow: 0.2rem 0.2rem 0 rgba(0,0,0,0.15); border-color: var(--cinnabar); color: var(--cinnabar); }
+        .control-btn:active:not(:disabled) { transform: translate(2px, 2px); box-shadow: 0; }
+        .control-btn:disabled { opacity: 0.5; border-color: #ccc; color: #999; cursor: not-allowed; box-shadow: none; }
+
+        .btn-title {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: clamp(0.7rem, 1.5vw, 1.1rem);
+            line-height: 1;
+        }
+
+        /* ========== 消息 ========== */
+        .message { 
+            text-align: center; 
+            padding: 1%; 
+            margin: 0;
+            height: 8%;
+            font-size: clamp(0.6rem, 1.2vw, 0.8rem);
+            border: 1px dashed var(--ink-black); 
+            display: none; 
+            background: rgba(255,255,255,0.5); 
+        }
+        .message.success { color: var(--jade); border-color: var(--jade); }
+        .message.failure { color: var(--cinnabar); border-color: var(--cinnabar); }
+
+        .tooltip { position: fixed; background: var(--paper-bg); border: 2px solid var(--ink-black); padding: 0.8rem; font-size: 0.8rem; z-index: 10000; opacity: 0; pointer-events: none; transition: opacity 0.2s; box-shadow: 0.4rem 0.4rem 0.8rem rgba(0,0,0,0.2); width: max-content; max-width: 80vw; }
+        .tooltip.show { opacity: 1; }
+        .tooltip-title { font-family: 'Ma Shan Zheng'; font-size: 1rem; color: var(--cinnabar); border-bottom: 1px solid rgba(0,0,0,0.2); margin-bottom: 0.4rem; }
+        .tooltip-range { display: flex; justify-content: space-between; gap: 1rem; }
+        .tooltip-value.positive { color: var(--jade); } .tooltip-value.negative { color: var(--cinnabar); }
+
+        /* ========== 通用弹窗 ========== */
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(43, 43, 43, 0.7); backdrop-filter: blur(2px); display: none; justify-content: center; align-items: center; }
+        .modal-overlay.active { display: flex; }
+        
+        /* 弹窗层级设置 */
+        #event-modal-overlay { z-index: 9998; }
+        #herb-modal-overlay { z-index: 9999; }
+        #shop-modal-overlay { z-index: 10000; }
+        #inventory-modal-overlay { z-index: 10001; }
+        
+        .modal { 
+            background: rgba(255, 255, 255, 0.65);
+            border: var(--border-thick) double var(--ink-black);
+            width: 90vw;
+            max-width: 1216px;
+            aspect-ratio: 1216 / 832;
+            padding: 1%;
+            position: relative;
+            box-shadow: 1rem 1rem 0 rgba(43, 43, 43, 0.15);
+            backdrop-filter: blur(5px);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+        
+        .modal-title { 
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(1.5rem, 3vw, 2rem); 
+            margin-bottom: 2%;
+            color: var(--cinnabar);
+            text-align: center;
+        }
+        
+        .modal-content { 
+            flex: 1;
+            overflow-y: auto;
+            margin: 2% 0;
+        }
+        
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 2%;
+            margin-top: 2%;
+        }
+        
+        .modal-btn { 
+            background: #fff;
+            border: var(--border-thin) solid var(--ink-black);
+            padding: clamp(0.5rem, 1vw, 0.8rem) clamp(1.5rem, 3vw, 2rem);
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            cursor: pointer;
+            box-shadow: 0.1rem 0.1rem 0 rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .modal-btn:hover { 
+            transform: translate(-1px, -1px);
+            box-shadow: 0.2rem 0.2rem 0 rgba(0,0,0,0.15);
+            background: var(--ink-black); 
+            color: #fff; 
+        }
+        .modal-btn.primary { 
+            background: var(--cinnabar); 
+            color: #fff; 
+            border-color: var(--cinnabar); 
+        }
+        .modal-btn.primary:hover { 
+            background: var(--ink-black); 
+            border-color: var(--ink-black);
+        }
+
+        /* ========== 顶部按钮（弹窗内）- 位置优化 ========== */
+        .modal-top-btn {
+            position: absolute;
+            top: 2%;
+            background: #fff;
+            border: var(--border-thin) solid var(--ink-black);
+            color: var(--ink-black);
+            padding: clamp(0.4rem, 1vw, 0.6rem) clamp(0.8rem, 2vw, 1.2rem);
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(0.8rem, 1.5vw, 1rem);
+            cursor: pointer;
+            z-index: 10;
+            box-shadow: 0.1rem 0.1rem 0 rgba(0,0,0,0.1);
+            transition: all 0.2s;
+        }
+        .modal-top-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 0.2rem 0.2rem 0 rgba(0,0,0,0.15);
+        }
+        
+        /* 商城按钮在右上 */
+        .modal-shop-btn {
+            right: 2%;
+        }
+        .modal-shop-btn:hover {
+            border-color: var(--gold);
+            color: var(--gold);
+        }
+        
+        /* 背包按钮在左上 */
+        .modal-inventory-btn {
+            left: 2%;
+        }
+        .modal-inventory-btn:hover {
+            border-color: var(--jade);
+            color: var(--jade);
+        }
+
+        /* ========== 商城弹窗内容 ========== */
+        .shop-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: clamp(0.5rem, 1.5vw, 0.8rem);
+            margin: clamp(0.3rem, 0.8vw, 0.5rem) 0;
+            border: 1px solid var(--ink-black);
+            background: rgba(255,255,255,0.5);
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .shop-item-name { 
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(1rem, 2vw, 1.2rem); 
+        }
+        .shop-item-price { 
+            color: var(--gold); 
+            font-weight: bold; 
+            margin: 0 clamp(0.5rem, 1vw, 1rem); 
+            font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+        }
+        .shop-item-btn { 
+            padding: clamp(0.3rem, 0.8vw, 0.4rem) clamp(0.8rem, 1.5vw, 1rem); 
+            background: var(--jade); 
+            color: #fff; 
+            border: none; 
+            cursor: pointer; 
+            font-family: 'Ma Shan Zheng';  /* 统一字体风格 */
+            font-size: clamp(0.8rem, 1.5vw, 1rem);
+        }
+        .shop-item-btn:hover { background: var(--ink-black); }
+
+        /* ========== 投入药材弹窗内容 - 响应式优化 ========== */
+        .herb-selector {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: clamp(0.5rem, 1vw, 0.8rem);
+            margin: clamp(0.5rem, 1vw, 1rem) 0;
+        }
+        
+        @media (min-width: 768px) {
+            .herb-selector {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+        
+        .herb-item {
+            border: 2px solid var(--ink-black);
+            padding: clamp(0.4rem, 1vw, 0.8rem);
+            background: rgba(255,255,255,0.5);
+            text-align: center;
+        }
+        .herb-item-name { 
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(0.9rem, 1.8vw, 1.2rem); 
+            margin-bottom: clamp(0.3rem, 0.8vw, 0.5rem); 
+        }
+        .herb-item-count { 
+            color: var(--ink-light); 
+            margin-bottom: clamp(0.3rem, 0.8vw, 0.5rem); 
+            font-size: clamp(0.7rem, 1.4vw, 0.9rem);
+        }
+        .herb-item-controls { 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            gap: clamp(0.3rem, 0.8vw, 0.5rem); 
+        }
+        .herb-item-controls button { 
+            width: clamp(1.5rem, 3vw, 2rem); 
+            height: clamp(1.5rem, 3vw, 2rem); 
+            border: 1px solid var(--ink-black); 
+            background: #fff; 
+            cursor: pointer; 
+            font-size: clamp(1rem, 2vw, 1.3rem); 
+        }
+        .herb-item-controls button:hover { background: var(--paper-dark); }
+        .herb-item-selected { 
+            font-weight: bold; 
+            font-size: clamp(1rem, 2vw, 1.3rem); 
+            min-width: 1.5rem;
+        }
+
+        .total-herbs {
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(1rem, 2vw, 1.3rem);
+            margin: clamp(0.8rem, 1.5vw, 1.2rem) 0;
+            padding: clamp(0.6rem, 1.5vw, 1rem);
+            background: var(--paper-dark);
+            border: 2px solid var(--ink-black);
+            text-align: center;
+        }
+
+        /* ========== 背包弹窗内容 ========== */
+        .inventory-section {
+            margin-bottom: 2%;
+        }
+        .inventory-title {
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+            color: var(--cinnabar);
+            border-bottom: 2px solid var(--ink-black);
+            padding-bottom: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .inventory-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+        }
+        .inventory-item {
+            background: rgba(255,255,255,0.5);
+            border: 1px solid var(--ink-black);
+            padding: clamp(0.5rem, 1vw, 0.8rem);
+            text-align: center;
+        }
+        .inventory-item-name {
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+            margin-bottom: 0.3rem;
+        }
+        .inventory-item-count {
+            font-size: clamp(1rem, 2vw, 1.3rem);
+            font-weight: bold;
+            color: var(--jade);
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+        @media (min-width: 768px) {
+            .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+        }
+
+        /* ========== 事件弹窗 ========== */
+        .event-modal { 
+            background: var(--paper-bg); 
+            border-top: clamp(0.3rem, 0.5vw, 0.5rem) solid var(--ink-black); 
+            border-bottom: clamp(0.3rem, 0.5vw, 0.5rem) solid var(--ink-black); 
+            padding: clamp(1rem, 2vw, 1.5rem); 
+            width: clamp(300px, 85vw, 400px); 
+            text-align: center; 
+            box-shadow: 0 1rem 2rem rgba(0,0,0,0.5); 
+        }
+        .event-icon { 
+            font-size: clamp(2rem, 4vw, 2.5rem); 
+            margin-bottom: clamp(0.3rem, 0.8vw, 0.5rem); 
+        }
+        .event-title { 
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(1.3rem, 3vw, 1.8rem); 
+            margin-bottom: clamp(0.3rem, 0.8vw, 0.5rem); 
+            color: var(--cinnabar); 
+        }
+        .event-effect { 
+            background: rgba(0,0,0,0.05); 
+            padding: clamp(0.5rem, 1.5vw, 0.8rem); 
+            margin: clamp(0.5rem, 1vw, 1rem) 0; 
+            border-left: 0.2rem solid var(--ink-black); 
+            text-align: left; 
+            font-size: clamp(0.8rem, 1.5vw, 0.9rem); 
+        }
+        .event-close-btn { 
+            background: transparent; 
+            border: 2px solid var(--ink-black); 
+            padding: clamp(0.4rem, 1vw, 0.5rem) clamp(1rem, 2vw, 1.5rem); 
+            font-family: 'Ma Shan Zheng'; 
+            font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+            cursor: pointer; 
+        }
+        .event-close-btn:hover { background: var(--ink-black); color: #fff; }
+
+    </style>
+</head>
+<body>
+    <!-- Toast 通知 -->
+    <div class="toast" id="toast"></div>
+
+    <!-- Tooltip -->
+    <div class="tooltip" id="tooltip"></div>
+
+    <!-- 事件弹窗 -->
+    <div class="modal-overlay" id="event-modal-overlay" onclick="closeEventModal()">
+        <div class="event-modal" id="event-modal" onclick="event.stopPropagation()">
+            <div class="event-icon" id="event-modal-icon"></div>
+            <div class="event-title" id="event-modal-title"></div>
+            <div class="event-description" id="event-modal-desc"></div>
+            <div class="event-effect" id="event-modal-effect"></div>
+            <button class="event-close-btn" onclick="closeEventModal()">阅 毕</button>
+        </div>
+    </div>
+
+    <!-- 商城弹窗 -->
+    <div class="modal-overlay" id="shop-modal-overlay" onclick="closeShopModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title">药材商城</div>
+            <div style="margin-bottom: 1rem; font-size: clamp(1rem, 2vw, 1.2rem); text-align: center;">
+                金钱：<span style="color: #bfa36f;" id="money-display">5000</span>
+            </div>
+            <div class="modal-content" id="shop-content"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeShopModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 背包弹窗 -->
+    <div class="modal-overlay" id="inventory-modal-overlay" onclick="closeInventoryModal()">
+        <div class="modal" onclick="event.stopPropagation()">
+            <div class="modal-title">背包</div>
+            <div class="modal-content" id="inventory-content"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn" onclick="closeInventoryModal()">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 投入药材弹窗 -->
+    <div class="modal-overlay" id="herb-modal-overlay">
+        <div class="modal" onclick="event.stopPropagation()">
+            <!-- 顶部按钮 - 位置优化 -->
+            <button class="modal-top-btn modal-inventory-btn" onclick="openInventoryModal()">🎒 背包</button>
+            <button class="modal-top-btn modal-shop-btn" onclick="openShopModal()">💰 商城</button>
+            
+            <div class="modal-title">投入药材</div>
+            <div style="margin-bottom: 1%; color: var(--ink-light); font-size: clamp(0.9rem, 1.8vw, 1rem); text-align: center;">
+                需要投入6-10个药材
+            </div>
+            <div class="modal-content">
+                <div class="herb-selector" id="herb-selector"></div>
+                <div class="total-herbs">
+                    已选择：<span id="total-selected-herbs">0</span> / 10
+                    <br>初始品质：<span id="initial-quality-preview">0</span>
+                </div>
+            </div>
+            <div class="modal-buttons">
+                <button class="modal-btn primary" onclick="startAlchemyWithHerbs()">开始炼丹</button>
+                <button class="modal-btn" onclick="closeHerbModal()">取消</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <!-- 顶部事件横幅 -->
+        <div class="event-banner" id="event-banner"></div>
+
+        <!-- 核心区域：纵向进度条 + 丹炉 + 火焰数值 -->
+        <div class="main-stage">
+            <!-- 左侧：品质 -->
+            <div class="vertical-gauge left">
+                <div class="gauge-label">品质</div>
+                <div class="gauge-value" id="quality-display">0</div>
+                <div class="gauge-track">
+                    <div class="gauge-fill fill-quality" id="quality-bar"></div>
+                </div>
+            </div>
+
+            <!-- 中间：丹炉 -->
+            <div class="furnace-container">
+                <!-- 开始炼丹按钮 -->
+                <button class="start-alchemy-btn" id="start-alchemy-btn" onclick="openHerbModal()">开始</button>
+                
+                <!-- 火焰容器 -->
+                <div class="furnace-fire-wrapper">
+                    <div class="furnace-fire-bg" id="furnace-fire-bg"></div>
+                    <div class="temp-display" id="temp-value">50</div>
+                </div>
+                <!-- 丹炉图片 -->
+                <div class="furnace-image"></div>
+            </div>
+
+            <!-- 右侧：完成度 -->
+            <div class="vertical-gauge right">
+                <div class="gauge-label">完成</div>
+                <div class="gauge-value" id="completion-display">0</div>
+                <div class="gauge-track">
+                    <div class="gauge-fill fill-completion" id="completion-bar"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 数据显示 -->
+        <div class="info-display">
+            <div class="info-item">
+                <div class="info-label">剩余操作</div>
+                <div class="info-value" id="moves-left">15</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">炉温倍率</div>
+                <div class="info-value" id="multiplier">0.8x</div>
+            </div>
+            <div class="info-item">
+                <div class="info-label">丹炉状态</div>
+                <div class="info-value" id="status">正常</div>
+            </div>
+        </div>
+        
+        <!-- 操作按钮 -->
+        <div class="controls" id="controls">
+            <button class="control-btn" data-action="fiereFire">
+                <span class="btn-title">猛火</span>
+            </button>
+            <button class="control-btn" data-action="gentleFire">
+                <span class="btn-title">文火</span>
+            </button>
+            <button class="control-btn" data-action="addHerb">
+                <span class="btn-title">投药</span>
+            </button>
+            <button class="control-btn" data-action="condense">
+                <span class="btn-title">冷凝</span>
+            </button>
+            <button class="control-btn" data-action="refine">
+                <span class="btn-title">淬炼</span>
+            </button>
+        </div>
+        
+        <div id="message" class="message"></div>
+    </div>
+
+    <script>
+        // ========== 日志系统 ==========
+        function log(message) {
+            console.log(`[炼丹模拟器] ${new Date().toLocaleTimeString()} - ${message}`);
+        }
+
+        // ========== Toast 通知函数 ==========
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = 'toast show ' + type;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 2000);
+        }
+
+        // ========== 角色属性 ==========
+        let playerStats = {
+            rootBone: 0,      // 根骨
+            comprehension: 0, // 悟性
+            nature: 0,        // 心性
+            charm: 0          // 魅力
+        };
+
+        let money = 5000;
+
+        let herbs = {
+            danshen: 0,   // 丹参
+            danggui: 0,   // 当归
+            moyao: 0,     // 没药
+            chenxiang: 0  // 沉香
+        };
+
+        let pills = {
+            daliwan: 0,      // 大力丸
+            jingutie: 0,     // 筋骨贴
+            jinchuangyao: 0, // 金疮药
+            piliwan: 0       // 霹雳丸
+        };
+
+        const herbNames = {
+            danshen: '丹参',
+            danggui: '当归',
+            moyao: '没药',
+            chenxiang: '沉香'
+        };
+
+        const pillNames = {
+            daliwan: '大力丸',
+            jingutie: '筋骨贴',
+            jinchuangyao: '金疮药',
+            piliwan: '霹雳丸'
+        };
+
+        const statNames = {
+            rootBone: '根骨',
+            comprehension: '悟性',
+            nature: '心性',
+            charm: '魅力'
+        };
+
+        // 药材与属性的对应关系
+        const herbToStat = {
+            danshen: 'rootBone',      // 丹参 → 根骨
+            danggui: 'comprehension', // 当归 → 悟性
+            moyao: 'nature',          // 没药 → 心性
+            chenxiang: 'charm'        // 沉香 → 魅力
+        };
+
+        let selectedHerbs = {
+            danshen: 0,
+            danggui: 0,
+            moyao: 0,
+            chenxiang: 0
+        };
+
+        // 记录炼丹时投入的药材（用于计算属性）
+        let herbsUsedForAlchemy = {};
+
+        let gameState = {
+            temperature: 50, quality: 0, completion: 0, movesLeft: 15,
+            gameOver: false, turnCount: 0, lastEventWasNegative: false,
+            alchemyStarted: false
+        };
+
+        const actions = {
+            fiereFire: { name: '猛火', desc: '大幅升温', effects: { temperature: [25, 35], quality: [-5, -2], completion: [0, 0] } },
+            gentleFire: { name: '文火', desc: '微调平衡', effects: { temperature: [5, 10], quality: [3, 6], completion: [4, 8] } },
+            addHerb: { name: '投药', desc: '增加完成度', effects: { temperature: [-15, -5], quality: [2, 4], completion: [8, 15] } },
+            condense: { name: '冷凝', desc: '降温凝丹', effects: { temperature: [-30, -20], quality: [8, 12], completion: [0, 2] } },
+            refine: { name: '淬炼', desc: '提纯杂质', effects: { temperature: [5, 10], quality: [5, 8], completion: [-10, -5] } }
+        };
+
+        let activeEvents = [];
+        const eventLibrary = [
+            { id: 'cold_snap', name: '寒潮', type: 'negative', icon: '❄️', desc: '寒气袭来，炉温骤降', effectDesc: '炉温-15，下次猛火减半', activeEffect: '下次猛火减半', duration: 0, probability: 0.15, onTrigger: (s) => { s.temperature = Math.max(0, s.temperature - 15); return { nextFireHalved: true, duration: 1 }; } },
+            { id: 'clog', name: '淤积', type: 'negative', icon: '🚫', desc: '药渣堵塞气孔', effectDesc: '下次冷凝失效', activeEffect: '下次冷凝失效', duration: 1, probability: 0.12, onTrigger: () => ({ coolDisabled: true }) },
+            { id: 'backlash', name: '反噬', type: 'negative', icon: '🔥', desc: '火气暴走侵蚀药性', effectDesc: '每轮品质-5', activeEffect: '每轮品质-5', duration: 3, probability: 0.1, onTick: (s) => { s.quality = Math.max(0, s.quality - 5); } },
+            { id: 'distraction', name: '心魔', type: 'negative', icon: '😵', desc: '心神不宁', effectDesc: '下次波动翻倍', activeEffect: '下次波动x2', duration: 1, probability: 0.13, onTrigger: () => ({ varianceDoubled: true }) },
+            { id: 'blessing', name: '祥瑞', type: 'positive', icon: '✨', desc: '紫气东来', effectDesc: '品质+15', activeEffect: '品质+15', duration: 0, probability: 0.12, onTrigger: (s) => { s.quality = Math.min(100, s.quality + 15); } },
+            { id: 'epiphany', name: '顿悟', type: 'positive', icon: '💡', desc: '领悟控火精髓', effectDesc: '下次不耗次数', activeEffect: '下次不耗次数', duration: 1, probability: 0.1, onTrigger: () => ({ freeTurn: true }) },
+            { id: 'wind_aid', name: '风助', type: 'positive', icon: '🌪️', desc: '风助火势', effectDesc: '下次猛火x2.5', activeEffect: '下次猛火x2.5', duration: 1, probability: 0.08, onTrigger: () => ({ fireBoost: 2.5 }) },
+            { id: 'shield', name: '护主', type: 'positive', icon: '🛡️', desc: '器灵护盾', effectDesc: '抵挡一次炸炉', activeEffect: '抵挡炸炉', duration: 1, probability: 0.08, onTrigger: () => ({ explosionShield: true }) },
+            { id: 'boiling', name: '沸腾', type: 'neutral', icon: '♨️', desc: '灵气活跃', effectDesc: '所有效果翻倍', activeEffect: '效果x2', duration: 2, probability: 0.08, onTrigger: () => ({ allDoubled: true }) },
+            { id: 'reverse', name: '阴火', type: 'neutral', icon: '🔄', desc: '阴阳颠倒寒暑逆转', effectDesc: '下次操作温度变化反转（升温变降温，降温变升温）', activeEffect: '下次温度反转', duration: 1, probability: 0.06, onTrigger: () => ({ temperatureReversed: true }) },
+            { id: 'lock_multiplier', name: '凝丹', type: 'neutral', icon: '💎', desc: '药液凝固瞬间，时间暂停', effectDesc: '持续2轮，炉温倍率锁定为1.5x', activeEffect: '倍率锁定1.5x', duration: 2, probability: 0.08, onTrigger: () => ({ multiplierLocked: 1.5 }) }
+        ];
+
+        // ========== 商城功能 ==========
+        function openShopModal() {
+            document.getElementById('money-display').textContent = money;
+            const shopContent = document.getElementById('shop-content');
+            shopContent.innerHTML = '';
+            
+            Object.keys(herbs).forEach(herbKey => {
+                const herbName = herbNames[herbKey];
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'shop-item';
+                itemDiv.innerHTML = `
+                    <span class="shop-item-name">${herbName}</span>
+                    <span style="color: var(--ink-light); font-size: clamp(0.8rem, 1.5vw, 0.9rem);">拥有：${herbs[herbKey]}</span>
+                    <span class="shop-item-price">500金</span>
+                    <button class="shop-item-btn" onclick="buyHerb('${herbKey}')">购买</button>
+                `;
+                shopContent.appendChild(itemDiv);
+            });
+            
+            document.getElementById('shop-modal-overlay').classList.add('active');
+        }
+
+        function closeShopModal() {
+            document.getElementById('shop-modal-overlay').classList.remove('active');
+        }
+
+        function buyHerb(herbKey) {
+            if (money >= 500) {
+                money -= 500;
+                herbs[herbKey]++;
+                log(`购买${herbNames[herbKey]}，花费500金，当前金钱：${money}，${herbNames[herbKey]}库存：${herbs[herbKey]}`);
+                openShopModal(); // 刷新商城显示
+                updateHerbDisplay(); // 更新投入药材界面的显示
+                showToast(`购买成功！获得${herbNames[herbKey]} x1`, 'success');
+            } else {
+                showToast('金钱不足！', 'error');
+            }
+        }
+
+        // ========== 背包功能 ==========
+        function openInventoryModal() {
+            const inventoryContent = document.getElementById('inventory-content');
+            inventoryContent.innerHTML = '';
+            
+            // 显示属性
+            let statsHtml = '<div class="inventory-section"><div class="inventory-title">角色属性</div><div class="stats-grid">';
+            Object.keys(playerStats).forEach(stat => {
+                statsHtml += `<div class="inventory-item">
+                    <div class="inventory-item-name">${statNames[stat]}</div>
+                    <div class="inventory-item-count">${playerStats[stat]}</div>
+                </div>`;
+            });
+            statsHtml += '</div></div>';
+            
+            // 显示药材
+            let herbsHtml = '<div class="inventory-section"><div class="inventory-title">药材</div><div class="inventory-grid">';
+            Object.keys(herbs).forEach(herbKey => {
+                herbsHtml += `<div class="inventory-item">
+                    <div class="inventory-item-name">${herbNames[herbKey]}</div>
+                    <div class="inventory-item-count">${herbs[herbKey]}</div>
+                </div>`;
+            });
+            herbsHtml += '</div></div>';
+            
+            // 显示丹药
+            let pillsHtml = '<div class="inventory-section"><div class="inventory-title">丹药</div><div class="inventory-grid">';
+            Object.keys(pills).forEach(pillKey => {
+                pillsHtml += `<div class="inventory-item">
+                    <div class="inventory-item-name">${pillNames[pillKey]}</div>
+                    <div class="inventory-item-count">${pills[pillKey]}</div>
+                </div>`;
+            });
+            pillsHtml += '</div></div>';
+            
+            inventoryContent.innerHTML = statsHtml + herbsHtml + pillsHtml;
+            document.getElementById('inventory-modal-overlay').classList.add('active');
+        }
+
+        function closeInventoryModal() {
+            document.getElementById('inventory-modal-overlay').classList.remove('active');
+        }
+
+        // ========== 投入药材功能 ==========
+        function openHerbModal() {
+            Object.keys(selectedHerbs).forEach(key => selectedHerbs[key] = 0);
+            renderHerbSelector();
+            updateHerbTotal();
+            document.getElementById('herb-modal-overlay').classList.add('active');
+        }
+
+        function renderHerbSelector() {
+            const herbSelector = document.getElementById('herb-selector');
+            herbSelector.innerHTML = '';
+            
+            Object.keys(herbs).forEach(herbKey => {
+                const herbName = herbNames[herbKey];
+                const itemDiv = document.createElement('div');
+                itemDiv.className = 'herb-item';
+                itemDiv.innerHTML = `
+                    <div class="herb-item-name">${herbName}</div>
+                    <div class="herb-item-count" id="herb-count-${herbKey}">拥有：${herbs[herbKey]}</div>
+                    <div class="herb-item-controls">
+                        <button onclick="changeHerbCount('${herbKey}', -1)">-</button>
+                        <span class="herb-item-selected" id="selected-${herbKey}">${selectedHerbs[herbKey] || 0}</span>
+                        <button onclick="changeHerbCount('${herbKey}', 1)">+</button>
+                    </div>
+                `;
+                herbSelector.appendChild(itemDiv);
+            });
+        }
+
+        function updateHerbDisplay() {
+            // 更新投入药材界面的库存显示
+            if (document.getElementById('herb-modal-overlay').classList.contains('active')) {
+                Object.keys(herbs).forEach(herbKey => {
+                    const countElement = document.getElementById(`herb-count-${herbKey}`);
+                    if (countElement) {
+                        countElement.textContent = `拥有：${herbs[herbKey]}`;
+                    }
+                });
+            }
+        }
+
+        function closeHerbModal() {
+            document.getElementById('herb-modal-overlay').classList.remove('active');
+        }
+
+        function changeHerbCount(herbKey, delta) {
+            const newValue = selectedHerbs[herbKey] + delta;
+            const totalSelected = Object.values(selectedHerbs).reduce((a, b) => a + b, 0);
+            
+            if (newValue < 0) return;
+            if (newValue > herbs[herbKey]) {
+                showToast(`${herbNames[herbKey]}库存不足！`, 'error');
+                return;
+            }
+            if (delta > 0 && totalSelected >= 10) {
+                showToast('最多投入10个药材！', 'error');
+                return;
+            }
+            
+            selectedHerbs[herbKey] = newValue;
+            document.getElementById(`selected-${herbKey}`).textContent = newValue;
+            updateHerbTotal();
+        }
+
+        function updateHerbTotal() {
+            const total = Object.values(selectedHerbs).reduce((a, b) => a + b, 0);
+            document.getElementById('total-selected-herbs').textContent = total;
+            
+            const initialQuality = Math.max(0, (total - 6) * 5);
+            document.getElementById('initial-quality-preview').textContent = initialQuality;
+        }
+
+        function startAlchemyWithHerbs() {
+            const total = Object.values(selectedHerbs).reduce((a, b) => a + b, 0);
+            
+            if (total < 6) {
+                showToast('至少需要投入6个药材！', 'error');
+                return;
+            }
+            
+            // 记录投入的药材（用于计算属性）
+            herbsUsedForAlchemy = {...selectedHerbs};
+            log(`开始炼丹，投入药材：${JSON.stringify(herbsUsedForAlchemy)}`);
+            
+            // 扣除药材
+            Object.keys(selectedHerbs).forEach(herbKey => {
+                herbs[herbKey] -= selectedHerbs[herbKey];
+                if (selectedHerbs[herbKey] > 0) {
+                    log(`消耗${herbNames[herbKey]} x${selectedHerbs[herbKey]}，剩余：${herbs[herbKey]}`);
+                }
+            });
+            
+            const initialQuality = Math.max(0, (total - 6) * 5);
+            gameState.quality = initialQuality;
+            gameState.alchemyStarted = true;
+            
+            closeHerbModal();
+            document.getElementById('start-alchemy-btn').classList.add('hidden');
+            updateDisplay();
+            document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = false);
+        }
+
+        // ========== 属性提升功能 ==========
+        function addRandomAttribute(points) {
+            // 计算总投入
+            const totalHerbs = Object.values(herbsUsedForAlchemy).reduce((a, b) => a + b, 0);
+            if (totalHerbs === 0) return;
+            
+            // 计算每种药材的概率权重
+            const weights = [];
+            const stats = [];
+            
+            Object.keys(herbsUsedForAlchemy).forEach(herbKey => {
+                if (herbsUsedForAlchemy[herbKey] > 0) {
+                    weights.push(herbsUsedForAlchemy[herbKey]);
+                    stats.push(herbToStat[herbKey]);
+                }
+            });
+            
+            // 随机选择属性
+            const totalWeight = weights.reduce((a, b) => a + b, 0);
+            let random = Math.random() * totalWeight;
+            let selectedStat = null;
+            
+            for (let i = 0; i < weights.length; i++) {
+                random -= weights[i];
+                if (random <= 0) {
+                    selectedStat = stats[i];
+                    break;
+                }
+            }
+            
+            if (selectedStat) {
+                playerStats[selectedStat] += points;
+                log(`属性提升：${statNames[selectedStat]} +${points}，当前值：${playerStats[selectedStat]}`);
+                showToast(`${statNames[selectedStat]} +${points}！`, 'success');
+            }
+        }
+
+        // Tooltip
+        let tooltipTimeout, longPressTimer;
+        function showTooltip(element, content, x, y) {
+            const tooltip = document.getElementById('tooltip');
+            tooltip.innerHTML = content; tooltip.classList.add('show');
+            const rect = element.getBoundingClientRect();
+            const tRect = tooltip.getBoundingClientRect();
+            let left = x || rect.left + rect.width/2 - tRect.width/2;
+            let top = y || rect.top - tRect.height - 10;
+            if (left < 10) left = 10; if (left + tRect.width > window.innerWidth) left = window.innerWidth - tRect.width - 10;
+            if (top < 10) top = rect.bottom + 10;
+            tooltip.style.left = left + 'px'; tooltip.style.top = top + 'px';
+        }
+        function hideTooltip() { document.getElementById('tooltip').classList.remove('show'); }
+        function formatRange(min, max) { return (min === max) ? String(min) : `${min>0?'+':''}${min}~${min>0?'+':''}${max}`; }
+        function getValueClass(v) { return v > 0 ? 'positive' : (v < 0 ? 'negative' : 'neutral'); }
+
+        function generateActionTooltip(actionType) {
+            const action = actions[actionType];
+            const m = calculateMultiplier();
+            const e = action.effects;
+            const qMin = Math.round(e.quality[0]*m), qMax = Math.round(e.quality[1]*m);
+            const cMin = Math.round(e.completion[0]*m), cMax = Math.round(e.completion[1]*m);
+            let html = `<div class="tooltip-title">${action.name}</div><div style="margin-bottom:5px;opacity:0.8">${action.desc}</div>`;
+            html += `<div class="tooltip-range"><span>炉温</span><span class="${getValueClass(e.temperature[0])}">${formatRange(e.temperature[0], e.temperature[1])}</span></div>`;
+            html += `<div class="tooltip-range"><span>品质</span><span class="${getValueClass(qMin)}">${formatRange(qMin, qMax)}</span></div>`;
+            html += `<div class="tooltip-range"><span>完成</span><span class="${getValueClass(cMin)}">${formatRange(cMin, cMax)}</span></div>`;
+            return html;
+        }
+
+        function initializeControls() {
+            document.querySelectorAll('.control-btn').forEach(btn => {
+                const action = btn.getAttribute('data-action');
+                btn.addEventListener('mouseenter', function() { if(!btn.disabled) tooltipTimeout = setTimeout(() => showTooltip(this, generateActionTooltip(action)), 300); });
+                btn.addEventListener('mouseleave', () => { clearTimeout(tooltipTimeout); hideTooltip(); });
+                btn.addEventListener('touchstart', function(e) { if(!btn.disabled) longPressTimer = setTimeout(() => showTooltip(this, generateActionTooltip(action), e.touches[0].clientX, e.touches[0].clientY-80), 500); });
+                btn.addEventListener('touchend', () => clearTimeout(longPressTimer));
+                btn.addEventListener('click', () => { hideTooltip(); performAction(action); });
+            });
+        }
+
+        function showEventModal(e) {
+            document.getElementById('event-modal-icon').textContent = e.icon;
+            document.getElementById('event-modal-title').textContent = e.name;
+            document.getElementById('event-modal-desc').textContent = e.desc;
+            document.getElementById('event-modal-effect').textContent = e.effectDesc;
+            document.getElementById('event-modal-overlay').classList.add('active');
+        }
+        function closeEventModal() { document.getElementById('event-modal-overlay').classList.remove('active'); }
+
+        function getRandom(min, max) { return Math.random() * (max - min) + min; }
+        function calculateMultiplier() {
+            const lock = activeEvents.find(e => e.multiplierLocked); if (lock) return lock.multiplierLocked;
+            if (gameState.temperature <= 30) return 0.3 + (gameState.temperature/30)*0.2;
+            if (gameState.temperature <= 70) return 0.5 + ((gameState.temperature-30)/40)*0.5;
+            return 1.0 + ((gameState.temperature-70)/30)*0.8;
+        }
+
+        function triggerRandomEvent() {
+            if (gameState.turnCount <= 2 || gameState.movesLeft <= 1 || Math.random() > 0.35) return;
+            let pool = eventLibrary.filter(e => !(e.type==='negative' && gameState.lastEventWasNegative) && Math.random()<(e.probability/0.35));
+            if (!pool.length) return;
+            const evt = pool[Math.floor(Math.random()*pool.length)];
+            gameState.lastEventWasNegative = (evt.type==='negative');
+            const res = evt.onTrigger ? evt.onTrigger(gameState) : {};
+            const active = { ...evt, ...res, remainingDuration: evt.duration };
+            activeEvents.push(active);
+            showEventModal(evt); displayEventCard(active);
+        }
+
+        function displayEventCard(e) {
+            const div = document.createElement('div');
+            div.className = `event-card ${e.type}`; div.setAttribute('data-id', e.id);
+            div.innerHTML = `<span>${e.name}</span><span style="opacity:0.7;font-size:0.7em">${e.activeEffect}</span>`;
+            document.getElementById('event-banner').appendChild(div);
+            div.addEventListener('click', () => showEventModal(e));
+            if(e.duration===0) setTimeout(() => div.remove(), 3000);
+        }
+
+        function updateEventDuration() {
+            activeEvents = activeEvents.filter(e => {
+                if(e.onTick) e.onTick(gameState);
+                e.remainingDuration--;
+                const card = document.querySelector(`.event-card[data-id="${e.id}"]`);
+                if(e.remainingDuration < 0) { if(card) card.remove(); return false; }
+                return true;
+            });
+        }
+
+        function updateDisplay() {
+            const m = calculateMultiplier();
+            document.getElementById('temp-value').textContent = Math.round(gameState.temperature);
+            document.getElementById('moves-left').textContent = gameState.movesLeft;
+            document.getElementById('quality-display').textContent = Math.round(gameState.quality);
+            document.getElementById('completion-display').textContent = Math.round(gameState.completion);
+            
+            const mulEl = document.getElementById('multiplier');
+            mulEl.textContent = m.toFixed(1) + 'x';
+            mulEl.className = 'info-value ' + (gameState.temperature > 85 ? 'danger-text' : '');
+
+            document.getElementById('quality-bar').style.height = gameState.quality + '%';
+            document.getElementById('completion-bar').style.height = gameState.completion + '%';
+            
+            const bg = document.getElementById('furnace-fire-bg');
+            const status = document.getElementById('status');
+            bg.className = 'furnace-fire-bg'; status.className = 'info-value';
+            if(gameState.temperature > 90) { bg.classList.add('danger'); status.textContent = '将炸'; status.classList.add('danger-text'); }
+            else if(gameState.temperature > 70) { bg.classList.add('hot'); status.textContent = '炽热'; status.classList.add('danger-text'); }
+            else if(gameState.temperature < 30) { bg.classList.add('cold'); status.textContent = '冷寂'; }
+            else { bg.classList.add('normal'); status.textContent = '正常'; }
+        }
+
+        function performAction(type) {
+            if (!gameState.alchemyStarted) {
+                showToast('请先点击"开始"按钮！', 'error');
+                return;
+            }
+            if (gameState.gameOver || gameState.movesLeft <= 0) return;
+            gameState.turnCount++;
+            const action = actions[type];
+            const e = action.effects;
+            const m = calculateMultiplier();
+            
+            let mod = { t: 1, q: 1, c: 1, v: 1, free: false };
+            activeEvents.forEach(evt => {
+                if(evt.allDoubled) { mod.t*=2; mod.q*=2; mod.c*=2; }
+                if(evt.fireBoost && type==='fiereFire') mod.t *= evt.fireBoost;
+                if(evt.nextFireHalved && type==='fiereFire') { mod.t *= 0.5; evt.remainingDuration = -1; }
+                if(evt.coolDisabled && type==='condense') { mod.t = 0; evt.remainingDuration = -1; }
+                if(evt.varianceDoubled) mod.v = 2;
+                if(evt.freeTurn) { mod.free = true; evt.remainingDuration = -1; }
+                if(evt.temperatureReversed) { mod.t *= -1; evt.remainingDuration = -1; }
+            });
+
+            let dt = getRandom(e.temperature[0], e.temperature[1]);
+            let dq = getRandom(e.quality[0], e.quality[1]);
+            let dc = getRandom(e.completion[0], e.completion[1]);
+
+            if(mod.v > 1) { const center = (e.temperature[0]+e.temperature[1])/2; dt = center + (dt-center)*mod.v; }
+
+            dt *= mod.t;
+            dq = dq * m * mod.q;
+            dc = dc * m * mod.c;
+
+            if(gameState.temperature > 80) dq -= (gameState.temperature - 80) * 0.2;
+
+            gameState.temperature = Math.max(0, gameState.temperature + dt);
+            gameState.quality = Math.max(0, Math.min(100, gameState.quality + dq));
+            gameState.completion = Math.max(0, Math.min(100, gameState.completion + dc));
+
+            if(!mod.free) gameState.movesLeft--;
+            updateEventDuration();
+
+            const hasShield = activeEvents.some(e => e.explosionShield);
+            if(gameState.temperature > 100) {
+                if(hasShield) {
+                    gameState.temperature = 99; activeEvents = activeEvents.filter(e => !e.explosionShield);
+                    showToast('器灵护主生效！', 'success');
+                } else { gameOver(false, '炉温过高，丹炉炸裂！'); return; }
+            }
+
+            updateDisplay();
+            triggerRandomEvent();
+
+            if(gameState.completion >= 100) {
+                gameState.completion = 100; updateDisplay();
+                const product = getProduct(gameState.quality);
+                gameOver(true, `炼丹成功！获得：${product}`);
+                return;
+            }
+            if(gameState.movesLeft === 0) gameOver(false, `次数耗尽，炼丹失败！`);
+        }
+
+        function getProduct(q) {
+            let productName = '';
+            let points = 0;
+            
+            if(q >= 100) {
+                productName = '【九转金丹】(传说)';
+                points = 3;
+            } else if(q >= 90) {
+                productName = '【易筋丹】(史诗)';
+                points = 2;
+            } else if(q >= 75) {
+                productName = '【培元丹】(稀有)';
+                points = 1;
+            } else if(q >= 50) {
+                const commonPills = ['daliwan', 'jingutie', 'jinchuangyao', 'piliwan'];
+                const pillNames = {
+                    daliwan: '【大力丸】(普通)',
+                    jingutie: '【筋骨贴】(普通)',
+                    jinchuangyao: '【金疮药】(普通)',
+                    piliwan: '【霹雳丸】(普通)'
+                };
+                const randomPill = commonPills[Math.floor(Math.random() * commonPills.length)];
+                pills[randomPill]++;
+                productName = pillNames[randomPill];
+                log(`获得丹药：${productName.replace(/【|】|\(.*\)/g, '')}，当前库存：${pills[randomPill]}`);
+            } else {
+                productName = '无产出';
+            }
+            
+            // 根据品质添加属性
+            if (points > 0) {
+                addRandomAttribute(points);
+            }
+            
+            log(`炼丹结果：品质${q}，${productName}`);
+            return productName;
+        }
+
+        function gameOver(success, msg) {
+            gameState.gameOver = true;
+            const el = document.getElementById('message');
+            el.innerHTML = `<div>${msg}</div><div style="font-size:0.8em;margin-top:0.3em;opacity:0.8">品质:${Math.round(gameState.quality)}</div>`;
+            el.className = 'message ' + (success ? 'success' : 'failure');
+            el.style.display = 'block';
+            document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = true);
+            
+            setTimeout(() => {
+                document.getElementById('start-alchemy-btn').classList.remove('hidden');
+            }, 3000);
+        }
+
+        function resetGame() {
+            gameState = { 
+                temperature: 50, quality: 0, completion: 0, movesLeft: 15, 
+                gameOver: false, turnCount: 0, lastEventWasNegative: false,
+                alchemyStarted: false
+            };
+            activeEvents = [];
+            document.getElementById('event-banner').innerHTML = '';
+            document.getElementById('message').style.display = 'none';
+            closeEventModal(); hideTooltip();
+            document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = true);
+            document.getElementById('start-alchemy-btn').classList.remove('hidden');
+            updateDisplay();
+        }
+
+        initializeControls();
+        updateDisplay();
+        document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = true);
+        document.addEventListener('click', (e) => { if(!e.target.closest('.control-btn') && !e.target.closest('.event-card')) hideTooltip(); });
+    </script>
+</body>
+</html>
