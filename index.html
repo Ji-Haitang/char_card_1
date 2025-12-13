@@ -102,6 +102,7 @@
                     <div class="location" id="nvdizi"></div>
                     <div class="location" id="shanmen"></div>
                     <div class="location" id="gongtian"></div>
+                    <div class="location" id="danfang"></div>
                     <div class="ink-decoration ink1"></div>
                     <div class="ink-decoration ink2"></div>
                     <!-- 建筑轮廓与热区（SVG覆盖层） -->
@@ -310,6 +311,16 @@
                     </div>
                 </div>
 
+                <div id="danfang-scene" class="scene">
+                    <button class="back-btn" onclick="backToMap()">返回</button>
+                    <button class="refresh-npc-btn scene-refresh-btn" onclick="refreshNpcLocations()">刷新NPC位置</button>
+                    <div class="scene-title">丹房</div>
+                    <div class="npc-container" id="danfang-npcs"></div>
+                    <div class="scene-actions">
+                        <button class="scene-btn" onclick="performAction('炼丹', 'danfang')">炼丹</button>
+                    </div>
+                </div>
+
                 <!-- 弹窗 -->
                 <div id="modal" class="modal">
                     <div class="modal-content">
@@ -338,6 +349,13 @@
                 <div id="farm-modal" class="farm-modal">
                     <div class="farm-container">
                         <iframe id="farm-iframe" class="farm-iframe"></iframe>
+                    </div>
+                </div>
+
+                <!-- 炼丹游戏iframe弹窗 -->
+                <div id="alchemy-modal" class="farm-modal">
+                    <div class="farm-container">
+                        <iframe id="alchemy-iframe" class="farm-iframe"></iframe>
                     </div>
                 </div>
 
@@ -579,9 +597,23 @@
                                 <label>神秘杂役</label>
                                 <input type="number" id="cheat-npc-L" min="0" max="100">
                             </div>
+                            <!-- 占位角色Z - 已注释
                             <div class="cheat-item">
                                 <label>新角色Z</label>
                                 <input type="number" id="cheat-npc-Z" min="0" max="100">
+                            </div>
+                            -->
+                            <div class="cheat-item">
+                                <label>玄天青</label>
+                                <input type="number" id="cheat-npc-M" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>鹿椿若</label>
+                                <input type="number" id="cheat-npc-N" min="0" max="100">
+                            </div>
+                            <div class="cheat-item">
+                                <label>苓雪妃</label>
+                                <input type="number" id="cheat-npc-O" min="0" max="100">
                             </div>
                         </div>
                     </div>
@@ -1219,6 +1251,9 @@ const outPut = `
                     case 'K': npcLocationK = 'none'; break;
                     case 'L': npcLocationL = 'none'; break;
                     case 'Z': npcLocationZ = 'none'; break;
+                    case 'M': npcLocationM = 'none'; break;
+                    case 'N': npcLocationN = 'none'; break;
+                    case 'O': npcLocationO = 'none'; break;
                 }
                 
                 // 如果当前场景有该NPC，更新显示
@@ -1300,6 +1335,9 @@ const outPut = `
                         npcSparred[npcId] = false;
                     });
                     
+                    // 重置炼丹状态
+                    alchemyDone = false;
+                    
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
@@ -1363,6 +1401,11 @@ const outPut = `
                 // if (!actionPointConsumed) {
                 //     window.pendingMindMessage = true;
                 // }
+                return;
+            }
+
+            if (action === '炼丹') {
+                showAlchemyGame();
                 return;
             }
 
@@ -1564,7 +1607,8 @@ const outPut = `
                 nandizi: 0,
                 nvdizi: 0,
                 shanmen: 0,
-                gongtian: 0
+                gongtian: 0,
+                danfang: 0
             };
             
             // 如果有当前位置，先统计该位置的NPC数量
@@ -1573,7 +1617,7 @@ const outPut = `
             }
 
             // 只对不在当前位置的NPC进行重新分配
-            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'Z'].filter(
+            const npcsToShuffle = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'Z', 'M', 'N', 'O'].filter(
                 npcId => !npcsAtCurrentLocation.includes(npcId)
             );
             const npcOrder = npcsToShuffle.sort(() => Math.random() - 0.5);
@@ -1629,6 +1673,9 @@ const outPut = `
             npcLocationK = currentNpcLocations.K;
             npcLocationL = currentNpcLocations.L;
             npcLocationZ = currentNpcLocations.Z;
+            npcLocationM = currentNpcLocations.M;
+            npcLocationN = currentNpcLocations.N;
+            npcLocationO = currentNpcLocations.O;
             
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id !== 'map-scene') {
@@ -2209,7 +2256,10 @@ const outPut = `
             document.getElementById('cheat-npc-J').value = npcFavorability.J;
             document.getElementById('cheat-npc-K').value = npcFavorability.K;
             document.getElementById('cheat-npc-L').value = npcFavorability.L;
-            document.getElementById('cheat-npc-Z').value = npcFavorability.Z;
+            // document.getElementById('cheat-npc-Z').value = npcFavorability.Z;  // 占位角色Z - 已注释
+            document.getElementById('cheat-npc-M').value = npcFavorability.M;
+            document.getElementById('cheat-npc-N').value = npcFavorability.N;
+            document.getElementById('cheat-npc-O').value = npcFavorability.O;
             
             const modal = document.getElementById('cheat-modal');
             modal.style.display = 'block';
@@ -2259,7 +2309,10 @@ const outPut = `
             npcFavorability.J = parseInt(document.getElementById('cheat-npc-J').value);
             npcFavorability.K = parseInt(document.getElementById('cheat-npc-K').value);
             npcFavorability.L = parseInt(document.getElementById('cheat-npc-L').value);
-            npcFavorability.Z = parseInt(document.getElementById('cheat-npc-Z').value);
+            // npcFavorability.Z = parseInt(document.getElementById('cheat-npc-Z').value);  // 占位角色Z - 已注释
+            npcFavorability.M = parseInt(document.getElementById('cheat-npc-M').value);
+            npcFavorability.N = parseInt(document.getElementById('cheat-npc-N').value);
+            npcFavorability.O = parseInt(document.getElementById('cheat-npc-O').value);
             // 检查数值范围
             checkAllValueRanges();
             
@@ -2985,6 +3038,15 @@ const outPut = `
             }
         });
 
+        document.getElementById('alchemy-modal').addEventListener('click', function(e) {
+            if (e.target === this) {
+                if (confirm('确定要退出炼丹吗？')) {
+                    this.style.display = 'none';
+                    document.getElementById('alchemy-iframe').src = '';
+                }
+            }
+        });
+
         // ========== 建筑轮廓与热区（SVG） ==========
         function setupMapHitAreas() {
             try {
@@ -3037,7 +3099,8 @@ const outPut = `
                     { id: 'tiejiangpu', name: '铁匠铺', points: '1226,691 1219,673 1215,659 1192,657 1179,615 1185,595 1200,591 1192,579 1212,540 1205,529 1212,529 1218,531 1250,524 1255,514 1263,511 1264,523 1264,531 1287,546 1299,576 1309,600 1321,618 1335,639 1345,647 1347,652 1334,653 1325,650 1315,663 1309,675 1302,688 1299,696 1293,702 1279,699 1250,694 1234,692' },
                     { id: 'huofang', name: '伙房', points: '879,704 888,639 868,630 869,618 882,618 915,459 909,453 912,449 933,450 954,445 975,433 991,450 1008,461 1030,471 1035,474 1033,478 1027,478 1027,511 1025,546 1027,586 1030,624 1030,653 1038,659 1041,672 1030,679 1012,672 998,731 885,707' },
                     { id: 'shanmen', name: '山门', points: '565,725 525,811 501,869 473,914 440,969 424,990 552,993 565,954 586,902 607,841 628,792 644,753 571,729' },
-                    { id: 'houshan', name: '后山', points: '1457,141 1439,142 1429,149 1412,168 1406,184 1394,201 1387,214 1376,213 1368,228 1363,239 1354,245 1345,242 1342,236 1339,228 1339,219 1329,219 1322,219 1313,223 1310,230 1310,236 1310,245 1305,252 1300,255 1284,290 1274,300 1264,303 1258,317 1247,320 1232,351 1218,375 1199,407 1283,448 1368,450 1458,449 1458,148' }
+                    { id: 'houshan', name: '后山', points: '1457,141 1439,142 1429,149 1412,168 1406,184 1394,201 1387,214 1376,213 1368,228 1363,239 1354,245 1345,242 1342,236 1339,228 1339,219 1329,219 1322,219 1313,223 1310,230 1310,236 1310,245 1305,252 1300,255 1284,290 1274,300 1264,303 1258,317 1247,320 1232,351 1218,375 1199,407 1283,448 1368,450 1458,449 1458,148' },
+                    { id: 'danfang', name: '丹房', points: '494,579 462,573 438,569 416,563 399,495 374,485 393,478 407,471 417,459 520,381 540,361 543,352 548,352 566,375 584,387 607,393 603,400 608,469 578,501 542,536 500,578' }
                  ];
 
                 // 清空并绘制

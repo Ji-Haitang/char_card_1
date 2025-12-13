@@ -100,7 +100,8 @@ body {
 #nandizi-scene,
 #nvdizi-scene,
 #shanmen-scene,
-#gongtian-scene {
+#gongtian-scene,
+#danfang-scene {
     background-size: cover;
     background-position: center;
     background-repeat: no-repeat;
@@ -359,6 +360,7 @@ body {
 #nvdizi { top: 25%; left: 38%; }
 #shanmen { top: 85%; left: 33%; }
 #gongtian { top: 45%; left: 12.5%; }
+#danfang { top: 40%; left: 30%; }
 
 /* 悬浮提示框 - 响应式改进 */
 .tooltip {

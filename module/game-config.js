@@ -62,7 +62,8 @@ const locationNames = {
     nandizi: '男弟子房',
     nvdizi: '女弟子房',
     shanmen: '山门',
-    gongtian: '公田', 
+    gongtian: '公田',
+    danfang: '丹房',
     tianshanpai: '天山派',
     none: 'none'
 };
@@ -78,68 +79,83 @@ const seasonNameMap = {
 const npcs = {
     A: {
         name: "破阵子",
-        description: "天山派外务长老，西域义军统领，呼延显的师父。<br>34岁回鹘族人，身材高大魁梧。<br>豪爽不羁，爱赌爱饮，人称道法将军。表面粗豪实则心思缜密，重情重义。",
+        description: "34岁回鹘族男性，天山派外务长老，西域义军统领，呼延显和雨烛的师父。",
         avatar: "A"
     },
     B: {
         name: "洞庭君",
-        description: "天山派刑罚长老，钱塘君的姐姐。<br>27岁却因修炼特殊内功停留在14岁童身，身材娇小，常需踮脚维持威严。<br>沉默寡言，公正严明，努力维持成熟气质。",
+        description: "27岁（外表14岁）汉族女性，天山派刑罚长老，钱塘君的姐姐。",
         avatar: "B"
     },
     C: {
         name: "钱塘君",
-        description: "天山派内门弟子，洞庭君的妹妹。<br>19岁少女，苗条挺拔，英气逼人，银白长发编成双辫。<br>活泼俏丽，言行跳脱，没心没肺的狐朋狗友。",
+        description: "19岁党项汉族混血女性，天山派内门弟子，洞庭君之妹，已故掌门张天义之徒。",
         avatar: "C"
     },
     D: {
         name: "萧白瑚",
-        description: "天山派外门弟子，年纪最小的弟子之一。<br>14岁女孩，银白色双髻配红色铃铛，活泼灵动。<br>傲娇好胜爱逞强，嘴硬心软。自称要成为天下第一。",
+        description: "14岁汉族女性，天山派外门弟子，年纪最小的第八代弟子。",
         avatar: "D"
     },
     E: {
         name: "姬姒",
-        description: "天山派内门弟子，归义军遗民。<br>外表28岁，银白长发琥珀眼眸，青衫黑袍，腰挂古旧长剑<br>古板正直，重情守礼，爱对后辈唠叨说教，饕口馋舌。",
+        description: "外表28岁汉族女性，天山派内门弟子，辈分成谜，自掌门至第八代弟子皆称其为师姐。",
         avatar: "E"
     },
     F: {
         name: "施延年",
-        description: "天山派外门弟子，藏经阁管理员。<br>16岁少女，身材纤细，清雅脱俗，谈吐不凡。<br>温文尔雅的书呆子，醉心典籍安贫乐道。但偶尔会慷慨激昂针砭时弊。",
+        description: "16岁汉族女性，天山派外门弟子，藏经阁管理员。",
         avatar: "F"
     },
     G: {
         name: "呼延显",
-        description: "天山派内门大师兄，破阵子之徒，带发修行的僧侣。<br>24岁匈奴族人，男生女相，面容柔美。<br>平时玩世不恭满嘴歪理，能言善辩。关键时刻亦有可靠的一面。",
+        description: "24岁匈奴族男性，天山派内门弟子，第八代大师兄，破阵子之徒，带发修行的僧侣。",
         avatar: "G"
     },
     H: {
         name: "雨烛",
-        description: "天山派内门弟子，破阵子长老的小徒弟。<br>15岁梵衍那族少女，金发碧眼，腰后生有青色半透明羽翼，身姿轻盈如仙。<br>活泼乖巧的团宠小天使，纯真善良。是门派的开心果。",
+        description: "15岁梵衍那族女性，天山派内门弟子，破阵子之徒。",
         avatar: "H"
     },
     I: {
         name: "安慕",
-        description: "天山派外门弟子，伙房主厨。<br>18岁少女，身材娇小力大无穷，金色猫耳猫尾，因近视常眯眼显凶。<br>刀子嘴豆腐心的小厨娘，不善言辞却用美食温暖人心。天生怪力让人不敢靠近。",
+        description: "18岁汉族女性，天山派外门弟子，伙房主厨。",
         avatar: "I"
     },
     J: {
         name: "唐沐梨",
-        description: "蜀中唐门大小姐，天山派客座弟子。<br>20岁少女，身姿挺拔气质高贵，粉紫渐变长发紫罗兰杏眼，生有粉色猫耳猫尾。<br>颐指气使的千金大小姐，实则重情重义。精于商道算计，暗器百发百中。",
+        description: "20岁汉族女性，蜀中唐门大小姐，天山派客座弟子。",
         avatar: "J"
     },
     K: {
         name: "洛潜幽",
-        description: "天山派外门弟子，负责女红织绣和接待贵客。<br>17岁少女，身形纤弱楚楚可怜，深蓝长发水蓝杏眼，耳侧生有鱼鳍。<br>对他人温和善良，唯独对你冷若冰霜。精通观星占卜，心思敏感易碎。",
+        description: "17岁汉族女性，天山派外门弟子，负责女红织绣和接待贵客。",
         avatar: "K"
     },
     L: {
         name: "神秘杂役",
-        description: "天山派杂役。<br>高大肥胖，从不以真面目示人。<br>名字身份来历都未知的神秘人物...",
+        description: "天山派杂役，高大肥胖，从不以真面目示人，名字身份来历都未知的神秘人物。",
         avatar: "L"
     },
-    Z: {
-        name: "新角色Z",
-        description: "占位描述：这里填写该角色的背景与性格。",
-        avatar: "Z"
+    // Z: {
+    //     name: "新角色Z",
+    //     description: "占位描述：这里填写该角色的背景与性格。",
+    //     avatar: "Z"
+    // },
+    M: {
+        name: "玄天青",
+        description: "31岁汉族男性，天山派岐黄长老，丹药房掌事。",
+        avatar: "M"
+    },
+    N: {
+        name: "鹿椿若",
+        description: "17岁汉族女性，昆仑派弟子，天山派客座弟子，玄天青的记名弟子。",
+        avatar: "N"
+    },
+    O: {
+        name: "苓雪妃",
+        description: "26岁汉族女性，天山派侍剑长老，派中第一高手。",
+        avatar: "O"
     }
 };
 
@@ -157,7 +173,10 @@ const npcNameToId = {
     "唐沐梨": "J",
     "洛潜幽": "K",
     "神秘杂役": "L",
-    "新角色Z": "Z"
+    // "新角色Z": "Z",
+    "玄天青": "M",
+    "鹿椿若": "N",
+    "苓雪妃": "O"
 };
 
 // NPC立绘URL映射
@@ -174,7 +193,10 @@ const npcPortraits = {
     J: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.webp',
     K: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.webp',
     L: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.webp',
-    Z: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.webp'
+    // Z: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.webp',
+    M: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/玄天青.webp',
+    N: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/鹿椿若.webp',
+    O: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/苓雪妃.webp'
 };
 
 // 地点背景图映射
@@ -202,7 +224,8 @@ const actionConfigs = {
     打铁: { talentBonus: '心性', affects: '金钱' },
     休息: { talentBonus: '心性', affects: '体力' },
     拜访: { talentBonus: '魅力', affects: '声望' },
-    下山: { talentBonus: '心性', affects: '声望' }
+    下山: { talentBonus: '心性', affects: '声望' },
+    炼丹: { talentBonus: '悟性', affects: '学识' }
 };
 
 const npcSparRewards = {
@@ -218,7 +241,10 @@ const npcSparRewards = {
     J: { type: '金钱', value: 1000 },      // 唐沐梨 - 魅力+1
     K: { type: '学识', value: 2 },      // 洛潜幽 - 学识+2
     L: { type: '金钱', value: 3000 },   // 神秘杂役 - 金钱+1000
-    Z: { type: '声望', value: 1 }
+    // Z: { type: '声望', value: 1 },
+    M: { type: '学识', value: 5 },      // 玄天青 - 岐黄长老，医术知识渊博
+    N: { type: '学识', value: 1 },      // 鹿椿若 - 武功平平，略懂医理
+    O: { type: '武学', value: 6 }       // 苓雪妃 - 第一高手，武学巅峰
 };
 
 // NPC在各地点的出现概率
@@ -234,6 +260,7 @@ const npcLocationProbability = {
         nvdizi: 0.00,
         shanmen: 0.05,
         gongtian: 0.10,  // 视察农业生产
+        danfang: 0.00,   // 很少去丹房
         none: 0.15
     },
     B: {  // 洞庭君 - 刑罚长老，偶尔视察
@@ -241,44 +268,47 @@ const npcLocationProbability = {
         cangjingge: 0.10,
         huofang: 0.05,
         houshan: 0.05,
-        yishiting: 0.30,
+        yishiting: 0.25,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
         gongtian: 0.05,  // 偶尔视察
+        danfang: 0.05,   // 偶尔去丹房检查
         none: 0.05
     },
     C: {  // 钱塘君 - 活泼好动，会去公田玩
         yanwuchang: 0.15,
         cangjingge: 0.05,
         huofang: 0.05,
-        houshan: 0.25,
+        houshan: 0.20,
         yishiting: 0.05,
         tiejiangpu: 0.10,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
         gongtian: 0.10,  // 去捣乱或帮忙
+        danfang: 0.05,   // 好奇去看看
         none: 0.05
     },
     D: {  // 萧白瑚 - 外门弟子，需要参与劳作
         yanwuchang: 0.20,
         cangjingge: 0.05,
         huofang: 0.15,
-        houshan: 0.15,
+        houshan: 0.10,
         yishiting: 0.00,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.20,
         shanmen: 0.05,
         gongtian: 0.10,  // 外门弟子劳作
+        danfang: 0.05,   // 帮忙打杂
         none: 0.05
     },
     E: {  // 姬姒 - 贪吃，会去看有什么能吃的
         yanwuchang: 0.10,
         cangjingge: 0.10,
-        huofang: 0.25,
+        huofang: 0.20,
         houshan: 0.15,
         yishiting: 0.05,
         tiejiangpu: 0.05,
@@ -286,11 +316,12 @@ const npcLocationProbability = {
         nvdizi: 0.15,
         shanmen: 0.05,
         gongtian: 0.05,  // 看看有什么能吃的
+        danfang: 0.05,   // 对丹药有兴趣
         none: 0.05
     },
-    F: {  // 施延年 - 书呆子，很少去公田
+    F: {  // 施延年 - 书呆子，对丹药典籍感兴趣
         yanwuchang: 0.05,
-        cangjingge: 0.50,
+        cangjingge: 0.40,
         huofang: 0.05,
         houshan: 0.05,
         yishiting: 0.05,
@@ -299,11 +330,12 @@ const npcLocationProbability = {
         nvdizi: 0.10,
         shanmen: 0.05,
         gongtian: 0.05,  // 偶尔去透透气
+        danfang: 0.10,   // 研究丹药典籍
         none: 0.05
     },
     G: {  // 呼延显 - 大师兄，可能指导劳作
         yanwuchang: 0.20,
-        cangjingge: 0.15,
+        cangjingge: 0.10,
         huofang: 0.05,
         houshan: 0.15,
         yishiting: 0.10,
@@ -312,58 +344,63 @@ const npcLocationProbability = {
         nvdizi: 0.00,
         shanmen: 0.05,
         gongtian: 0.05,  // 偶尔指导
+        danfang: 0.05,   // 偶尔来看看
         none: 0.10
     },
     H: {  // 雨烛 - 活泼小天使，会去玩耍
         yanwuchang: 0.15,
         cangjingge: 0.10,
         huofang: 0.15,
-        houshan: 0.20,
+        houshan: 0.15,
         yishiting: 0.05,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.15,
         shanmen: 0.05,
         gongtian: 0.10,  // 去玩耍帮忙
+        danfang: 0.05,   // 好奇来看看
         none: 0.00
     },
     I: {  // 安慕 - 伙房主厨，需要新鲜食材
         yanwuchang: 0.05,
         cangjingge: 0.00,
-        huofang: 0.50,
+        huofang: 0.45,
         houshan: 0.15,
         yishiting: 0.00,
         tiejiangpu: 0.05,
         nandizi: 0.00,
         nvdizi: 0.10,
         shanmen: 0.05,
-        gongtian: 0.10,  // 不再需要去公田
+        gongtian: 0.10,  // 采集食材
+        danfang: 0.05,   // 取药材调味
         none: 0.00
     },
-    J: {  // 唐沐梨 - 商人，对农产品感兴趣
+    J: {  // 唐沐梨 - 商人，对丹药生意感兴趣
         yanwuchang: 0.10,
         cangjingge: 0.05,
         huofang: 0.10,
         houshan: 0.05,
-        yishiting: 0.15,
+        yishiting: 0.10,
         tiejiangpu: 0.10,
         nandizi: 0.00,
         nvdizi: 0.20,
         shanmen: 0.15,
         gongtian: 0.05,  // 查看农产品商机
+        danfang: 0.05,   // 查看丹药商机
         none: 0.05
     },
     K: {  // 洛潜幽 - 可能去采花装饰
         yanwuchang: 0.05,
         cangjingge: 0.10,
         huofang: 0.10,
-        houshan: 0.15,
+        houshan: 0.10,
         yishiting: 0.15,
         tiejiangpu: 0.00,
         nandizi: 0.00,
         nvdizi: 0.25,
         shanmen: 0.05,
         gongtian: 0.05,  // 不需要劳作
+        danfang: 0.05,   // 采集药草
         none: 0.10
     },
     L: {  // 神秘杂役 - 神秘出没
@@ -377,20 +414,64 @@ const npcLocationProbability = {
         nvdizi: 0.00,
         shanmen: 0.01,
         gongtian: 0.01,  // 偶尔在公田出现
-        none: 0.90
+        danfang: 0.01,   // 神秘出没
+        none: 0.89
     },
-    Z: { // 新角色X - 占位：均衡分布
-        yanwuchang: 0.10,
-        cangjingge: 0.10,
-        huofang: 0.10,
-        houshan: 0.10,
+    // Z: { // 新角色Z - 占位：均衡分布
+    //     yanwuchang: 0.10,
+    //     cangjingge: 0.10,
+    //     huofang: 0.10,
+    //     houshan: 0.10,
+    //     yishiting: 0.10,
+    //     tiejiangpu: 0.10,
+    //     nandizi: 0.05,
+    //     nvdizi: 0.05,
+    //     shanmen: 0.10,
+    //     gongtian: 0.05,
+    //     danfang: 0.05,   // 均衡分布
+    //     none: 0.10
+    // },
+    M: {  // 玄天青 - 岐黄长老，常在丹房
+        yanwuchang: 0.02,
+        cangjingge: 0.20,
+        huofang: 0.05,
+        houshan: 0.15,
         yishiting: 0.10,
-        tiejiangpu: 0.10,
+        tiejiangpu: 0.00,
         nandizi: 0.05,
-        nvdizi: 0.05,
-        shanmen: 0.10,
+        nvdizi: 0.00,
+        shanmen: 0.03,
         gongtian: 0.05,
-        none: 0.15
+        danfang: 0.30,
+        none: 0.05
+    },
+    N: {  // 鹿椿若 - 采药迷路
+        yanwuchang: 0.02,
+        cangjingge: 0.05,
+        huofang: 0.05,
+        houshan: 0.25,
+        yishiting: 0.02,
+        tiejiangpu: 0.02,
+        nandizi: 0.00,
+        nvdizi: 0.08,
+        shanmen: 0.05,
+        gongtian: 0.15,
+        danfang: 0.20,
+        none: 0.11
+    },
+    O: {  // 苓雪妃 - 在公田耕种
+        yanwuchang: 0.00,
+        cangjingge: 0.02,
+        huofang: 0.02,
+        houshan: 0.15,
+        yishiting: 0.05,
+        tiejiangpu: 0.00,
+        nandizi: 0.00,
+        nvdizi: 0.10,
+        shanmen: 0.02,
+        gongtian: 0.35,
+        danfang: 0.02,
+        none: 0.27
     }
 };
 
@@ -871,6 +952,112 @@ const item_list = {
         "装备类型": "饰品",
         "装备属性": "魅力",
         "装备数值": 5
+    },
+    // 炼丹药材
+    "丹参": {
+        "描述": "珍贵药材，可用于炼制丹药，能增强根骨",
+        "可交易": true,
+        "买入价格": 500,
+        "卖出价格": 250,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "当归": {
+        "描述": "珍贵药材，可用于炼制丹药，能增强悟性",
+        "可交易": true,
+        "买入价格": 500,
+        "卖出价格": 250,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "没药": {
+        "描述": "珍贵药材，可用于炼制丹药，能增强心性",
+        "可交易": true,
+        "买入价格": 500,
+        "卖出价格": 250,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "沉香": {
+        "描述": "珍贵药材，可用于炼制丹药，能增强魅力",
+        "可交易": true,
+        "买入价格": 500,
+        "卖出价格": 250,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    // 炼丹丹药
+    "大力丸": {
+        "描述": "炼丹所得的普通丹药，服用后可短暂增强力量",
+        "可交易": true,
+        "买入价格": 1000,
+        "卖出价格": 500,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "筋骨贴": {
+        "描述": "炼丹所得的普通丹药，可治疗筋骨损伤",
+        "可交易": true,
+        "买入价格": 1000,
+        "卖出价格": 500,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "金疮药": {
+        "描述": "炼丹所得的普通丹药，可治疗外伤",
+        "可交易": true,
+        "买入价格": 1000,
+        "卖出价格": 500,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
+    },
+    "霹雳丸": {
+        "描述": "炼丹所得的普通丹药，可用作暗器投掷",
+        "可交易": true,
+        "买入价格": 1000,
+        "卖出价格": 500,
+        "可使用": false,
+        "影响属性": null,
+        "影响数值": null,
+        "可装备": false,
+        "装备类型": null,
+        "装备属性": null,
+        "装备数值": null
     }
 };
 // 默认游戏数据
@@ -886,17 +1073,17 @@ const defaultGameData = {
         "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
         "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
     },
-    npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0, "Z": 0},
+    npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0, /* "Z": 0, */ "M": 0, "N": 0, "O": 0},
     actionPoints: 3,
     currentWeek: 1,
     dayNightStatus: 'daytime',  // 新增：昼夜状况 'daytime' 或 'night'
     seasonStatus: 'winter',      // 新增：四季状况 'spring', 'summer', 'autumn', 'winter'
-    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang","J":"tiejiangpu","K":"nvdizi","L":"none","Z":"none"},
+    npcLocations: { "A":"none","B":"yishiting","C":"yishiting","D":"shanmen","E":"nvdizi","F":"cangjingge","G":"yanwuchang","H":"houshan","I":"huofang","J":"tiejiangpu","K":"nvdizi","L":"none",/* "Z":"none", */"M":"danfang","N":"danfang","O":"gongtian"},
     GameMode: 0,  // 游戏模式，0=普通模式，1=SLG模式
     difficulty: 'normal', // 默认难度 
-    npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true, "Z": true}, // 新增：NPC是否显示
-    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, "Z": false}, // 新增：本周是否已送礼
-    npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, "Z": false}, // 新增：本周是否已切磋
+    npcVisibility: { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true, /* "Z": true, */ "M": true, "N": true, "O": true}, // 新增：NPC是否显示
+    npcGiftGiven: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, /* "Z": false, */ "M": false, "N": false, "O": false}, // 新增：本周是否已送礼
+    npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, /* "Z": false, */ "M": false, "N": false, "O": false}, // 新增：本周是否已切磋
     lastFarmWeek: 1,  // 新增：上次耕种的周数
     farmGrid: [],     // 新增：农场地块状态
     inventory: {
@@ -920,5 +1107,6 @@ const defaultGameData = {
     mapLocation: '天山派', // 地图位置
     cgContentEnabled: false,  // 新增：CG内容开关（默认关）
     compressSummary: false,    // 新增：强力总结（默认关）
-    enamor: 0               // 新增：倾慕触发标记（默认0）
+    enamor: 0,              // 新增：倾慕触发标记（默认0）
+    alchemyDone: false      // 新增：本周是否已炼丹（默认false）
 };

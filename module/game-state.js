@@ -73,6 +73,7 @@ let compressSummary = false;    // 新增：强力总结运行时变量（默认
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
+let alchemyDone = false;  // 新增：本周是否已炼丹
 let lastUserMessage = "";
 let summary_Small = "";
 let summary_Week = "";
@@ -91,7 +92,10 @@ let npcLocationI = "huofang";
 let npcLocationJ = "tiejiangpu";
 let npcLocationK = "nvdizi";
 let npcLocationL = "none";
-let npcLocationZ = "none";
+// let npcLocationZ = "none";  // 占位角色Z - 已注释
+let npcLocationM = "danfang";
+let npcLocationN = "houshan";
+let npcLocationO = "gongtian";
 
 // 临时状态变量
 let randIdx = 0;
@@ -183,7 +187,8 @@ function syncVariablesFromGameData() {
     companionNPC,     // 新增
     mapLocation,      // 新增
     cgContentEnabled,  // 新增
-    compressSummary
+    compressSummary,
+    alchemyDone       // 新增：本周是否已炼丹
     } = gameData);
 
     npcLocationA = currentNpcLocations.A;
@@ -198,7 +203,10 @@ function syncVariablesFromGameData() {
     npcLocationJ = currentNpcLocations.J;
     npcLocationK = currentNpcLocations.K;
     npcLocationL = currentNpcLocations.L;
-    npcLocationZ = currentNpcLocations.Z;
+    // npcLocationZ = currentNpcLocations.Z;  // 占位角色Z - 已注释
+    npcLocationM = currentNpcLocations.M;
+    npcLocationN = currentNpcLocations.N;
+    npcLocationO = currentNpcLocations.O;
     userLocation_old = userLocation;
     randIdx = Math.floor(Math.random() * 4) + 1;
 }
@@ -240,6 +248,7 @@ function syncGameDataFromVariables() {
     gameData.mapLocation = mapLocation;
     gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
     gameData.compressSummary = compressSummary;    // 新增：写回存档
+    gameData.alchemyDone = alchemyDone;            // 新增：本周是否已炼丹
 }
 
 function syncGameDatalastUserMessage() {

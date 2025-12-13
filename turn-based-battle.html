@@ -171,6 +171,32 @@ body {
     font-size: clamp(12px, 2.5vw, 16px);
 }
 
+/* 挑衅状态显示样式 */
+.taunt-status {
+    display: none;
+    margin-top: clamp(3px, 0.8vw, 6px);
+    padding: clamp(2px, 0.5vw, 4px) clamp(4px, 1vw, 8px);
+    background: linear-gradient(135deg, rgba(255, 60, 60, 0.8), rgba(180, 20, 20, 0.9));
+    border-radius: clamp(2px, 0.4vw, 4px);
+    font-size: clamp(9px, 1.8vw, 12px);
+    font-weight: bold;
+    color: #fff;
+    text-align: center;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    animation: taunt-pulse 1s ease-in-out infinite;
+    border: 1px solid rgba(255, 100, 100, 0.6);
+}
+
+.taunt-status.active {
+    display: block;
+}
+
+@keyframes taunt-pulse {
+    0% { opacity: 0.8; transform: scale(1); }
+    50% { opacity: 1; transform: scale(1.02); }
+    100% { opacity: 0.8; transform: scale(1); }
+}
+
 /* 回合指示器 - 优化位置避免被遮挡 */
 .turn-indicator {
     position: absolute;
@@ -746,6 +772,7 @@ body {
                     <div class="energy-value"><span id="player-energy">0</span>/10</div>
                     <div class="energy-icon">⚡</div>
                 </div>
+                <div class="taunt-status" id="player-taunt-status">🔥 挑衅中</div>
             </div>
 
             <!-- 敌人状态区 -->
@@ -763,6 +790,7 @@ body {
                     <div class="energy-value"><span id="enemy-energy">0</span>/10</div>
                     <div class="energy-icon">⚡</div>
                 </div>
+                <div class="taunt-status" id="enemy-taunt-status">🔥 挑衅中</div>
             </div>
 
             <!-- 回合指示器 -->
@@ -857,12 +885,13 @@ const urlParams = new URLSearchParams(window.location.search);
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
     name: urlParams.get('playerName') || '你',
-    maxHealth: parseInt(urlParams.get('playerHealth')) || 50,
-    currentHealth: parseInt(urlParams.get('playerHealth')) || 50,
+    maxHealth: parseInt(urlParams.get('playerHealth')) || 500,
+    currentHealth: parseInt(urlParams.get('playerHealth')) || 500,
     energy: 0,
     maxEnergy: 10,
     selectedAction: null,
-    basicDamage: parseInt(urlParams.get('playerAttack')) || 20
+    basicDamage: parseInt(urlParams.get('playerAttack')) || 20,
+    tauntedTurns: 0  // 挑衅状态剩余回合数
 };
 
 // //回合制系统集成更新 - 构建敌方信息文本
@@ -880,8 +909,99 @@ const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
 
 // 生命值和伤害等级映射
 const healthMap = { '极低': 25,'低': 50, '中':100, '高': 175, '极高': 275 };
-const damageMap = { '极低': 10,'低': 20, '中': 40, '高': 70, '极高': 110 };
+const damageMap = { '极低': 10,'低': 20, '中': 40, '高': 70, '极高': 120 };
 const styles = ['风', '火', '林', '山'];
+
+// 加权随机选择函数
+function weightedRandom(options, debugInfo = null) {
+    // options: { 'action': weight, ... }
+    const entries = Object.entries(options);
+    const totalWeight = entries.reduce((sum, [, weight]) => sum + weight, 0);
+    const rollValue = Math.random() * totalWeight;
+    let remaining = rollValue;
+    
+    // 如果需要调试输出
+    if (debugInfo) {
+        const actionNames = {
+            'gather': '集气',
+            'defend': '防御',
+            'light-attack': '轻攻击',
+            'heavy-attack': '重攻击',
+            'special': '绝招',
+            'taunt': '嘴炮'
+        };
+        const probabilities = entries.map(([action, weight]) => {
+            const probability = (weight / totalWeight * 100).toFixed(1);
+            return `${actionNames[action] || action}(${probability}%)`;
+        });
+        console.log(`[AI策略] 风格: ${debugInfo.style}, 能量范围: ${debugInfo.energyKey}`);
+        console.log(`[AI策略] 参与加权的行动: ${probabilities.join(', ')}`);
+        console.log(`[AI策略] Roll点: ${rollValue.toFixed(2)} / ${totalWeight} (${(rollValue / totalWeight * 100).toFixed(1)}%)`);
+    }
+    
+    for (const [action, weight] of entries) {
+        remaining -= weight;
+        if (remaining <= 0) {
+            if (debugInfo) {
+                const actionNames = {
+                    'gather': '集气',
+                    'defend': '防御',
+                    'light-attack': '轻攻击',
+                    'heavy-attack': '重攻击',
+                    'special': '绝招',
+                    'taunt': '嘴炮'
+                };
+                console.log(`[AI策略] 选择结果: ${actionNames[action] || action}`);
+            }
+            return action;
+        }
+    }
+    // 兜底返回第一个选项
+    if (debugInfo) {
+        console.log(`[AI策略] 选择结果(兜底): ${entries[0][0]}`);
+    }
+    return entries[0][0];
+}
+
+// 风格策略配置：基于能量范围的概率分布
+const STYLE_STRATEGIES = {
+    '风': {
+        // 风格：快攻型，偏好轻攻击
+        0: { 'gather': 100},
+        1: { 'gather': 25, 'taunt': 15, 'light-attack': 60 },
+        '2-4': { 'gather': 15, 'taunt': 10, 'light-attack': 50, 'heavy-attack': 25 },
+        '5+': { 'gather': 10, 'taunt': 5, 'light-attack': 30, 'heavy-attack': 20, 'special': 35 }
+    },
+    '火': {
+        // 火格：爆发型，偏好重攻击
+        0: { 'gather': 100},
+        1: { 'gather': 45, 'taunt': 10, 'light-attack': 45 },
+        '2-4': { 'gather': 20, 'taunt': 5, 'light-attack': 20, 'heavy-attack': 55 },
+        '5+': { 'gather': 10, 'taunt': 5, 'light-attack': 10, 'heavy-attack': 35, 'special': 40 }
+    },
+    '林': {
+        // 林格：蓄力型，偏好集气和绝招
+        0: { 'gather': 100},
+        1: { 'gather': 75, 'taunt': 10, 'light-attack': 15 },
+        '2-4': { 'gather': 60, 'taunt': 10, 'light-attack': 15, 'heavy-attack': 15 },
+        '5+': { 'gather': 15, 'taunt': 5, 'light-attack': 10, 'heavy-attack': 15, 'special': 55 }
+    },
+    '山': {
+        // 山格：防守型，偏好嘴炮和集气（防御在独立阶段处理）
+        0: { 'gather': 100},
+        1: { 'gather': 45, 'taunt': 30, 'light-attack': 25 },
+        '2-4': { 'gather': 35, 'taunt': 25, 'light-attack': 20, 'heavy-attack': 20 },
+        '5+': { 'gather': 10, 'taunt': 10, 'light-attack': 15, 'heavy-attack': 15, 'special': 50 }
+    }
+};
+
+// 根据能量获取对应的策略配置
+function getEnergyRangeKey(energy) {
+    if (energy === 0) return 0;
+    if (energy === 1) return 1;
+    if (energy >= 2 && energy <= 4) return '2-4';
+    return '5+';
+}
 
 // 特殊NPC信息
 const commonNPCs = {
@@ -898,6 +1018,20 @@ const commonNPCs = {
         basicDamage: 100,
         style: '林',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.png'
+    },
+    '苓雪妃': {
+        name: '苓雪妃',
+        maxHealth: 250,
+        basicDamage: 160,
+        style: '风',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/苓雪妃.png'
+    },    
+    '玄天青': {
+        name: '玄天青',
+        maxHealth: 300,
+        basicDamage: 60,
+        style: '山',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/玄天青.png'
     },
     '钱塘君': {
         name: '钱塘君',
@@ -969,12 +1103,12 @@ const commonNPCs = {
         style: '山',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.png'
     },
-    '新角色Z': {
-        name: '新角色Z',
-        maxHealth: 11,
-        basicDamage: 11,
-        style: '山',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.png'
+    '鹿椿若': {
+        name: '鹿椿若',
+        maxHealth: 150,
+        basicDamage: 30,
+        style: '林',
+        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/鹿椿若.png'
     }
 };
 
@@ -1020,7 +1154,8 @@ function parseEnemyInfo(text) {
             maxEnergy: 10,
             selectedAction: null,
             basicDamage: basicDamage,
-            style: npc.style
+            style: npc.style,
+            tauntedTurns: 0  // 挑衅状态剩余回合数
         };
     }
 
@@ -1052,7 +1187,8 @@ function parseEnemyInfo(text) {
         maxEnergy: 10,
         selectedAction: null,
         basicDamage: baseDamage,
-        style: styles[Math.floor(Math.random() * styles.length)]
+        style: styles[Math.floor(Math.random() * styles.length)],
+        tauntedTurns: 0  // 挑衅状态剩余回合数
     };
 }
 
@@ -1191,6 +1327,24 @@ function updateDisplay() {
     // 更新回合数显示
     turnText.textContent = `第${gameState.turnNumber}回合`;
     
+    // 更新挑衅状态显示
+    const playerTauntStatus = document.getElementById('player-taunt-status');
+    const enemyTauntStatus = document.getElementById('enemy-taunt-status');
+    
+    if (gameState.player.tauntedTurns > 0) {
+        playerTauntStatus.textContent = `🔥 挑衅中 (${gameState.player.tauntedTurns}回合)`;
+        playerTauntStatus.classList.add('active');
+    } else {
+        playerTauntStatus.classList.remove('active');
+    }
+    
+    if (gameState.enemy.tauntedTurns > 0) {
+        enemyTauntStatus.textContent = `🔥 挑衅中 (${gameState.enemy.tauntedTurns}回合)`;
+        enemyTauntStatus.classList.add('active');
+    } else {
+        enemyTauntStatus.classList.remove('active');
+    }
+    
     // 根据能量值启用/禁用按钮
     checkButtonAvailability();
 }
@@ -1222,6 +1376,11 @@ function checkButtonAvailability() {
     
     if (gameState.player.energy < 5) {
         document.getElementById('special').classList.add('disabled');
+    }
+    
+    // 挑衅状态下禁用防御
+    if (gameState.player.tauntedTurns > 0) {
+        document.getElementById('defend').classList.add('disabled');
     }
     
     // 如果有选中的动作，高亮显示
@@ -1304,32 +1463,35 @@ function selectEnemyAction() {
     const enemy = gameState.enemy;
     const player = gameState.player;
     const style = enemy.style || '风'; // 默认风格
+    
+    // 检查是否处于挑衅状态（不能使用防御）
+    const canDefend = enemy.tauntedTurns <= 0;
 
     // 玩家气的威胁等级
     const playerEnergy = player.energy;
 
     // 嘴炮判定：玩家气满5时，敌人有较高概率嘴炮
     if (playerEnergy >= 5) {
-        if (style === '山' && Math.random() < 0.5) {
+        if (style === '山' && Math.random() < 0.6) {
             enemy.selectedAction = 'taunt';
             return;
         }
-        if (style === '林' && Math.random() < 0.4) {
+        if (style === '林' && Math.random() < 0.5) {
             enemy.selectedAction = 'taunt';
             return;
         }
-        if (style === '火' && Math.random() < 0.25) {
+        if (style === '火' && Math.random() < 0.5) {
             enemy.selectedAction = 'taunt';
             return;
         }
-        if (style === '风' && Math.random() < 0.2) {
+        if (style === '风' && Math.random() < 0.4) {
             enemy.selectedAction = 'taunt';
             return;
         }
     }
 
-    // 防御判定：玩家气较高时，敌人有概率防御
-    if (playerEnergy >= 1) {
+    // 防御判定：玩家气较高时，敌人有概率防御（挑衅状态下不可防御）
+    if (playerEnergy >= 1 && canDefend) {
         if (style === '山' && Math.random() < 0.5) {
             enemy.selectedAction = 'defend';
             return;
@@ -1338,107 +1500,47 @@ function selectEnemyAction() {
             enemy.selectedAction = 'defend';
             return;
         }
-        if (style === '火' && Math.random() < 0.2) {
+        if (style === '火' && Math.random() < 0.25) {
             enemy.selectedAction = 'defend';
             return;
         }
-        if (style === '风' && Math.random() < 0.15) {
+        if (style === '风' && Math.random() < 0.25) {
             enemy.selectedAction = 'defend';
             return;
         }
     }
 
-    // 风格主策略
-    if (style === '风') {
-        // 风：更倾向于轻攻击
-        if (enemy.energy >= 1 && Math.random() < 0.7) {
-            enemy.selectedAction = 'light-attack';
+    // 风格主策略：基于能量范围的加权随机选择
+    const styleStrategy = STYLE_STRATEGIES[style];
+    if (styleStrategy) {
+        const energyKey = getEnergyRangeKey(enemy.energy);
+        const options = { ...styleStrategy[energyKey] };
+        
+        // 根据能量限制过滤不可用的行动
+        if (enemy.energy < 1) {
+            delete options['light-attack'];
+        }
+        if (enemy.energy < 2) {
+            delete options['heavy-attack'];
+        }
+        if (enemy.energy < 5) {
+            delete options['special'];
+        }
+        
+        // 过滤掉无收益的嘴炮选项：玩家已被挑衅且气不足5时，嘴炮无收益
+        if (player.tauntedTurns > 0 && playerEnergy < 5) {
+            delete options['taunt'];
+        }
+        
+        // 如果过滤后还有选项，使用加权随机选择
+        if (Object.keys(options).length > 0) {
+            const debugInfo = {
+                style: style,
+                energyKey: energyKey
+            };
+            enemy.selectedAction = weightedRandom(options, debugInfo);
             return;
         }
-        if (enemy.energy < 10 && Math.random() < 0.6) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 2 && Math.random() < 0.3) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 5 && Math.random() < 0.2) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
-
-    if (style === '火') {
-        // 火：更倾向于重攻击
-        if (enemy.energy >= 2 && Math.random() < 0.7) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 1 && Math.random() < 0.4) {
-            enemy.selectedAction = 'light-attack';
-            return;
-        }
-        if (enemy.energy < 10 && Math.random() < 0.5) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 5 && Math.random() < 0.2) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
-
-    if (style === '林') {
-        // 林：更倾向于攒气用绝招
-        if (enemy.energy >= 5 && Math.random() < 0.7) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        if (enemy.energy < 10 && Math.random() < 0.7) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 2 && Math.random() < 0.2) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 1 && Math.random() < 0.2) {
-            enemy.selectedAction = 'light-attack';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
-    }
-
-    if (style === '山') {
-        // 山：注重防守
-        if (enemy.currentHealth < enemy.maxHealth * 0.5 && playerEnergy >= 1 && Math.random() < 0.5) {
-            enemy.selectedAction = 'defend';
-            return;
-        }
-        if (enemy.energy < 10 && Math.random() < 0.6) {
-            enemy.selectedAction = 'gather';
-            return;
-        }
-        if (enemy.energy >= 1 && Math.random() < 0.4) {
-            enemy.selectedAction = 'light-attack';
-            return;
-        }
-        if (enemy.energy >= 2 && Math.random() < 0.3) {
-            enemy.selectedAction = 'heavy-attack';
-            return;
-        }
-        if (enemy.energy >= 5 && Math.random() < 0.1) {
-            enemy.selectedAction = 'special';
-            return;
-        }
-        enemy.selectedAction = 'gather';
-        return;
     }
 
     // 默认行为
@@ -1532,20 +1634,47 @@ function processActions(playerAction, enemyAction) {
         addLog(`${enemy.name}进入防御状态！`);
     }
     
-    // 嘴炮只能无效化绝招的伤害
+    // 嘴炮逻辑处理
     let playerTauntSuccess = false;
     let enemyTauntSuccess = false;
     
-    if (playerAction === 'taunt' && enemyAction === 'special') {
-        playerTauntSuccess = true;
-        addLog(`${player.name}的嘴炮成功无效化了${enemy.name}的绝招伤害！`);
-        // 注意：不在这里扣除敌人的能量，而是统一在特殊技能处理部分扣除
-    }
-    
-    if (enemyAction === 'taunt' && playerAction === 'special') {
-        enemyTauntSuccess = true;
-        addLog(`${enemy.name}的嘴炮成功无效化了${player.name}的绝招伤害！`);
-        // 注意：不在这里扣除玩家的能量，而是统一在特殊技能处理部分扣除
+    // 双方同时嘴炮，无事发生
+    if (playerAction === 'taunt' && enemyAction === 'taunt') {
+        addLog('双方互相嘴炮，不分高下！');
+    } else {
+        // 嘴炮对防御的效果：挑衅
+        if (playerAction === 'taunt' && enemyDefending) {
+            // 玩家嘴炮 vs 敌人防御：敌人气-1，进入挑衅状态
+            if (enemy.energy > 0) {
+                enemy.energy -= 1;
+                addLog(`${player.name}的嘴炮激怒了${enemy.name}！${enemy.name}气-1，进入挑衅状态！`);
+            } else {
+                addLog(`${player.name}的嘴炮激怒了${enemy.name}！${enemy.name}进入挑衅状态！`);
+            }
+            enemy.tauntedTurns = 3;
+        }
+        
+        if (enemyAction === 'taunt' && playerDefending) {
+            // 敌人嘴炮 vs 玩家防御：玩家气-1，进入挑衅状态
+            if (player.energy > 0) {
+                player.energy -= 1;
+                addLog(`${enemy.name}的嘴炮激怒了${player.name}！${player.name}气-1，进入挑衅状态！`);
+            } else {
+                addLog(`${enemy.name}的嘴炮激怒了${player.name}！${player.name}进入挑衅状态！`);
+            }
+            player.tauntedTurns = 3;
+        }
+        
+        // 嘴炮对绝招的效果：无效化伤害（保持原有逻辑）
+        if (playerAction === 'taunt' && enemyAction === 'special') {
+            playerTauntSuccess = true;
+            addLog(`${player.name}的嘴炮成功无效化了${enemy.name}的绝招伤害！`);
+        }
+        
+        if (enemyAction === 'taunt' && playerAction === 'special') {
+            enemyTauntSuccess = true;
+            addLog(`${enemy.name}的嘴炮成功无效化了${player.name}的绝招伤害！`);
+        }
     }
     
     // 处理绝招（无视防御）
@@ -1798,6 +1927,20 @@ function continueGame() {
     gameState.enemy.selectedAction = null;
     gameState.waitingForConfirmation = false;
     selectedActionText.textContent = '无';
+    
+    // 递减挑衅状态计数
+    if (gameState.player.tauntedTurns > 0) {
+        gameState.player.tauntedTurns--;
+        if (gameState.player.tauntedTurns === 0) {
+            addLog(`${gameState.player.name}的挑衅状态结束了。`);
+        }
+    }
+    if (gameState.enemy.tauntedTurns > 0) {
+        gameState.enemy.tauntedTurns--;
+        if (gameState.enemy.tauntedTurns === 0) {
+            addLog(`${gameState.enemy.name}的挑衅状态结束了。`);
+        }
+    }
     
     // 增加回合数
     gameState.turnNumber++;

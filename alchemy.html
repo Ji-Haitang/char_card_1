@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>修仙炼丹模拟器 - 紧凑水墨版</title>
+    <title>炼丹模拟器</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=Noto+Serif+SC:wght@500;700&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
@@ -25,31 +25,34 @@
 
         * { margin: 0; padding: 0; box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
 
+        html, body {
+            width: 100%;
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
         body {
             font-family: 'ZCOOL XiaoWei', 'Noto Serif SC', serif;
             background-color: var(--paper-bg);
-            background-image: 
+            background-image:
                 radial-gradient(var(--paper-dark) 15%, transparent 16%),
                 radial-gradient(var(--paper-dark) 15%, transparent 16%);
             background-size: 1rem 1rem;
             background-position: 0 0, 0.5rem 0.5rem;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
             color: var(--ink-black);
-            overflow-x: hidden;
         }
 
         .game-container {
             background: rgba(255, 255, 255, 0.65);
             border: var(--border-thick) double var(--ink-black);
-            width: 90vw;
-            max-width: 1216px;
-            aspect-ratio: 1216 / 832;
+            /* 填满整个视窗 */
+            width: 100%;
+            height: 100%;
             padding: 1%;
             position: relative;
-            box-shadow: 1rem 1rem 0 rgba(43, 43, 43, 0.15);
+            box-shadow: none;
             backdrop-filter: blur(5px);
             display: flex;
             flex-direction: column;
@@ -58,6 +61,115 @@
 
         .game-container::after { content: "❖"; position: absolute; top: 0.2rem; right: 0.2rem; color: var(--ink-light); opacity: 0.6; font-size: 0.8rem; }
         .game-container::before { content: "❖"; position: absolute; bottom: 0.2rem; left: 0.2rem; color: var(--ink-light); opacity: 0.6; font-size: 0.8rem; }
+
+        /* ========== 退出按钮样式 - 响应式优化 ========== */
+        .exit-btn {
+            position: absolute;
+            top: 1%;
+            right: 1%;
+            padding: clamp(0.3rem, 0.8vw, 0.6rem) clamp(0.5rem, 1.2vw, 1rem);
+            background: var(--cinnabar);
+            color: #fff;
+            border: clamp(1px, 0.2vw, 2px) solid var(--ink-black);
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(0.6rem, 1.2vw, 1rem);
+            cursor: pointer;
+            z-index: 100;
+            box-shadow: 0.1rem 0.1rem 0.3rem rgba(0,0,0,0.3);
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .exit-btn:hover {
+            transform: translate(-1px, -1px);
+            box-shadow: 0.2rem 0.2rem 0.4rem rgba(0,0,0,0.4);
+            background: var(--ink-black);
+        }
+        
+        /* 小视窗下退出按钮进一步缩小 */
+        @media (max-width: 500px), (max-height: 400px) {
+            .exit-btn {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.55rem;
+                border-width: 1px;
+                top: 0.5%;
+                right: 0.5%;
+            }
+        }
+        
+        /* 极小视窗 */
+        @media (max-width: 350px), (max-height: 300px) {
+            .exit-btn {
+                padding: 0.15rem 0.3rem;
+                font-size: 0.5rem;
+            }
+        }
+
+        /* ========== 退出确认弹窗 ========== */
+        .exit-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 16px;
+        }
+        .exit-dialog {
+            width: clamp(260px, 80vw, 420px);
+            max-width: 90vw;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+            background: var(--paper-bg);
+            color: var(--ink-black);
+            border: var(--border-thick) double var(--ink-black);
+        }
+        .exit-dialog header {
+            padding: 14px;
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+            font-weight: 700;
+            text-align: center;
+            border-bottom: 2px solid var(--ink-black);
+            background: rgba(0,0,0,0.05);
+        }
+        .exit-dialog .body {
+            padding: 20px;
+            text-align: center;
+            line-height: 1.6;
+            font-size: clamp(0.9rem, 1.8vw, 1.1rem);
+        }
+        .exit-dialog .actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            padding: 12px;
+            background: rgba(0,0,0,0.05);
+        }
+        .exit-dialog .actions button {
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 2px solid var(--ink-black);
+            background: #fff;
+            color: var(--ink-black);
+            font-family: 'Ma Shan Zheng';
+            font-size: clamp(1rem, 2vw, 1.2rem);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .exit-dialog .actions button:hover {
+            background: var(--paper-dark);
+        }
+        .exit-dialog .actions button.confirm {
+            background: var(--cinnabar);
+            color: #fff;
+            border-color: var(--cinnabar);
+        }
+        .exit-dialog .actions button.confirm:hover {
+            background: var(--ink-black);
+            border-color: var(--ink-black);
+        }
 
         /* ========== 开始炼丹按钮 - 响应式优化 ========== */
         .start-alchemy-btn {
@@ -133,6 +245,7 @@
             flex-direction: column;
             gap: 2%;
             overflow: hidden;
+            width: 80%;  /* 宽度80%，右侧空出20%给退出按钮 */
         }
 
         .event-card {
@@ -562,46 +675,50 @@
             text-align: center;
         }
 
-        /* ========== 背包弹窗内容 ========== */
+        /* ========== 背包弹窗内容 - 响应式优化 ========== */
         .inventory-section {
             margin-bottom: 2%;
         }
         .inventory-title {
             font-family: 'Ma Shan Zheng';
-            font-size: clamp(1.2rem, 2.5vw, 1.5rem);
+            font-size: clamp(1rem, 2vw, 1.5rem);
             color: var(--cinnabar);
             border-bottom: 2px solid var(--ink-black);
-            padding-bottom: 0.5rem;
-            margin-bottom: 1rem;
+            padding-bottom: 0.3rem;
+            margin-bottom: 0.5rem;
         }
         .inventory-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-            gap: 1rem;
+            /* 强制保持两列布局 */
+            grid-template-columns: repeat(2, 1fr);
+            gap: clamp(0.3rem, 0.8vw, 1rem);
         }
         .inventory-item {
             background: rgba(255,255,255,0.5);
             border: 1px solid var(--ink-black);
-            padding: clamp(0.5rem, 1vw, 0.8rem);
+            padding: clamp(0.3rem, 0.8vw, 0.8rem);
             text-align: center;
         }
         .inventory-item-name {
             font-family: 'Ma Shan Zheng';
-            font-size: clamp(0.9rem, 1.8vw, 1.1rem);
-            margin-bottom: 0.3rem;
+            font-size: clamp(0.7rem, 1.5vw, 1.1rem);
+            margin-bottom: 0.2rem;
         }
         .inventory-item-count {
-            font-size: clamp(1rem, 2vw, 1.3rem);
+            font-size: clamp(0.8rem, 1.6vw, 1.3rem);
             font-weight: bold;
             color: var(--jade);
         }
         .stats-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 1rem;
+            gap: clamp(0.3rem, 0.8vw, 1rem);
         }
         @media (min-width: 768px) {
             .stats-grid {
+                grid-template-columns: repeat(4, 1fr);
+            }
+            .inventory-grid {
                 grid-template-columns: repeat(4, 1fr);
             }
         }
@@ -647,6 +764,18 @@
     </style>
 </head>
 <body>
+    <!-- 退出确认弹窗 -->
+    <div class="exit-overlay" id="exitOverlay" role="dialog" aria-modal="true" aria-label="确认退出炼丹">
+        <div class="exit-dialog">
+            <header>确认退出</header>
+            <div class="body">确定要退出炼丹吗？</div>
+            <div class="actions">
+                <button id="exitCancel">取消</button>
+                <button id="exitConfirm" class="confirm">确认退出</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- Toast 通知 -->
     <div class="toast" id="toast"></div>
 
@@ -715,6 +844,9 @@
     </div>
 
     <div class="game-container">
+        <!-- 退出按钮 - 放在game-container内部 -->
+        <button class="exit-btn" id="btnExitAlchemy">退出</button>
+        
         <!-- 顶部事件横幅 -->
         <div class="event-banner" id="event-banner"></div>
 
@@ -807,29 +939,50 @@
             }, 2000);
         }
 
+        // ========== 从URL参数初始化 ==========
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // 调试：输出完整的URL参数
+        log('========== URL参数调试 ==========');
+        log(`完整URL: ${window.location.href}`);
+        log(`URL参数字符串: ${window.location.search}`);
+        
+        // 逐个输出参数
+        for (const [key, value] of urlParams.entries()) {
+            log(`参数 ${key} = ${value}`);
+        }
+        
         // ========== 角色属性 ==========
         let playerStats = {
-            rootBone: 0,      // 根骨
-            comprehension: 0, // 悟性
-            nature: 0,        // 心性
-            charm: 0          // 魅力
+            rootBone: parseInt(urlParams.get('rootBone')) || 0,      // 根骨
+            comprehension: parseInt(urlParams.get('comprehension')) || 0, // 悟性
+            nature: parseInt(urlParams.get('nature')) || 0,        // 心性
+            charm: parseInt(urlParams.get('charm')) || 0          // 魅力
         };
+        
+        log(`解析后的角色属性: ${JSON.stringify(playerStats)}`);
 
-        let money = 5000;
+        let money = parseInt(urlParams.get('money')) || 5000;
+        log(`解析后的金钱: ${money} (原始值: ${urlParams.get('money')})`);
 
         let herbs = {
-            danshen: 0,   // 丹参
-            danggui: 0,   // 当归
-            moyao: 0,     // 没药
-            chenxiang: 0  // 沉香
+            danshen: parseInt(urlParams.get('danshen')) || 0,   // 丹参
+            danggui: parseInt(urlParams.get('danggui')) || 0,   // 当归
+            moyao: parseInt(urlParams.get('moyao')) || 0,     // 没药
+            chenxiang: parseInt(urlParams.get('chenxiang')) || 0  // 沉香
         };
+        
+        log(`解析后的药材: ${JSON.stringify(herbs)}`);
 
         let pills = {
-            daliwan: 0,      // 大力丸
-            jingutie: 0,     // 筋骨贴
-            jinchuangyao: 0, // 金疮药
-            piliwan: 0       // 霹雳丸
+            daliwan: parseInt(urlParams.get('daliwan')) || 0,      // 大力丸
+            jingutie: parseInt(urlParams.get('jingutie')) || 0,     // 筋骨贴
+            jinchuangyao: parseInt(urlParams.get('jinchuangyao')) || 0, // 金疮药
+            piliwan: parseInt(urlParams.get('piliwan')) || 0       // 霹雳丸
         };
+        
+        log(`解析后的丹药: ${JSON.stringify(pills)}`);
+        log('========== 初始化完成 ==========');
 
         const herbNames = {
             danshen: '丹参',
@@ -1334,13 +1487,41 @@
         function gameOver(success, msg) {
             gameState.gameOver = true;
             const el = document.getElementById('message');
-            el.innerHTML = `<div>${msg}</div><div style="font-size:0.8em;margin-top:0.3em;opacity:0.8">品质:${Math.round(gameState.quality)}</div>`;
+            el.innerHTML = `<div>${msg}</div><div style="font-size:0.8em;margin-top:0.3em;opacity:0.8">品质:${Math.round(gameState.quality)}</div><div style="font-size:0.7em;margin-top:0.5em;opacity:0.6">3秒后自动退出...</div>`;
             el.className = 'message ' + (success ? 'success' : 'failure');
             el.style.display = 'block';
             document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = true);
             
+            // 3秒后自动退出炼丹界面
             setTimeout(() => {
-                document.getElementById('start-alchemy-btn').classList.remove('hidden');
+                // 构建返回数据
+                const returnData = {
+                    type: 'alchemy-exit',
+                    money: money,
+                    herbs: {
+                        danshen: herbs.danshen,
+                        danggui: herbs.danggui,
+                        moyao: herbs.moyao,
+                        chenxiang: herbs.chenxiang
+                    },
+                    pills: {
+                        daliwan: pills.daliwan,
+                        jingutie: pills.jingutie,
+                        jinchuangyao: pills.jinchuangyao,
+                        piliwan: pills.piliwan
+                    },
+                    playerStats: {
+                        rootBone: playerStats.rootBone,
+                        comprehension: playerStats.comprehension,
+                        nature: playerStats.nature,
+                        charm: playerStats.charm
+                    }
+                };
+                
+                log(`炼丹结束，自动退出，返回数据: ${JSON.stringify(returnData)}`);
+                
+                // 发送消息给父窗口
+                window.parent.postMessage(returnData, '*');
             }, 3000);
         }
 
@@ -1363,6 +1544,52 @@
         updateDisplay();
         document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = true);
         document.addEventListener('click', (e) => { if(!e.target.closest('.control-btn') && !e.target.closest('.event-card')) hideTooltip(); });
+        
+        // ========== 退出炼丹功能 ==========
+        const exitOverlay = document.getElementById('exitOverlay');
+        
+        document.getElementById('btnExitAlchemy').addEventListener('click', function() {
+            exitOverlay.style.display = 'flex';
+        });
+        
+        document.getElementById('exitCancel').addEventListener('click', function() {
+            exitOverlay.style.display = 'none';
+        });
+        
+        document.getElementById('exitConfirm').addEventListener('click', function() {
+            // 构建返回数据
+            const returnData = {
+                type: 'alchemy-exit',
+                money: money,
+                herbs: {
+                    danshen: herbs.danshen,
+                    danggui: herbs.danggui,
+                    moyao: herbs.moyao,
+                    chenxiang: herbs.chenxiang
+                },
+                pills: {
+                    daliwan: pills.daliwan,
+                    jingutie: pills.jingutie,
+                    jinchuangyao: pills.jinchuangyao,
+                    piliwan: pills.piliwan
+                },
+                playerStats: {
+                    rootBone: playerStats.rootBone,
+                    comprehension: playerStats.comprehension,
+                    nature: playerStats.nature,
+                    charm: playerStats.charm
+                }
+            };
+            
+            log(`退出炼丹，返回数据: ${JSON.stringify(returnData)}`);
+            
+            try {
+                exitOverlay.style.display = 'none';
+            } catch(_) {}
+            
+            // 发送消息给父窗口
+            window.parent.postMessage(returnData, '*');
+        });
     </script>
 </body>
 </html>

@@ -201,6 +201,64 @@ function showFarmGame() {
     modal.style.display = 'block';
 }
 
+// 显示炼丹游戏
+function showAlchemyGame() {
+    // 检查是否已经炼丹过
+    if (alchemyDone) {
+        showModal('本周已经进行过炼丹，请等待下周！');
+        return;
+    }
+    
+    const modal = document.getElementById('alchemy-modal');
+    const iframe = document.getElementById('alchemy-iframe');
+    
+    // 准备药材数据 - 从inventory中读取
+    const herbCounts = {
+        danshen: inventory['丹参'] || 0,
+        danggui: inventory['当归'] || 0,
+        moyao: inventory['没药'] || 0,
+        chenxiang: inventory['沉香'] || 0
+    };
+    
+    // 准备丹药数据 - 从inventory中读取
+    const pillCounts = {
+        daliwan: inventory['大力丸'] || 0,
+        jingutie: inventory['筋骨贴'] || 0,
+        jinchuangyao: inventory['金疮药'] || 0,
+        piliwan: inventory['霹雳丸'] || 0
+    };
+    
+    // 调试日志：输出传递的数据
+    console.log('[炼丹] 准备传递数据到alchemy.html:');
+    console.log('[炼丹] 金钱:', playerStats.金钱);
+    console.log('[炼丹] 天赋属性:', playerTalents);
+    console.log('[炼丹] 药材数量:', herbCounts);
+    console.log('[炼丹] 丹药数量:', pillCounts);
+    
+    // 构建URL参数
+    const params = new URLSearchParams({
+        money: playerStats.金钱,
+        // 天赋属性（用于属性提升计算）
+        rootBone: playerTalents.根骨,
+        comprehension: playerTalents.悟性,
+        nature: playerTalents.心性,
+        charm: playerTalents.魅力,
+        // 药材数量
+        ...herbCounts,
+        // 丹药数量
+        ...pillCounts
+    });
+    
+    // 使用本地URL进行调试
+    // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
+    const gameUrl = `alchemy.html?${params.toString()}`;
+    
+    console.log('[炼丹] 完整URL:', gameUrl);
+    
+    iframe.src = gameUrl;
+    modal.style.display = 'block';
+}
+
 // 显示互动输入弹窗
 function showInteractionInput(npcId, location) {
     currentInteractionNpc = npcId;
@@ -566,7 +624,8 @@ function updateLocationHeadcountLabels() {
             nandizi: 0,
             nvdizi: 0,
             shanmen: 0,
-            gongtian: 0
+            gongtian: 0,
+            danfang: 0
         };
 
         if (currentNpcLocations && typeof currentNpcLocations === 'object') {
@@ -767,7 +826,7 @@ function updateSceneBackgrounds() {
     }
     
     // 更新其他场景背景
-    const sceneNames = ['yanwuchang', 'cangjingge', 'huofang', 'houshan', 'yishiting', 'tiejiangpu', 'nandizi', 'nvdizi', 'shanmen', 'gongtian'];
+    const sceneNames = ['yanwuchang', 'cangjingge', 'huofang', 'houshan', 'yishiting', 'tiejiangpu', 'nandizi', 'nvdizi', 'shanmen', 'gongtian', 'danfang'];
     const dayNight = dayNightStatus === 'night' ? '夜' : '昼';
     
     sceneNames.forEach(sceneName => {

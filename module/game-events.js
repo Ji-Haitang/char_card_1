@@ -414,7 +414,10 @@ function parseLLMResponse(response, mainTextContent) {
                             case 'J': npcLocationJ = toLocationId; break;
                             case 'K': npcLocationK = toLocationId; break;
                             case 'L': npcLocationL = toLocationId; break;
-                            case 'Z': npcLocationZ = toLocationId; break;
+                            // case 'Z': npcLocationZ = toLocationId; break;  // 占位角色Z - 已注释
+                            case 'M': npcLocationM = toLocationId; break;
+                            case 'N': npcLocationN = toLocationId; break;
+                            case 'O': npcLocationO = toLocationId; break;
                         }
                         
                         console.log(`${npcName} 移动到 ${toLocation}`);
@@ -467,7 +470,10 @@ function parseLLMResponse(response, mainTextContent) {
     console.log(`npcLocationJ ${npcLocationJ}`);
     console.log(`npcLocationK ${npcLocationK}`);
     console.log(`npcLocationL ${npcLocationL}`);
-    console.log(`npcLocationZ ${npcLocationZ}`);
+    // console.log(`npcLocationZ ${npcLocationZ}`);  // 占位角色Z - 已注释
+    console.log(`npcLocationM ${npcLocationM}`);
+    console.log(`npcLocationN ${npcLocationN}`);
+    console.log(`npcLocationO ${npcLocationO}`);
     // 更新当前场景的NPC显示
     if (activeScene && activeScene.id !== 'map-scene' && 
         activeScene.id !== 'player-stats-scene' && 
@@ -623,6 +629,51 @@ function setupMessageListeners() {
             
             document.getElementById('farm-modal').style.display = 'none';
             document.getElementById('farm-iframe').src = '';
+        }
+        else if (event.data.type === 'alchemy-exit') {
+            // 更新金钱
+            playerStats.金钱 = event.data.money;
+            
+            // 更新药材数量
+            if (event.data.herbs) {
+                inventory['丹参'] = event.data.herbs.danshen || 0;
+                inventory['当归'] = event.data.herbs.danggui || 0;
+                inventory['没药'] = event.data.herbs.moyao || 0;
+                inventory['沉香'] = event.data.herbs.chenxiang || 0;
+            }
+            
+            // 更新丹药数量
+            if (event.data.pills) {
+                inventory['大力丸'] = event.data.pills.daliwan || 0;
+                inventory['筋骨贴'] = event.data.pills.jingutie || 0;
+                inventory['金疮药'] = event.data.pills.jinchuangyao || 0;
+                inventory['霹雳丸'] = event.data.pills.piliwan || 0;
+            }
+            
+            // 更新天赋属性（直接赋值，因为alchemy返回的是完整值而非增量）
+            if (event.data.playerStats) {
+                playerTalents.根骨 = event.data.playerStats.rootBone ?? playerTalents.根骨;
+                playerTalents.悟性 = event.data.playerStats.comprehension ?? playerTalents.悟性;
+                playerTalents.心性 = event.data.playerStats.nature ?? playerTalents.心性;
+                playerTalents.魅力 = event.data.playerStats.charm ?? playerTalents.魅力;
+            }
+            
+            // 清理数量为0的物品
+            Object.keys(inventory).forEach(key => {
+                if (inventory[key] === 0) {
+                    delete inventory[key];
+                }
+            });
+            
+            // 标记本周已炼丹
+            alchemyDone = true;
+            
+            checkAllValueRanges();
+            updateAllDisplays();
+            // await saveGameData();  // 保存游戏数据
+            
+            document.getElementById('alchemy-modal').style.display = 'none';
+            document.getElementById('alchemy-iframe').src = '';
         }
         else if (event.data.type === 'worldmap-close') {
             // 只关闭弹窗，不做任何其他操作
