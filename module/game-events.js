@@ -597,6 +597,24 @@ function setupMessageListeners() {
                 hideBattleEvent();
             }
             
+            // 同步道具数量变化
+            if (event.data.remainingItems) {
+                const remaining = event.data.remainingItems;
+                inventory['大力丸'] = remaining.daliwan || 0;
+                inventory['筋骨贴'] = remaining.jingutie || 0;
+                inventory['金疮药'] = remaining.jinchuangyao || 0;
+                inventory['霹雳丸'] = remaining.piliwan || 0;
+                
+                // 清理数量为0的道具
+                Object.keys(inventory).forEach(key => {
+                    if (inventory[key] === 0) {
+                        delete inventory[key];
+                    }
+                });
+                
+                console.log('[战斗] 道具数量已同步:', remaining);
+            }
+            
             currentBattleType = null;
             currentBattleReward = null;
         }

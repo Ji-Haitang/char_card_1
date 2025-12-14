@@ -48,7 +48,7 @@ async function handleMessageOutput(message) {
         await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
 
     // 新增：检查是否是新的一周的消息（新版：年/月/周）
-    const newWeekPattern = /^新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
+    const newWeekPattern = /^行动选择:新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
         const match = message.match(newWeekPattern);
 
         if (match) {
@@ -153,6 +153,14 @@ function showBattleGame(battleData) {
     
     // 获取当前难度
     const currentDifficulty = difficulty || 'normal';
+    
+    // 准备道具数据 - 从inventory中读取
+    const itemCounts = {
+        daliwan: inventory['大力丸'] || 0,
+        jingutie: inventory['筋骨贴'] || 0,
+        jinchuangyao: inventory['金疮药'] || 0,
+        piliwan: inventory['霹雳丸'] || 0
+    };
 
     const params = new URLSearchParams({
         playerName: battleData.player.name,
@@ -162,7 +170,9 @@ function showBattleGame(battleData) {
         enemyMaxHealth: battleData.enemy.maxHealth,
         enemyBasicDamage: battleData.enemy.basicDamage,
         backgroundUrl: backgroundUrl,
-        difficulty: currentDifficulty
+        difficulty: currentDifficulty,
+        // 道具数量
+        ...itemCounts
     });
     
     const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;

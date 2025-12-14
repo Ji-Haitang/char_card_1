@@ -719,13 +719,268 @@ body {
 }
 
 /* 统一的弹窗按钮风格 */
-.modal-actions { 
-    display: flex; 
-    gap: clamp(8px, 2vw, 14px); 
-    justify-content: center; 
+.modal-actions {
+    display: flex;
+    gap: clamp(8px, 2vw, 14px);
+    justify-content: center;
     padding: clamp(8px, 2vw, 14px);
     background: rgba(0,0,0,0.4);
     border-top: 1px solid rgba(255,255,255,0.18);
+}
+
+/* 道具弹窗样式 - 全屏覆盖game-container，紧凑布局确保4个道具同屏显示 */
+#item-modal {
+    position: absolute !important;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+}
+
+.item-modal-content {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    box-shadow: none;
+    color: #fff;
+    position: relative;
+    border: none;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(20, 15, 10, 0.98);
+    background-size: cover;
+    background-position: center;
+}
+
+.item-modal-header {
+    padding: 1.5vh 2vw;
+    background-color: rgba(0, 0, 0, 0.6);
+    font-size: clamp(0.9rem, 2.5vw, 1.4rem);
+    font-weight: bold;
+    text-align: center;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    font-family: 'Ma Shan Zheng', cursive;
+    text-shadow:
+        -1px -1px 1px #000,
+        1px -1px 1px #000,
+        -1px 1px 1px #000,
+        1px 1px 1px #000,
+        2px 2px 3px rgba(0, 0, 0, 0.8);
+    flex-shrink: 0;
+}
+
+.item-list {
+    padding: 1.5vh 3vw;
+    display: flex;
+    flex-direction: column;
+    gap: 1.5vh;
+    flex: 1;
+    overflow: hidden;
+    justify-content: space-evenly;
+}
+
+.item-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.2vh 2.5vw;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 0.6vw;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: all 0.15s ease;
+    flex: 1;
+    max-height: 16vh;
+    min-height: 0;
+}
+
+.item-row:hover {
+    background: rgba(60, 50, 30, 0.7);
+    border-color: rgba(255, 200, 100, 0.5);
+}
+
+.item-row.disabled {
+    opacity: 0.5;
+    pointer-events: none;
+}
+
+.item-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3vh;
+    flex: 1;
+    min-width: 0;
+}
+
+.item-name {
+    font-size: clamp(0.85rem, 2.2vw, 1.2rem);
+    font-weight: bold;
+    font-family: 'Ma Shan Zheng', cursive;
+    color: #ffd700;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-desc {
+    font-size: clamp(0.6rem, 1.5vw, 0.85rem);
+    color: #bbb;
+    font-family: 'ZCOOL XiaoWei', sans-serif;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.item-count {
+    font-size: clamp(0.8rem, 2vw, 1.1rem);
+    color: #88ff88;
+    font-weight: bold;
+    min-width: 5vw;
+    text-align: center;
+    margin: 0 1.5vw;
+    flex-shrink: 0;
+}
+
+.item-count.empty {
+    color: #ff6666;
+}
+
+.item-use-btn {
+    padding: 0.8vh 2.5vw;
+    background: linear-gradient(135deg, #5c3b1c, #34210f);
+    color: #fff;
+    border: 1px solid #7c5a3d;
+    border-radius: 0.5vw;
+    font-size: clamp(0.75rem, 1.8vw, 1rem);
+    font-family: 'Ma Shan Zheng', cursive;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.6);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.item-use-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #7c5b3c, #4e3020);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.item-use-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.item-modal-footer {
+    padding: 1.5vh 2vw;
+    background: rgba(0, 0, 0, 0.5);
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
+    text-align: center;
+    flex-shrink: 0;
+}
+
+.item-close-btn {
+    padding: 1vh 5vw;
+    background: linear-gradient(135deg, #444, #222);
+    color: #ddd;
+    border: 1px solid #666;
+    border-radius: 0.5vw;
+    font-size: clamp(0.8rem, 2vw, 1.1rem);
+    font-family: 'Ma Shan Zheng', cursive;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.item-close-btn:hover {
+    background: linear-gradient(135deg, #555, #333);
+}
+
+/* 道具使用提示样式 */
+.item-used-hint {
+    padding: 2vh 3vw;
+    background: rgba(100, 60, 20, 0.9);
+    border: 1px solid #ffd700;
+    border-radius: 0.6vw;
+    text-align: center;
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: clamp(0.9rem, 2.2vw, 1.2rem);
+    color: #ffd700;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* 横屏和小屏幕下的道具弹窗优化 */
+@media (max-height: 500px) {
+    .item-modal-header {
+        padding: 0.8vh 2vw;
+        font-size: clamp(0.8rem, 2vw, 1rem);
+    }
+    
+    .item-list {
+        padding: 0.8vh 2vw;
+        gap: 0.8vh;
+    }
+    
+    .item-row {
+        padding: 0.6vh 2vw;
+        max-height: 20vh;
+    }
+    
+    .item-name {
+        font-size: clamp(0.75rem, 1.8vw, 1rem);
+    }
+    
+    .item-desc {
+        font-size: clamp(0.55rem, 1.2vw, 0.75rem);
+    }
+    
+    .item-use-btn {
+        padding: 0.5vh 2vw;
+        font-size: clamp(0.65rem, 1.5vw, 0.85rem);
+    }
+    
+    .item-modal-footer {
+        padding: 0.8vh 2vw;
+    }
+    
+    .item-close-btn {
+        padding: 0.6vh 4vw;
+        font-size: clamp(0.7rem, 1.6vw, 0.9rem);
+    }
+}
+
+/* 极小屏幕优化 */
+@media (max-height: 400px) {
+    .item-modal-header {
+        padding: 0.5vh 1.5vw;
+    }
+    
+    .item-list {
+        padding: 0.5vh 1.5vw;
+        gap: 0.5vh;
+    }
+    
+    .item-row {
+        padding: 0.4vh 1.5vw;
+    }
+    
+    .item-info {
+        gap: 0;
+    }
+    
+    .item-modal-footer {
+        padding: 0.5vh 1.5vw;
+    }
 }
 .modal-actions .btn {
     min-width: clamp(90px, 20vw, 160px);
@@ -830,6 +1085,10 @@ body {
                     <div class="key-hint">Y</div>
                     <div class="btn-name">嘴炮</div>
                 </div>
+                <div class="command-btn" id="item" data-key="U">
+                    <div class="key-hint">U</div>
+                    <div class="btn-name">道具</div>
+                </div>
             </div>
         </div>
 
@@ -877,10 +1136,96 @@ body {
                 </div>
             </div>
         </div>
+
+        <!-- 道具选择弹窗 -->
+        <div id="item-modal" class="modal">
+            <div class="item-modal-content">
+                <div class="item-modal-header">选择道具</div>
+                <div class="item-list" id="item-list">
+                    <!-- 道具列表将由JavaScript动态生成 -->
+                </div>
+                <div class="item-modal-footer">
+                    <button class="item-close-btn" onclick="closeItemModal()">返回战斗</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script>
 // //回合制系统集成更新 - 获取URL参数
 const urlParams = new URLSearchParams(window.location.search);
+
+// 道具系统变量
+const battleItems = {
+    daliwan: parseInt(urlParams.get('daliwan')) || 5,      // 大力丸
+    jingutie: parseInt(urlParams.get('jingutie')) || 5,    // 筋骨贴
+    jinchuangyao: parseInt(urlParams.get('jinchuangyao')) || 5,  // 金疮药
+    piliwan: parseInt(urlParams.get('piliwan')) || 5       // 霹雳丸
+};
+
+// 道具使用状态
+let itemUsedThisBattle = false;  // 本场战斗是否已使用道具
+let usedItemKey = null;          // 使用的道具类型
+let damageMultiplier = 1.0;      // 伤害倍率（大力丸效果）
+let defenseMultiplier = 1.0;     // 防御倍率（筋骨贴效果）
+
+// 道具配置
+const itemConfig = {
+    daliwan: {
+        name: '大力丸',
+        desc: '本场战斗所有伤害×1.25',
+        effect: () => {
+            damageMultiplier = 1.25;
+            addLog('【道具】服用大力丸，攻击力大增！');
+        }
+    },
+    jingutie: {
+        name: '筋骨贴',
+        desc: '本场战斗所受伤害÷1.25',
+        effect: () => {
+            defenseMultiplier = 1.25;
+            addLog('【道具】贴上筋骨贴，防御力提升！');
+        }
+    },
+    jinchuangyao: {
+        name: '金疮药',
+        desc: '立即恢复30%最大生命值',
+        effect: () => {
+            const healAmount = Math.round(gameState.player.maxHealth * 0.3);
+            gameState.player.currentHealth = Math.min(
+                gameState.player.currentHealth + healAmount,
+                gameState.player.maxHealth
+            );
+            addLog(`【道具】使用金疮药，恢复${healAmount}点生命！`);
+            updateDisplay();
+        }
+    },
+    piliwan: {
+        name: '霹雳丸',
+        desc: '立即对敌人造成1.5倍攻击伤害',
+        effect: () => {
+            const damage = Math.round(gameState.player.basicDamage * 1.5);
+            gameState.enemy.currentHealth -= damage;
+            if (gameState.enemy.currentHealth < 0) gameState.enemy.currentHealth = 0;
+            addLog(`【道具】投掷霹雳丸，对${gameState.enemy.name}造成${damage}点伤害！`);
+            
+            // 触发敌人受击动画
+            const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
+            npcPortraitLayer.classList.add('shake');
+            setTimeout(() => {
+                npcPortraitLayer.classList.remove('shake');
+            }, 400);
+            
+            updateDisplay();
+            
+            // 检查是否击杀敌人
+            if (gameState.enemy.currentHealth <= 0) {
+                setTimeout(() => {
+                    checkGameOver();
+                }, 500);
+            }
+        }
+    }
+};
 
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
@@ -897,7 +1242,7 @@ const PLAYER_INFO = {
 // //回合制系统集成更新 - 构建敌方信息文本
 const enemyInfoText = `
 发起战斗，敌方信息如下
-name: ${urlParams.get('enemyName') || '姬姒'}
+name: ${urlParams.get('enemyName') || '神秘杂役'}
   maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
   basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
 `;
@@ -966,16 +1311,16 @@ function weightedRandom(options, debugInfo = null) {
 // 风格策略配置：基于能量范围的概率分布
 const STYLE_STRATEGIES = {
     '风': {
-        // 风格：快攻型，偏好轻攻击
+        // 风格：快攻型，偏好轻攻击和嘴炮破防
         0: { 'gather': 100},
-        1: { 'gather': 25, 'taunt': 15, 'light-attack': 60 },
-        '2-4': { 'gather': 15, 'taunt': 10, 'light-attack': 50, 'heavy-attack': 25 },
+        1: { 'gather': 25, 'taunt': 30, 'light-attack': 45 },
+        '2-4': { 'gather': 10, 'taunt': 25, 'light-attack': 45, 'heavy-attack': 20 },
         '5+': { 'gather': 10, 'taunt': 5, 'light-attack': 30, 'heavy-attack': 20, 'special': 35 }
     },
     '火': {
         // 火格：爆发型，偏好重攻击
         0: { 'gather': 100},
-        1: { 'gather': 45, 'taunt': 10, 'light-attack': 45 },
+        1: { 'gather': 50, 'taunt': 15, 'light-attack': 35 },
         '2-4': { 'gather': 20, 'taunt': 5, 'light-attack': 20, 'heavy-attack': 55 },
         '5+': { 'gather': 10, 'taunt': 5, 'light-attack': 10, 'heavy-attack': 35, 'special': 40 }
     },
@@ -984,14 +1329,14 @@ const STYLE_STRATEGIES = {
         0: { 'gather': 100},
         1: { 'gather': 75, 'taunt': 10, 'light-attack': 15 },
         '2-4': { 'gather': 60, 'taunt': 10, 'light-attack': 15, 'heavy-attack': 15 },
-        '5+': { 'gather': 15, 'taunt': 5, 'light-attack': 10, 'heavy-attack': 15, 'special': 55 }
+        '5+': { 'gather': 10, 'taunt': 5, 'light-attack': 10, 'heavy-attack': 15, 'special': 60}
     },
     '山': {
-        // 山格：防守型，偏好嘴炮和集气（防御在独立阶段处理）
+        // 山格：防守型（防御在独立阶段处理）
         0: { 'gather': 100},
-        1: { 'gather': 45, 'taunt': 30, 'light-attack': 25 },
-        '2-4': { 'gather': 35, 'taunt': 25, 'light-attack': 20, 'heavy-attack': 20 },
-        '5+': { 'gather': 10, 'taunt': 10, 'light-attack': 15, 'heavy-attack': 15, 'special': 50 }
+        1: { 'gather': 50, 'taunt': 10, 'light-attack': 40 },
+        '2-4': { 'gather': 50, 'taunt': 5, 'light-attack': 20, 'heavy-attack': 25 },
+        '5+': { 'gather': 10, 'taunt': 5, 'light-attack': 15, 'heavy-attack': 20, 'special': 50 }
     }
 };
 
@@ -1079,7 +1424,7 @@ const commonNPCs = {
         name: '安慕',
         maxHealth: 75,
         basicDamage: 110,
-        style: '山',
+        style: '火',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.png'
     },
     '唐沐梨': {
@@ -1100,7 +1445,7 @@ const commonNPCs = {
         name: '神秘杂役',
         maxHealth: 75,
         basicDamage: 300,
-        style: '山',
+        style: '风',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.png'
     },
     '鹿椿若': {
@@ -1206,12 +1551,94 @@ function clearEnemyPortrait() {
 
 // //回合制系统集成更新 - 退出战斗
 function exitBattle(result) {
-    // 向父窗口发送战斗结果
+    // 向父窗口发送战斗结果和道具消耗信息
     if (window.parent !== window) {
         window.parent.postMessage({
             type: 'battle-exit',
-            result: result // 'victory' 或 'defeat' 或 'quit'
+            result: result, // 'victory' 或 'defeat' 或 'quit'
+            itemUsed: usedItemKey,  // 使用的道具类型
+            remainingItems: battleItems  // 剩余道具数量
         }, '*');
+    }
+}
+
+// 打开道具弹窗
+function openItemModal() {
+    // 如果不是玩家回合或正在等待确认，返回
+    if (gameState.currentTurn !== 'player' || gameState.waitingForConfirmation) return;
+    
+    const itemModal = document.getElementById('item-modal');
+    const itemList = document.getElementById('item-list');
+    
+    // 清空列表
+    itemList.innerHTML = '';
+    
+    // 如果本场战斗已使用道具，显示提示
+    if (itemUsedThisBattle) {
+        itemList.innerHTML = `
+            <div class="item-used-hint">
+                本场战斗已使用过道具，无法再次使用
+            </div>
+        `;
+    } else {
+        // 生成道具列表
+        for (const [key, config] of Object.entries(itemConfig)) {
+            const count = battleItems[key];
+            const isEmpty = count <= 0;
+            
+            const itemRow = document.createElement('div');
+            itemRow.className = `item-row${isEmpty ? ' disabled' : ''}`;
+            itemRow.innerHTML = `
+                <div class="item-info">
+                    <div class="item-name">${config.name}</div>
+                    <div class="item-desc">${config.desc}</div>
+                </div>
+                <div class="item-count${isEmpty ? ' empty' : ''}">×${count}</div>
+                <button class="item-use-btn" ${isEmpty ? 'disabled' : ''} onclick="useItem('${key}')">使用</button>
+            `;
+            itemList.appendChild(itemRow);
+        }
+    }
+    
+    itemModal.style.display = 'flex';
+}
+
+// 关闭道具弹窗
+function closeItemModal() {
+    const itemModal = document.getElementById('item-modal');
+    itemModal.style.display = 'none';
+}
+
+// 使用道具
+function useItem(itemKey) {
+    if (itemUsedThisBattle) {
+        addLog('本场战斗已使用过道具！');
+        return;
+    }
+    
+    if (battleItems[itemKey] <= 0) {
+        addLog('该道具数量不足！');
+        return;
+    }
+    
+    // 消耗道具
+    battleItems[itemKey]--;
+    itemUsedThisBattle = true;
+    usedItemKey = itemKey;
+    
+    // 关闭弹窗
+    closeItemModal();
+    
+    // 执行道具效果
+    const config = itemConfig[itemKey];
+    if (config && config.effect) {
+        config.effect();
+    }
+    
+    // 禁用道具按钮
+    const itemBtn = document.getElementById('item');
+    if (itemBtn) {
+        itemBtn.classList.add('disabled');
     }
 }
 
@@ -1277,6 +1704,7 @@ function setupButtonEvents() {
     document.getElementById('heavy-attack').addEventListener('click', () => selectAction('heavy-attack'));
     document.getElementById('special').addEventListener('click', () => selectAction('special'));
     document.getElementById('taunt').addEventListener('click', () => selectAction('taunt'));
+    document.getElementById('item').addEventListener('click', openItemModal);
     
     // 确认按钮事件
     confirmActionButton.addEventListener('click', () => {
@@ -1323,6 +1751,18 @@ function updateDisplay() {
     // 更新角色名字显示
     playerNameDisplay.textContent = gameState.player.name;
     enemyNameDisplay.textContent = gameState.enemy.name;
+    
+    // 根据敌人战斗风格设置名字颜色
+    const styleColors = {
+        '风': '#4169E1',  // 靛蓝色 (Royal Blue)
+        '林': '#228B22',  // 深绿色 (Forest Green)
+        '火': '#B22222',  // 暗红色 (Firebrick)
+        '山': '#DAA520'   // 土黄色 (Goldenrod)
+    };
+    const enemyStyle = gameState.enemy.style;
+    if (enemyStyle && styleColors[enemyStyle]) {
+        enemyNameDisplay.style.color = styleColors[enemyStyle];
+    }
     
     // 更新回合数显示
     turnText.textContent = `第${gameState.turnNumber}回合`;
@@ -1381,6 +1821,11 @@ function checkButtonAvailability() {
     // 挑衅状态下禁用防御
     if (gameState.player.tauntedTurns > 0) {
         document.getElementById('defend').classList.add('disabled');
+    }
+    
+    // 本场战斗已使用道具则禁用道具按钮
+    if (itemUsedThisBattle) {
+        document.getElementById('item').classList.add('disabled');
     }
     
     // 如果有选中的动作，高亮显示
@@ -1690,7 +2135,7 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 1000);
             
-            const damage = player.basicDamage * 3;
+            const damage = Math.round(player.basicDamage * 3 * damageMultiplier);
             enemy.currentHealth -= damage;
             addLog(`${player.name}使用绝招，对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
@@ -1723,7 +2168,7 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 1000);
             
-            const damage = enemy.basicDamage * 3;
+            const damage = Math.round(enemy.basicDamage * 3 / defenseMultiplier);
             player.currentHealth -= damage;
             addLog(`${enemy.name}使用绝招，对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
@@ -1745,20 +2190,26 @@ function processActions(playerAction, enemyAction) {
     }
     
     // 如果没有被绝招无效，处理重攻击
-    if (playerAction === 'heavy-attack' && 
-        enemyAction !== 'special' && 
+    if (playerAction === 'heavy-attack' &&
+        enemyAction !== 'special' &&
         playerAction !== 'special') {
         player.energy -= 2;
         
         // 检查是否被防御或是否无效对方轻攻击
         if (enemyDefending) {
             playerCharacter.classList.add('player-attack');
+            // enemyCharacter.classList.add('enemy-hit');
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-attack');
+                // enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            addLog(`${player.name}的重攻击被${enemy.name}防御了！`);
+            // 防御重攻击受到25%伤害
+            const reducedDamage = Math.round(player.basicDamage * 1.5 * 0.25 * damageMultiplier);
+            enemy.currentHealth -= reducedDamage;
+            addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            enemyWasHit = true;
         } else if (enemyAction === 'light-attack') {
             // 重攻击克制轻攻击
             playerCharacter.classList.add('player-attack');
@@ -1769,7 +2220,7 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const damage = player.basicDamage * 1.5;
+            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier);
             enemy.currentHealth -= damage;
             enemy.energy -= 1; // 消耗敌人的能量
             addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${damage}点伤害！`);
@@ -1783,27 +2234,33 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const damage = player.basicDamage * 1.5;
+            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier);
             enemy.currentHealth -= damage;
             addLog(`${player.name}的重攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
         }
     }
     
-    if (enemyAction === 'heavy-attack' && 
-        playerAction !== 'special' && 
+    if (enemyAction === 'heavy-attack' &&
+        playerAction !== 'special' &&
         enemyAction !== 'special') {
         enemy.energy -= 2;
         
         // 检查是否被防御或是否无效对方轻攻击
         if (playerDefending) {
             enemyCharacter.classList.add('enemy-attack');
+            // playerCharacter.classList.add('player-hit');
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
+                // playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            addLog(`${enemy.name}的重攻击被${player.name}防御了！`);
+            // 防御重攻击受到20%伤害
+            const reducedDamage = Math.round(enemy.basicDamage * 1.5 * 0.2 / defenseMultiplier);
+            player.currentHealth -= reducedDamage;
+            addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            playerWasHit = true;
         } else if (playerAction === 'light-attack') {
             // 重攻击克制轻攻击
             enemyCharacter.classList.add('enemy-attack');
@@ -1814,7 +2271,7 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const damage = enemy.basicDamage * 1.5;
+            const damage = Math.round(enemy.basicDamage * 1.5 / defenseMultiplier);
             player.currentHealth -= damage;
             player.energy -= 1; // 消耗玩家的能量
             addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${damage}点伤害！`);
@@ -1828,7 +2285,7 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const damage = enemy.basicDamage * 1.5;
+            const damage = Math.round(enemy.basicDamage * 1.5 / defenseMultiplier);
             player.currentHealth -= damage;
             addLog(`${enemy.name}的重攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
@@ -1844,12 +2301,18 @@ function processActions(playerAction, enemyAction) {
         // 检查是否被防御
         if (enemyDefending) {
             playerCharacter.classList.add('player-attack');
+            // enemyCharacter.classList.add('enemy-hit');
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-attack');
+                // enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            addLog(`${player.name}的轻攻击被${enemy.name}防御了！`);
+            // 防御轻攻击受到15%伤害
+            const reducedDamage = Math.round(player.basicDamage * 0.15 * damageMultiplier);
+            enemy.currentHealth -= reducedDamage;
+            addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            enemyWasHit = true;
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
@@ -1859,7 +2322,7 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const damage = player.basicDamage;
+            const damage = Math.round(player.basicDamage * damageMultiplier);
             enemy.currentHealth -= damage;
             addLog(`${player.name}的轻攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
@@ -1874,12 +2337,18 @@ function processActions(playerAction, enemyAction) {
         // 检查是否被防御
         if (playerDefending) {
             enemyCharacter.classList.add('enemy-attack');
+            // playerCharacter.classList.add('player-hit');
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
+                // playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            addLog(`${enemy.name}的轻攻击被${player.name}防御了！`);
+            // 防御轻攻击受到15%伤害
+            const reducedDamage = Math.round(enemy.basicDamage * 0.15 / defenseMultiplier);
+            player.currentHealth -= reducedDamage;
+            addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            playerWasHit = true;
         } else {
             enemyCharacter.classList.add('enemy-attack');
             playerCharacter.classList.add('player-hit');
@@ -1889,7 +2358,7 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const damage = enemy.basicDamage;
+            const damage = Math.round(enemy.basicDamage / defenseMultiplier);
             player.currentHealth -= damage;
             addLog(`${enemy.name}的轻攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
@@ -2018,11 +2487,18 @@ function gameEnd(isVictory) {
 
 
 // 键盘事件处理
-function handleKeyPress(event) { 
-    // 如果弹窗显示中，按ESC关闭 
-    if (confirmModal.style.display === 'flex' && event.key === 'Escape') { 
-        confirmModal.style.display = 'none'; gameState.player.selectedAction = null; 
-        updateDisplay(); return; 
+function handleKeyPress(event) {
+    // 如果道具弹窗显示中，按ESC关闭
+    const itemModal = document.getElementById('item-modal');
+    if (itemModal && itemModal.style.display === 'flex' && event.key === 'Escape') {
+        closeItemModal();
+        return;
+    }
+    
+    // 如果弹窗显示中，按ESC关闭
+    if (confirmModal.style.display === 'flex' && event.key === 'Escape') {
+        confirmModal.style.display = 'none'; gameState.player.selectedAction = null;
+        updateDisplay(); return;
     }
 
 
@@ -2056,6 +2532,9 @@ function handleKeyPress(event) {
             break;
         case 'Y':
             selectAction('taunt');
+            break;
+        case 'U':
+            openItemModal();
             break;
     }
 }
@@ -2134,11 +2613,17 @@ document.addEventListener('DOMContentLoaded', () => {
         gameContainer.style.backgroundImage = `url('${GAME_BG_URL}')`;
     }
 
-    // 设置弹窗背景
+    // 设置弹窗背景 - 排除道具弹窗
     const modalContents = document.querySelectorAll('.modal-content');
     modalContents.forEach(modal => {
         modal.style.background = `url('${MODAL_BG_URL}') center center / cover`;
     });
+    
+    // 道具弹窗使用不透明纯色背景
+    const itemModalContent = document.querySelector('.item-modal-content');
+    if (itemModalContent) {
+        itemModalContent.style.background = 'linear-gradient(135deg, #1a1410 0%, #2a2018 50%, #1a1410 100%)';
+    }
 
     // 初始化游戏
     initGame();
