@@ -1156,10 +1156,10 @@ const urlParams = new URLSearchParams(window.location.search);
 
 // 道具系统变量
 const battleItems = {
-    daliwan: parseInt(urlParams.get('daliwan')) || 5,      // 大力丸
-    jingutie: parseInt(urlParams.get('jingutie')) || 5,    // 筋骨贴
-    jinchuangyao: parseInt(urlParams.get('jinchuangyao')) || 5,  // 金疮药
-    piliwan: parseInt(urlParams.get('piliwan')) || 5       // 霹雳丸
+    daliwan: parseInt(urlParams.get('daliwan')) || 0,      // 大力丸
+    jingutie: parseInt(urlParams.get('jingutie')) || 0,    // 筋骨贴
+    jinchuangyao: parseInt(urlParams.get('jinchuangyao')) || 0,  // 金疮药
+    piliwan: parseInt(urlParams.get('piliwan')) || 0       // 霹雳丸
 };
 
 // 道具使用状态
@@ -1230,8 +1230,8 @@ const itemConfig = {
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
     name: urlParams.get('playerName') || '你',
-    maxHealth: parseInt(urlParams.get('playerHealth')) || 500,
-    currentHealth: parseInt(urlParams.get('playerHealth')) || 500,
+    maxHealth: parseInt(urlParams.get('playerHealth')) || 50,
+    currentHealth: parseInt(urlParams.get('playerHealth')) || 50,
     energy: 0,
     maxEnergy: 10,
     selectedAction: null,
