@@ -3007,10 +3007,12 @@ const outPut = `
             updateCompressSummaryLabel();
         }
 
-        // 根据inputEnable控制自由行动输入框和发送按钮
+        // 根据inputEnable控制自由行动输入框、发送按钮、跳过一周按钮和返回天山派按钮
         function updateFreeActionInputState() {
             const inputElement = document.getElementById('free-action-input');
             const sendButton = document.getElementById('free-action-send-btn');
+            const skipWeekBtn = document.getElementById('skip-week-btn');
+            const slgReturnBtn = document.getElementById('slg-return-btn');
             
             if (inputEnable === 0) {
                 // 禁用输入框和按钮
@@ -3025,6 +3027,18 @@ const outPut = `
                     sendButton.style.opacity = '0.5';
                     sendButton.style.cursor = 'not-allowed';
                 }
+                // 禁用跳过一周按钮
+                if (skipWeekBtn) {
+                    skipWeekBtn.disabled = true;
+                    skipWeekBtn.style.opacity = '0.5';
+                    skipWeekBtn.style.cursor = 'not-allowed';
+                }
+                // 禁用返回天山派按钮
+                if (slgReturnBtn) {
+                    slgReturnBtn.disabled = true;
+                    slgReturnBtn.style.opacity = '0.5';
+                    slgReturnBtn.style.cursor = 'not-allowed';
+                }
             } else {
                 // 启用输入框和按钮
                 if (inputElement) {
@@ -3037,6 +3051,18 @@ const outPut = `
                     sendButton.disabled = false;
                     sendButton.style.opacity = '1';
                     sendButton.style.cursor = '';
+                }
+                // 启用跳过一周按钮
+                if (skipWeekBtn) {
+                    skipWeekBtn.disabled = false;
+                    skipWeekBtn.style.opacity = '1';
+                    skipWeekBtn.style.cursor = '';
+                }
+                // 启用返回天山派按钮
+                if (slgReturnBtn) {
+                    slgReturnBtn.disabled = false;
+                    slgReturnBtn.style.opacity = '1';
+                    slgReturnBtn.style.cursor = '';
                 }
             }
         }

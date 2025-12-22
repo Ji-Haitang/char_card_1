@@ -49,10 +49,11 @@ const specialEvents = [
         name: "拜师剧情1",
         priority: 100,
         conditions: {
-            currentWeek: { min: 4 }  // 第4周（第一个月末）
+            currentWeek: { min: 2 }  // 第2周（第一个月末）
         },
         effects: {
             GameMode: { set: 1 },
+            inputEnable: { set: 0 },
             mapLocation: { set: '天山派外堡' },  
             companionNPC: { push: '苓雪妃' }
         }, 
@@ -348,6 +349,7 @@ const specialEvents = [
         },
         effects: {
             GameMode: { set: 0 },
+            inputEnable: { set: 1 },
             mapLocation: { set: '天山派' },  
             companionNPC: { set: [] },
             userLocation: { set: 'nvdizi' }
@@ -1099,7 +1101,9 @@ async function triggerSpecialEvent(event) {
         if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
             const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
             if (renderFunc) {
-                const safeText = event.text.replace(/`/g, '\\`');
+                const safeText = event.text
+                    .replace(/\|/g, '\\|')   // 先转义管道符
+                    .replace(/`/g, '\\`');   // 再转义反引号
                 await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
                 console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
                 return true;
