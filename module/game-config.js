@@ -1108,5 +1108,8 @@ const defaultGameData = {
     cgContentEnabled: false,  // 新增：CG内容开关（默认关）
     compressSummary: false,    // 新增：强力总结（默认关）
     enamor: 0,              // 新增：倾慕触发标记（默认0）
-    alchemyDone: false      // 新增：本周是否已炼丹（默认false）
+    alchemyDone: false,      // 新增：本周是否已炼丹（默认false）
+    triggeredEvents: [],     // 新增：已触发的特殊事件ID列表
+    currentSpecialEvent: "", // 新增：当前触发的特殊事件ID
+    inputEnable: 1           // 新增：自由行动输入框可用状态（1=可用，0=不可用）
 };

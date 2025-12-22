@@ -74,6 +74,9 @@ let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": tru
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let alchemyDone = false;  // 新增：本周是否已炼丹
+let triggeredEvents = [];  // 新增：已触发的特殊事件ID列表
+let currentSpecialEvent = "";  // 新增：当前触发的特殊事件ID
+let inputEnable = 1;  // 新增：自由行动输入框可用状态（1=可用，0=不可用）
 let lastUserMessage = "";
 let summary_Small = "";
 let summary_Week = "";
@@ -188,7 +191,10 @@ function syncVariablesFromGameData() {
     mapLocation,      // 新增
     cgContentEnabled,  // 新增
     compressSummary,
-    alchemyDone       // 新增：本周是否已炼丹
+    alchemyDone,       // 新增：本周是否已炼丹
+    triggeredEvents,   // 新增：已触发的特殊事件ID列表
+    currentSpecialEvent, // 新增：当前触发的特殊事件ID
+    inputEnable        // 新增：自由行动输入框可用状态
     } = gameData);
 
     npcLocationA = currentNpcLocations.A;
@@ -249,6 +255,9 @@ function syncGameDataFromVariables() {
     gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
     gameData.compressSummary = compressSummary;    // 新增：写回存档
     gameData.alchemyDone = alchemyDone;            // 新增：本周是否已炼丹
+    gameData.triggeredEvents = triggeredEvents;    // 新增：已触发的特殊事件ID列表
+    gameData.currentSpecialEvent = currentSpecialEvent;  // 新增：当前触发的特殊事件ID
+    gameData.inputEnable = inputEnable;            // 新增：自由行动输入框可用状态
 }
 
 function syncGameDatalastUserMessage() {

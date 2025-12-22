@@ -1,4 +1,4 @@
-<%_ const favor_lcr = gameData.npcFavorability.; _%>
+<%_ const favor_lcr = gameData.npcFavorability.N; _%>
 鹿椿若:
   基本信息:
     姓名: 鹿椿若

@@ -396,13 +396,13 @@
 
         <!-- 自由行动输入框 -->
         <div class="free-action-container">
-            <textarea 
-                class="free-action-input" 
-                id="free-action-input" 
+            <textarea
+                class="free-action-input"
+                id="free-action-input"
                 placeholder="输入自由行动内容"
                 rows="1"
             ></textarea>
-            <button class="free-action-send-btn" onclick="sendFreeAction()">发送</button>
+            <button class="free-action-send-btn" id="free-action-send-btn" onclick="sendFreeAction()">发送</button>
         </div>
 
         <!-- 难度设置弹窗 -->
@@ -806,6 +806,7 @@
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@d675192/module/game-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@d675192/module/game-helpers.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@d675192/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@d675192/module/special-event.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -1176,7 +1177,7 @@
         }
 
         // 修改 skipWeek 函数，在跳过周时重置送礼状态
-        function skipWeek() {
+        async function skipWeek() {
             showConfirmModal(
                 '确认跳过',
                 '确定要跳过这一周吗？',
@@ -1211,11 +1212,28 @@
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
+                    
+                    // 检查特殊事件
+                    const specialEvent = typeof checkSpecialEvents === 'function' ? checkSpecialEvents() : null;
                     const year = Math.floor((currentWeek - 1) / 48) + 1;
                     const remainingWeeks = (currentWeek - 1) % 48;
                     const month = Math.floor(remainingWeeks / 4) + 1;
                     const week = remainingWeeks % 4 + 1;
-                    await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
+                    
+                    if (specialEvent) {
+                        console.log(`[skipWeek] 触发特殊事件: ${specialEvent.name}`);
+                        // 先inject跳过一周的信息
+                        const skipMessage = '行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周';
+                        const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+                        if (renderFunc) {
+                            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${skipMessage}`);
+                        }
+                        // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
+                        await triggerSpecialEvent(specialEvent);
+                    } else {
+                        // 无特殊事件，发送普通的新周消息
+                        await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
+                    }
                 }
             );
         }
@@ -1642,8 +1660,7 @@
                 locationInfo +  // 使用新的地点信息
                 `{{user}}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
-                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
-                `在场NPC：${npcsPresent}`;
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>`;
             
             closeModal();
             
@@ -2948,6 +2965,39 @@
             if (story) story.style.fontSize = size + 'px';
         }
 
+        // 更新自由行动输入框和发送按钮的状态
+        function updateFreeActionInputState() {
+            const inputElement = document.getElementById('free-action-input');
+            const sendButton = document.getElementById('free-action-send-btn');
+            
+            // 检查inputEnable变量，如果为0则禁用输入框和按钮
+            const isEnabled = (typeof inputEnable !== 'undefined' && inputEnable !== 0);
+            
+            if (inputElement) {
+                inputElement.disabled = !isEnabled;
+                if (!isEnabled) {
+                    inputElement.placeholder = '输入已禁用';
+                    inputElement.style.opacity = '0.5';
+                    inputElement.style.cursor = 'not-allowed';
+                } else {
+                    inputElement.placeholder = '输入自由行动内容';
+                    inputElement.style.opacity = '1';
+                    inputElement.style.cursor = 'text';
+                }
+            }
+            
+            if (sendButton) {
+                sendButton.disabled = !isEnabled;
+                if (!isEnabled) {
+                    sendButton.style.opacity = '0.5';
+                    sendButton.style.cursor = 'not-allowed';
+                } else {
+                    sendButton.style.opacity = '1';
+                    sendButton.style.cursor = 'pointer';
+                }
+            }
+        }
+
         async function initializeOrSync() {
             await loadOrInitGameData();
             console.log('初始化完成');
@@ -3016,6 +3066,8 @@
             updateCgToggleLabel();
             // 初始化完成后应用字体档位
             try { applyFontLevel((typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2); } catch(_){}
+            // 初始化时更新自由行动输入框状态
+            updateFreeActionInputState();
             /* === 新增 === */
             window.__initDone = true;
             if (window.__pendingTemplateVars) {

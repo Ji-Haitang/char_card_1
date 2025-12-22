@@ -260,8 +260,8 @@ function showAlchemyGame() {
     });
     
     // 使用本地URL进行调试
-    // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
-    const gameUrl = `alchemy.html?${params.toString()}`;
+    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
+    //const gameUrl = `alchemy.html?${params.toString()}`;
     
     console.log('[炼丹] 完整URL:', gameUrl);
     

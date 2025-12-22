@@ -416,13 +416,13 @@
 
         <!-- 自由行动输入框 -->
         <div class="free-action-container">
-            <textarea 
-                class="free-action-input" 
-                id="free-action-input" 
+            <textarea
+                class="free-action-input"
+                id="free-action-input"
                 placeholder="输入自由行动内容"
                 rows="1"
             ></textarea>
-            <button class="free-action-send-btn" onclick="sendFreeAction()">发送</button>
+            <button class="free-action-send-btn" id="free-action-send-btn" onclick="sendFreeAction()">发送</button>
         </div>
 
         <!-- 难度设置弹窗 -->
@@ -848,6 +848,7 @@
     <script src="module/game-ui.js"></script>
     <script src="module/game-helpers.js"></script>
     <script src="module/game-events.js"></script>
+    <script src="module/special-event.js"></script>
     
     <script>
         // 记录原始渲染环境状态
@@ -955,79 +956,6 @@
 // 册饿成市场的市场上出售的
 // `;
 
-const outPut = `
-<thinking>
-<MAIN_TEXT>ana: sadadassfsafafa
-<SUMMARY>ans: asdadafa
-</thinking>
-
-<MAIN_TEXT>
-清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|姬姒|街道|微笑|none
-
-测试场景错误|钱塘君|不存在的地方|不满|无
-
-测试表情错误|姬姒|山门|阿黑颜|none
-
-穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。|钱塘君|客房|尴-尬|亲吻
-
-呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。|呼延显|演武场|微笑|无
-
-
-测试内容缺失|姬姒|山门|none
-
-
-就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」|姬姒| 浴室|严肃|none
-
-测试最后一段格式错误|钱塘君|严肃|后背位
-
-</MAIN_TEXT>
-
-<SUMMARY>
-清晨，user在演武场练功。姬姒外出采购药材。萧白瑚去议事厅整理文书。
-</SUMMARY>
-
-<SIDE_NOTE>
-{
-    "随机事件": {
-        "事件类型": "战斗事件",
-        "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
-        "敌方信息": {
-        "名称": "吐蕃探子",
-        "属性": {
-            "攻击力": "低",
-            "生命力": "中"
-        },
-        "战斗报酬": {
-            "类型": "金钱",
-            "数值": 500
-        }
-        }
-    },
-    "用户": {
-    "位置变动": "后山"
-    },
-    "当前NPC": {
-        "呼延显": {
-        "好感变化": "上升",
-        "位置变动": "演武场|藏经阁"
-        },
-        "萧白瑚": {
-        "好感变化": "上升",
-        "位置变动": "山门|议事厅"
-        },
-        "洞庭君": {
-        "好感变化": "不变",
-        "位置变动": "议事厅"
-        },
-        "钱塘君": {
-        "好感变化": "大幅上升",
-        "位置变动": "议事厅|后山"
-        }
-    },
-    "其他NPC": "无"
-}
-</SIDE_NOTE>`;
-
 // const outPut = `
 // <thinking>
 // <MAIN_TEXT>ana: sadadassfsafafa
@@ -1062,12 +990,18 @@ const outPut = `
 // <SIDE_NOTE>
 // {
 //     "随机事件": {
-//         "事件类型": "选项事件",
-//         "事件描述": "姬姒想要和你探讨昨天练武的心得",
-//         "选项一": {
-//             "描述": "继续",
-//             "奖励": "",
-//             "成功率": "100%"
+//         "事件类型": "战斗事件",
+//         "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
+//         "敌方信息": {
+//         "名称": "吐蕃探子",
+//         "属性": {
+//             "攻击力": "低",
+//             "生命力": "中"
+//         },
+//         "战斗报酬": {
+//             "类型": "金钱",
+//             "数值": 500
+//         }
 //         }
 //     },
 //     "用户": {
@@ -1094,6 +1028,73 @@ const outPut = `
 //     "其他NPC": "无"
 // }
 // </SIDE_NOTE>`;
+
+const outPut = `
+<thinking>
+<MAIN_TEXT>ana: sadadassfsafafa
+<SUMMARY>ans: asdadafa
+</thinking>
+
+<MAIN_TEXT>
+清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|姬姒|街道|微笑|none
+
+测试场景错误|钱塘君|不存在的地方|不满|无
+
+测试表情错误|姬姒|山门|阿黑颜|none
+
+穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。|钱塘君|客房|尴-尬|亲吻
+
+呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。|呼延显|演武场|微笑|无
+
+
+测试内容缺失|姬姒|山门|none
+
+
+就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」|姬姒| 浴室|严肃|none
+
+测试最后一段格式错误|钱塘君|严肃|后背位
+
+</MAIN_TEXT>
+
+<SUMMARY>
+清晨，user在演武场练功。姬姒外出采购药材。萧白瑚去议事厅整理文书。
+</SUMMARY>
+
+<SIDE_NOTE>
+{
+    "随机事件": {
+        "事件类型": "选项事件",
+        "事件描述": "",
+        "选项一": {
+            "描述": "特殊剧情: 继续",
+            "奖励": "",
+            "成功率": "100%"
+        }
+    },
+    "用户": {
+    "位置变动": "后山"
+    },
+    "当前NPC": {
+        "呼延显": {
+        "好感变化": "上升",
+        "位置变动": "演武场|藏经阁"
+        },
+        "萧白瑚": {
+        "好感变化": "上升",
+        "位置变动": "山门|议事厅"
+        },
+        "洞庭君": {
+        "好感变化": "不变",
+        "位置变动": "议事厅"
+        },
+        "钱塘君": {
+        "好感变化": "大幅上升",
+        "位置变动": "议事厅|后山"
+        }
+    },
+    "其他NPC": "无"
+}
+</SIDE_NOTE>`;
       
         // ========== 保留在HTML中的函数（用于onclick调用） ==========
         function parseOutput(slgModeContent) {
@@ -1372,7 +1373,7 @@ const outPut = `
             await showModal(message);
         }
 
-        // 修改 skipWeek 函数，在跳过周时重置送礼状态
+        // 修改 skipWeek 函数，在跳过周时重置送礼状态并检查特殊事件
         function skipWeek() {
             showConfirmModal(
                 '确认跳过',
@@ -1408,11 +1409,28 @@ const outPut = `
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
+                    
+                    // 检查特殊事件
+                    const specialEvent = typeof checkSpecialEvents === 'function' ? checkSpecialEvents() : null;
                     const year = Math.floor((currentWeek - 1) / 48) + 1;
                     const remainingWeeks = (currentWeek - 1) % 48;
                     const month = Math.floor(remainingWeeks / 4) + 1;
                     const week = remainingWeeks % 4 + 1;
-                    await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
+                    
+                    if (specialEvent) {
+                        console.log(`[skipWeek] 触发特殊事件: ${specialEvent.name}`);
+                        // 先inject跳过一周的信息
+                        const skipMessage = '行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周';
+                        const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+                        if (renderFunc) {
+                            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${skipMessage}`);
+                        }
+                        // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
+                        await triggerSpecialEvent(specialEvent);
+                    } else {
+                        // 无特殊事件，发送普通的新周消息
+                        await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
+                    }
                 }
             );
         }
@@ -2989,6 +3007,40 @@ const outPut = `
             updateCompressSummaryLabel();
         }
 
+        // 根据inputEnable控制自由行动输入框和发送按钮
+        function updateFreeActionInputState() {
+            const inputElement = document.getElementById('free-action-input');
+            const sendButton = document.getElementById('free-action-send-btn');
+            
+            if (inputEnable === 0) {
+                // 禁用输入框和按钮
+                if (inputElement) {
+                    inputElement.disabled = true;
+                    inputElement.placeholder = '当前无法输入';
+                    inputElement.style.opacity = '0.5';
+                    inputElement.style.cursor = 'not-allowed';
+                }
+                if (sendButton) {
+                    sendButton.disabled = true;
+                    sendButton.style.opacity = '0.5';
+                    sendButton.style.cursor = 'not-allowed';
+                }
+            } else {
+                // 启用输入框和按钮
+                if (inputElement) {
+                    inputElement.disabled = false;
+                    inputElement.placeholder = '输入自由行动内容';
+                    inputElement.style.opacity = '1';
+                    inputElement.style.cursor = '';
+                }
+                if (sendButton) {
+                    sendButton.disabled = false;
+                    sendButton.style.opacity = '1';
+                    sendButton.style.cursor = '';
+                }
+            }
+        }
+
         // ========== 初始化 ==========
         window.onload = async function() {
             await loadOrInitGameData();
@@ -3051,6 +3103,8 @@ const outPut = `
             updateCgToggleLabel();
             // 初始化完成后应用字体档位
             try { applyFontLevel((typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2); } catch(_){}
+            // 初始化时更新自由行动输入框状态
+            updateFreeActionInputState();
         };
         
         // 自由行动输入框事件

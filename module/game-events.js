@@ -88,6 +88,26 @@ async function handleEventOption(optionIndex, option) {
     
     hideRandomEvent();
     
+    // 检查是否是"特殊剧情:"选项
+    if (option.描述 && option.描述.startsWith('特殊剧情:')) {
+        // 检查是否有满足条件的特殊事件
+        const specialEvent = typeof checkSpecialEvents === 'function' ? checkSpecialEvents() : null;
+        
+        if (specialEvent) {
+            console.log(`[handleEventOption] 触发特殊事件: ${specialEvent.name}`);
+            // 先inject随机事件的选择信息（去掉"特殊剧情:"前缀）
+            const actionDesc = option.描述.replace(/^特殊剧情:\s*/, '');
+            const injectMessage = `{{user}}行动选择: ${actionDesc}`;
+            const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+            if (renderFunc) {
+                await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${injectMessage}`);
+            }
+            // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
+            await triggerSpecialEvent(specialEvent);
+            return;
+        }
+    }
+    
     await handleMessageOutput(resultMessage);
 }
 
