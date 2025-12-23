@@ -742,7 +742,9 @@ function getValueByPath(path) {
         npcVisibility: typeof npcVisibility !== 'undefined' ? npcVisibility : undefined,
         npcGiftGiven: typeof npcGiftGiven !== 'undefined' ? npcGiftGiven : undefined,
         npcSparred: typeof npcSparred !== 'undefined' ? npcSparred : undefined,
-        triggeredEvents: typeof triggeredEvents !== 'undefined' ? triggeredEvents : undefined
+        triggeredEvents: typeof triggeredEvents !== 'undefined' ? triggeredEvents : undefined,
+        currentSpecialEvent: typeof currentSpecialEvent !== 'undefined' ? currentSpecialEvent : undefined,
+        inputEnable: typeof inputEnable !== 'undefined' ? inputEnable : undefined
     };
     
     let value = globalVars[parts[0]];
