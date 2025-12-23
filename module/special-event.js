@@ -1095,20 +1095,35 @@ async function triggerSpecialEvent(event) {
         // 3. 保存游戏数据
         if (typeof saveGameData === 'function') {
             await saveGameData();
+            console.log('[SpecialEvent] 游戏数据已保存');
         }
         
         // 4. 发送预设文本
-        if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
-            const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
-            if (renderFunc) {
-                const safeText = event.text
-                    .replace(/\|/g, '\\|')   // 先转义管道符
-                    .replace(/`/g, '\\`');   // 再转义反引号
-                await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
-                console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
-                return true;
+        // if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
+        //     const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+        //     if (renderFunc) {
+        //         const safeText = event.text
+        //             .replace(/\|/g, '\\|')   // 先转义管道符
+        //             .replace(/`/g, '\\`');   // 再转义反引号
+        //         await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
+        //         console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
+        //         return true;
+        //     }
+        // }
+
+        setTimeout(async () => {
+            if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
+                const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+                if (renderFunc) {
+                    const safeText = event.text
+                        .replace(/\|/g, '\\|')   // 先转义管道符
+                        .replace(/`/g, '\\`');   // 再转义反引号
+                    await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
+                    console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
+                    return true;
+                }
             }
-        }
+        }, 500); 
         
         // 非渲染环境，用弹窗显示
         if (typeof showModal === 'function') {
