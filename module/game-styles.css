@@ -2308,7 +2308,7 @@ body {
 .trading-content {
     max-width: 900px;
     max-height: 80vh;
-    overflow: hidden;
+    overflow: auto;  /* 从hidden改为auto，允许内容滚动 */
     display: flex;
     flex-direction: column;
 }
@@ -2493,10 +2493,40 @@ body {
     }
 }
 
-/* 移动端进一步优化 */
+/* 移动端进一步优化 - 改为纵向布局 */
 @media (max-width: 480px) {
+    .trading-content {
+        max-height: 85vh;  /* 增加最大高度 */
+        padding: 10px;
+    }
+    
+    .trading-container {
+        flex-direction: column;  /* 改为纵向布局 */
+        gap: 10px;
+        overflow: visible;  /* 让子元素可以控制滚动 */
+    }
+    
+    .trading-section {
+        flex: none;  /* 不拉伸 */
+        max-height: 35vh;  /* 限制每个区块高度 */
+        min-height: 120px;
+    }
+    
+    .trading-section h4 {
+        margin-bottom: 8px;
+        padding-bottom: 5px;
+        font-size: 14px;
+    }
+    
     .trading-list {
         padding: 5px;
+        flex: 1;
+        min-height: 0;  /* 重要：允许flex子元素收缩 */
+        overflow-y: auto;  /* 确保列表可滚动 */
+    }
+    
+    .trading-divider {
+        display: none;  /* 隐藏分隔线 */
     }
     
     .trading-item-row {
@@ -2715,6 +2745,95 @@ body {
     font-size: 18px;
     font-weight: bold;
     color: #4ecdc4;
+}
+
+/* 商店详情弹窗移动端适配 */
+@media (max-width: 640px) {
+    .shop-detail-content {
+        max-width: 280px;
+        max-height: 50vh;
+        padding: 12px;
+    }
+    
+    .shop-item-description {
+        font-size: 12px;
+        margin: 10px 0;
+        line-height: 1.5;
+    }
+    
+    .shop-item-info {
+        padding: 10px;
+        margin-bottom: 12px;
+    }
+    
+    .shop-item-stat {
+        font-size: 11px;
+        margin: 3px 0;
+    }
+    
+    .shop-item-price-info {
+        gap: 6px;
+        margin-bottom: 12px;
+        padding: 8px;
+    }
+    
+    .price-label {
+        font-size: 13px;
+    }
+    
+    .price-value {
+        font-size: 15px;
+    }
+    
+    .shop-detail-content .modal-buttons {
+        gap: 6px;
+    }
+    
+    .shop-detail-content .modal-btn {
+        padding: 6px 14px;
+        font-size: 12px;
+    }
+}
+
+/* 极小屏幕商店详情弹窗适配 */
+@media (max-width: 380px) {
+    .shop-detail-content {
+        max-width: 240px;
+        max-height: 45vh;
+        padding: 10px;
+    }
+    
+    .shop-item-description {
+        font-size: 11px;
+        margin: 8px 0;
+    }
+    
+    .shop-item-info {
+        padding: 8px;
+        margin-bottom: 10px;
+    }
+    
+    .shop-item-stat {
+        font-size: 10px;
+    }
+    
+    .shop-item-price-info {
+        padding: 6px;
+        margin-bottom: 10px;
+    }
+    
+    .price-label {
+        font-size: 12px;
+    }
+    
+    .price-value {
+        font-size: 14px;
+    }
+    
+    .shop-detail-content .modal-btn {
+        padding: 5px 12px;
+        font-size: 11px;
+    }
 }
 
 /* 农场游戏iframe弹窗 */

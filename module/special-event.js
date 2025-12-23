@@ -787,6 +787,7 @@ function setValueByPath(path, newValue) {
             case 'seasonStatus': seasonStatus = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 seasonStatus`); break;
             case 'dayNightStatus': dayNightStatus = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 dayNightStatus`); break;
             case 'companionNPC': companionNPC = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 companionNPC`); break;
+            case 'inputEnable': inputEnable = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 inputEnable`); if (typeof updateFreeActionInputState === 'function') { updateFreeActionInputState(); } break;
             default:
                 console.warn(`[SpecialEvent]   ✗ 无法设置顶层变量: ${parts[0]}（未在支持列表中）`);
         }
