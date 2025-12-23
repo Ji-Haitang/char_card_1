@@ -453,6 +453,12 @@ function parseLLMResponse(response, mainTextContent) {
     if (response.随机事件) {
         currentRandomEvent = response.随机事件;
         
+        // 有随机事件时禁用输入
+        inputEnable = 0;
+        if (typeof updateFreeActionInputState === 'function') {
+            updateFreeActionInputState();
+        }
+        
         if (currentRandomEvent.事件类型 === '战斗事件') {
             displayBattleEvent(currentRandomEvent);
             hideRandomEvent();
@@ -468,6 +474,12 @@ function parseLLMResponse(response, mainTextContent) {
             }
         } catch (e) {}
     } else {
+        // 无随机事件时启用输入
+        inputEnable = 1;
+        if (typeof updateFreeActionInputState === 'function') {
+            updateFreeActionInputState();
+        }
+        
         hideRandomEvent();
         hideBattleEvent();
     }

@@ -3,10 +3,17 @@
 <!-- <HistorySummary> is a brief summary of what has happened so far. Please read it to continue the story. -->
 
 <HistorySummary>
+
+<FormerHistory>
 <%_ if (compressSummaryforSummary == false) { _%>
   <%- gameData.summary_Backup %>
 <%_ } else { _%>
   <%- gameData.summary_Week %>
 <%_ } _%>
+</FormerHistory>
+
+<RecentHistory>
   <%- gameData.summary_Small %>
+</RecentHistory>
+
 </HistorySummary>

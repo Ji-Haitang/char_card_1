@@ -62,7 +62,9 @@
   </MAIN_TEXT>
 
   <SUMMARY>
-  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式逐条罗列{{user}}过去一周的所有行动}}
+  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列}}
+  ...
+  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列}}
   </SUMMARY>
 
   <SIDE_NOTE>
@@ -128,7 +130,9 @@
   </MAIN_TEXT>
 
   <SUMMARY>
-  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式逐条罗列{{user}}过去一周的所有行动}}
+  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列}}
+  ...
+  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列}}
   </SUMMARY>
 
   <SIDE_NOTE>
