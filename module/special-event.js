@@ -1071,10 +1071,13 @@ function checkSpecialEvents() {
 /**
  * 触发特殊事件
  * 应用效果、标记已触发、发送预设文本
+ * 与 handleMessageOutput 保持一致：更新 lastUserMessage、调用 /setvar、但不改变 newWeek
  * @param {object} event - 事件对象
+ * @param {object} options - 可选参数
+ * @param {boolean} options.fromSkipWeek - 是否由跳过一周按钮触发
  * @returns {Promise<boolean>} 是否成功触发
  */
-async function triggerSpecialEvent(event) {
+async function triggerSpecialEvent(event, options = {}) {
     if (!event) {
         console.warn('[SpecialEvent] 事件对象为空');
         return false;
@@ -1083,41 +1086,68 @@ async function triggerSpecialEvent(event) {
     console.log(`[SpecialEvent] 开始触发事件: ${event.name} (${event.id})`);
     
     try {
-        // 1. 应用事件效果
+        // 1. 构造用户消息：年月周、地点、特殊剧情名称
+        const weekNum = typeof currentWeek !== 'undefined' ? currentWeek : 1;
+        const year = Math.floor((weekNum - 1) / 48) + 1;
+        const remainingWeeks = (weekNum - 1) % 48;
+        const month = Math.floor(remainingWeeks / 4) + 1;
+        const week = remainingWeeks % 4 + 1;
+        const location = typeof mapLocation !== 'undefined' ? mapLocation : '未知地点';
+        
+        // 根据是否由跳过一周触发，构建不同的消息前缀
+        let userMessage;
+        if (options.fromSkipWeek) {
+            userMessage = `时间过了一周，在${year}年${month}月${week}周，{{user}}在${location}触发特殊剧情——${event.name}`;
+        } else {
+            userMessage = `${year}年${month}月${week}周，{{user}}在${location}触发特殊剧情——${event.name}`;
+        }
+        
+        // 2. 更新 lastUserMessage（与 handleMessageOutput 保持一致）
+        if (typeof lastUserMessage !== 'undefined') {
+            lastUserMessage = userMessage;
+            console.log(`[SpecialEvent] 已更新 lastUserMessage = "${userMessage}"`);
+        }
+        
+        // 3. 调用 /setvar 保存到酒馆变量（与 handleMessageOutput 保持一致）
+        if (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
+            const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+            if (renderFunc) {
+                console.log('[SpecialEvent] user消息存入变量lastMessage_jxz');
+                await renderFunc(`/setvar key=lastMessage_jxz ${userMessage}`);
+            }
+        }
+        
+        // 注意：特殊剧情不改变 newWeek，保持现状（与 handleMessageOutput 的区别）
+        console.log('[SpecialEvent] newWeek 保持现状，不做修改');
+        
+        // 4. 应用事件效果
         applyEventEffects(event);
         
-        // 2. 设置当前特殊事件ID
+        // 5. 设置当前特殊事件ID
         if (typeof currentSpecialEvent !== 'undefined') {
             currentSpecialEvent = event.id;
             console.log(`[SpecialEvent] 已设置 currentSpecialEvent = "${event.id}"`);
         }
         
-        // 3. 标记事件为已触发
+        // 6. 标记事件为已触发
         markEventTriggered(event.id);
         
-        // 3. 保存游戏数据
+        // 7. 保存游戏数据
         if (typeof saveGameData === 'function') {
             await saveGameData();
             console.log('[SpecialEvent] 游戏数据已保存');
         }
         
-        // 4. 发送预设文本
-        // if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
-        //     const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
-        //     if (renderFunc) {
-        //         const safeText = event.text
-        //             .replace(/\|/g, '\\|')   // 先转义管道符
-        //             .replace(/`/g, '\\`');   // 再转义反引号
-        //         await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
-        //         console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
-        //         return true;
-        //     }
-        // }
-
+        // 8. 发送预设文本（先注入用户输入，再发送AI回复）
         setTimeout(async () => {
             if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
                 const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
                 if (renderFunc) {
+                    // 先注入用户输入（与 handleMessageOutput 保持一致）
+                    await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${userMessage}`);
+                    console.log(`[SpecialEvent] 用户输入已注入: ${userMessage}`);
+                    
+                    // 再发送AI的预设回复
                     const safeText = event.text
                         .replace(/\|/g, '\\|')   // 先转义管道符
                         .replace(/`/g, '\\`');   // 再转义反引号
@@ -1129,7 +1159,7 @@ async function triggerSpecialEvent(event) {
         }, 500); 
         
         // 非渲染环境，用弹窗显示
-        if (typeof showModal === 'function') {
+        if (typeof showModal === 'function' && !(typeof isInRenderEnvironment === 'function' && isInRenderEnvironment())) {
             showModal(`【特殊事件】${event.name}<br><br>（非酒馆环境，事件文本无法发送）`);
         }
         

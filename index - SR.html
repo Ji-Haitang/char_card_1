@@ -60,7 +60,7 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-styles.css">
 </head>
 <body>
     <div class="container">
@@ -796,13 +796,13 @@
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-state.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-ui.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/game-events.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@8316b95/module/special-event.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@2c42e30/module/special-event.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -1219,14 +1219,9 @@
                     
                     if (specialEvent) {
                         console.log(`[skipWeek] 触发特殊事件: ${specialEvent.name}`);
-                        // 先inject跳过一周的信息
-                        const skipMessage = '行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周';
-                        const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
-                        if (renderFunc) {
-                            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${skipMessage}`);
-                        }
                         // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
-                        await triggerSpecialEvent(specialEvent);
+                        // 传递 fromSkipWeek: true 标识是由跳过一周按钮触发的
+                        await triggerSpecialEvent(specialEvent, { fromSkipWeek: true });
                     } else {
                         // 无特殊事件，发送普通的新周消息
                         await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');

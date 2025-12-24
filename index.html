@@ -1415,14 +1415,9 @@ const outPut = `
                     
                     if (specialEvent) {
                         console.log(`[skipWeek] 触发特殊事件: ${specialEvent.name}`);
-                        // 先inject跳过一周的信息
-                        const skipMessage = '行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周';
-                        const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
-                        if (renderFunc) {
-                            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${skipMessage}`);
-                        }
                         // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
-                        await triggerSpecialEvent(specialEvent);
+                        // 传递 fromSkipWeek: true 标识是由跳过一周按钮触发的
+                        await triggerSpecialEvent(specialEvent, { fromSkipWeek: true });
                     } else {
                         // 无特殊事件，发送普通的新周消息
                         await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
