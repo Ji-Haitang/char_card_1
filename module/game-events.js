@@ -555,6 +555,24 @@ function setupMessageListeners() {
                 // 无论胜利还是失败，都标记本周已经切磋过
                 npcSparred[currentBattleNpcId] = true;
                 
+                // 先同步道具数量变化（在发送消息之前，避免saveGameData保存旧数据）
+                if (event.data.remainingItems) {
+                    const remaining = event.data.remainingItems;
+                    inventory['大力丸'] = remaining.daliwan || 0;
+                    inventory['筋骨贴'] = remaining.jingutie || 0;
+                    inventory['金疮药'] = remaining.jinchuangyao || 0;
+                    inventory['霹雳丸'] = remaining.piliwan || 0;
+                    
+                    // 清理数量为0的道具
+                    Object.keys(inventory).forEach(key => {
+                        if (inventory[key] === 0) {
+                            delete inventory[key];
+                        }
+                    });
+                    
+                    console.log('[战斗-NPC切磋] 道具数量已同步:', remaining);
+                }
+                
                 // 获取时间信息
                 const year = Math.floor((currentWeek - 1) / 48) + 1;
                 const remainingWeeks = (currentWeek - 1) % 48;
@@ -612,6 +630,24 @@ function setupMessageListeners() {
                 currentBattleNpcId = null;
                 
             } else if (currentBattleType === 'event') {
+                // 先同步道具数量变化（在发送消息之前，避免saveGameData保存旧数据）
+                if (event.data.remainingItems) {
+                    const remaining = event.data.remainingItems;
+                    inventory['大力丸'] = remaining.daliwan || 0;
+                    inventory['筋骨贴'] = remaining.jingutie || 0;
+                    inventory['金疮药'] = remaining.jinchuangyao || 0;
+                    inventory['霹雳丸'] = remaining.piliwan || 0;
+                    
+                    // 清理数量为0的道具
+                    Object.keys(inventory).forEach(key => {
+                        if (inventory[key] === 0) {
+                            delete inventory[key];
+                        }
+                    });
+                    
+                    console.log('[战斗-事件] 道具数量已同步:', remaining);
+                }
+                
                 if (result === 'victory') {
                     let rewardMessage = '';
                     if (currentBattleReward) {
@@ -627,24 +663,24 @@ function setupMessageListeners() {
                 }
                 
                 hideBattleEvent();
-            }
-            
-            // 同步道具数量变化
-            if (event.data.remainingItems) {
-                const remaining = event.data.remainingItems;
-                inventory['大力丸'] = remaining.daliwan || 0;
-                inventory['筋骨贴'] = remaining.jingutie || 0;
-                inventory['金疮药'] = remaining.jinchuangyao || 0;
-                inventory['霹雳丸'] = remaining.piliwan || 0;
-                
-                // 清理数量为0的道具
-                Object.keys(inventory).forEach(key => {
-                    if (inventory[key] === 0) {
-                        delete inventory[key];
-                    }
-                });
-                
-                console.log('[战斗] 道具数量已同步:', remaining);
+            } else {
+                // 非NPC切磋、非事件战斗的情况，也需要同步道具
+                if (event.data.remainingItems) {
+                    const remaining = event.data.remainingItems;
+                    inventory['大力丸'] = remaining.daliwan || 0;
+                    inventory['筋骨贴'] = remaining.jingutie || 0;
+                    inventory['金疮药'] = remaining.jinchuangyao || 0;
+                    inventory['霹雳丸'] = remaining.piliwan || 0;
+                    
+                    // 清理数量为0的道具
+                    Object.keys(inventory).forEach(key => {
+                        if (inventory[key] === 0) {
+                            delete inventory[key];
+                        }
+                    });
+                    
+                    console.log('[战斗-其他] 道具数量已同步:', remaining);
+                }
             }
             
             currentBattleType = null;

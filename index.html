@@ -718,14 +718,10 @@
         <!-- 交易弹窗 -->
         <div id="trading-modal" class="modal viewport-overlay">
             <div class="modal-content trading-content">
-                <div class="trading-header">
-                    <h3 id="trading-title">交易</h3>
-                    <div class="trading-money">当前金钱: <span id="trading-money-value">0</span></div>
-                </div>
                 <div class="trading-container">
                     <!-- 左侧：用户物品 -->
                     <div class="trading-section user-items">
-                        <h4>我的物品</h4>
+                        <h4 class="user-money-header">当前金钱: <span id="trading-money-value">0</span></h4>
                         <div class="trading-list" id="user-items-list">
                             <!-- 动态生成 -->
                         </div>
@@ -2532,9 +2528,7 @@ const outPut = `
             closeAllSpecialModals();
             currentTradingType = type;
             
-            // 设置标题
-            const title = type === 'food' ? '伙房交易' : '铁匠铺交易';
-            document.getElementById('trading-title').textContent = title;
+            // 设置商店区域标题
             document.getElementById('shop-title').textContent = type === 'food' ? '伙房食物' : '铁匠铺装备';
             
             // 显示当前金钱
