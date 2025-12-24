@@ -71,7 +71,14 @@ function parseSlgMainText(mainText) {
         return false;
     };
     const isSceneAllowed = (scene) => slgSceneOptions.includes(scene);
-    const isEmotionAllowed = (emo) => emo === 'none' || slgEmotionOptions.includes(emo);
+    // 支持固定表情选项，以及"特殊CGx"格式（x为任意数字，如：特殊CG1、特殊CG999）
+    const isEmotionAllowed = (emo) => {
+        if (emo === 'none') return true;
+        if (slgEmotionOptions.includes(emo)) return true;
+        // 匹配"特殊CG"后跟任意数字的格式
+        if (/^特殊CG\d+$/.test(emo)) return true;
+        return false;
+    };
 
     let currentTextBlock = [];
     let lastValidDisplay = null;

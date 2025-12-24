@@ -553,6 +553,7 @@ const slgCGOptions = [
 ];
 
 // SLG模式可选表情配置
+// 注意：除以下固定选项外，还支持"特殊CGx"格式（x为任意数字，如：特殊CG1、特殊CG999）
 const slgEmotionOptions = [
     '大笑',
     '平静',
