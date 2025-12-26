@@ -87,15 +87,17 @@ async function handleMessageOutput(message) {
             showModal(modalHTML);
             await saveGameData();
             
-            // 短暂延迟后自动关闭弹窗并发送
-            setTimeout(async () => {
-                // closeModal();
-                // 使用inject命令隐式注入user输入
-                await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${message}`);
-                // await saveGameData();
-                await renderFunc('/trigger');
-                console.log('Message injected:', message);
-            }, 500); // 1.5秒后自动发送
+            // 使用Promise方式延迟，保持在同一个async上下文中
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            // 确保变量完全同步到SillyTavern
+            await saveGameData();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
+            // 使用inject命令隐式注入user输入
+            await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${message}`);
+            await renderFunc('/trigger');
+            console.log('Message injected:', message);
         } catch (error) {
             console.error('Error injecting message:', error);
             const message_error = `发生失败降级为弹窗<br>` + message;
