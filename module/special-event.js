@@ -1142,24 +1142,31 @@ async function triggerSpecialEvent(event, options = {}) {
         }
         
         // 8. 发送预设文本（先注入用户输入，再发送AI回复）
-        setTimeout(async () => {
-            if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
-                const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
-                if (renderFunc) {
-                    // 先注入用户输入（与 handleMessageOutput 保持一致）
-                    await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${userMessage}`);
-                    console.log(`[SpecialEvent] 用户输入已注入: ${userMessage}`);
-                    
-                    // 再发送AI的预设回复
-                    const safeText = event.text
-                        .replace(/\|/g, '\\|')   // 先转义管道符
-                        .replace(/`/g, '\\`');   // 再转义反引号
-                    await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
-                    console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
-                    return true;
+        if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
+            const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+            if (renderFunc) {
+                // 使用Promise方式延迟，保持在同一个async上下文中
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // 确保变量完全同步到SillyTavern
+                if (typeof saveGameData === 'function') {
+                    await saveGameData();
                 }
+                await new Promise(resolve => setTimeout(resolve, 100));
+                
+                // 先注入用户输入（与 handleMessageOutput 保持一致）
+                await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${userMessage}`);
+                console.log(`[SpecialEvent] 用户输入已注入: ${userMessage}`);
+                
+                // 再发送AI的预设回复
+                const safeText = event.text
+                    .replace(/\|/g, '\\|')   // 先转义管道符
+                    .replace(/`/g, '\\`');   // 再转义反引号
+                await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeText}`);
+                console.log(`[SpecialEvent] 事件文本已发送: ${event.name}`);
+                return true;
             }
-        }, 500); 
+        }
         
         // 非渲染环境，用弹窗显示
         if (typeof showModal === 'function' && !(typeof isInRenderEnvironment === 'function' && isInRenderEnvironment())) {
