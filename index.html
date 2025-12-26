@@ -1097,6 +1097,7 @@ const outPut = `
             if (slgModeContent !== null && slgModeContent !== undefined) {
                 // 提取正文：从第一个汉字、# 或 * 开始到第一个<为止
                 // 扩展的Unicode范围支持更多中文字符（包括繁体）
+                saveGameData();
                 const mainTextMatch = slgModeContent.match(/[#*\u4e00-\u9fff\u3400-\u4dbf...][^<]*/);
                 if (mainTextMatch) {
                     const startIndex = slgModeContent.indexOf(mainTextMatch[0]);
@@ -3461,8 +3462,8 @@ const outPut = `
             applyFontLevel(lvl);
             // 持久化到内存与存档
             textFontLevel = lvl;
-            if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
-            if (typeof saveGameData === 'function') { try { saveGameData(); } catch(_){} }
+            // if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+            // if (typeof saveGameData === 'function') { try { saveGameData(); } catch(_){} }
         }
 
         function applyFontLevel(level){
