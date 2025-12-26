@@ -1124,29 +1124,41 @@ const outPut = `
                         const week = remainingWeeks % 4 + 1;
 
                         const timestamp = `[第${year}年第${month}月第${week}周]`;
-
-                        if (newWeek === 1) {
-                            if (summary_Week) {
-                                summary_Week += `\n\n${summaryContent}`;
-                            } else {
-                                summary_Week = `${summaryContent}`;
-                            }
-                            if (summary_Small) {
-                                summary_Backup = summary_Backup
-                                    ? `${summary_Backup}\n\n${summary_Small}`
-                                    : `${summary_Small}`;
-                            }
-                            summary_Small = "";
+                        
+                        // 构建本次要添加的完整内容（用于去重检查）
+                        const contentToAdd = `${timestamp}\n${summaryContent}`;
+                        
+                        // 检查是否已存在相同内容（防止重新渲染时重复累加）
+                        const alreadyExists = summary_Small && summary_Small.includes(summaryContent);
+                        const alreadyExistsInWeek = summary_Week && summary_Week.includes(summaryContent);
+                        const alreadyExistsInBackup = summary_Backup && summary_Backup.includes(summaryContent);
+                        
+                        if (alreadyExists || alreadyExistsInWeek || alreadyExistsInBackup) {
+                            console.log('SUMMARY内容已存在，跳过重复添加');
                         } else {
-                            if (summary_Small) {
-                                summary_Small += `\n\n${timestamp}\n${summaryContent}`;
+                            if (newWeek === 1) {
+                                if (summary_Week) {
+                                    summary_Week += `\n\n${summaryContent}`;
+                                } else {
+                                    summary_Week = `${summaryContent}`;
+                                }
+                                if (summary_Small) {
+                                    summary_Backup = summary_Backup
+                                        ? `${summary_Backup}\n\n${summary_Small}`
+                                        : `${summary_Small}`;
+                                }
+                                summary_Small = "";
                             } else {
-                                summary_Small = `${timestamp}\n${summaryContent}`;
+                                if (summary_Small) {
+                                    summary_Small += `\n\n${timestamp}\n${summaryContent}`;
+                                } else {
+                                    summary_Small = `${timestamp}\n${summaryContent}`;
+                                }
                             }
+                            console.log('SUMMARY已根据newWeek规则更新');
                         }
 
                         localState.summarySmallUpdateApplied = true;
-                        console.log('SUMMARY已根据newWeek规则更新');
                     } else {
                         // 如果没有找到SUMMARY标签，尝试更鲁棒的方法
                         // 从第一个{符号往前找汉字，再回溯到>符号
@@ -1171,31 +1183,42 @@ const outPut = `
                                         // 检查是否包含SUMMARY相关内容
                                         if (potentialSummary.length > 0 && !potentialSummary.includes('<MAIN_TEXT>')) {
                                             console.log('通过鲁棒方法捕捉到可能的SUMMARY内容：', potentialSummary);
-                                            const year = Math.floor((currentWeek - 1) / 48) + 1;
-                                            const remainingWeeks = (currentWeek - 1) % 48;
-                                            const month = Math.floor(remainingWeeks / 4) + 1;
-                                            const week = remainingWeeks % 4 + 1;
-
-                                            const timestamp = `[第${year}年第${month}月第${week}周]`;
-
-                                            if (newWeek === 1) {
-                                                if (summary_Week) {
-                                                    summary_Week += `\n\n${timestamp}\n${potentialSummary}`;
-                                                } else {
-                                                    summary_Week = `${timestamp}\n${potentialSummary}`;
-                                                }
-                                                if (summary_Small) {
-                                                    summary_Backup = summary_Backup
-                                                        ? `${summary_Backup}\n\n${summary_Small}`
-                                                        : `${summary_Small}`;
-                                                }
-                                                summary_Small = "";
+                                            
+                                            // 检查是否已存在相同内容（防止重新渲染时重复累加）
+                                            const alreadyExists = summary_Small && summary_Small.includes(potentialSummary);
+                                            const alreadyExistsInWeek = summary_Week && summary_Week.includes(potentialSummary);
+                                            const alreadyExistsInBackup = summary_Backup && summary_Backup.includes(potentialSummary);
+                                            
+                                            if (alreadyExists || alreadyExistsInWeek || alreadyExistsInBackup) {
+                                                console.log('SUMMARY内容已存在（鲁棒方法），跳过重复添加');
                                             } else {
-                                                if (summary_Small) {
-                                                    summary_Small += `\n\n${timestamp}\n${potentialSummary}`;
+                                                const year = Math.floor((currentWeek - 1) / 48) + 1;
+                                                const remainingWeeks = (currentWeek - 1) % 48;
+                                                const month = Math.floor(remainingWeeks / 4) + 1;
+                                                const week = remainingWeeks % 4 + 1;
+
+                                                const timestamp = `[第${year}年第${month}月第${week}周]`;
+
+                                                if (newWeek === 1) {
+                                                    if (summary_Week) {
+                                                        summary_Week += `\n\n${timestamp}\n${potentialSummary}`;
+                                                    } else {
+                                                        summary_Week = `${timestamp}\n${potentialSummary}`;
+                                                    }
+                                                    if (summary_Small) {
+                                                        summary_Backup = summary_Backup
+                                                            ? `${summary_Backup}\n\n${summary_Small}`
+                                                            : `${summary_Small}`;
+                                                    }
+                                                    summary_Small = "";
                                                 } else {
-                                                    summary_Small = `${timestamp}\n${potentialSummary}`;
+                                                    if (summary_Small) {
+                                                        summary_Small += `\n\n${timestamp}\n${potentialSummary}`;
+                                                    } else {
+                                                        summary_Small = `${timestamp}\n${potentialSummary}`;
+                                                    }
                                                 }
+                                                console.log('SUMMARY已根据newWeek规则更新（鲁棒方法）');
                                             }
 
                                             localState.summarySmallUpdateApplied = true;

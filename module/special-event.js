@@ -46,7 +46,7 @@
 const specialEvents = [
     {
         id: "Apprenticeship_Storyline_1",
-        name: "拜师剧情1",
+        name: "拜师苓雪妃1",
         priority: 100,
         conditions: {
             currentWeek: { min: 2 }  // 第2周（第一个月末）
@@ -108,7 +108,7 @@ const specialEvents = [
     },
     {
         id: "Apprenticeship_Storyline_2",
-        name: "拜师剧情2",
+        name: "拜师苓雪妃2",
         priority: 99,
         conditions: {
             currentSpecialEvent: { equals: 'Apprenticeship_Storyline_1' } 
@@ -168,7 +168,7 @@ const specialEvents = [
     },
     {
         id: "Apprenticeship_Storyline_3",
-        name: "拜师剧情3",
+        name: "拜师苓雪妃3",
         priority: 98,
         conditions: {
             currentSpecialEvent: { equals: 'Apprenticeship_Storyline_2' } 
@@ -226,7 +226,7 @@ const specialEvents = [
     },
     {
         id: "Apprenticeship_Storyline_4",
-        name: "拜师剧情4",
+        name: "拜师苓雪妃4",
         priority: 97,
         conditions: {
             currentSpecialEvent: { equals: 'Apprenticeship_Storyline_3' } 
@@ -284,7 +284,7 @@ const specialEvents = [
     },
     {
         id: "Apprenticeship_Storyline_5",
-        name: "拜师剧情5",
+        name: "拜师苓雪妃5",
         priority: 96,
         conditions: {
             currentSpecialEvent: { equals: 'Apprenticeship_Storyline_4' } 
@@ -342,7 +342,7 @@ const specialEvents = [
     },
     {
         id: "Apprenticeship_Storyline_6",
-        name: "拜师剧情6",
+        name: "拜师苓雪妃6",
         priority: 95,
         conditions: {
             currentSpecialEvent: { equals: 'Apprenticeship_Storyline_5' } 
@@ -352,7 +352,9 @@ const specialEvents = [
             inputEnable: { set: 1 },
             mapLocation: { set: '天山派' },  
             companionNPC: { set: [] },
-            userLocation: { set: 'nvdizi' }
+            userLocation: { set: 'nvdizi' },
+            "npcFavorability.O": { add: 20 },
+            "npcVisibility.O": { set: true }
         },  // 无属性变化
         text: `<SLG_MODE>
 
@@ -795,6 +797,7 @@ function setValueByPath(path, newValue) {
         // 嵌套变量
         const globalVars = {
             npcFavorability: typeof npcFavorability !== 'undefined' ? npcFavorability : null,
+            npcVisibility: typeof npcVisibility !== 'undefined' ? npcVisibility : null,
             playerTalents: typeof playerTalents !== 'undefined' ? playerTalents : null,
             playerStats: typeof playerStats !== 'undefined' ? playerStats : null,
             combatStats: typeof combatStats !== 'undefined' ? combatStats : null,
