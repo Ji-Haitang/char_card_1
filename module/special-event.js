@@ -49,7 +49,7 @@ const specialEvents = [
         name: "拜师苓雪妃1",
         priority: 100,
         conditions: {
-            currentWeek: { min: 2 }  // 第2周（第一个月末）
+            currentWeek: { min: 4 }  // 第4周（第一个月末）
         },
         effects: {
             GameMode: { set: 1 },
