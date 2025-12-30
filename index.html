@@ -394,6 +394,7 @@
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
                     <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容（关）</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
+                    <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
                 </div>
             </div>
             
@@ -3017,6 +3018,12 @@ const outPut = `
         async function toggleCompressSummary() {
             compressSummary = !compressSummary;
             updateCompressSummaryLabel();
+        }
+
+        // 打开玩法说明
+        function openPlayGuide() {
+            window.open('https://rentry.org/how2playJXZ', '_blank');
+            toggleDropdown('system-dropdown');
         }
 
         // 根据inputEnable控制自由行动输入框、发送按钮、跳过一周按钮和返回天山派按钮

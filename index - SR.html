@@ -60,7 +60,7 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-styles.css">
 </head>
 <body>
     <div class="container">
@@ -374,6 +374,7 @@
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
                     <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容（关）</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
+                    <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
                 </div>
             </div>
             
@@ -796,13 +797,13 @@
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-state.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-ui.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/game-events.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ffb6797/module/special-event.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@c253e3c/module/special-event.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -2901,6 +2902,12 @@
             updateCompressSummaryLabel();
         }
 
+        // 打开玩法说明
+        function openPlayGuide() {
+            window.open('https://rentry.org/how2playJXZ', '_blank');
+            toggleDropdown('system-dropdown');
+        }
+
         // 字体设置弹窗
         function showFontSettings(){
             // 关闭下拉
@@ -3189,6 +3196,7 @@
         window.toggleCgContent = toggleCgContent;
         window.toggleCompressSummary = toggleCompressSummary;
         window.showFontSettings = showFontSettings;
+        window.openPlayGuide = openPlayGuide;
         window.closeFontModal = closeFontModal;
         // 暴露 updateFreeActionInputState 到全局，供 game-events.js 调用
         window.updateFreeActionInputState = updateFreeActionInputState;
