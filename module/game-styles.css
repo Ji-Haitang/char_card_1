@@ -2872,7 +2872,13 @@ body {
     max-width: 90%;              /* 可选：防止极端宽图超出 */
     object-fit: contain;         /* 覆盖全局的 cover */
     object-position: bottom center;
-  }
+}
+
+/* 特殊CG表情差分：占满全屏高度 */
+.slg-emotion-layer.slg-emotion-special-cg img {
+    height: 100%;
+    max-width: 100%;             /* 特殊CG允许更大宽度 */
+}
 
   /* 汗青集正文字号与故事正文一致 */
 #history-summary-content {

@@ -578,6 +578,11 @@ function updateStoryDisplay() {
                     const emotionImg = document.createElement('img');
 
                     const emotion = (pageData.emotion && pageData.emotion !== 'none') ? pageData.emotion : '平静';
+                    
+                    // 检查是否为特殊CG格式（特殊CG1、特殊CG15等），添加对应CSS类
+                    if (/^特殊CG\d+$/.test(emotion)) {
+                        emotionLayer.classList.add('slg-emotion-special-cg');
+                    }
                     // 触发 enamor：首次遇到“发情”
                     if (emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) {
                         enamor = 1;
