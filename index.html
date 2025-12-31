@@ -70,6 +70,7 @@
         document.head.appendChild(cssLink);
     </script> -->
     <link rel="stylesheet" href="module/game-styles.css">
+    <link rel="stylesheet" href="module/game-styles-theme.css" id="theme-css">
 </head>
 <body>
     <div class="container">
@@ -389,8 +390,7 @@
                     系统设置 ▲
                 </button>
                 <div id="system-dropdown" class="dropdown-menu">
-                    <button class="dropdown-item" onclick="saveGame()">存档</button>
-                    <button class="dropdown-item" onclick="loadGame()">读档</button>
+                    <button class="dropdown-item" id="toggle-ui-btn" onclick="toggleUIStyle()">UI风格（古风）</button>
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
                     <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容（关）</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
@@ -404,6 +404,8 @@
                     信息设置 ▲
                 </button>
                 <div id="history-dropdown" class="dropdown-menu">
+                    <button class="dropdown-item" onclick="saveGame()">存档</button>
+                    <button class="dropdown-item" onclick="loadGame()">读档</button>
                     <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
                     <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结（关）</button>
@@ -3020,6 +3022,36 @@ const outPut = `
             updateCompressSummaryLabel();
         }
 
+        // 更新UI风格按钮文案
+        function updateUIStyleLabel() {
+            const btn = document.getElementById('toggle-ui-btn');
+            const style = (typeof uiStyle !== 'undefined') ? uiStyle : 0;
+            if (btn) btn.textContent = `UI风格（${style === 0 ? '古风' : '扁平'}）`;
+        }
+
+        // 切换UI风格
+        function toggleUIStyle() {
+            uiStyle = (typeof uiStyle !== 'undefined' && uiStyle === 0) ? 1 : 0;
+            applyUIStyle(uiStyle);
+            updateUIStyleLabel();
+            toggleDropdown('system-dropdown');
+        }
+
+        // 应用UI风格
+        function applyUIStyle(style) {
+            const themeLink = document.getElementById('theme-css');
+            if (themeLink) {
+                if (style === 0) {
+                    // 古风UI：加载主题CSS
+                    themeLink.href = 'module/game-styles-theme.css';
+                    themeLink.disabled = false;
+                } else {
+                    // 扁平化UI：禁用主题CSS
+                    themeLink.disabled = true;
+                }
+            }
+        }
+
         // 打开玩法说明
         function openPlayGuide() {
             window.open('https://rentry.org/how2playJXZ', '_blank');
@@ -3146,6 +3178,11 @@ const outPut = `
             // 新增：初始化时更新SLG返回按钮显示
             updateSLGReturnButton();
             updateCgToggleLabel();
+            // 初始化UI风格
+            updateUIStyleLabel();
+            if (typeof applyUIStyle === 'function') {
+                applyUIStyle((typeof uiStyle !== 'undefined') ? uiStyle : 0);
+            }
             // 初始化完成后应用字体档位
             try { applyFontLevel((typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2); } catch(_){}
             // 初始化时更新自由行动输入框状态

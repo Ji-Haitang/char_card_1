@@ -202,7 +202,7 @@ body {
 
 /* 行动点图标 */
 .action-points-display::before {
-    content: '⚡';
+    content: '';
     margin-right: 6px;
     color: #ffd54f;
     filter: drop-shadow(0 0 2px rgba(255,213,79,0.6));

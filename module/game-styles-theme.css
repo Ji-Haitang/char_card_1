@@ -1,0 +1,468 @@
+/* 
+ * 姬侠传 - 水墨古风主题包
+ * 基于原版 game-styles.css 进行样式覆盖与增强
+ */
+
+:root {
+    /* --- 调色板 --- */
+    /* 纸张背景色 */
+    --paper-base: #f4f0e6;
+    --paper-light: #faf8f2;
+    --paper-dark: #e6e2d8;
+    
+    /* 水墨色阶 */
+    --ink-black: #1a1a1a;   /* 焦墨 */
+    --ink-dark: #2c2c2c;    /* 浓墨 */
+    --ink-medium: #595959;  /* 重墨 */
+    --ink-light: #8c8c8c;   /* 淡墨 */
+    
+    /* 点缀色 */
+    --accent-red: #a93226;  /* 朱砂 - 战斗/强调 */
+    --accent-cyan: #2471a3; /* 靛青 - 互动/选中 */
+    --accent-gold: #b7950b; /* 藤黄 - 金钱/高亮 */
+    --accent-green: #1e8449; /* 竹青 - 生命/恢复 */
+    
+    /* 边框与纹理 */
+    --border-style: 2px solid var(--ink-dark);
+    --border-double: 4px double var(--ink-dark);
+    --shadow-hard: 4px 4px 0 rgba(44, 44, 44, 0.2);
+    
+    /* 字体栈 */
+    --font-serif: "Kaiti", "STKaiti", "AR PL UKai CN", "KaiTi_GB2312", "SimSun", serif;
+    --font-sans: "Microsoft YaHei", "SimHei", sans-serif;
+}
+
+/* --- 全局基础 --- */
+body {
+    background-color: #d6d2c4;
+    background-image: 
+        url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
+    color: var(--ink-dark);
+    font-family: var(--font-serif) !important;
+}
+
+/* 视窗容器：增加双线边框 + 强制纸质背景 */
+.viewport {
+    border: var(--border-double);
+    box-shadow: 0 0 40px rgba(0,0,0,0.4);
+    border-radius: 2px;
+    /* 这里给视窗本身加上纸质背景，这样当场景透明时就能看到纸纹 */
+    background-color: var(--paper-base) !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.1'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E") !important;
+}
+
+/* --- UI 组件重塑 --- */
+
+/* 1. 按钮：匾额/印章风格 */
+/* 注意：这里添加了 .free-action-send-btn 和 .story-expand-btn 以统一风格 */
+.control-btn, .scene-btn, .modal-btn, .game-btn, .location-go-btn, .back-btn, .free-action-send-btn, .story-expand-btn, 
+.trading-btn, .detail-btn, .buy-btn, .sell-btn, .unequip-btn {
+    background: var(--paper-base) !important;
+    color: var(--ink-dark) !important;
+    border: 2px solid var(--ink-dark) !important;
+    border-radius: 2px !important; /* 几近直角 */
+    font-family: var(--font-serif) !important;
+    letter-spacing: 1px;
+    position: relative;
+    transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+/* 按钮内饰线（仅在大按钮显示） */
+.control-btn::after, .scene-btn::after, .back-btn::after {
+    content: '';
+    position: absolute;
+    top: 3px; left: 3px; right: 3px; bottom: 3px;
+    border: 1px solid rgba(0,0,0,0.1);
+    pointer-events: none;
+}
+
+/* 动态交互：墨水扩散效果 (Ripple) */
+@keyframes ink-spread {
+    0% { transform: scale(0); opacity: 0.5; }
+    100% { transform: scale(3); opacity: 0; }
+}
+
+.control-btn:active::before, .scene-btn:active:not(:disabled)::before, .back-btn:active::before, .free-action-send-btn:active:not(:disabled)::before {
+    content: '';
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 20px; height: 20px;
+    background: rgba(0,0,0,0.2);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    animation: ink-spread 0.6s ease-out;
+    pointer-events: none;
+}
+
+/* 通用悬停效果 */
+.control-btn:hover, .scene-btn:hover:not(:disabled), .modal-btn:hover, .location-go-btn:hover, .back-btn:hover, .free-action-send-btn:hover:not(:disabled), .story-expand-btn:hover,
+.trading-btn:hover:not(:disabled), .detail-btn:hover, .buy-btn:hover:not(:disabled), .sell-btn:hover:not(:disabled), .unequip-btn:hover {
+    background: var(--paper-light) !important;
+    color: var(--accent-red) !important;
+    border-color: var(--accent-red) !important;
+    transform: translate(-1px, -1px);
+    box-shadow: 4px 4px 0 rgba(169, 50, 38, 0.15);
+}
+
+/* 展开按钮专属覆盖：修复偏移问题 */
+.story-expand-btn:hover {
+    padding-bottom: clamp(4px, 1vw, 6px) !important; /* 保持与默认值一致，不改变高度 */
+    transform: translateX(-50%) !important; /* 关键：强制保持居中，不使用通用的 translate(-1px, -1px) */
+}
+
+.control-btn:active, .scene-btn:active:not(:disabled), .back-btn:active, .free-action-send-btn:active:not(:disabled), .story-expand-btn:active,
+.trading-btn:active:not(:disabled), .detail-btn:active, .buy-btn:active:not(:disabled), .sell-btn:active:not(:disabled), .unequip-btn:active {
+    transform: translate(1px, 1px);
+    box-shadow: none;
+}
+
+.story-expand-btn:active {
+    transform: translateX(-50%) translateY(1px) !important; /* 仅在按下时稍微下沉，保持居中 */
+}
+
+/* 翻页箭头：古风配色，保持形状位置 */
+.story-nav-btn {
+    background: rgba(44, 44, 44, 0.8) !important; /* 保持原有深底色，但覆盖为墨色系 */
+    border: 1px solid var(--ink-medium) !important;
+    color: var(--paper-base) !important; /* 米白箭头 */
+    font-family: "SimHei", sans-serif; /* 箭头符号不需要衬线 */
+}
+
+.story-nav-btn:hover:not(:disabled) {
+    background: var(--ink-black) !important;
+    border-color: var(--accent-gold) !important;
+    color: var(--accent-gold) !important; /* 悬停变金 */
+}
+
+/* 禁用状态 */
+.control-btn:disabled, .scene-btn:disabled, .modal-btn.disabled, .free-action-send-btn:disabled, .trading-btn:disabled, .buy-btn:disabled, .sell-btn:disabled {
+    background: #e0e0e0 !important;
+    color: #999 !important;
+    border-color: #bbb !important;
+    cursor: not-allowed;
+    box-shadow: none;
+}
+
+/* 2. 状态栏：深沉底色 */
+.status-display {
+    background: linear-gradient(to bottom, rgba(30,30,30,0.95), rgba(44,44,44,0.9));
+    border-bottom: 2px solid var(--accent-gold);
+    font-family: var(--font-serif);
+}
+
+.status-display .date-display {
+    color: var(--paper-light);
+    text-shadow: 1px 1px 2px #000;
+}
+
+/* 进度条优化：水墨笔触感 */
+.mood-bar {
+    border: 1px solid rgba(255,255,255,0.3);
+    background: rgba(0,0,0,0.3);
+    border-radius: 100px;
+}
+
+.mood-fill {
+    background: linear-gradient(90deg, #5dade2, var(--accent-cyan));
+    /* 可以尝试加一点纹理 */
+}
+
+/* 3. 弹窗与容器通用风格：卷轴/信笺 - 强力覆盖背景色 */
+.modal-content, .npc-info-popup, .location-info-popup, 
+.stats-group, .inventory-item, .relationship-card, .equipment-stats, .item-info, .shop-item-info, .shop-item-price-info,
+.equipment-slot, .trading-list, .trading-item-row,
+/* 新增：随机事件和战斗容器 */
+.random-event-container, .battle-event-container {
+    background-color: var(--paper-base) !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.1'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E") !important;
+    color: var(--ink-black) !important;
+    border: 2px solid var(--ink-dark) !important;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1), 0 0 0 2px rgba(44,44,44,0.05) !important;
+    border-radius: 2px !important; /* 统一为硬朗直角 */
+}
+
+/* 覆盖特定的圆角和阴影 */
+.stats-group h3, .cheat-section h4 {
+    font-family: var(--font-serif) !important;
+    color: var(--ink-black) !important;
+    border-bottom: 1px solid var(--accent-gold);
+    padding-bottom: 5px;
+}
+
+.modal-text {
+    font-family: var(--font-serif) !important;
+    color: var(--ink-black) !important;
+    border-bottom: 1px dashed var(--ink-light);
+    padding-bottom: 15px;
+}
+
+/* 4. 故事文本区域：更强的排版 */
+.story-area {
+    background: var(--paper-light) !important;
+    border: 2px solid var(--ink-dark);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+}
+
+.story-text {
+    font-family: var(--font-sans) !important; /* 改回无衬线字体，保证可读性 */
+    line-height: 1.9;
+    font-size: 1.15rem;
+    color: #111;
+}
+
+/* 汗青集正文内容：同样改回无衬线字体 */
+#history-summary-content {
+    font-family: var(--font-sans) !important;
+    color: var(--ink-black) !important;
+}
+
+/* 5. 下拉菜单：印章风格 - 增加优先级 */
+.dropdown-menu {
+    background: var(--paper-base) !important;
+    border: 2px solid var(--ink-dark) !important;
+    box-shadow: 4px 4px 0 rgba(0,0,0,0.2) !important;
+}
+
+.dropdown-item {
+    color: var(--ink-dark) !important;
+    font-family: var(--font-serif) !important;
+    border-bottom: 1px dotted rgba(0,0,0,0.2) !important;
+    transition: all 0.2s;
+}
+
+.dropdown-item:hover {
+    background: rgba(169, 50, 38, 0.1) !important; /* 朱红淡色 */
+    color: var(--accent-red) !important;
+    padding-left: 20px !important; /* 悬停右移 */
+}
+
+/* 6. 输入框：水墨边框 */
+.free-action-input, .input-field {
+    background: #fff;
+    border: 2px solid var(--ink-medium);
+    border-radius: 2px;
+    font-family: var(--font-serif) !important;
+    color: var(--ink-black);
+}
+
+.free-action-input:focus, .input-field:focus {
+    border-color: var(--accent-cyan);
+    box-shadow: 0 0 8px rgba(36, 113, 163, 0.2);
+}
+
+/* 7. 场景标题：竖排版与匾额 */
+.scene-title {
+    font-family: "LiSu", "KaiTi", serif !important; /* 隶书或楷体 */
+    color: #000 !important;
+    text-shadow: 
+        0 0 5px #fff, 
+        0 0 10px #fff,
+        0 0 2px #fff;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0));
+    padding: 10px 15px;
+    border-radius: 4px;
+    border-top: 3px solid var(--ink-black);
+    
+    /* 竖排文字 */
+    writing-mode: vertical-rl;
+    text-orientation: upright;
+    letter-spacing: 5px;
+    position: absolute;
+    top: 15px; /* 上移至15px，贴近顶部 */
+    right: 30px; /* 改为右上角显示，更符合古风 */
+    left: auto;
+    transform: none;
+}
+
+/* 8. 随机事件与战斗卡片（特定优化） */
+.event-title, .battle-event-title {
+    color: var(--accent-red) !important;
+    font-family: var(--font-serif) !important;
+    border-bottom: 1px solid var(--ink-light) !important;
+    padding-bottom: 8px;
+    margin-bottom: 12px !important;
+}
+
+/* 事件内容文字 */
+.event-description, .battle-event-description, .enemy-info-item, .battle-reward-text, .option-desc, .option-reward, .option-success-rate {
+    color: var(--ink-black) !important;
+    font-family: var(--font-serif) !important;
+}
+
+/* 战斗/事件选项按钮 */
+.event-option-btn, .battle-action-btn {
+    background: var(--paper-light) !important;
+    border: 1px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    color: var(--ink-black) !important;
+    font-family: var(--font-serif) !important;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.1) !important;
+    transition: all 0.2s;
+}
+
+.event-option-btn:hover, .battle-action-btn:hover {
+    background: var(--paper-dark) !important;
+    border-color: var(--accent-red) !important;
+    color: var(--accent-red) !important;
+    transform: translate(-1px, -1px);
+}
+
+/* 战斗详情背景修正 */
+.battle-enemy-info, .battle-reward {
+    background: rgba(0,0,0,0.03) !important;
+    border: 1px solid rgba(0,0,0,0.1) !important;
+    border-radius: 2px !important;
+}
+
+/* 9. 地点标签：使用 game-styles.css 的原始样式，仅覆盖全局楷体继承 */
+/* 由于 body 设置了楷体，需要明确将地点标签恢复为无衬线字体 */
+.location,
+.location .location-label-text {
+    font-family: "Microsoft YaHei", "SimHei", sans-serif !important;
+}
+
+/* 不添加任何额外的 text-shadow、box-shadow 或其他样式 */
+/* 让 game-styles.css 中的原始样式生效 */
+
+/* 10. 返回按钮：特殊处理（已合并到通用按钮样式） */
+/* .back-btn 样式已由上方的通用 .control-btn, .back-btn 规则覆盖 */
+
+/* 覆盖原有蓝色阴影 */
+.tooltip.show {
+    background: var(--ink-black);
+    border: 1px solid var(--ink-light);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.5);
+    font-family: var(--font-serif) !important;
+}
+
+/* --- 属性面板与关系界面特定覆盖 --- */
+
+/* 场景背景：透明，显示body背景 */
+/* 关键：确保这些场景没有背景色，能透出 viewport 的纸纹 */
+#player-stats-scene, #relationships-scene {
+    background: transparent !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+
+.stat-bar, .relationship-bar {
+    background: #e6e2d8 !important;
+    border: 1px solid #999;
+    border-radius: 2px !important;
+    height: 18px !important;
+}
+
+.stat-fill {
+    background: linear-gradient(to right, var(--ink-medium), var(--ink-black)) !important;
+    border-radius: 0 !important;
+}
+
+.add-point-btn, .gift-btn {
+    background: var(--paper-base) !important;
+    color: var(--ink-dark) !important;
+    border: 1px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+}
+
+.add-point-btn:hover:not(:disabled), .gift-btn:hover:not(.disabled) {
+    background: var(--paper-dark) !important;
+    color: var(--accent-red) !important;
+    border-color: var(--accent-red) !important;
+}
+
+/* 强制所有文字使用衬线体 */
+.stat-name, .simple-stat-name, .simple-stat-value, .stat-value, 
+.relationship-name, .relationship-value, .checkbox-label, .npc-info-desc, .npc-info-name {
+    font-family: var(--font-serif) !important;
+    color: var(--ink-black) !important;
+}
+
+/* 关系进度条 */
+.relationship-fill {
+    background: linear-gradient(to right, #d98880, #c0392b) !important;
+    border-radius: 0 !important;
+}
+
+/* 装备和物品槽/列表/表格行 */
+.equipment-slot, .inventory-item, .trading-list, .trading-item-row, .cheat-section, .cheat-item input {
+    background: var(--paper-light) !important;
+    border: 1px solid #ccc !important;
+    border-radius: 2px !important;
+}
+
+.equipped-item, .shop-item-price-info {
+    background: rgba(183, 149, 11, 0.1) !important;
+    border: 1px solid var(--accent-gold) !important;
+    color: var(--ink-dark) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+}
+
+/* --- 地点弹窗优化 (去除荧光蓝) --- */
+.location-info-name {
+    color: var(--accent-red) !important;
+    font-family: var(--font-serif) !important;
+    border-bottom: 1px solid var(--ink-light);
+    padding-bottom: 5px;
+}
+
+/* 覆盖前往按钮 */
+.location-go-btn {
+    /* 已合并到通用按钮样式中，这里仅做微调 */
+    min-width: 120px;
+}
+
+.location-info-npcs {
+    color: var(--ink-medium) !important;
+    font-family: var(--font-serif) !important;
+}
+
+/* 地图热区高亮：改为金色光晕 */
+#map-hit-areas polygon:hover,
+#map-hit-areas polygon.active {
+    stroke: var(--accent-gold) !important;
+    filter: drop-shadow(0 0 6px rgba(183, 149, 11, 0.6)) !important;
+    stroke-width: 3px !important;
+}
+
+/* --- 交易与物品详情修复 --- */
+
+/* 强制替换荧光蓝价格颜色 */
+.trading-money, .trading-item-price, .price-value, .stat-effect {
+    color: var(--accent-cyan) !important;
+    font-family: var(--font-serif) !important;
+    text-shadow: none !important;
+}
+
+/* 物品详情与列表文字统一 */
+.trading-item-name, .item-name, .shop-item-stat-label, .shop-item-stat, .item-description, .shop-item-description, .price-label {
+    font-family: var(--font-serif) !important;
+    color: var(--ink-dark) !important;
+}
+
+/* 售出价格颜色区分 */
+.trading-item-price[style*="color: #ff6b6b"], .sell-price {
+    color: var(--accent-red) !important;
+}
+
+/* 弹窗标题统一 */
+.trading-header h3, .shop-detail-content h3 {
+    font-family: var(--font-serif) !important;
+    color: var(--ink-black) !important;
+    border-bottom: 1px solid var(--accent-gold);
+    padding-bottom: 8px;
+    display: block;
+    width: 100%;
+    text-align: center;
+}
+
+/* 物品图标背景优化 */
+.item-icon {
+    background-color: var(--paper-dark) !important;
+    border: 1px solid var(--ink-light) !important;
+    border-radius: 2px !important;
+    color: var(--ink-dark) !important;
+}

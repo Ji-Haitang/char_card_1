@@ -56,6 +56,7 @@ let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50 };
 let userBackground = "A"; // 新增：出身编码
 let textFontLevel = 2; // 新增：正文字体档位 1~5
+let uiStyle = 0; // 新增：UI风格（0=古风UI，1=扁平化UI）
 let dayNightStatus = 'daytime';  // 新增：昼夜状况
 let seasonStatus = 'winter';      // 新增：四季状况
 let playerMood = 100;
@@ -191,6 +192,7 @@ function syncVariablesFromGameData() {
     mapLocation,      // 新增
     cgContentEnabled,  // 新增
     compressSummary,
+    uiStyle,           // 新增：UI风格
     alchemyDone,       // 新增：本周是否已炼丹
     triggeredEvents,   // 新增：已触发的特殊事件ID列表
     currentSpecialEvent, // 新增：当前触发的特殊事件ID
@@ -254,6 +256,7 @@ function syncGameDataFromVariables() {
     gameData.mapLocation = mapLocation;
     gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
     gameData.compressSummary = compressSummary;    // 新增：写回存档
+    gameData.uiStyle = uiStyle;                    // 新增：UI风格
     gameData.alchemyDone = alchemyDone;            // 新增：本周是否已炼丹
     gameData.triggeredEvents = triggeredEvents;    // 新增：已触发的特殊事件ID列表
     gameData.currentSpecialEvent = currentSpecialEvent;  // 新增：当前触发的特殊事件ID
