@@ -353,8 +353,8 @@ body {
 #yanwuchang { top: 51%; left: 44%; }
 #cangjingge { top: 25%; left: 14%; }
 #huofang { top: 50%; left: 62%; }
-#houshan { top: 25%; left: 90%; }
-#yishiting { top: 12%; left: 55%; }
+#houshan { top: 27%; left: 88%; }  /* 左移2%，下移2%，防止框选图片超出界面 */
+#yishiting { top: 14%; left: 55%; }  /* 下移2%，防止框选图片超出界面 */
 #tiejiangpu { top: 55%; left: 82%; }
 #nandizi { top: 27%; left: 63%; }
 #nvdizi { top: 25%; left: 38%; }
@@ -2895,3 +2895,13 @@ body {
     height: 100% !important;
     max-height: none !important;
 }
+
+/* 多边形高亮样式：仅扁平化UI时生效 */
+body.ui-style-flat #map-hit-areas polygon:hover,
+body.ui-style-flat #map-hit-areas polygon.active {
+    stroke: #4ecdc4;
+    fill: transparent;
+    filter: drop-shadow(0 0 6px rgba(78,205,196,0.55)) drop-shadow(0 0 12px rgba(78,205,196,0.35));
+    cursor: pointer;
+}
+

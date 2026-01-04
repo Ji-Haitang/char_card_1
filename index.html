@@ -3045,9 +3045,13 @@ const outPut = `
                     // 古风UI：加载主题CSS
                     themeLink.href = 'module/game-styles-theme.css';
                     themeLink.disabled = false;
+                    document.body.classList.remove('ui-style-flat');
+                    document.body.classList.add('ui-style-ancient');
                 } else {
                     // 扁平化UI：禁用主题CSS
                     themeLink.disabled = true;
+                    document.body.classList.remove('ui-style-ancient');
+                    document.body.classList.add('ui-style-flat');
                 }
             }
         }
@@ -3271,14 +3275,6 @@ const outPut = `
                             pointer-events: all;
                             transition: stroke 120ms, stroke-width 120ms, filter 120ms;
                         }
-                        /* 悬停/高亮：仅边缘高亮为白色，中心保持透明，并添加向外发光 */
-                        #map-hit-areas polygon:hover,
-                        #map-hit-areas polygon.active {
-                            stroke: #4ecdc4; /* 与地点弹窗标题同款青色 */
-                            fill: transparent;
-                            filter: drop-shadow(0 0 6px rgba(78,205,196,0.55)) drop-shadow(0 0 12px rgba(78,205,196,0.35));
-                            cursor: pointer;
-                        }
                         /* 小屏下描边更细 */
                         @media (max-width: 600px) {
                             #map-hit-areas polygon { stroke-width: 1.6; }
@@ -3286,6 +3282,28 @@ const outPut = `
                         .scene.slg-mode #map-hit-areas { pointer-events: none; }
                     `;
                     document.head.appendChild(style);
+                }
+
+                // 新增：创建框选图片叠加层元素（若不存在）
+                let selectionOverlay = document.getElementById('location-selection-overlay');
+                if (!selectionOverlay) {
+                    selectionOverlay = document.createElement('div');
+                    selectionOverlay.id = 'location-selection-overlay';
+                    selectionOverlay.className = 'location-selection-overlay';
+                    document.getElementById('map-scene').appendChild(selectionOverlay);
+                }
+
+                // 新增：点击地图空白处隐藏框选
+                const mapScene = document.getElementById('map-scene');
+                if (mapScene && !mapScene._selectionClickBound) {
+                    mapScene.addEventListener('click', (e) => {
+                        // 如果点击的是地图空白处（不是多边形），隐藏框选
+                        if (!e.target.closest('polygon') && typeof uiStyle !== 'undefined' && uiStyle === 0) {
+                            hideLocationSelectionOverlay();
+                            window._selectionLocked = false;
+                        }
+                    });
+                    mapScene._selectionClickBound = true;
                 }
 
                 // 根据 main-viewport 比例设置动态 viewBox（高度基准=1000）
@@ -3312,10 +3330,38 @@ const outPut = `
                     const p = document.createElementNS('http://www.w3.org/2000/svg','polygon');
                     p.setAttribute('points', b.points);
                     p.dataset.location = b.id;
+
+                    // 新增：悬浮事件 - 古风UI时显示框选图片
+                    p.addEventListener('mouseenter', (e) => {
+                        if (typeof uiStyle !== 'undefined' && uiStyle === 0) {
+                            // 如果没有被点击锁定，则显示框选
+                            if (!window._selectionLocked) {
+                                showLocationSelectionOverlay(b.id);
+                            }
+                        }
+                    });
+
+                    p.addEventListener('mouseleave', (e) => {
+                        if (typeof uiStyle !== 'undefined' && uiStyle === 0) {
+                            // 如果没有被点击锁定，则隐藏框选
+                            if (!window._selectionLocked) {
+                                hideLocationSelectionOverlay();
+                            }
+                        }
+                    });
+
                     p.addEventListener('click', (e) => {
-                        // 切换高亮
-                        svg.querySelectorAll('polygon.active').forEach(n => n.classList.remove('active'));
-                        p.classList.add('active');
+                        if (typeof uiStyle !== 'undefined' && uiStyle === 0) {
+                            // 古风UI：持续显示框选图片，锁定状态
+                            showLocationSelectionOverlay(b.id);
+                            window._selectionLocked = true;
+                            window._currentSelectedLocation = b.id;
+                        } else {
+                            // 扁平化UI：切换高亮类
+                            svg.querySelectorAll('polygon.active').forEach(n => n.classList.remove('active'));
+                            p.classList.add('active');
+                        }
+                        
                         // 调起原有地点信息弹窗
                         if (typeof showLocationInfo === 'function') {
                             showLocationInfo(b.id, e);
@@ -3325,6 +3371,36 @@ const outPut = `
                     svg.appendChild(p);
                 });
             } catch (e) { console.warn(e); }
+        }
+
+        // 新增：显示框选图片叠加层
+        function showLocationSelectionOverlay(locationId) {
+            const overlay = document.getElementById('location-selection-overlay');
+            const locationElement = document.getElementById(locationId);
+            
+            if (!overlay || !locationElement) return;
+            
+            // 获取地点标签的位置（相对于 map-scene）
+            const mapScene = document.getElementById('map-scene');
+            const mapRect = mapScene.getBoundingClientRect();
+            const locRect = locationElement.getBoundingClientRect();
+            
+            // 计算地点标签中心相对于 map-scene 的位置
+            const centerX = locRect.left - mapRect.left + locRect.width / 2;
+            const centerY = locRect.top - mapRect.top + locRect.height / 2;
+            
+            // 设置叠加层位置
+            overlay.style.left = centerX + 'px';
+            overlay.style.top = centerY + 'px';
+            overlay.classList.add('show');
+        }
+
+        // 新增：隐藏框选图片叠加层
+        function hideLocationSelectionOverlay() {
+            const overlay = document.getElementById('location-selection-overlay');
+            if (overlay) {
+                overlay.classList.remove('show');
+            }
         }
 
         function setMapHitAreasViewBox() {

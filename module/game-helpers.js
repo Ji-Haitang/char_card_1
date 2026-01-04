@@ -392,6 +392,166 @@ function showNpcInfo(npcId, location, event) {
     if (GameMode === 1) {
         return;
     }
+    
+    const npc = npcs[npcId];
+    
+    // 检查是否已经切磋过
+    const hasSparred = npcSparred[npcId];
+    
+    // 获取切磋奖励信息
+    const reward = npcSparRewards[npcId];
+    const rewardText = reward ? `(${reward.type}+${reward.value})` : '';
+    
+    // 判断UI风格：古风UI(uiStyle=0) 使用框选叠加层，扁平化UI(uiStyle=1) 使用原有弹窗
+    if (typeof uiStyle !== 'undefined' && uiStyle === 0) {
+        // ========== 古风UI：框选叠加层效果 ==========
+        showNpcSelectionOverlay(npcId, location, event);
+    } else {
+        // ========== 扁平化UI：原有弹窗效果 ==========
+        showNpcInfoPopup(npcId, location, event);
+    }
+}
+
+// 古风UI：显示NPC选中框选叠加层
+function showNpcSelectionOverlay(npcId, location, event) {
+    const npc = npcs[npcId];
+    const hasSparred = npcSparred[npcId];
+    const reward = npcSparRewards[npcId];
+    const rewardText = reward ? `(${reward.type}+${reward.value})` : '';
+    
+    // 获取NPC立绘容器
+    const portrait = event.currentTarget;
+    const container = portrait.closest('.npc-container');
+    if (!container) return;
+    
+    // 隐藏场景交互按钮
+    const scene = container.closest('.scene');
+    if (scene) {
+        const sceneActions = scene.querySelector('.scene-actions');
+        if (sceneActions) {
+            sceneActions.style.opacity = '0';
+            sceneActions.style.pointerEvents = 'none';
+        }
+    }
+    
+    // 移除已有的叠加层
+    const existingOverlay = container.querySelector('.npc-selection-overlay');
+    if (existingOverlay) {
+        existingOverlay.remove();
+    }
+    
+    // 统计当前场景NPC数量和位置
+    const allPortraits = container.querySelectorAll('.npc-portrait');
+    const npcCount = allPortraits.length;
+    let npcIndex = Array.from(allPortraits).indexOf(portrait);
+    
+    // 判断按钮应该显示在左侧还是右侧
+    // 规则：
+    // - 1个NPC：显示在左侧
+    // - 2个NPC：左边的按钮在右侧，右边的按钮在左侧
+    // - 3个NPC：左边的按钮在右侧，中间和右边的按钮在左侧
+    let optionsPosition = 'left'; // 默认左侧
+    if (npcCount === 2 && npcIndex === 0) {
+        optionsPosition = 'right'; // 2个NPC时，左边那个的按钮在右侧
+    } else if (npcCount === 3 && npcIndex === 0) {
+        optionsPosition = 'right'; // 3个NPC时，左边那个的按钮在右侧
+    }
+    
+    // 创建叠加层
+    const overlay = document.createElement('div');
+    overlay.className = 'npc-selection-overlay show';
+    overlay.dataset.npcId = npcId;
+    
+    // 直接复制NPC立绘的定位样式，让框选图片完全覆盖立绘
+    const portraitStyle = window.getComputedStyle(portrait);
+    const portraitLeft = portrait.style.left || portraitStyle.left;
+    const portraitTransform = portrait.style.transform || portraitStyle.transform;
+    
+    overlay.innerHTML = `
+        <div class="npc-selection-close-area"></div>
+        <div class="npc-selection-frame options-${optionsPosition}" style="
+            left: ${portraitLeft};
+            bottom: 0;
+            transform: ${portraitTransform};
+        ">
+            <div class="npc-selection-name">${npc.name}</div>
+            <div class="npc-selection-options">
+                <button class="npc-selection-option ${hasSparred ? 'disabled' : ''}" 
+                        data-action="切磋" data-npc="${npcId}"
+                        ${hasSparred ? 'disabled' : ''}>
+                    ${hasSparred ? '已切磋' : '切磋'}<span class="npc-selection-option-reward">${rewardText}</span>
+                </button>
+                <button class="npc-selection-option" 
+                        data-action="互动" data-npc="${npcId}">
+                    互动
+                </button>
+            </div>
+            <div class="npc-selection-desc">${npc.description}</div>
+        </div>
+    `;
+    
+    container.appendChild(overlay);
+    
+    // 使用事件委托绑定按钮点击事件（解决 onclick 不生效问题）
+    overlay.addEventListener('click', function(e) {
+        const btn = e.target.closest('.npc-selection-option');
+        if (btn && !btn.disabled) {
+            e.stopPropagation();
+            const action = btn.dataset.action;
+            const npcIdFromBtn = btn.dataset.npc;
+            closeNpcSelectionOverlay();
+            npcAction(npcIdFromBtn, action);
+        }
+        // 点击关闭区域
+        if (e.target.classList.contains('npc-selection-close-area')) {
+            closeNpcSelectionOverlay();
+        }
+    });
+    
+    // 记录当前选中的NPC
+    window._currentSelectedNpc = npcId;
+    
+    // 点击其他区域关闭
+    setTimeout(() => {
+        document.addEventListener('click', handleNpcOverlayOutsideClick);
+    }, 100);
+}
+
+// 关闭NPC选中叠加层
+function closeNpcSelectionOverlay() {
+    const overlays = document.querySelectorAll('.npc-selection-overlay');
+    overlays.forEach(overlay => {
+        // 恢复场景交互按钮
+        const scene = overlay.closest('.scene');
+        if (scene) {
+            const sceneActions = scene.querySelector('.scene-actions');
+            if (sceneActions) {
+                sceneActions.style.opacity = '1';
+                sceneActions.style.pointerEvents = 'auto';
+            }
+        }
+        overlay.remove();
+    });
+    window._currentSelectedNpc = null;
+    document.removeEventListener('click', handleNpcOverlayOutsideClick);
+}
+
+// 处理点击叠加层外部
+function handleNpcOverlayOutsideClick(e) {
+    const overlay = document.querySelector('.npc-selection-overlay');
+    if (overlay && !overlay.contains(e.target) && !e.target.closest('.npc-portrait')) {
+        closeNpcSelectionOverlay();
+    }
+}
+
+// 从叠加层触发NPC动作
+function npcActionFromOverlay(npcId, action) {
+    closeNpcSelectionOverlay();
+    npcAction(npcId, action);
+}
+
+// 扁平化UI：原有弹窗效果
+function showNpcInfoPopup(npcId, location, event) {
     const npc = npcs[npcId];
     const popup = document.getElementById('npc-info-popup');
     

@@ -235,7 +235,21 @@ body {
 .dropdown-item:hover {
     background: rgba(169, 50, 38, 0.1) !important; /* 朱红淡色 */
     color: var(--accent-red) !important;
-    padding-left: 20px !important; /* 悬停右移 */
+    padding-left: 25px !important; /* 悬停右移（小屏幕基础值15px → 25px，+10px） */
+}
+
+/* 中等屏幕：增强右移效果 */
+@media (min-width: 768px) {
+    .dropdown-item:hover {
+        padding-left: 32px !important; /* 基础值20px → 32px，+12px */
+    }
+}
+
+/* 大屏幕：进一步增强右移效果 */
+@media (min-width: 1200px) {
+    .dropdown-item:hover {
+        padding-left: 38px !important; /* 基础值20px → 38px，+18px */
+    }
 }
 
 /* 6. 输入框：水墨边框 */
@@ -420,12 +434,52 @@ body {
     font-family: var(--font-serif) !important;
 }
 
-/* 地图热区高亮：改为金色光晕 */
+/* 地图热区高亮：古风UI下使用边缘白色发光效果 */
 #map-hit-areas polygon:hover,
 #map-hit-areas polygon.active {
-    stroke: var(--accent-gold) !important;
-    filter: drop-shadow(0 0 6px rgba(183, 149, 11, 0.6)) !important;
-    stroke-width: 3px !important;
+    stroke: rgba(255, 255, 255, 0.25) !important;  /* 淡白色描边，作为发光种子 */
+    stroke-width: 1px !important;
+    fill: transparent !important;
+    /* 多层白色发光，从边缘向外扩散（基础版 - 适合小屏幕） */
+    filter: 
+        drop-shadow(0 0 3px rgba(255, 255, 255, 1))
+        drop-shadow(0 0 6px rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 10px rgba(255, 255, 255, 0.6))
+        drop-shadow(0 0 16px rgba(255, 255, 255, 0.3)) !important;
+    cursor: pointer;
+}
+
+/* 大屏幕（平板横屏及以上）：增强发光效果 */
+@media (min-width: 768px) {
+    #map-hit-areas polygon:hover,
+    #map-hit-areas polygon.active {
+        stroke: rgba(255, 255, 255, 0.3) !important;  /* 稍微增加描边可见度 */
+        stroke-width: 1.5px !important;
+        /* 增强版发光：更多层、更大范围 */
+        filter: 
+            drop-shadow(0 0 4px rgba(255, 255, 255, 1))
+            drop-shadow(0 0 8px rgba(255, 255, 255, 0.95))
+            drop-shadow(0 0 14px rgba(255, 255, 255, 0.7))
+            drop-shadow(0 0 22px rgba(255, 255, 255, 0.45))
+            drop-shadow(0 0 32px rgba(255, 255, 255, 0.2)) !important;
+    }
+}
+
+/* 超大屏幕（桌面显示器）：进一步增强发光效果 */
+@media (min-width: 1200px) {
+    #map-hit-areas polygon:hover,
+    #map-hit-areas polygon.active {
+        stroke: rgba(255, 255, 255, 0.35) !important;
+        stroke-width: 2px !important;
+        /* 超强版发光：6层叠加，最远扩散40px */
+        filter: 
+            drop-shadow(0 0 5px rgba(255, 255, 255, 1))
+            drop-shadow(0 0 10px rgba(255, 255, 255, 0.95))
+            drop-shadow(0 0 16px rgba(255, 255, 255, 0.8))
+            drop-shadow(0 0 24px rgba(255, 255, 255, 0.55))
+            drop-shadow(0 0 34px rgba(255, 255, 255, 0.3))
+            drop-shadow(0 0 46px rgba(255, 255, 255, 0.15)) !important;
+    }
 }
 
 /* --- 交易与物品详情修复 --- */
@@ -465,4 +519,190 @@ body {
     border: 1px solid var(--ink-light) !important;
     border-radius: 2px !important;
     color: var(--ink-dark) !important;
+}
+
+/* ========== 古风UI框选图片叠加层（地图地点） ========== */
+.location-selection-overlay {
+    position: absolute;
+    width: 14vw;
+    height: 14vw;
+    pointer-events: none;
+    z-index: 15;
+    transform: translate(-50%, -50%);
+    display: none;
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/框选.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    filter: 
+        drop-shadow(0 0 2px rgba(255, 255, 255, 0.9))
+        drop-shadow(0 0 4px rgba(255, 255, 255, 0.7))
+        drop-shadow(0 0 8px rgba(255, 255, 255, 0.5));
+}
+
+.location-selection-overlay.show {
+    display: block;
+}
+
+/* ========== NPC选中叠加层样式（古风UI专用） ========== */
+.npc-selection-overlay {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: auto;
+    z-index: 50;
+    display: none;
+}
+
+.npc-selection-overlay.show {
+    display: block;
+}
+
+/* 框选图片容器 */
+.npc-selection-frame {
+    position: absolute;
+    width: 70%;
+    height: 70%;
+    pointer-events: auto;
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/框选2.png');
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    z-index: 51;
+    filter: none !important;
+}
+
+/* NPC名称 - 古风字体，白字黑边 */
+.npc-selection-name {
+    position: absolute;
+    top: -1vw;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 3.5vw;
+    font-weight: bold;
+    font-family: var(--font-serif) !important;
+    color: #fff !important;
+    letter-spacing: 3px;
+    text-shadow: 
+        1px 0 0 #000, -1px 0 0 #000,
+        0 1px 0 #000, 0 -1px 0 #000,
+        1px 1px 0 #000, -1px -1px 0 #000,
+        1px -1px 0 #000, -1px 1px 0 #000,
+        2px 0 0 #000, -2px 0 0 #000,
+        0 2px 0 #000, 0 -2px 0 #000 !important;
+    white-space: nowrap;
+    pointer-events: none;
+    z-index: 52;
+}
+
+/* NPC简介 - 古风字体，白字黑边，带背景 */
+.npc-selection-desc {
+    position: absolute;
+    bottom: 8vw;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 2.2vw;
+    font-family: var(--font-serif) !important;
+    color: #fff !important;
+    letter-spacing: 1px;
+    text-shadow: 
+        1px 0 0 #000, -1px 0 0 #000,
+        0 1px 0 #000, 0 -1px 0 #000,
+        1px 1px 0 #000, -1px -1px 0 #000 !important;
+    max-width: 90%;
+    text-align: center;
+    line-height: 1.4;
+    pointer-events: none;
+    z-index: 52;
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/背景.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-position: center;
+    padding: 1.5vw 2.5vw;
+    border-radius: 0.5vw;
+}
+
+/* 选项容器 - 默认左侧 */
+.npc-selection-options {
+    position: absolute;
+    left: 2vw;
+    top: 35%;
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    gap: 2vw;
+    z-index: 55;
+    pointer-events: auto;
+}
+
+/* 选项容器 - 右侧位置 */
+.npc-selection-frame.options-right .npc-selection-options {
+    left: auto;
+    right: 2vw;
+}
+
+/* 选项文字按钮 - 古风样式，白字黑边 */
+.npc-selection-option {
+    font-size: 3vw;
+    font-weight: bold;
+    font-family: var(--font-serif) !important;
+    color: #fff !important;
+    letter-spacing: 2px;
+    cursor: pointer;
+    pointer-events: auto !important;
+    padding: 1vw 2.5vw;
+    text-shadow: 
+        1px 0 0 #000, -1px 0 0 #000,
+        0 1px 0 #000, 0 -1px 0 #000,
+        1px 1px 0 #000, -1px -1px 0 #000,
+        1px -1px 0 #000, -1px 1px 0 #000,
+        2px 0 0 #000, -2px 0 0 #000,
+        0 2px 0 #000, 0 -2px 0 #000 !important;
+    transition: all 0.2s ease;
+    white-space: nowrap;
+    background: transparent !important;
+    border: none;
+    border-radius: 4px;
+}
+
+/* 选项悬停 - 金色高亮 */
+.npc-selection-option:hover {
+    color: #ffeb3b !important;
+    background: rgba(0, 0, 0, 0.4) !important;
+    transform: scale(1.1);
+}
+
+.npc-selection-option.disabled {
+    color: #999 !important;
+    cursor: not-allowed;
+    opacity: 0.6;
+    background: transparent !important;
+}
+
+.npc-selection-option.disabled:hover {
+    color: #999 !important;
+    background: transparent !important;
+    transform: none;
+}
+
+/* 选项奖励提示 */
+.npc-selection-option-reward {
+    font-size: clamp(0.65rem, 1.4vw, 0.8rem);
+    font-family: var(--font-serif) !important;
+    color: #4ecdc4 !important;
+    margin-left: 4px;
+}
+
+/* 关闭区域（点击其他区域关闭） */
+.npc-selection-close-area {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    pointer-events: auto;
+    z-index: 50;
+    cursor: pointer;
 }
