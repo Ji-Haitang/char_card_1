@@ -61,24 +61,47 @@ function parseSlgMainText(mainText) {
         return cleaned;
     };
 
-    const isNpcAllowed = (npcNameOrId) => {
-        if (npcNameOrId === 'none') return true;
+    // 使用模糊匹配获取标准化的NPC名称
+    const getNormalizedNpc = (npcNameOrId) => {
+        if (npcNameOrId === 'none') return 'none';
+        return (typeof matchNPC === 'function') ? matchNPC(npcNameOrId) : npcNameOrId;
+    };
+    
+    // 使用模糊匹配获取标准化的场景名称
+    const getNormalizedScene = (scene) => {
+        if (scene === 'none') return 'none';
+        return (typeof matchScene === 'function') ? matchScene(scene) : scene;
+    };
+    
+    // 使用模糊匹配获取标准化的表情名称
+    const getNormalizedEmotion = (emo) => {
+        if (emo === 'none') return 'none';
+        if (/^特殊CG\d+$/.test(emo)) return emo;  // 特殊CG格式直接返回
+        return (typeof matchEmotion === 'function') ? matchEmotion(emo) : emo;
+    };
+    
+    // 使用模糊匹配获取标准化的CG名称
+    const getNormalizedCG = (cg) => {
+        if (cg === 'none') return 'none';
+        return (typeof matchCG === 'function') ? matchCG(cg) : (slgCGOptions.includes(cg) ? cg : 'none');
+    };
+
+    // 检查NPC是否在随行列表中（使用标准化后的名称）
+    const isNpcAllowed = (normalizedNpc) => {
+        if (normalizedNpc === 'none') return true;
         const pool = new Set(companionNPC || []);
-        if (pool.has(npcNameOrId)) return true;                 // 直接命中（可能是中文名或ID）
-        const id = npcNameToId[npcNameOrId];
-        if (id && (pool.has(id) || pool.has(npcs[id]?.name))) return true;  // 名 -> ID
-        if (npcs[npcNameOrId]?.name && pool.has(npcs[npcNameOrId].name)) return true; // ID -> 名
+        if (pool.has(normalizedNpc)) return true;
+        const id = npcNameToId[normalizedNpc];
+        if (id && (pool.has(id) || pool.has(npcs[id]?.name))) return true;
+        if (npcs[normalizedNpc]?.name && pool.has(npcs[normalizedNpc].name)) return true;
         return false;
     };
-    const isSceneAllowed = (scene) => slgSceneOptions.includes(scene);
-    // 支持固定表情选项，以及"特殊CGx"格式（x为任意数字，如：特殊CG1、特殊CG999）
-    const isEmotionAllowed = (emo) => {
-        if (emo === 'none') return true;
-        if (slgEmotionOptions.includes(emo)) return true;
-        // 匹配"特殊CG"后跟任意数字的格式
-        if (/^特殊CG\d+$/.test(emo)) return true;
-        return false;
-    };
+    
+    // 检查场景是否有效（标准化后的场景必须不为none）
+    const isSceneAllowed = (normalizedScene) => normalizedScene !== 'none' || normalizedScene === 'none';
+    
+    // 检查表情是否有效
+    const isEmotionAllowed = (normalizedEmo) => normalizedEmo !== 'none' || normalizedEmo === 'none';
 
     let currentTextBlock = [];
     let lastValidDisplay = null;
@@ -102,11 +125,17 @@ function parseSlgMainText(mainText) {
         const emotionRaw = normalizeNone(parts[3]);
         const cgRaw = normalizeNone(parts[4]);
 
-        const npcOk = isNpcAllowed(npcRaw);
-        const sceneOk = isSceneAllowed(sceneRaw);
-        const emoOk = isEmotionAllowed(emotionRaw);
+        // 使用模糊匹配获取标准化的值
+        const normalizedNpc = getNormalizedNpc(npcRaw);
+        const normalizedScene = getNormalizedScene(sceneRaw);
+        const normalizedEmotion = getNormalizedEmotion(emotionRaw);
+        const normalizedCG = getNormalizedCG(cgRaw);
+
+        // 验证各字段
+        const npcOk = isNpcAllowed(normalizedNpc);
+        const sceneOk = normalizedScene !== 'none' || sceneRaw === 'none' || sceneRaw === '无';  // 原始值为none时允许
+        const emoOk = normalizedEmotion !== 'none' || emotionRaw === 'none' || emotionRaw === '无';  // 原始值为none时允许
         const cgOk = cgRaw !== '';
-        const normalizedCG = slgCGOptions.includes(cgRaw) ? cgRaw : 'none';
 
         if (!(npcOk && sceneOk && emoOk && cgOk)) {
             if (textPart) currentTextBlock.push(textPart);
@@ -120,15 +149,16 @@ function parseSlgMainText(mainText) {
             currentTextBlock = [];
         }
 
+        // 使用标准化后的值构建结果
         result.push({
             text: mergedText,
-            npc: npcRaw,
-            scene: sceneRaw,
-            emotion: emotionRaw,
+            npc: normalizedNpc,
+            scene: normalizedScene,
+            emotion: normalizedEmotion,
             cg: normalizedCG
         });
 
-        lastValidDisplay = { npc: npcRaw, scene: sceneRaw, emotion: emotionRaw, cg: normalizedCG };
+        lastValidDisplay = { npc: normalizedNpc, scene: normalizedScene, emotion: normalizedEmotion, cg: normalizedCG };
     }
 
     // 末尾残留：用上一次有效展示配置兜底，否则全 none

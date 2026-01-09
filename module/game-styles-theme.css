@@ -145,28 +145,85 @@ body {
     box-shadow: none;
 }
 
-/* 2. 状态栏：深沉底色 */
+/* 2. 状态栏：纸张质感，半透明 */
 .status-display {
-    background: linear-gradient(to bottom, rgba(30,30,30,0.95), rgba(44,44,44,0.9));
-    border-bottom: 2px solid var(--accent-gold);
+    background: linear-gradient(to bottom, 
+        rgba(244, 240, 230, 0.92),  /* --paper-base with opacity */
+        rgba(230, 226, 216, 0.88)   /* --paper-dark with opacity */
+    ) !important;
+    border-bottom: 2px solid var(--ink-dark) !important;
+    border-top: none !important;
     font-family: var(--font-serif);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    /* 纸张纹理 */
+    background-image: 
+        linear-gradient(to bottom, 
+            rgba(244, 240, 230, 0.92),
+            rgba(230, 226, 216, 0.88)
+        ),
+        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.08'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3z'/%3E%3C/g%3E%3C/svg%3E") !important;
 }
 
+/* 状态栏文字：深色墨字 */
 .status-display .date-display {
-    color: var(--paper-light);
-    text-shadow: 1px 1px 2px #000;
+    color: var(--ink-dark) !important;
+    text-shadow: none;
+    font-weight: bold;
+    letter-spacing: 1px;
+}
+
+/* 状态栏中的所有文字统一为深色 */
+.status-display .mood-label,
+.status-display .action-points,
+.status-display span,
+.status-display div,
+.status-display label,
+.status-display p,
+.status-display * {
+    color: var(--ink-dark) !important;
+    text-shadow: none !important;
 }
 
 /* 进度条优化：水墨笔触感 */
 .mood-bar {
-    border: 1px solid rgba(255,255,255,0.3);
-    background: rgba(0,0,0,0.3);
-    border-radius: 100px;
+    border: 1px solid var(--ink-medium) !important;
+    background: rgba(230, 226, 216, 0.6) !important;
+    border-radius: 2px !important;
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .mood-fill {
-    background: linear-gradient(90deg, #5dade2, var(--accent-cyan));
-    /* 可以尝试加一点纹理 */
+    background: linear-gradient(90deg, var(--accent-cyan), #2980b9) !important;
+    border-radius: 1px !important;
+}
+
+/* 刷新NPC按钮 - 古风样式 */
+.status-display .refresh-btn,
+.status-display button,
+.refresh-npc-btn {
+    background: transparent !important;
+    color: var(--ink-dark) !important;
+    border: 1px solid var(--ink-medium) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+    padding: 2px 8px !important;
+    font-size: 0.85em !important;
+    transition: all 0.2s ease;
+}
+
+.status-display .refresh-btn:hover,
+.status-display button:hover,
+.refresh-npc-btn:hover {
+    background: rgba(0, 0, 0, 0.08) !important;
+    color: var(--accent-red) !important;
+    border-color: var(--accent-red) !important;
+}
+
+/* 行动点数字高亮 */
+.status-display .action-points strong,
+.status-display .action-value {
+    color: var(--accent-red) !important;
+    font-weight: bold;
 }
 
 /* 3. 弹窗与容器通用风格：卷轴/信笺 - 强力覆盖背景色 */
@@ -566,25 +623,41 @@ body {
     width: 70%;
     height: 70%;
     pointer-events: auto;
+    z-index: 51;
+}
+
+/* 框选图片使用伪元素显示，方便镜像翻转 */
+.npc-selection-frame::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
     background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/框选2.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
-    z-index: 51;
-    filter: none !important;
+    pointer-events: none;
+    z-index: -1;
 }
 
-/* NPC名称 - 古风字体，白字黑边 */
+/* 选项在左侧时，框选图片水平镜像翻转 */
+.npc-selection-frame.options-left::before {
+    transform: scaleX(-1);
+}
+
+/* NPC名称 - 古风字体，白字黑边，放大字号 */
 .npc-selection-name {
     position: absolute;
-    top: -1vw;
+    top: -2vw;
     left: 50%;
     transform: translateX(-50%);
-    font-size: 3.5vw;
+    font-size: 4.5vw; /* 从3.5vw放大到4.5vw */
     font-weight: bold;
     font-family: var(--font-serif) !important;
     color: #fff !important;
-    letter-spacing: 3px;
+    letter-spacing: 4px;
     text-shadow: 
         1px 0 0 #000, -1px 0 0 #000,
         0 1px 0 #000, 0 -1px 0 #000,
@@ -597,16 +670,16 @@ body {
     z-index: 52;
 }
 
-/* NPC简介 - 古风字体，白字黑边，带背景 */
+/* NPC简介 - 无衬线字体（与正文一致），白字黑边，带背景 */
 .npc-selection-desc {
     position: absolute;
-    bottom: 8vw;
+    bottom: 1vw;
     left: 50%;
     transform: translateX(-50%);
     font-size: 2.2vw;
-    font-family: var(--font-serif) !important;
+    font-family: var(--font-sans) !important; /* 改为无衬线字体，与正文一致 */
     color: #fff !important;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
     text-shadow: 
         1px 0 0 #000, -1px 0 0 #000,
         0 1px 0 #000, 0 -1px 0 #000,
@@ -624,27 +697,40 @@ body {
     border-radius: 0.5vw;
 }
 
-/* 选项容器 - 默认左侧 */
+/* 简介偏移：选项在右侧时，简介左移5vw */
+.npc-selection-desc.desc-offset-left {
+    left: calc(50% - 5vw);
+}
+
+/* 简介偏移：选项在左侧时，简介右移5vw */
+.npc-selection-desc.desc-offset-right {
+    left: calc(50% + 5vw);
+}
+
+/* 选项容器 - 圆周排列的锚点（以框选图片中心为圆心） */
 .npc-selection-options {
     position: absolute;
-    left: 2vw;
-    top: 35%;
-    transform: translateY(-50%);
-    display: flex;
-    flex-direction: column;
-    gap: 2vw;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    width: 0;
+    height: 0;
     z-index: 55;
-    pointer-events: auto;
+    pointer-events: none; /* 容器本身不拦截点击 */
 }
 
-/* 选项容器 - 右侧位置 */
+/* 右侧位置时，不需要特殊处理，因为角度已在JS中计算 */
 .npc-selection-frame.options-right .npc-selection-options {
-    left: auto;
-    right: 2vw;
+    /* 保持相同 */
 }
 
-/* 选项文字按钮 - 古风样式，白字黑边 */
+/* 选项文字按钮 - 古风样式，圆周定位，白字黑边 */
 .npc-selection-option {
+    position: absolute;
+    /* 使用CSS变量实现圆周定位 */
+    left: var(--opt-x, 0);
+    top: var(--opt-y, 0);
+    transform: translate(-50%, -50%);
     font-size: 3vw;
     font-weight: bold;
     font-family: var(--font-serif) !important;
@@ -667,11 +753,12 @@ body {
     border-radius: 4px;
 }
 
-/* 选项悬停 - 金色高亮 */
+/* 选项悬停 - 金色高亮，无位移 */
 .npc-selection-option:hover {
     color: #ffeb3b !important;
     background: rgba(0, 0, 0, 0.4) !important;
-    transform: scale(1.1);
+    /* 保持原位置，不缩放位移 */
+    transform: translate(-50%, -50%) !important;
 }
 
 .npc-selection-option.disabled {
@@ -684,7 +771,7 @@ body {
 .npc-selection-option.disabled:hover {
     color: #999 !important;
     background: transparent !important;
-    transform: none;
+    transform: translate(-50%, -50%) !important;
 }
 
 /* 选项奖励提示 */
@@ -705,4 +792,220 @@ body {
     pointer-events: auto;
     z-index: 50;
     cursor: pointer;
+}
+
+/* ========== 古风UI滚动条样式 ========== */
+
+/* Webkit内核浏览器（Chrome、Safari、Edge）滚动条样式 */
+/* 应用于所有可滚动容器 */
+.modal-content::-webkit-scrollbar,
+.inventory-grid::-webkit-scrollbar,
+.equipment-slots::-webkit-scrollbar,
+.trading-list::-webkit-scrollbar,
+.trading-content::-webkit-scrollbar,
+.cheat-content::-webkit-scrollbar,
+.cheat-sections::-webkit-scrollbar,
+.stats-container::-webkit-scrollbar,
+.relationships-container::-webkit-scrollbar,
+.item-detail-content::-webkit-scrollbar,
+.shop-detail-content::-webkit-scrollbar,
+.inventory-content::-webkit-scrollbar,
+.equipment-content::-webkit-scrollbar,
+.story-text::-webkit-scrollbar,
+.battle-enemy-info::-webkit-scrollbar,
+.battle-reward::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+/* 滚动条轨道 */
+.modal-content::-webkit-scrollbar-track,
+.inventory-grid::-webkit-scrollbar-track,
+.equipment-slots::-webkit-scrollbar-track,
+.trading-list::-webkit-scrollbar-track,
+.trading-content::-webkit-scrollbar-track,
+.cheat-content::-webkit-scrollbar-track,
+.cheat-sections::-webkit-scrollbar-track,
+.stats-container::-webkit-scrollbar-track,
+.relationships-container::-webkit-scrollbar-track,
+.item-detail-content::-webkit-scrollbar-track,
+.shop-detail-content::-webkit-scrollbar-track,
+.inventory-content::-webkit-scrollbar-track,
+.equipment-content::-webkit-scrollbar-track,
+.story-text::-webkit-scrollbar-track,
+.battle-enemy-info::-webkit-scrollbar-track,
+.battle-reward::-webkit-scrollbar-track {
+    background: var(--paper-dark);
+    border-radius: 2px;
+    border: 1px solid var(--ink-light);
+}
+
+/* 滚动条滑块 */
+.modal-content::-webkit-scrollbar-thumb,
+.inventory-grid::-webkit-scrollbar-thumb,
+.equipment-slots::-webkit-scrollbar-thumb,
+.trading-list::-webkit-scrollbar-thumb,
+.trading-content::-webkit-scrollbar-thumb,
+.cheat-content::-webkit-scrollbar-thumb,
+.cheat-sections::-webkit-scrollbar-thumb,
+.stats-container::-webkit-scrollbar-thumb,
+.relationships-container::-webkit-scrollbar-thumb,
+.item-detail-content::-webkit-scrollbar-thumb,
+.shop-detail-content::-webkit-scrollbar-thumb,
+.inventory-content::-webkit-scrollbar-thumb,
+.equipment-content::-webkit-scrollbar-thumb,
+.story-text::-webkit-scrollbar-thumb,
+.battle-enemy-info::-webkit-scrollbar-thumb,
+.battle-reward::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--ink-medium) 0%, var(--ink-dark) 100%);
+    border-radius: 2px;
+    border: 1px solid var(--ink-dark);
+    transition: background 0.2s ease;
+}
+
+/* 滚动条滑块悬停 */
+.modal-content::-webkit-scrollbar-thumb:hover,
+.inventory-grid::-webkit-scrollbar-thumb:hover,
+.equipment-slots::-webkit-scrollbar-thumb:hover,
+.trading-list::-webkit-scrollbar-thumb:hover,
+.trading-content::-webkit-scrollbar-thumb:hover,
+.cheat-content::-webkit-scrollbar-thumb:hover,
+.cheat-sections::-webkit-scrollbar-thumb:hover,
+.stats-container::-webkit-scrollbar-thumb:hover,
+.relationships-container::-webkit-scrollbar-thumb:hover,
+.item-detail-content::-webkit-scrollbar-thumb:hover,
+.shop-detail-content::-webkit-scrollbar-thumb:hover,
+.inventory-content::-webkit-scrollbar-thumb:hover,
+.equipment-content::-webkit-scrollbar-thumb:hover,
+.story-text::-webkit-scrollbar-thumb:hover,
+.battle-enemy-info::-webkit-scrollbar-thumb:hover,
+.battle-reward::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--ink-dark) 0%, var(--ink-black) 100%);
+}
+
+/* 滚动条滑块激活 */
+.modal-content::-webkit-scrollbar-thumb:active,
+.inventory-grid::-webkit-scrollbar-thumb:active,
+.equipment-slots::-webkit-scrollbar-thumb:active,
+.trading-list::-webkit-scrollbar-thumb:active,
+.trading-content::-webkit-scrollbar-thumb:active,
+.cheat-content::-webkit-scrollbar-thumb:active,
+.cheat-sections::-webkit-scrollbar-thumb:active,
+.stats-container::-webkit-scrollbar-thumb:active,
+.relationships-container::-webkit-scrollbar-thumb:active,
+.item-detail-content::-webkit-scrollbar-thumb:active,
+.shop-detail-content::-webkit-scrollbar-thumb:active,
+.inventory-content::-webkit-scrollbar-thumb:active,
+.equipment-content::-webkit-scrollbar-thumb:active,
+.story-text::-webkit-scrollbar-thumb:active,
+.battle-enemy-info::-webkit-scrollbar-thumb:active,
+.battle-reward::-webkit-scrollbar-thumb:active {
+    background: var(--ink-black);
+}
+
+/* 滚动条角落 */
+.modal-content::-webkit-scrollbar-corner,
+.inventory-grid::-webkit-scrollbar-corner,
+.equipment-slots::-webkit-scrollbar-corner,
+.trading-list::-webkit-scrollbar-corner,
+.trading-content::-webkit-scrollbar-corner,
+.cheat-content::-webkit-scrollbar-corner,
+.cheat-sections::-webkit-scrollbar-corner,
+.stats-container::-webkit-scrollbar-corner,
+.relationships-container::-webkit-scrollbar-corner,
+.item-detail-content::-webkit-scrollbar-corner,
+.shop-detail-content::-webkit-scrollbar-corner,
+.inventory-content::-webkit-scrollbar-corner,
+.equipment-content::-webkit-scrollbar-corner,
+.story-text::-webkit-scrollbar-corner,
+.battle-enemy-info::-webkit-scrollbar-corner,
+.battle-reward::-webkit-scrollbar-corner {
+    background: var(--paper-dark);
+}
+
+/* Firefox滚动条样式 */
+.modal-content,
+.inventory-grid,
+.equipment-slots,
+.trading-list,
+.trading-content,
+.cheat-content,
+.cheat-sections,
+.stats-container,
+.relationships-container,
+.item-detail-content,
+.shop-detail-content,
+.inventory-content,
+.equipment-content,
+.story-text,
+.battle-enemy-info,
+.battle-reward {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-medium) var(--paper-dark);
+}
+
+/* 通用：所有弹窗内可滚动区域 */
+.modal.viewport-overlay::-webkit-scrollbar,
+.modal.viewport-overlay .modal-content::-webkit-scrollbar,
+.modal .modal-content::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+.modal.viewport-overlay::-webkit-scrollbar-track,
+.modal.viewport-overlay .modal-content::-webkit-scrollbar-track,
+.modal .modal-content::-webkit-scrollbar-track {
+    background: var(--paper-dark);
+    border-radius: 2px;
+    border: 1px solid var(--ink-light);
+}
+
+.modal.viewport-overlay::-webkit-scrollbar-thumb,
+.modal.viewport-overlay .modal-content::-webkit-scrollbar-thumb,
+.modal .modal-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--ink-medium) 0%, var(--ink-dark) 100%);
+    border-radius: 2px;
+    border: 1px solid var(--ink-dark);
+}
+
+.modal.viewport-overlay::-webkit-scrollbar-thumb:hover,
+.modal.viewport-overlay .modal-content::-webkit-scrollbar-thumb:hover,
+.modal .modal-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--ink-dark) 0%, var(--ink-black) 100%);
+}
+
+.modal.viewport-overlay,
+.modal.viewport-overlay .modal-content,
+.modal .modal-content {
+    scrollbar-width: thin;
+    scrollbar-color: var(--ink-medium) var(--paper-dark);
+}
+
+/* 通用：所有使用overflow的容器 */
+[style*="overflow"]::-webkit-scrollbar,
+[style*="overflow-y"]::-webkit-scrollbar,
+[style*="overflow-x"]::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+
+[style*="overflow"]::-webkit-scrollbar-track,
+[style*="overflow-y"]::-webkit-scrollbar-track,
+[style*="overflow-x"]::-webkit-scrollbar-track {
+    background: var(--paper-dark);
+    border-radius: 2px;
+}
+
+[style*="overflow"]::-webkit-scrollbar-thumb,
+[style*="overflow-y"]::-webkit-scrollbar-thumb,
+[style*="overflow-x"]::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, var(--ink-medium) 0%, var(--ink-dark) 100%);
+    border-radius: 2px;
+    border: 1px solid var(--ink-dark);
+}
+
+[style*="overflow"]::-webkit-scrollbar-thumb:hover,
+[style*="overflow-y"]::-webkit-scrollbar-thumb:hover,
+[style*="overflow-x"]::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, var(--ink-dark) 0%, var(--ink-black) 100%);
 }

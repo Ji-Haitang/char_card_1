@@ -372,18 +372,93 @@ function displayNpcs(location) {
             portrait.style.zIndex = index + 1;
         }
         
-        portrait.innerHTML = `<img src="${npcPortraits[npc.id]}" alt="${npc.name}">`;
+        // 创建img元素，添加crossOrigin以支持跨域canvas操作
+        const img = document.createElement('img');
+        img.crossOrigin = 'anonymous';
+        img.src = npcPortraits[npc.id];
+        img.alt = npc.name;
+        portrait.appendChild(img);
         
-        // 修改：只在非SLG模式下添加点击事件
+        // 修改：只在非SLG模式下添加点击事件（带透明度检测）
         if (GameMode !== 1) {
             portrait.addEventListener('click', function(e) {
                 e.stopPropagation();
-                showNpcInfo(npc.id, location, e);
+                
+                // 检测点击位置是否在非透明区域
+                if (isClickOnOpaquePixel(e, img)) {
+                    showNpcInfo(npc.id, location, e);
+                }
             });
         }
         
         container.appendChild(portrait);
     });
+}
+
+// 检测点击位置是否在图片的非透明区域
+function isClickOnOpaquePixel(event, img) {
+    // 如果图片未加载完成，默认允许点击
+    if (!img.complete || img.naturalWidth === 0) {
+        return true;
+    }
+    
+    try {
+        // 获取图片在页面上的位置和尺寸
+        const imgRect = img.getBoundingClientRect();
+        
+        // 计算点击位置相对于图片的坐标
+        const clickX = event.clientX - imgRect.left;
+        const clickY = event.clientY - imgRect.top;
+        
+        // 计算图片实际显示区域（考虑object-fit: contain）
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        const containerAspect = imgRect.width / imgRect.height;
+        
+        let displayWidth, displayHeight, offsetX, offsetY;
+        
+        if (imgAspect > containerAspect) {
+            // 图片更宽，以容器宽度为准
+            displayWidth = imgRect.width;
+            displayHeight = imgRect.width / imgAspect;
+            offsetX = 0;
+            offsetY = imgRect.height - displayHeight; // object-position: bottom center
+        } else {
+            // 图片更高，以容器高度为准
+            displayHeight = imgRect.height;
+            displayWidth = imgRect.height * imgAspect;
+            offsetX = (imgRect.width - displayWidth) / 2;
+            offsetY = 0;
+        }
+        
+        // 检查点击是否在图片显示区域内
+        if (clickX < offsetX || clickX > offsetX + displayWidth ||
+            clickY < offsetY || clickY > offsetY + displayHeight) {
+            return false;
+        }
+        
+        // 计算点击位置对应的原始图片像素坐标
+        const pixelX = Math.floor((clickX - offsetX) / displayWidth * img.naturalWidth);
+        const pixelY = Math.floor((clickY - offsetY) / displayHeight * img.naturalHeight);
+        
+        // 使用canvas读取像素alpha值
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        
+        // 获取该像素的数据
+        const pixelData = ctx.getImageData(pixelX, pixelY, 1, 1).data;
+        const alpha = pixelData[3]; // alpha通道值 (0-255)
+        
+        // alpha > 30 视为非透明（允许一点容差）
+        return alpha > 30;
+        
+    } catch (error) {
+        // 如果出现跨域或其他错误，默认允许点击
+        console.warn('透明度检测失败，使用默认点击行为:', error.message);
+        return true;
+    }
 }
 
 // 显示NPC信息弹窗
@@ -419,6 +494,19 @@ function showNpcSelectionOverlay(npcId, location, event) {
     const reward = npcSparRewards[npcId];
     const rewardText = reward ? `(${reward.type}+${reward.value})` : '';
     
+    // 获取送礼状态
+    const hasGifted = npcGiftGiven[npcId];
+    const currentFavorability = npcFavorability[npcId];
+    const canGift = !hasGifted && currentFavorability <= 40 && playerStats.金钱 >= 500;
+    let giftDisabledReason = '';
+    if (hasGifted) {
+        giftDisabledReason = '已送礼';
+    } else if (currentFavorability > 40) {
+        giftDisabledReason = '好感>40';
+    } else if (playerStats.金钱 < 500) {
+        giftDisabledReason = '金钱不足';
+    }
+    
     // 获取NPC立绘容器
     const portrait = event.currentTarget;
     const container = portrait.closest('.npc-container');
@@ -446,26 +534,78 @@ function showNpcSelectionOverlay(npcId, location, event) {
     let npcIndex = Array.from(allPortraits).indexOf(portrait);
     
     // 判断按钮应该显示在左侧还是右侧
-    // 规则：
-    // - 1个NPC：显示在左侧
-    // - 2个NPC：左边的按钮在右侧，右边的按钮在左侧
-    // - 3个NPC：左边的按钮在右侧，中间和右边的按钮在左侧
-    let optionsPosition = 'left'; // 默认左侧
+    let optionsPosition = 'left';
     if (npcCount === 2 && npcIndex === 0) {
-        optionsPosition = 'right'; // 2个NPC时，左边那个的按钮在右侧
+        optionsPosition = 'right';
     } else if (npcCount === 3 && npcIndex === 0) {
-        optionsPosition = 'right'; // 3个NPC时，左边那个的按钮在右侧
+        optionsPosition = 'right';
     }
     
     // 创建叠加层
     const overlay = document.createElement('div');
     overlay.className = 'npc-selection-overlay show';
     overlay.dataset.npcId = npcId;
+    overlay.dataset.portraitIndex = npcIndex; // 保存立绘索引用于后续查找
     
     // 直接复制NPC立绘的定位样式，让框选图片完全覆盖立绘
     const portraitStyle = window.getComputedStyle(portrait);
     const portraitLeft = portrait.style.left || portraitStyle.left;
     const portraitTransform = portrait.style.transform || portraitStyle.transform;
+    
+    // 圆周排列参数（3个选项，按角度分布，以右侧水平线为0°）
+    // 从上到下统一顺序：送礼、切磋、互动
+    // 左侧NPC：选项在右侧，角度 -30°(上), 0°(中), 30°(下)
+    // 右侧/中间NPC：选项在左侧，角度 210°(上), 180°(中), 150°(下)
+    const radius = 18; // vw
+    let angles;
+    if (optionsPosition === 'right') {
+        // 左侧NPC，选项显示在右边（上到下：-30°, 0°, 30°）
+        angles = [-30, 0, 30];
+    } else {
+        // 右侧/中间NPC，选项显示在左边（上到下：210°, 180°, 150°）
+        angles = [210, 180, 150];
+    }
+    
+    // 计算每个选项的位置（从上到下：送礼、切磋、互动）
+    const options = [
+        {
+            action: '送礼',
+            text: canGift ? '送礼' : giftDisabledReason,
+            disabled: !canGift,
+            angle: angles[0]
+        },
+        {
+            action: '切磋',
+            text: hasSparred ? '已切磋' : '切磋',
+            disabled: hasSparred,
+            angle: angles[1]
+        },
+        {
+            action: '互动',
+            text: '互动',
+            disabled: false,
+            angle: angles[2]
+        }
+    ];
+    
+    // 生成选项HTML（使用CSS变量传递角度和半径，不显示奖励括号）
+    let optionsHtml = '';
+    options.forEach((opt, idx) => {
+        const angleRad = opt.angle * Math.PI / 180;
+        const x = Math.cos(angleRad) * radius;
+        const y = Math.sin(angleRad) * radius;
+        optionsHtml += `
+            <button class="npc-selection-option ${opt.disabled ? 'disabled' : ''}" 
+                    data-action="${opt.action}" data-npc="${npcId}"
+                    style="--opt-x: ${x.toFixed(2)}vw; --opt-y: ${y.toFixed(2)}vw;"
+                    ${opt.disabled ? 'disabled' : ''}>
+                ${opt.text}
+            </button>
+        `;
+    });
+    
+    // 简介偏移方向：选项在右侧时，简介左移；选项在左侧时，简介右移
+    const descOffsetClass = optionsPosition === 'right' ? 'desc-offset-left' : 'desc-offset-right';
     
     overlay.innerHTML = `
         <div class="npc-selection-close-area"></div>
@@ -476,23 +616,15 @@ function showNpcSelectionOverlay(npcId, location, event) {
         ">
             <div class="npc-selection-name">${npc.name}</div>
             <div class="npc-selection-options">
-                <button class="npc-selection-option ${hasSparred ? 'disabled' : ''}" 
-                        data-action="切磋" data-npc="${npcId}"
-                        ${hasSparred ? 'disabled' : ''}>
-                    ${hasSparred ? '已切磋' : '切磋'}<span class="npc-selection-option-reward">${rewardText}</span>
-                </button>
-                <button class="npc-selection-option" 
-                        data-action="互动" data-npc="${npcId}">
-                    互动
-                </button>
+                ${optionsHtml}
             </div>
-            <div class="npc-selection-desc">${npc.description}</div>
+            <div class="npc-selection-desc ${descOffsetClass}">${npc.description}</div>
         </div>
     `;
     
     container.appendChild(overlay);
     
-    // 使用事件委托绑定按钮点击事件（解决 onclick 不生效问题）
+    // 使用事件委托绑定按钮点击事件
     overlay.addEventListener('click', function(e) {
         const btn = e.target.closest('.npc-selection-option');
         if (btn && !btn.disabled) {
@@ -500,11 +632,43 @@ function showNpcSelectionOverlay(npcId, location, event) {
             const action = btn.dataset.action;
             const npcIdFromBtn = btn.dataset.npc;
             closeNpcSelectionOverlay();
-            npcAction(npcIdFromBtn, action);
+            
+            // 处理送礼动作
+            if (action === '送礼') {
+                giveGift(npcIdFromBtn);
+            } else {
+                npcAction(npcIdFromBtn, action);
+            }
+            return;
         }
-        // 点击关闭区域
+        
+        // 点击关闭区域（背景遮罩）
         if (e.target.classList.contains('npc-selection-close-area')) {
             closeNpcSelectionOverlay();
+            return;
+        }
+        
+        // 点击frame内部非按钮区域时，检查是否点击在当前NPC的非透明区域
+        // 如果不是，则关闭叠加层
+        const frame = e.target.closest('.npc-selection-frame');
+        if (frame) {
+            // 获取当前选中的NPC立绘
+            const portraitIndex = parseInt(overlay.dataset.portraitIndex, 10);
+            const container = overlay.closest('.npc-container');
+            if (container && !isNaN(portraitIndex)) {
+                // 通过索引找到对应的NPC立绘
+                const allPortraits = container.querySelectorAll('.npc-portrait');
+                const currentPortrait = allPortraits[portraitIndex];
+                
+                if (currentPortrait) {
+                    const img = currentPortrait.querySelector('img');
+                    if (img && !isClickOnOpaquePixel(e, img)) {
+                        // 点击在透明区域，关闭叠加层
+                        closeNpcSelectionOverlay();
+                        return;
+                    }
+                }
+            }
         }
     });
     
@@ -536,12 +700,40 @@ function closeNpcSelectionOverlay() {
     document.removeEventListener('click', handleNpcOverlayOutsideClick);
 }
 
-// 处理点击叠加层外部
+// 处理点击叠加层外部（包括NPC立绘的透明区域）
 function handleNpcOverlayOutsideClick(e) {
     const overlay = document.querySelector('.npc-selection-overlay');
-    if (overlay && !overlay.contains(e.target) && !e.target.closest('.npc-portrait')) {
-        closeNpcSelectionOverlay();
+    if (!overlay) return;
+    
+    // 如果点击的是叠加层内的元素（选项按钮等），不关闭
+    if (overlay.contains(e.target)) {
+        return;
     }
+    
+    // 检查是否点击了NPC立绘
+    const clickedPortrait = e.target.closest('.npc-portrait');
+    if (clickedPortrait) {
+        // 检查点击的是否是当前选中NPC的立绘
+        const npcId = overlay.dataset.npcId;
+        const container = overlay.closest('.npc-container');
+        if (container) {
+            const allPortraits = container.querySelectorAll('.npc-portrait');
+            const currentPortraitIndex = Array.from(allPortraits).indexOf(clickedPortrait);
+            
+            // 获取点击的NPC立绘中的图片
+            const img = clickedPortrait.querySelector('img');
+            if (img) {
+                // 检测点击是否在非透明区域
+                if (isClickOnOpaquePixel(e, img)) {
+                    // 点击了非透明区域，不关闭（会由其他逻辑处理切换NPC）
+                    return;
+                }
+            }
+        }
+    }
+    
+    // 其他情况（点击空白区域或透明区域），关闭叠加层
+    closeNpcSelectionOverlay();
 }
 
 // 从叠加层触发NPC动作
