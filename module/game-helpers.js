@@ -171,6 +171,7 @@ function showBattleGame(battleData) {
         enemyName: battleData.enemy.name,
         enemyMaxHealth: battleData.enemy.maxHealth,
         enemyBasicDamage: battleData.enemy.basicDamage,
+        enemyCategory: battleData.enemy.category || '未知',  // 添加敌人类别
         backgroundUrl: backgroundUrl,
         difficulty: currentDifficulty,
         // 道具数量

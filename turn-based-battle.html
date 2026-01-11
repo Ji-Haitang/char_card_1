@@ -38,34 +38,34 @@ body {
     background-position: center;
     background-repeat: no-repeat;
     margin-top: 0;  /* 确保紧贴顶部 */
+    overflow: hidden;  /* 防止子元素溢出 */
 }
 
-/* //回合制系统集成更新 - 修改退出按钮样式到右下角 */
-.exit-battle-btn {
+/* 背景毛玻璃层 */
+.game-container::before {
+    content: '';
     position: absolute;
-    bottom: 0px;
-    right: 18px;
-    padding: 10px 20px;
-    background: #1a1a1a;
-    color: #ffffff;
-    border: 2px solid #333;
-    border-radius: 5px;
-    cursor: pointer;
-    font-size: clamp(0.9rem, 2.2vw, 1.8rem);
-    font-weight: bold;
-    font-family: 'Ma Shan Zheng', cursive;  /* 统一字体 */
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    z-index: 100;
-    font-weight: bold;
-    transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: inherit;
+    background-size: inherit;
+    background-position: inherit;
+    filter: blur(3px);
+    z-index: 0;
 }
 
-.exit-battle-btn:hover {
-    background: #2a2a2a;
-    border-color: #555;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+/* 背景遮罩层（让毛玻璃效果更柔和） */
+.game-container::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.15);
+    z-index: 1;
 }
 
 .battle-scene {
@@ -77,118 +77,145 @@ body {
     padding-bottom: clamp(60px, 12vw, 120px);
 }
 
-/* 状态区样式 - 进一步缩小手机端显示 */
+/* 状态区样式 - 使用clamp适配不同屏幕 */
 .player-status-area {
     position: absolute;
-    top: clamp(6px, 1.5vw, 15px);
-    left: clamp(6px, 1.5vw, 15px);
+    top: clamp(5px, 1vw, 15px);
+    left: clamp(5px, 1vw, 15px);
+    width: clamp(130px, 20vw, 240px);
+    height: auto;
     background-color: rgba(0, 0, 0, 0.85);
-    border-radius: clamp(3px, 0.8vw, 6px);
-    padding: clamp(4px, 1vw, 10px);
+    border-radius: clamp(4px, 0.5vw, 8px);
+    padding: clamp(6px, 1vw, 12px);
     z-index: 5;
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
-    min-width: clamp(120px, 20vw, 200px);
-    max-width: clamp(160px, 25vw, 250px);
+}
+
+/* 名字行：包含名字和挑衅状态 */
+.name-row {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: clamp(6px, 1vw, 12px);
+    margin-bottom: clamp(3px, 0.5vw, 6px);
+    border-bottom: 1px solid rgba(255, 204, 0, 0.3);
+    padding-bottom: clamp(2px, 0.3vw, 5px);
 }
 
 .character-name {
-    font-size: clamp(11px, 2.2vw, 16px);
+    font-size: clamp(14px, 1.6vw, 20px);
     font-weight: bold;
     color: #ffcc00;
-    margin-bottom: clamp(3px, 0.8vw, 6px);
-    text-align: center;
+    text-align: left;
     font-family: 'Ma Shan Zheng', cursive;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
-    border-bottom: 1px solid rgba(255, 204, 0, 0.3);
-    padding-bottom: clamp(2px, 0.5vw, 4px);
 }
 
 .enemy-status-area {
     position: absolute;
-    top: clamp(6px, 1.5vw, 15px);
-    right: clamp(6px, 1.5vw, 15px);
+    top: clamp(5px, 1vw, 15px);
+    right: clamp(5px, 1vw, 15px);
+    width: clamp(130px, 20vw, 240px);
+    height: auto;
     background-color: rgba(0, 0, 0, 0.85);
-    border-radius: clamp(3px, 0.8vw, 6px);
-    padding: clamp(4px, 1vw, 10px);
+    border-radius: clamp(4px, 0.5vw, 8px);
+    padding: clamp(6px, 1vw, 12px);
     z-index: 5;
     border: 1px solid rgba(255, 255, 255, 0.3);
     box-shadow: 0 0 8px rgba(0, 0, 0, 0.6);
-    min-width: clamp(120px, 20vw, 200px);
-    max-width: clamp(160px, 25vw, 250px);
+}
+
+/* HP和气同一行显示 */
+.stats-row {
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 1vw, 12px);
 }
 
 .health-container {
+    flex: 1;
     display: flex;
     align-items: center;
-    min-width: clamp(110px, 18vw, 180px);
-    margin-bottom: clamp(2px, 0.5vw, 5px);
     position: relative;
 }
 
 .health-bar {
     flex: 1;
-    height: clamp(12px, 2.5vw, 20px);
+    height: clamp(16px, 2.2vw, 26px);
     background-color: #333;
-    border-radius: clamp(2px, 0.4vw, 3px);
-    overflow: hidden;
-    margin-right: clamp(30px, 6vw, 60px);
+    border-radius: clamp(2px, 0.3vw, 4px);
     border: 1px solid rgba(255, 255, 255, 0.2);
+    position: relative;
+    overflow: visible;
 }
 
 .health-fill {
+    position: absolute;
+    left: 0;
+    top: 0;
     height: 100%;
     background: linear-gradient(to right, #ff0043, #ff6a00);
     width: 100%;
     transition: width 0.5s cubic-bezier(.4,2,.6,1);
+    border-radius: clamp(2px, 0.3vw, 4px) 0 0 clamp(2px, 0.3vw, 4px);
 }
 
+/* HP数字显示在血条内部 */
 .health-text {
     position: absolute;
-    right: 0;
-    font-size: clamp(10px, 2vw, 14px);
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    font-size: clamp(10px, 1.2vw, 14px);
     color: #fff;
-    min-width: clamp(30px, 6vw, 60px);
-    text-align: right;
+    text-align: center;
     font-weight: bold;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8), 
+                 -1px -1px 2px rgba(0, 0, 0, 0.8),
+                 1px -1px 2px rgba(0, 0, 0, 0.8),
+                 -1px 1px 2px rgba(0, 0, 0, 0.8);
+    white-space: nowrap;
+    z-index: 2;
 }
 
+/* 气值显示在右边 */
 .energy-display {
     display: flex;
-    justify-content: flex-end;
     align-items: center;
+    flex-shrink: 0;
 }
 
 .energy-value {
-    font-size: clamp(10px, 2vw, 14px);
+    font-size: clamp(11px, 1.3vw, 16px);
     color: #ffcc00;
-    margin-right: clamp(2px, 0.5vw, 5px);
     font-weight: bold;
+    white-space: nowrap;
 }
 
 .energy-icon {
-    color: #ffcc00;
-    font-size: clamp(12px, 2.5vw, 16px);
+    display: none;
 }
 
-/* 挑衅状态显示样式 */
+/* 挑衅状态显示样式 - 显示在名字右侧 */
 .taunt-status {
     display: none;
-    margin-top: clamp(3px, 0.8vw, 6px);
-    padding: clamp(2px, 0.5vw, 4px) clamp(4px, 1vw, 8px);
-    background: linear-gradient(135deg, rgba(255, 60, 60, 0.8), rgba(180, 20, 20, 0.9));
-    border-radius: clamp(2px, 0.4vw, 4px);
-    font-size: clamp(9px, 1.8vw, 12px);
+    padding: clamp(1px, 0.3vw, 3px) clamp(4px, 0.6vw, 8px);
+    background: linear-gradient(135deg, rgba(255, 60, 60, 0.9), rgba(180, 20, 20, 0.95));
+    border-radius: clamp(2px, 0.3vw, 4px);
+    font-size: clamp(9px, 1vw, 12px);
     font-weight: bold;
     color: #fff;
     text-align: center;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
     animation: taunt-pulse 1s ease-in-out infinite;
     border: 1px solid rgba(255, 100, 100, 0.6);
+    white-space: nowrap;
+    flex-shrink: 0;
 }
 
 .taunt-status.active {
-    display: block;
+    display: inline-block;
 }
 
 @keyframes taunt-pulse {
@@ -197,24 +224,78 @@ body {
     100% { opacity: 0.8; transform: scale(1); }
 }
 
-/* 回合指示器 - 优化位置避免被遮挡 */
+/* 回合指示器 - 可点击显示日志 */
 .turn-indicator {
     position: absolute;
-    top: 0;  /* 改为0，紧贴上边缘 */
+    top: 0;
     left: 50%;
     transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.85);
-    padding: clamp(4px, 1vw, 8px) clamp(10px, 2.5vw, 20px);
-    border-radius: 0 0 clamp(12px, 3vw, 20px) clamp(12px, 3vw, 20px); /* 修改为只有底部圆角 */
-    z-index: 6;
-    font-size: clamp(12px, 2.8vw, 18px);
+    padding: clamp(6px, 0.8vw, 12px) clamp(12px, 2vw, 25px);
+    border-radius: 0 0 clamp(8px, 1.2vw, 15px) clamp(8px, 1.2vw, 15px);
+    z-index: 20;
+    font-size: clamp(14px, 1.8vw, 22px);
     font-weight: bold;
     border: 1px solid rgba(255, 255, 255, 0.3);
-    border-top: none; /* 移除顶部边框 */
+    border-top: none;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
     font-family: 'Ma Shan Zheng', cursive;
     text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
     white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.turn-indicator:hover {
+    background-color: rgba(30, 30, 30, 0.95);
+}
+
+.turn-indicator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.turn-indicator::after {
+    content: '▼';
+    font-size: clamp(8px, 1vw, 12px);
+    opacity: 0.7;
+    margin-top: clamp(2px, 0.3vw, 4px);
+}
+
+/* 日志下拉框 */
+.log-dropdown {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: clamp(280px, 50vw, 550px);
+    max-height: 35vh;
+    background-color: rgba(0, 0, 0, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 0 0 clamp(6px, 1vw, 12px) clamp(6px, 1vw, 12px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    overflow-y: auto;
+    z-index: 19;
+    padding: clamp(8px, 1.2vw, 15px);
+}
+
+.log-dropdown.active {
+    display: block;
+}
+
+.log-dropdown p {
+    margin: clamp(3px, 0.5vw, 6px) 0;
+    padding: clamp(3px, 0.5vw, 6px) 0;
+    font-size: clamp(13px, 1.5vw, 18px);
+    color: #fff;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    line-height: 1.5;
+}
+
+.log-dropdown p:last-child {
+    border-bottom: none;
 }
 
 /* 命令区域 - 水墨风格 */
@@ -248,28 +329,31 @@ body {
     gap: 10px;
 }
 
-/* 指令按钮浮动样式 - 优化版本：始终紧贴左边缘 */
+/* 指令按钮浮动样式 - 60%屏幕宽度，靠右放置 */
 .command-buttons-floating {
     position: absolute;
-    left: 0;
+    right: 0;
     bottom: 0;
     display: flex;
     flex-direction: row;
-    gap: clamp(2px, 1vw, 12px);
-    padding: clamp(2px, 0.5vw, 8px) 0 0 clamp(2px, 0.5vw, 8px);
+    gap: clamp(3px, 0.5vw, 8px);
+    padding: clamp(4px, 0.6vw, 10px);
     z-index: 10;
-    width: 50vw;
-    min-width: 280px;
-    max-width: 50vw;
-    justify-content: space-between;
+    justify-content: flex-end;
+    flex-wrap: nowrap;
+    width: 60%;
+    max-width: 60vw;
 }
 
 .command-btn {
     flex: 1 1 0;
+    min-width: 0;
+    /* 使用aspect-ratio确保高度始终是宽度的2倍 */
+    aspect-ratio: 1 / 2;
+    height: auto;
     margin: 0;
-    padding: clamp(0.5vw, 1.2vw, 1.5vw) clamp(0.3vw, 0.8vw, 1vw);
-    height: clamp(60px, 8vw, 120px);
-    border-radius: clamp(4px, 0.8vw, 8px);
+    padding: clamp(4px, 0.6vw, 10px);
+    border-radius: clamp(4px, 0.6vw, 8px);
     background: #111 !important;
     color: #fff !important;
     border: 1px solid #333;
@@ -278,11 +362,10 @@ body {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-width: 0;
     cursor: pointer;
     transition: all 0.2s;
     position: relative;
-    overflow: hidden;
+    overflow: visible;
 }
 
 .command-btn::before {
@@ -294,7 +377,7 @@ body {
     bottom: -2px;
     background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.1), transparent);
     z-index: -1;
-    border-radius: clamp(4px, 0.8vw, 8px);
+    border-radius: clamp(4px, 0.6vw, 8px);
 }
 
 .command-btn:hover:not(.disabled) {
@@ -315,6 +398,17 @@ body {
     box-shadow: 0 0 15px rgba(58, 108, 191, 0.6);
 }
 
+/* 逃跑按钮特殊样式 */
+.command-btn.escape-btn {
+    background: linear-gradient(135deg, #4a1a1a, #2a0a0a) !important;
+    border-color: #733;
+}
+
+.command-btn.escape-btn:hover:not(.disabled) {
+    background: linear-gradient(135deg, #5a2a2a, #3a1a1a) !important;
+    border-color: #944;
+}
+
 .command-btn.disabled {
     opacity: 0.5;
     cursor: not-allowed;
@@ -323,44 +417,36 @@ body {
 /* 键位提示自适应 */
 .command-btn .key-hint {
     position: absolute;
-    top: clamp(2px, 0.5vw, 6px);
-    left: clamp(2px, 0.5vw, 6px);
+    top: clamp(2px, 0.3vw, 5px);
+    left: 50%;
+    transform: translateX(-50%);
     background-color: rgba(0, 0, 0, 0.7);
     color: #fff;
-    font-size: clamp(0.7rem, 1.5vw, 1rem);
-    padding: clamp(1px, 0.3vw, 4px) clamp(3px, 0.6vw, 8px);
-    border-radius: clamp(2px, 0.4vw, 4px);
+    font-size: clamp(8px, 1vw, 12px);
+    padding: clamp(1px, 0.2vw, 3px) clamp(2px, 0.4vw, 5px);
+    border-radius: clamp(2px, 0.2vw, 4px);
     line-height: 1;
 }
 
-/* 按钮名称自适应 */
+/* 按钮名称 - 纵向排列 */
 .command-btn .btn-name {
-    font-size: clamp(0.9rem, 2.2vw, 1.8rem);
-    font-weight: bold;
-    font-family: 'Ma Shan Zheng', cursive;
-    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
-    text-align: center;
-    line-height: 1.1;
-    margin-top: clamp(2px, 0.5vw, 8px);
+    display: block !important;
+    font-size: clamp(14px, 2vw, 22px) !important;
+    font-weight: bold !important;
+    font-family: 'Ma Shan Zheng', cursive !important;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5) !important;
+    text-align: center !important;
+    line-height: 1.2 !important;
+    margin-top: clamp(12px, 2vw, 20px) !important;
+    writing-mode: vertical-rl !important;
+    text-orientation: upright !important;
+    letter-spacing: 0.15em !important;
+    white-space: nowrap !important;
 }
 
-/* 战斗日志 - 自适应优化 */
+/* 战斗日志 - 隐藏（改为下拉框显示） */
 .battle-log {
-    height: clamp(50px, 10vw, 80px);
-    background-color: rgba(0, 0, 0, 0.85);
-    border-top: 1px solid #444;
-    padding: clamp(6px, 1.5vw, 10px) clamp(12px, 2.5vw, 20px);
-    overflow-y: auto;
-    font-size: clamp(12px, 2.5vw, 16px);
-    line-height: 1.4;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-    position: relative;
-    z-index: 10;
-}
-
-.battle-log p {
-    margin-bottom: clamp(1px, 0.3vw, 4px);
-    word-wrap: break-word;
+    display: none;
 }
 
 /* 确认弹窗 - 手机优化 */
@@ -560,24 +646,86 @@ body {
   animation: damage-flash 0.5s;
 }
 
-.npc-portrait-layer {
+/* 主角图层 */
+.player-portrait-layer {
     position: absolute;
-    left: 7.5%;  /* 水平居中 */
-    bottom: 0;  /* 紧贴下边缘 */
-    width: 85%; /* 改为70%大小 */
-    height: 85%; /* 改为70%大小 */
-    /* transform: translateX(-50%); 水平居中对齐 */
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
     pointer-events: none;
     z-index: 3;
     background: none;
-    background-position: center bottom; /* 改为底部对齐 */
+    background-position: center bottom;
     background-repeat: no-repeat;
-    background-size: contain; /* 改为contain保持比例 */
-    transition: background-image 0.3s;
+    background-size: contain;
+    transition: background-image 0.3s, filter 0.2s ease;
+    /* 使用CSS变量控制描边颜色，默认白色 */
+    --glow-color: 255, 255, 255;
+    --glow-intensity: 0.8;
+    filter: drop-shadow(0 0 1px rgba(var(--glow-color), var(--glow-intensity)))
+            drop-shadow(0 0 2px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)))
+            drop-shadow(0 0 3px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.4)));
+}
+
+.player-portrait-layer.shake {
+    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* NPC图层 */
+.npc-portrait-layer {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 3;
+    background: none;
+    background-position: center bottom;
+    background-repeat: no-repeat;
+    background-size: contain;
+    transition: background-image 0.3s, filter 0.2s ease;
+    /* 使用CSS变量控制描边颜色，默认白色 */
+    --glow-color: 255, 255, 255;
+    --glow-intensity: 0.8;
+    filter: drop-shadow(0 0 1px rgba(var(--glow-color), var(--glow-intensity)))
+            drop-shadow(0 0 2px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)))
+            drop-shadow(0 0 3px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.4)));
 }
 
 .npc-portrait-layer.shake {
     animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+}
+
+/* 攻击描边效果 - 黄色（轻攻击） */
+.player-portrait-layer.glow-yellow,
+.npc-portrait-layer.glow-yellow {
+    --glow-color: 255, 215, 0;
+    --glow-intensity: 1;
+    filter: drop-shadow(0 0 1px rgba(var(--glow-color), var(--glow-intensity)))
+            drop-shadow(0 0 2px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)))
+            drop-shadow(0 0 3px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.4)));
+}
+
+/* 攻击描边效果 - 橙色（重攻击） */
+.player-portrait-layer.glow-orange,
+.npc-portrait-layer.glow-orange {
+    --glow-color: 255, 140, 0;
+    --glow-intensity: 1;
+    filter: drop-shadow(0 0 1px rgba(var(--glow-color), var(--glow-intensity)))
+            drop-shadow(0 0 2px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)))
+            drop-shadow(0 0 3px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.4)));
+}
+
+/* 攻击描边效果 - 红色（绝招） */
+.player-portrait-layer.glow-red,
+.npc-portrait-layer.glow-red {
+    --glow-color: 255, 48, 48;
+    --glow-intensity: 1;
+    filter: drop-shadow(0 0 1px rgba(var(--glow-color), var(--glow-intensity)))
+            drop-shadow(0 0 2px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.6)))
+            drop-shadow(0 0 3px rgba(var(--glow-color), calc(var(--glow-intensity) * 0.4)));
 }
 
 .screen-flash {
@@ -620,16 +768,12 @@ body {
 
 /* 移动端优化 */
 @media (max-width: 900px) {
-    .command-buttons-floating {
+    /* .command-buttons-floating {
         width: 70vw;
         min-width: 260px;
         gap: clamp(2px, 0.8vw, 6px);
         padding: clamp(2px, 0.4vw, 6px) 0 0 clamp(2px, 0.4vw, 6px);
-    }
-    
-    .command-btn {
-        height: clamp(45px, 9vw, 70px);
-    }
+    } */
     
     .command-btn .btn-name {
         font-size: clamp(0.8rem, 2.8vw, 1.1rem);
@@ -641,17 +785,13 @@ body {
 }
 
 @media (max-width: 600px) {
-    .command-buttons-floating {
+    /* .command-buttons-floating {
         width: 85vw;
         min-width: 240px;
         gap: clamp(1px, 0.5vw, 4px);
         padding: clamp(1px, 0.3vw, 4px) 0 0 clamp(1px, 0.3vw, 4px);
         flex-direction: row;
-    }
-    
-    .command-btn {
-        height: clamp(35px, 10vw, 55px);
-    }
+    } */
     
     .command-btn .btn-name {
         font-size: clamp(0.7rem, 3vw, 1rem);
@@ -664,14 +804,10 @@ body {
 
 /* 超大屏幕优化 */
 @media (min-width: 1400px) {
-    .command-buttons-floating {
+    /* .command-buttons-floating {
         width: 45vw;
         max-width: 700px;
-    }
-    
-    .command-btn {
-        height: clamp(80px, 6vw, 100px);
-    }
+    } */
     
     .command-btn .btn-name {
         font-size: clamp(1.2rem, 1.8vw, 1.6rem);
@@ -680,16 +816,15 @@ body {
 
 /* 超小屏幕优化 */
 @media (max-width: 480px) {
-    .command-buttons-floating {
+    /* .command-buttons-floating {
         width: 95vw;
         min-width: 200px;
         gap: clamp(1px, 0.2vw, 2px);
         padding: 2px 0 0 2px;
         flex-direction: row;
-    }
+    } */
     
     .command-btn {
-        height: clamp(30px, 11vw, 45px);
         padding: clamp(0.2vw, 0.8vw, 1vw) clamp(0.1vw, 0.4vw, 0.6vw);
     }
     
@@ -707,10 +842,6 @@ body {
 @media (max-width: 900px) and (orientation: landscape) {
     .battle-scene {
         padding-bottom: clamp(60px, 10vw, 100px);
-    }
-    
-    .command-btn {
-        height: clamp(30px, 6vw, 50px);
     }
     
     .turn-indicator {
@@ -1004,9 +1135,9 @@ body {
 </head>
 <body>
     <div class="game-container">
-        <!-- //回合制系统集成更新 - 添加手动退出按钮 -->
-        <button class="exit-battle-btn" onclick="confirmExitBattle()">退出战斗</button>
-        
+        <!-- 主角图层 -->
+        <div class="player-portrait-layer"></div>
+        <!-- NPC图层 -->
         <div class="npc-portrait-layer"></div>
         <div class="screen-flash"></div>
         <!-- 战斗场景 -->
@@ -1014,43 +1145,53 @@ body {
  
             <!-- 玩家状态区 -->
             <div class="player-status-area">
-                <div class="character-name" id="player-name">user</div>
-                <div class="health-container">
-                    <div class="health-bar">
-                        <div class="health-fill" id="player-health"></div>
+                <div class="name-row">
+                    <div class="character-name" id="player-name">user</div>
+                    <div class="taunt-status" id="player-taunt-status">挑衅中</div>
+                </div>
+                <div class="stats-row">
+                    <div class="health-container">
+                        <div class="health-bar">
+                            <div class="health-fill" id="player-health"></div>
+                            <div class="health-text">
+                                <span id="player-health-value">50</span>/<span id="player-max-health">50</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="health-text">
-                        <span id="player-health-value">50</span>/<span id="player-max-health">50</span>
+                    <div class="energy-display">
+                        <div class="energy-value">气:<span id="player-energy">0</span></div>
                     </div>
                 </div>
-                <div class="energy-display">
-                    <div class="energy-value"><span id="player-energy">0</span>/10</div>
-                    <div class="energy-icon">⚡</div>
-                </div>
-                <div class="taunt-status" id="player-taunt-status">🔥 挑衅中</div>
             </div>
 
             <!-- 敌人状态区 -->
             <div class="enemy-status-area">
-                <div class="character-name" id="enemy-name">北条</div>
-                <div class="health-container">
-                    <div class="health-bar">
-                        <div class="health-fill" id="enemy-health"></div>
+                <div class="name-row">
+                    <div class="character-name" id="enemy-name">北条</div>
+                    <div class="taunt-status" id="enemy-taunt-status">挑衅中</div>
+                </div>
+                <div class="stats-row">
+                    <div class="health-container">
+                        <div class="health-bar">
+                            <div class="health-fill" id="enemy-health"></div>
+                            <div class="health-text">
+                                <span id="enemy-health-value">50</span>/<span id="enemy-max-health">50</span>
+                            </div>
+                        </div>
                     </div>
-                    <div class="health-text">
-                        <span id="enemy-health-value">50</span>/<span id="enemy-max-health">50</span>
+                    <div class="energy-display">
+                        <div class="energy-value">气:<span id="enemy-energy">0</span></div>
                     </div>
                 </div>
-                <div class="energy-display">
-                    <div class="energy-value"><span id="enemy-energy">0</span>/10</div>
-                    <div class="energy-icon">⚡</div>
-                </div>
-                <div class="taunt-status" id="enemy-taunt-status">🔥 挑衅中</div>
             </div>
 
-            <!-- 回合指示器 -->
-            <div class="turn-indicator">
+            <!-- 回合指示器（点击显示日志） -->
+            <div class="turn-indicator" id="turn-indicator" onclick="toggleLogDropdown()">
                 <div id="turn-text">第1回合</div>
+                <!-- 日志下拉框 -->
+                <div class="log-dropdown" id="log-dropdown">
+                    <p>战斗开始，请选择行动...</p>
+                </div>
             </div>
 
             <!-- 左侧玩家角色 -->
@@ -1071,17 +1212,17 @@ body {
                 </div>
                 <div class="command-btn" id="light-attack" data-key="E">
                     <div class="key-hint">E</div>
-                    <div class="btn-name">轻攻击</div>
+                    <div class="btn-name">轻击</div>
                 </div>
                 <div class="command-btn" id="heavy-attack" data-key="R">
                     <div class="key-hint">R</div>
-                    <div class="btn-name">重攻击</div>
+                    <div class="btn-name">重击</div>
                 </div>
-                <div class="command-btn" id="special" data-key="F">
+                <div class="command-btn" id="special" data-key="T">
                     <div class="key-hint">T</div>
                     <div class="btn-name">绝招</div>
                 </div>
-                <div class="command-btn" id="taunt" data-key="C">
+                <div class="command-btn" id="taunt" data-key="Y">
                     <div class="key-hint">Y</div>
                     <div class="btn-name">嘴炮</div>
                 </div>
@@ -1089,10 +1230,14 @@ body {
                     <div class="key-hint">U</div>
                     <div class="btn-name">道具</div>
                 </div>
+                <div class="command-btn escape-btn" id="escape" data-key="Escape">
+                    <div class="key-hint">Esc</div>
+                    <div class="btn-name">逃跑</div>
+                </div>
             </div>
         </div>
 
-        <!-- 战斗日志 -->
+        <!-- 战斗日志（隐藏，数据保留用于下拉框同步） -->
         <div class="battle-log" id="battle-log">
             <p>战斗开始，请选择行动...</p>
         </div>
@@ -1153,6 +1298,44 @@ body {
     <script>
 // //回合制系统集成更新 - 获取URL参数
 const urlParams = new URLSearchParams(window.location.search);
+
+// 敌人类别列表（用于模糊匹配）
+const ENEMY_CATEGORIES = ['正派弟子', '反派弟子', '游侠', '军士', '匪徒', '平民', '蒙面人', '野兽', '未知'];
+
+// 类别同义词映射（用于模糊匹配）
+const CATEGORY_SYNONYMS = {
+    '门派弟子': '正派弟子',
+    '武林弟子': '正派弟子',
+    '正道弟子': '正派弟子',
+    '魔教弟子': '反派弟子',
+    '邪道弟子': '反派弟子',
+    '邪派弟子': '反派弟子',
+    '魔道弟子': '反派弟子',
+    '侠客': '游侠',
+    '江湖人': '游侠',
+    '武者': '游侠',
+    '士兵': '军士',
+    '官兵': '军士',
+    '守卫': '军士',
+    '土匪': '匪徒',
+    '盗贼': '匪徒',
+    '强盗': '匪徒',
+    '山贼': '匪徒',
+    '马贼': '匪徒',
+    '百姓': '平民',
+    '村民': '平民',
+    '商人': '平民',
+    '路人': '平民',
+    '刺客': '蒙面人',
+    '黑衣人': '蒙面人',
+    '神秘人': '蒙面人',
+    '猛兽': '野兽',
+    '野狼': '野兽',
+    '猛虎': '野兽',
+    '毒蛇': '野兽',
+    '动物': '野兽',
+    '怪物': '野兽'
+};
 
 // 道具系统变量
 const battleItems = {
@@ -1230,8 +1413,8 @@ const itemConfig = {
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
     name: urlParams.get('playerName') || '你',
-    maxHealth: parseInt(urlParams.get('playerHealth')) || 50,
-    currentHealth: parseInt(urlParams.get('playerHealth')) || 50,
+    maxHealth: parseInt(urlParams.get('playerHealth')) || 51,
+    currentHealth: parseInt(urlParams.get('playerHealth')) || 51,
     energy: 0,
     maxEnergy: 10,
     selectedAction: null,
@@ -1242,13 +1425,13 @@ const PLAYER_INFO = {
 // //回合制系统集成更新 - 构建敌方信息文本
 const enemyInfoText = `
 发起战斗，敌方信息如下
-name: ${urlParams.get('enemyName') || '神秘杂役'}
+name: ${urlParams.get('enemyName') || '钱塘君'}
   maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
   basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
 `;
 
 // 游戏主背景和弹窗背景图片链接
-const GAME_BG_URL = urlParams.get('backgroundUrl') || 'https://files.catbox.moe/4qg2k3.png';
+const GAME_BG_URL = urlParams.get('backgroundUrl') || 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山_昼.webp';
 const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
 
 
@@ -1256,6 +1439,100 @@ const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
 const healthMap = { '极低': 25,'低': 50, '中':100, '高': 175, '极高': 275 };
 const damageMap = { '极低': 10,'低': 20, '中': 40, '高': 70, '极高': 120 };
 const styles = ['风', '火', '林', '山'];
+
+// 模糊匹配函数 - 计算编辑距离
+function levenshteinDistance(a, b) {
+    if (!a || !b) return Math.max((a || '').length, (b || '').length);
+    if (a === b) return 0;
+    
+    const matrix = [];
+    const aLen = a.length;
+    const bLen = b.length;
+    
+    for (let i = 0; i <= bLen; i++) {
+        matrix[i] = [i];
+    }
+    for (let j = 0; j <= aLen; j++) {
+        matrix[0][j] = j;
+    }
+    
+    for (let i = 1; i <= bLen; i++) {
+        for (let j = 1; j <= aLen; j++) {
+            if (b.charAt(i - 1) === a.charAt(j - 1)) {
+                matrix[i][j] = matrix[i - 1][j - 1];
+            } else {
+                matrix[i][j] = Math.min(
+                    matrix[i - 1][j - 1] + 1,
+                    matrix[i][j - 1] + 1,
+                    matrix[i - 1][j] + 1
+                );
+            }
+        }
+    }
+    
+    return matrix[bLen][aLen];
+}
+
+// 模糊匹配类别
+function fuzzyMatchCategory(input) {
+    if (!input || typeof input !== 'string') return '未知';
+    
+    const normalizedInput = input.trim();
+    if (!normalizedInput) return '未知';
+    
+    // 1. 精确匹配
+    if (ENEMY_CATEGORIES.includes(normalizedInput)) {
+        return normalizedInput;
+    }
+    
+    // 2. 同义词精确匹配
+    if (CATEGORY_SYNONYMS[normalizedInput]) {
+        const synonym = CATEGORY_SYNONYMS[normalizedInput];
+        if (ENEMY_CATEGORIES.includes(synonym)) {
+            console.log(`[类别匹配] 同义词匹配: "${normalizedInput}" -> "${synonym}"`);
+            return synonym;
+        }
+    }
+    
+    // 3. 包含匹配
+    for (const category of ENEMY_CATEGORIES) {
+        if (normalizedInput.includes(category) || category.includes(normalizedInput)) {
+            console.log(`[类别匹配] 包含匹配: "${normalizedInput}" -> "${category}"`);
+            return category;
+        }
+    }
+    
+    // 4. 同义词的包含匹配
+    for (const [key, value] of Object.entries(CATEGORY_SYNONYMS)) {
+        if (normalizedInput.includes(key) || key.includes(normalizedInput)) {
+            if (ENEMY_CATEGORIES.includes(value)) {
+                console.log(`[类别匹配] 同义词包含匹配: "${normalizedInput}" (via "${key}") -> "${value}"`);
+                return value;
+            }
+        }
+    }
+    
+    // 5. 编辑距离匹配
+    let bestMatch = '未知';
+    let bestDistance = Infinity;
+    const threshold = 2; // 允许的最大编辑距离
+    
+    for (const category of ENEMY_CATEGORIES) {
+        const distance = levenshteinDistance(normalizedInput, category);
+        if (distance < bestDistance && distance <= threshold) {
+            bestDistance = distance;
+            bestMatch = category;
+        }
+    }
+    
+    if (bestMatch !== '未知') {
+        console.log(`[类别匹配] 编辑距离匹配: "${normalizedInput}" -> "${bestMatch}" (距离: ${bestDistance})`);
+    } else {
+        console.log(`[类别匹配] 无法匹配: "${normalizedInput}"，使用默认值"未知"`);
+    }
+    
+    return bestMatch;
+}
 
 // 加权随机选择函数
 function weightedRandom(options, debugInfo = null) {
@@ -1473,11 +1750,17 @@ function parseEnemyInfo(text) {
     // 获取难度参数
     const currentDifficulty = urlParams.get('difficulty') || 'normal';
     
+    // 获取类别参数并进行模糊匹配
+    const rawCategory = urlParams.get('enemyCategory') || '未知';
+    const enemyCategory = fuzzyMatchCategory(rawCategory);
+    console.log(`[敌人信息] 原始类别: "${rawCategory}" -> 匹配结果: "${enemyCategory}"`);
+    
     // 优先查找常见NPC
     if (npcName && commonNPCs[npcName]) {
         const npc = commonNPCs[npcName];
-        // 更新敌人立绘
-        updateEnemyPortrait(npc.portrait);
+        // 更新敌人立绘 - 使用战斗差分目录
+        const npcBattlePortrait = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/${npc.name}-待机.png`;
+        updateEnemyPortrait(npcBattlePortrait);
         
         // 根据难度调整属性
         let maxHealth = npc.maxHealth;
@@ -1500,13 +1783,14 @@ function parseEnemyInfo(text) {
             selectedAction: null,
             basicDamage: basicDamage,
             style: npc.style,
+            category: enemyCategory,  // 添加类别字段
             tauntedTurns: 0  // 挑衅状态剩余回合数
         };
     }
 
-    // 没有匹配到常见NPC，为普通NPC随机选择立绘
-    const randomPortrait = genericNPCPortraits[Math.floor(Math.random() * genericNPCPortraits.length)];
-    updateEnemyPortrait(randomPortrait);
+    // 没有匹配到常见NPC，根据类别选择立绘
+    const categoryPortrait = getCategoryPortrait(enemyCategory);
+    updateEnemyPortrait(categoryPortrait);
     
     // 走原有解析逻辑，风格随机
     const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
@@ -1533,8 +1817,27 @@ function parseEnemyInfo(text) {
         selectedAction: null,
         basicDamage: baseDamage,
         style: styles[Math.floor(Math.random() * styles.length)],
+        category: enemyCategory,  // 添加类别字段
         tauntedTurns: 0  // 挑衅状态剩余回合数
     };
+}
+
+// 根据类别获取立绘
+function getCategoryPortrait(category) {
+    // 类别立绘映射 - 使用战斗差分目录下的待机图
+    const categoryPortraits = {
+        '正派弟子': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/正派弟子-待机.png',
+        '反派弟子': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/反派弟子-待机.png',
+        '游侠': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/游侠-待机.png',
+        '军士': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/军士-待机.png',
+        '匪徒': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/匪徒-待机.png',
+        '平民': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/平民-待机.png',
+        '蒙面人': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/蒙面人-待机.png',
+        '野兽': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/野兽-待机.png',
+        '未知': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/未知-待机.png'
+    };
+    
+    return categoryPortraits[category] || categoryPortraits['未知'];
 }
 
 // 更新敌人立绘
@@ -1547,6 +1850,84 @@ function updateEnemyPortrait(portraitUrl) {
 function clearEnemyPortrait() {
     const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
     npcPortraitLayer.style.backgroundImage = '';
+}
+
+// 更新主角立绘
+function updatePlayerPortrait(portraitUrl) {
+    const playerPortraitLayer = document.querySelector('.player-portrait-layer');
+    if (playerPortraitLayer) {
+        playerPortraitLayer.style.backgroundImage = `url('${portraitUrl}')`;
+    }
+}
+
+// 初始化主角立绘
+function initPlayerPortrait() {
+    const defaultPlayerPortrait = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/主角-待机.png';
+    updatePlayerPortrait(defaultPlayerPortrait);
+}
+
+// 获取主角立绘URL（根据状态）
+function getPlayerPortraitUrl(state) {
+    return `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/主角-${state}.png`;
+}
+
+// 获取敌人立绘URL（根据状态）
+function getEnemyPortraitUrl(state) {
+    const enemy = gameState.enemy;
+    const npcName = enemy.name;
+    
+    // 优先检查是否是特殊NPC
+    if (npcName && commonNPCs[npcName]) {
+        return `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/${npcName}-${state}.png`;
+    }
+    
+    // 否则使用类别
+    const category = enemy.category || '未知';
+    return `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/${category}-${state}.png`;
+}
+
+// 设置立绘描边效果
+function setPortraitGlow(isPlayer, glowColor) {
+    const layer = isPlayer 
+        ? document.querySelector('.player-portrait-layer')
+        : document.querySelector('.npc-portrait-layer');
+    
+    if (!layer) return;
+    
+    // 清除所有描边效果
+    layer.classList.remove('glow-yellow', 'glow-orange', 'glow-red');
+    
+    // 添加新的描边效果
+    if (glowColor) {
+        layer.classList.add(glowColor);
+    }
+}
+
+// 切换立绘状态
+function setPortraitState(isPlayer, state, glowColor) {
+    if (isPlayer) {
+        updatePlayerPortrait(getPlayerPortraitUrl(state));
+    } else {
+        updateEnemyPortrait(getEnemyPortraitUrl(state));
+    }
+    setPortraitGlow(isPlayer, glowColor);
+}
+
+// 恢复双方立绘到待机状态
+function resetPortraitsToIdle() {
+    setPortraitState(true, '待机', null);   // 玩家恢复待机
+    setPortraitState(false, '待机', null);  // 敌人恢复待机
+}
+
+// 获取攻击类型对应的描边颜色类名
+function getGlowClass(action, dealtDamage) {
+    if (!dealtDamage) return null;
+    switch(action) {
+        case 'light-attack': return 'glow-yellow';  // 黄色
+        case 'heavy-attack': return 'glow-orange';  // 橙色
+        case 'special': return 'glow-red';          // 红色
+        default: return null;
+    }
 }
 
 // //回合制系统集成更新 - 退出战斗
@@ -1686,6 +2067,9 @@ const enemyCharacter = document.querySelector('.enemy-character');
 
 // 初始化游戏
 function initGame() {
+    // 初始化主角立绘
+    initPlayerPortrait();
+    
     updateDisplay();
     addLog('战斗开始，请选择行动...');
     
@@ -1705,6 +2089,7 @@ function setupButtonEvents() {
     document.getElementById('special').addEventListener('click', () => selectAction('special'));
     document.getElementById('taunt').addEventListener('click', () => selectAction('taunt'));
     document.getElementById('item').addEventListener('click', openItemModal);
+    document.getElementById('escape').addEventListener('click', confirmExitBattle);
     
     // 确认按钮事件
     confirmActionButton.addEventListener('click', () => {
@@ -1772,14 +2157,14 @@ function updateDisplay() {
     const enemyTauntStatus = document.getElementById('enemy-taunt-status');
     
     if (gameState.player.tauntedTurns > 0) {
-        playerTauntStatus.textContent = `🔥 挑衅中 (${gameState.player.tauntedTurns}回合)`;
+        playerTauntStatus.textContent = '挑衅中';
         playerTauntStatus.classList.add('active');
     } else {
         playerTauntStatus.classList.remove('active');
     }
     
     if (gameState.enemy.tauntedTurns > 0) {
-        enemyTauntStatus.textContent = `🔥 挑衅中 (${gameState.enemy.tauntedTurns}回合)`;
+        enemyTauntStatus.textContent = '挑衅中';
         enemyTauntStatus.classList.add('active');
     } else {
         enemyTauntStatus.classList.remove('active');
@@ -1840,7 +2225,33 @@ function addLog(message) {
     logEntry.textContent = message;
     battleLog.appendChild(logEntry);
     battleLog.scrollTop = battleLog.scrollHeight;
+    
+    // 同步更新日志下拉框
+    const logDropdown = document.getElementById('log-dropdown');
+    if (logDropdown) {
+        const dropdownEntry = document.createElement('p');
+        dropdownEntry.textContent = message;
+        logDropdown.appendChild(dropdownEntry);
+        logDropdown.scrollTop = logDropdown.scrollHeight;
+    }
 }
+
+// 切换日志下拉框显示
+function toggleLogDropdown() {
+    const logDropdown = document.getElementById('log-dropdown');
+    if (logDropdown) {
+        logDropdown.classList.toggle('active');
+    }
+}
+
+// 点击其他区域关闭日志下拉框
+document.addEventListener('click', function(e) {
+    const turnIndicator = document.getElementById('turn-indicator');
+    const logDropdown = document.getElementById('log-dropdown');
+    if (turnIndicator && logDropdown && !turnIndicator.contains(e.target)) {
+        logDropdown.classList.remove('active');
+    }
+});
 
 // 选择动作
 function selectAction(action) {
@@ -2036,9 +2447,22 @@ function processActions(playerAction, enemyAction) {
     const enemy = gameState.enemy;
     const gameContainer = document.querySelector('.game-container');
     const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
+    const playerPortraitLayer = document.querySelector('.player-portrait-layer');
     const screenFlash = document.querySelector('.screen-flash');
     let playerWasHit = false;
     let enemyWasHit = false;
+    
+    // 立绘动画状态追踪
+    let playerDealtDamage = false;      // 玩家是否造成伤害
+    let enemyDealtDamage = false;       // 敌人是否造成伤害
+    let playerSpecialBroken = false;    // 玩家绝招是否被嘴炮破
+    let enemySpecialBroken = false;     // 敌人绝招是否被嘴炮破
+    let playerDamageAction = null;      // 玩家造成伤害的攻击类型
+    let enemyDamageAction = null;       // 敌人造成伤害的攻击类型
+    let playerBrokenByTaunt = false;    // 玩家被嘴炮破防
+    let enemyBrokenByTaunt = false;     // 敌人被嘴炮破防
+    let playerHitBySpecial = false;     // 玩家被绝招无视防御
+    let enemyHitBySpecial = false;      // 敌人被绝招无视防御
     
     // 处理集气
     if (playerAction === 'gather') {
@@ -2097,6 +2521,8 @@ function processActions(playerAction, enemyAction) {
                 addLog(`${player.name}的嘴炮激怒了${enemy.name}！${enemy.name}进入挑衅状态！`);
             }
             enemy.tauntedTurns = 3;
+            enemyWasHit = true;
+            enemyBrokenByTaunt = true;  // 敌人被嘴炮破防
         }
         
         if (enemyAction === 'taunt' && playerDefending) {
@@ -2108,16 +2534,20 @@ function processActions(playerAction, enemyAction) {
                 addLog(`${enemy.name}的嘴炮激怒了${player.name}！${player.name}进入挑衅状态！`);
             }
             player.tauntedTurns = 3;
+            playerWasHit = true;
+            playerBrokenByTaunt = true;  // 玩家被嘴炮破防
         }
         
         // 嘴炮对绝招的效果：无效化伤害（保持原有逻辑）
         if (playerAction === 'taunt' && enemyAction === 'special') {
             playerTauntSuccess = true;
+            enemySpecialBroken = true;  // 敌人绝招被破
             addLog(`${player.name}的嘴炮成功无效化了${enemy.name}的绝招伤害！`);
         }
         
         if (enemyAction === 'taunt' && playerAction === 'special') {
             enemyTauntSuccess = true;
+            playerSpecialBroken = true;  // 玩家绝招被破
             addLog(`${enemy.name}的嘴炮成功无效化了${player.name}的绝招伤害！`);
         }
     }
@@ -2139,6 +2569,11 @@ function processActions(playerAction, enemyAction) {
             enemy.currentHealth -= damage;
             addLog(`${player.name}使用绝招，对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
+            playerDealtDamage = true;           // 玩家造成伤害
+            playerDamageAction = 'special';     // 记录攻击类型
+            if (enemyDefending) {
+                enemyHitBySpecial = true;       // 敌人防御被绝招无视
+            }
         } else {
             addLog(`${player.name}使用绝招，但伤害被${enemy.name}的嘴炮无效化了！`);
         }
@@ -2172,6 +2607,11 @@ function processActions(playerAction, enemyAction) {
             player.currentHealth -= damage;
             addLog(`${enemy.name}使用绝招，对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
+            enemyDealtDamage = true;           // 敌人造成伤害
+            enemyDamageAction = 'special';     // 记录攻击类型
+            if (playerDefending) {
+                playerHitBySpecial = true;     // 玩家防御被绝招无视
+            }
         } else {
             addLog(`${enemy.name}使用绝招，但伤害被${player.name}的嘴炮无效化了！`);
         }
@@ -2210,6 +2650,8 @@ function processActions(playerAction, enemyAction) {
             enemy.currentHealth -= reducedDamage;
             addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
             enemyWasHit = true;
+            playerDealtDamage = true;
+            playerDamageAction = 'heavy-attack';
         } else if (enemyAction === 'light-attack') {
             // 重攻击克制轻攻击
             playerCharacter.classList.add('player-attack');
@@ -2225,6 +2667,8 @@ function processActions(playerAction, enemyAction) {
             enemy.energy -= 1; // 消耗敌人的能量
             addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${damage}点伤害！`);
             enemyWasHit = true;
+            playerDealtDamage = true;
+            playerDamageAction = 'heavy-attack';
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
@@ -2238,6 +2682,8 @@ function processActions(playerAction, enemyAction) {
             enemy.currentHealth -= damage;
             addLog(`${player.name}的重攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
+            playerDealtDamage = true;
+            playerDamageAction = 'heavy-attack';
         }
     }
     
@@ -2261,6 +2707,8 @@ function processActions(playerAction, enemyAction) {
             player.currentHealth -= reducedDamage;
             addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
             playerWasHit = true;
+            enemyDealtDamage = true;
+            enemyDamageAction = 'heavy-attack';
         } else if (playerAction === 'light-attack') {
             // 重攻击克制轻攻击
             enemyCharacter.classList.add('enemy-attack');
@@ -2276,6 +2724,8 @@ function processActions(playerAction, enemyAction) {
             player.energy -= 1; // 消耗玩家的能量
             addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${damage}点伤害！`);
             playerWasHit = true;
+            enemyDealtDamage = true;
+            enemyDamageAction = 'heavy-attack';
         } else {
             enemyCharacter.classList.add('enemy-attack');
             playerCharacter.classList.add('player-hit');
@@ -2289,6 +2739,8 @@ function processActions(playerAction, enemyAction) {
             player.currentHealth -= damage;
             addLog(`${enemy.name}的重攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
+            enemyDealtDamage = true;
+            enemyDamageAction = 'heavy-attack';
         }
     }
     
@@ -2313,6 +2765,8 @@ function processActions(playerAction, enemyAction) {
             enemy.currentHealth -= reducedDamage;
             addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
             enemyWasHit = true;
+            playerDealtDamage = true;
+            playerDamageAction = 'light-attack';
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
@@ -2326,6 +2780,8 @@ function processActions(playerAction, enemyAction) {
             enemy.currentHealth -= damage;
             addLog(`${player.name}的轻攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
+            playerDealtDamage = true;
+            playerDamageAction = 'light-attack';
         }
     }
     
@@ -2349,6 +2805,8 @@ function processActions(playerAction, enemyAction) {
             player.currentHealth -= reducedDamage;
             addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
             playerWasHit = true;
+            enemyDealtDamage = true;
+            enemyDamageAction = 'light-attack';
         } else {
             enemyCharacter.classList.add('enemy-attack');
             playerCharacter.classList.add('player-hit');
@@ -2362,6 +2820,8 @@ function processActions(playerAction, enemyAction) {
             player.currentHealth -= damage;
             addLog(`${enemy.name}的轻攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
+            enemyDealtDamage = true;
+            enemyDamageAction = 'light-attack';
         }
     }
     
@@ -2369,21 +2829,82 @@ function processActions(playerAction, enemyAction) {
     if (player.currentHealth < 0) player.currentHealth = 0;
     if (enemy.currentHealth < 0) enemy.currentHealth = 0;
     
-    // 受击反馈动画
-    if (playerWasHit) {
+    // 受击反馈动画（与立绘受击状态判断一致）
+    // 玩家真正受击的情况：绝招被破、被嘴炮破防、被绝招无视防御、非防御状态被打
+    const playerTrueHit = playerSpecialBroken || playerBrokenByTaunt || playerHitBySpecial || (playerWasHit && !playerDefending);
+    // 敌人真正受击的情况：绝招被破、被嘴炮破防、被绝招无视防御、非防御状态被打
+    const enemyTrueHit = enemySpecialBroken || enemyBrokenByTaunt || enemyHitBySpecial || (enemyWasHit && !enemyDefending);
+    
+    if (playerTrueHit) {
         gameContainer.classList.add('shake');
         screenFlash.classList.add('active');
+        playerPortraitLayer.classList.add('shake');
         setTimeout(() => {
             gameContainer.classList.remove('shake');
             screenFlash.classList.remove('active');
+            playerPortraitLayer.classList.remove('shake');
         }, 400);
     }
-    if (enemyWasHit) {
+    if (enemyTrueHit) {
         npcPortraitLayer.classList.add('shake');
         setTimeout(() => {
             npcPortraitLayer.classList.remove('shake');
         }, 400);
     }
+    
+    // ========== 立绘动画逻辑 ==========
+    // 确定玩家立绘状态
+    let playerPortraitState = '待机';
+    let playerGlowClass = null;
+    
+    if (playerSpecialBroken) {
+        // 绝招被嘴炮破，显示受击
+        playerPortraitState = '受击';
+    } else if (playerDealtDamage) {
+        // 造成伤害优先显示攻击
+        playerPortraitState = '攻击';
+        playerGlowClass = getGlowClass(playerDamageAction, true);
+    } else if (playerBrokenByTaunt || playerHitBySpecial) {
+        // 被嘴炮破防或被绝招无视防御，显示受击
+        playerPortraitState = '受击';
+    } else if (playerDefending) {
+        // 防御状态（正常防御轻/重攻击）
+        playerPortraitState = '防御';
+    } else if (playerWasHit) {
+        // 只受伤显示受击（非防御情况下被打）
+        playerPortraitState = '受击';
+    }
+    
+    // 确定敌人立绘状态
+    let enemyPortraitState = '待机';
+    let enemyGlowClass = null;
+    
+    if (enemySpecialBroken) {
+        // 绝招被嘴炮破，显示受击
+        enemyPortraitState = '受击';
+    } else if (enemyDealtDamage) {
+        // 造成伤害优先显示攻击
+        enemyPortraitState = '攻击';
+        enemyGlowClass = getGlowClass(enemyDamageAction, true);
+    } else if (enemyBrokenByTaunt || enemyHitBySpecial) {
+        // 被嘴炮破防或被绝招无视防御，显示受击
+        enemyPortraitState = '受击';
+    } else if (enemyDefending) {
+        // 防御状态（正常防御轻/重攻击）
+        enemyPortraitState = '防御';
+    } else if (enemyWasHit) {
+        // 只受伤显示受击（非防御情况下被打）
+        enemyPortraitState = '受击';
+    }
+    
+    // 应用立绘状态
+    setPortraitState(true, playerPortraitState, playerGlowClass);
+    setPortraitState(false, enemyPortraitState, enemyGlowClass);
+    
+    // 1.0秒后恢复待机状态
+    setTimeout(() => {
+        resetPortraitsToIdle();
+    }, 1000);
     
     // 更新显示
     updateDisplay();

@@ -1755,7 +1755,8 @@
                     enemy: {
                         name: npc.name,
                         maxHealth: '中',
-                        basicDamage: '中'
+                        basicDamage: '中',
+                        category: '未知'  // NPC切磋时类别默认为未知
                     }
                 };
                 
@@ -1892,7 +1893,8 @@
                 enemy: {
                     name: enemyInfo.名称,
                     maxHealth: enemyInfo.属性?.生命力 || '中',
-                    basicDamage: enemyInfo.属性?.攻击力 || '中'
+                    basicDamage: enemyInfo.属性?.攻击力 || '中',
+                    category: enemyInfo.类别 || '未知'  // 从敌方信息中提取类别
                 }
             };
             
