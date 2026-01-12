@@ -525,8 +525,12 @@ body {
 }
 
 .location-info-npcs {
-    color: var(--ink-medium) !important;
+    color: var(--ink-dark) !important;
     font-family: var(--font-serif) !important;
+}
+
+.location-info-npc-item {
+    color: var(--ink-dark) !important;
 }
 
 /* 地图热区高亮：古风UI下使用边缘白色发光效果 */
@@ -1012,6 +1016,314 @@ body {
 .modal .modal-content {
     scrollbar-width: thin;
     scrollbar-color: var(--ink-medium) var(--paper-dark);
+}
+
+/* ========== 全局字体优化（古风UI专用） ========== */
+/* 统一标准：参考上拉菜单选项的清晰效果 */
+/* 基准样式：font-size: clamp(0.9rem, 2.2vw, 1.1rem), font-weight: 600, color: --ink-dark */
+
+/* ===== 颜色统一规则 ===== */
+/* 主要文字：使用 --ink-dark (#2c2c2c)，与上拉菜单一致 */
+/* 标题文字：使用 --ink-black (#1a1a1a) */
+/* 禁用/不可用：使用 #999 或 --ink-light (#8c8c8c) */
+/* 价格/数值：使用 --accent-cyan (#2471a3) */
+
+/* 统一所有可交互文字颜色为深色 */
+.dropdown-item,
+.location-info-npcs,
+.location-info-npc-item,
+.relationship-value,
+.checkbox-label,
+.visibility-checkbox,
+.npc-info-desc,
+.modal-text,
+.trading-item-name,
+.item-name,
+.item-description,
+.shop-item-description,
+.item-stat,
+.shop-item-stat,
+.option-desc,
+.option-reward,
+.option-success-rate,
+.enemy-info-item,
+.battle-reward-text,
+.slot-label,
+.cheat-item label,
+.difficulty-option .option-content small {
+    color: var(--ink-dark) !important;
+}
+
+/* 标题类文字使用更深的颜色 */
+.location-info-name,
+.npc-info-name,
+.relationship-name,
+.stats-group h3,
+.cheat-section h4,
+.trading-section h4,
+.equipment-stats h4,
+.difficulty-option .option-content strong {
+    color: var(--ink-black) !important;
+}
+
+/* 禁用状态保持淡色 */
+.empty-slot,
+.gift-btn.disabled,
+.npc-info-btn.disabled,
+.add-point-btn:disabled,
+.trading-btn:disabled,
+.buy-btn:disabled,
+.sell-btn:disabled,
+.modal-btn.disabled,
+.scene-btn:disabled,
+.control-btn:disabled {
+    color: #999 !important;
+}
+
+/* 1. 下拉菜单项 - 上拉栏各选项（基准样式） */
+.dropdown-item {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+    padding: clamp(10px, 2.5vw, 14px) clamp(15px, 3vw, 20px) !important;
+    letter-spacing: 0.5px;
+}
+
+/* 2. 地点弹窗 - 统一到基准样式 */
+.location-info-name {
+    font-size: clamp(1.2rem, 3vw, 1.5rem) !important;
+    font-weight: bold !important;
+}
+
+.location-info-npcs {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+    line-height: 1.6 !important;
+}
+
+.location-info-npc-item {
+    margin: clamp(6px, 1.5vw, 8px) 0 !important;
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+/* 前往按钮 */
+.location-go-btn {
+    font-size: clamp(1rem, 2.5vw, 1.2rem) !important;
+    font-weight: bold !important;
+    padding: clamp(10px, 2.5vw, 12px) clamp(30px, 6vw, 40px) !important;
+}
+
+/* 3. 人际关系卡片 - 统一到基准样式 */
+.relationship-name {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.relationship-value {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.checkbox-label {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.visibility-checkbox {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.gift-btn {
+    font-size: clamp(0.85rem, 2vw, 1rem) !important;
+    font-weight: bold !important;
+    padding: clamp(5px, 1.2vw, 7px) clamp(10px, 2.2vw, 14px) !important;
+}
+
+/* 4. NPC信息弹窗 - 统一样式 */
+.npc-info-name {
+    font-size: clamp(1.2rem, 3vw, 1.5rem) !important;
+    font-weight: bold !important;
+}
+
+.npc-info-desc {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+    line-height: 1.5 !important;
+}
+
+.npc-info-btn {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+/* 5. 状态栏文字增强 */
+.status-display .date-display {
+    font-size: clamp(1rem, 2.2vw, 1.4rem) !important;
+    font-weight: bold !important;
+}
+
+.status-display .mood-text,
+.status-display .action-points {
+    font-size: clamp(0.9rem, 2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+/* 6. 弹窗标题与文本 - 统一样式 */
+.modal-text {
+    font-size: clamp(1rem, 2.5vw, 1.2rem) !important;
+    font-weight: 600 !important;
+    line-height: 1.7 !important;
+}
+
+.modal-btn {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+/* 7. 交易界面文字 - 统一样式 */
+.trading-item-name {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.trading-item-price {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.trading-money {
+    font-size: clamp(1rem, 2.2vw, 1.2rem) !important;
+    font-weight: bold !important;
+}
+
+.trading-section h4 {
+    font-size: clamp(0.95rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+/* 8. 背包物品 - 增加字重 */
+.inventory-item {
+    font-weight: 600 !important;
+}
+
+.item-name {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.item-quantity {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+/* 9. 物品详情弹窗 - 统一样式 */
+.item-description, .shop-item-description {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+    line-height: 1.6 !important;
+}
+
+.item-stat, .shop-item-stat {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.item-stat-label, .shop-item-stat-label {
+    font-weight: bold !important;
+}
+
+.price-label {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.price-value {
+    font-size: clamp(1rem, 2.4vw, 1.2rem) !important;
+    font-weight: bold !important;
+}
+
+/* 10. 事件选项文字 - 统一样式 */
+.option-desc {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.option-reward, .option-success-rate {
+    font-size: clamp(0.85rem, 2vw, 1rem) !important;
+    font-weight: 600 !important;
+}
+
+/* 11. 控制按钮（底部） */
+.control-btn {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+    letter-spacing: 1px !important;
+}
+
+/* 12. 装备界面 - 统一样式 */
+.slot-label {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.equipped-item {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.empty-slot {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.stat-effect {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+/* 13. 金手指/设置弹窗 */
+.cheat-section h4 {
+    font-size: clamp(1rem, 2.4vw, 1.2rem) !important;
+    font-weight: bold !important;
+}
+
+.cheat-item label {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.difficulty-option .option-content strong {
+    font-size: clamp(0.95rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+.difficulty-option .option-content small {
+    font-size: clamp(0.85rem, 2vw, 1rem) !important;
+    font-weight: 600 !important;
+}
+
+/* 14. 场景按钮 */
+.scene-btn {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+/* 15. 返回按钮 */
+.back-btn {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: bold !important;
+}
+
+/* 16. 战斗/事件信息 */
+.enemy-info-item {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+
+.battle-reward-text {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
+    font-weight: 600 !important;
 }
 
 /* 通用：所有使用overflow的容器 */

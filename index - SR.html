@@ -370,9 +370,9 @@
                     系统设置 ▲
                 </button>
                 <div id="system-dropdown" class="dropdown-menu">
-                    <button class="dropdown-item" id="toggle-ui-btn" onclick="toggleUIStyle()">UI风格（古风）</button>
+                    <button class="dropdown-item" id="toggle-ui-btn" onclick="toggleUIStyle()">风格(古风)</button>
+                    <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容(关)</button>
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
-                    <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容（关）</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
                     <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
                 </div>
@@ -384,11 +384,11 @@
                     信息设置 ▲
                 </button>
                 <div id="history-dropdown" class="dropdown-menu">
+                    <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结(关)</button>
                     <button class="dropdown-item" onclick="saveGame()">存档</button>
                     <button class="dropdown-item" onclick="loadGame()">读档</button>
                     <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
-                    <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结（关）</button>
                     <button class="dropdown-item" onclick="showFontSettings()">正文字体</button>               
                 </div>
             </div>
@@ -2874,7 +2874,7 @@
         function updateCgToggleLabel() {
             const btn = document.getElementById('toggle-cg-btn');
             const enabled = (typeof cgContentEnabled !== 'undefined') ? cgContentEnabled : false;
-            if (btn) btn.textContent = `CG内容（${enabled ? '开' : '关'}）`;
+            if (btn) btn.textContent = `CG内容(${enabled ? '开' : '关'})`;
         }
 
         // 切换CG内容开关（仅切开关，不改 slgCGOptions）
@@ -2897,7 +2897,7 @@
         // 切换强力总结开关 + 刷新按钮
         function updateCompressSummaryLabel() {
             const btn = document.getElementById('toggle-compress-summary-btn');
-            if (btn) btn.textContent = `强力总结（${compressSummary ? '开' : '关'}）`;
+            if (btn) btn.textContent = `强力总结(${compressSummary ? '开' : '关'})`;
         }
 
         // 切换强力总结开关
@@ -2910,7 +2910,7 @@
         function updateUIStyleLabel() {
             const btn = document.getElementById('toggle-ui-btn');
             const style = (typeof uiStyle !== 'undefined') ? uiStyle : 0;
-            if (btn) btn.textContent = `UI风格（${style === 0 ? '古风' : '扁平'}）`;
+            if (btn) btn.textContent = `风格(${style === 0 ? '古风' : '扁平'})`;
         }
 
         // 切换UI风格
