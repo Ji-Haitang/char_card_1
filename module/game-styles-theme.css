@@ -323,28 +323,66 @@ body {
     box-shadow: 0 0 8px rgba(36, 113, 163, 0.2);
 }
 
-/* 7. 场景标题：竖排版与匾额 */
+/* 7. 场景标题：竖排版与匾额 - 响应式设计 */
 .scene-title {
     font-family: "LiSu", "KaiTi", serif !important; /* 隶书或楷体 */
-    color: #000 !important;
+    color: #fff !important; /* 白色字体 */
+    
+    /* 字体大小：使用视口宽度单位，确保响应式 */
+    font-size: 3.5vw;
+    
+    /* 黑色描边：使用 em 单位相对于字体大小 */
     text-shadow: 
-        0 0 5px #fff, 
-        0 0 10px #fff,
-        0 0 2px #fff;
-    background: linear-gradient(to bottom, rgba(255,255,255,0.9), rgba(255,255,255,0));
-    padding: 10px 15px;
-    border-radius: 4px;
-    border-top: 3px solid var(--ink-black);
+        0.05em 0 0 #000, -0.05em 0 0 #000,
+        0 0.05em 0 #000, 0 -0.05em 0 #000,
+        0.05em 0.05em 0 #000, -0.05em -0.05em 0 #000,
+        0.05em -0.05em 0 #000, -0.05em 0.05em 0 #000,
+        0.1em 0 0 #000, -0.1em 0 0 #000,
+        0 0.1em 0 #000, 0 -0.1em 0 #000;
+    
+    /* 背景透明，由伪元素提供 */
+    background: transparent;
+    
+    /* 内边距：使用视口宽度单位 */
+    padding: 1.5vw 2vw;
+    border-radius: 0.5vw;
+    border-top: none;
     
     /* 竖排文字 */
     writing-mode: vertical-rl;
     text-orientation: upright;
-    letter-spacing: 5px;
+    letter-spacing: 0.15em; /* 字间距相对于字体大小 */
+    
+    /* 定位：使用百分比相对于父容器 */
     position: absolute;
-    top: 15px; /* 上移至15px，贴近顶部 */
-    right: 30px; /* 改为右上角显示，更符合古风 */
+    top: 3%;
+    right: 4%;
     left: auto;
     transform: none;
+    z-index: 10;
+}
+
+/* 场景标题背景：伪元素实现淡出效果，文字不受影响 */
+.scene-title::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
+    
+    /* 背景图片 */
+    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/背景.png');
+    background-size: 100% 100%; /* 拉伸填充 */
+    background-position: center;
+    background-repeat: no-repeat;
+    
+    border-radius: 0.5vw;
+    
+    /* 底部淡出效果：只应用于背景 */
+    -webkit-mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
+    mask-image: linear-gradient(to bottom, black 0%, black 50%, transparent 100%);
 }
 
 /* 8. 随机事件与战斗卡片（特定优化） */
@@ -717,11 +755,6 @@ body {
     height: 0;
     z-index: 55;
     pointer-events: none; /* 容器本身不拦截点击 */
-}
-
-/* 右侧位置时，不需要特殊处理，因为角度已在JS中计算 */
-.npc-selection-frame.options-right .npc-selection-options {
-    /* 保持相同 */
 }
 
 /* 选项文字按钮 - 古风样式，圆周定位，白字黑边 */
