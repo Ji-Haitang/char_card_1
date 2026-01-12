@@ -224,16 +224,24 @@ body {
     100% { opacity: 0.8; transform: scale(1); }
 }
 
-/* 回合指示器 - 可点击显示日志 */
-.turn-indicator {
+/* 顶部状态栏容器 - 改为纵向排列 */
+.top-status-bar {
     position: absolute;
     top: 0;
     left: 50%;
     transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    z-index: 20;
+}
+
+/* 回合指示器 - 可点击显示日志 */
+.turn-indicator {
+    position: relative;
     background-color: rgba(0, 0, 0, 0.85);
     padding: clamp(6px, 0.8vw, 12px) clamp(12px, 2vw, 25px);
     border-radius: 0 0 clamp(8px, 1.2vw, 15px) clamp(8px, 1.2vw, 15px);
-    z-index: 20;
     font-size: clamp(14px, 1.8vw, 22px);
     font-weight: bold;
     border: 1px solid rgba(255, 255, 255, 0.3);
@@ -296,6 +304,218 @@ body {
 
 .log-dropdown p:last-child {
     border-bottom: none;
+}
+
+/* ========== 场地效果指示器 - 在回合数上方 ========== */
+.field-effect-indicator {
+    position: relative;
+    background-color: rgba(0, 0, 0, 0.85);
+    padding: clamp(3px, 0.5vw, 6px) clamp(12px, 2vw, 25px);
+    border-radius: 0;  /* 无圆角 */
+    font-size: clamp(10px, 1.2vw, 14px);
+    font-weight: bold;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-bottom: none;  /* 和下方回合数容器连接 */
+    box-shadow: 0 -2px 8px rgba(0, 0, 0, 0.6);
+    font-family: 'Ma Shan Zheng', cursive;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.7);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: none;
+    justify-content: center;
+}
+
+.field-effect-indicator.active {
+    display: flex;
+    align-items: center;
+    gap: clamp(4px, 0.6vw, 8px);
+}
+
+.field-effect-icon {
+    font-size: clamp(14px, 1.8vw, 22px);
+}
+
+.field-effect-name {
+    color: #fff;
+}
+
+.field-effect-timer {
+    color: #ffcc00;
+    font-size: clamp(10px, 1.2vw, 14px);
+    opacity: 0.9;
+}
+
+/* 场地效果颜色主题 */
+.field-effect-indicator.killing-intent {
+    border-color: rgba(255, 60, 60, 0.6);
+    background: linear-gradient(135deg, rgba(80, 20, 20, 0.95), rgba(40, 10, 10, 0.95));
+}
+
+.field-effect-indicator.miasma {
+    border-color: rgba(150, 50, 200, 0.6);
+    background: linear-gradient(135deg, rgba(60, 20, 80, 0.95), rgba(30, 10, 40, 0.95));
+}
+
+.field-effect-indicator.fortify {
+    border-color: rgba(100, 150, 255, 0.6);
+    background: linear-gradient(135deg, rgba(20, 40, 80, 0.95), rgba(10, 20, 50, 0.95));
+}
+
+.field-effect-indicator.energy-tide {
+    border-color: rgba(255, 200, 50, 0.6);
+    background: linear-gradient(135deg, rgba(80, 60, 20, 0.95), rgba(50, 35, 10, 0.95));
+}
+
+.field-effect-indicator.melee {
+    border-color: rgba(200, 150, 100, 0.6);
+    background: linear-gradient(135deg, rgba(60, 45, 30, 0.95), rgba(35, 25, 15, 0.95));
+}
+
+.field-effect-indicator.rejuvenation {
+    border-color: rgba(80, 220, 120, 0.6);
+    background: linear-gradient(135deg, rgba(20, 70, 40, 0.95), rgba(10, 40, 20, 0.95));
+}
+
+/* 场地效果下拉介绍框 - 相对于game-container居中显示 */
+.field-effect-dropdown {
+    display: none;
+    position: absolute;
+    top: 12%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 60%;
+    max-width: 280px;
+    min-width: 180px;
+    background-color: rgba(0, 0, 0, 0.95);
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-radius: clamp(6px, 1vw, 12px);
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.7);
+    padding: clamp(8px, 1.5vw, 14px);
+    z-index: 100;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    box-sizing: border-box;
+}
+
+/* 场地弹窗颜色主题 - 边框颜色和场地效果一致 */
+.field-effect-dropdown.killing-intent {
+    border-color: rgba(255, 60, 60, 0.8);
+}
+
+.field-effect-dropdown.miasma {
+    border-color: rgba(150, 50, 200, 0.8);
+}
+
+.field-effect-dropdown.fortify {
+    border-color: rgba(100, 150, 255, 0.8);
+}
+
+.field-effect-dropdown.energy-tide {
+    border-color: rgba(255, 200, 50, 0.8);
+}
+
+.field-effect-dropdown.melee {
+    border-color: rgba(200, 150, 100, 0.8);
+}
+
+.field-effect-dropdown.rejuvenation {
+    border-color: rgba(80, 220, 120, 0.8);
+}
+
+.field-effect-dropdown.active {
+    display: block;
+}
+
+.field-effect-dropdown-title {
+    font-size: clamp(14px, 1.8vw, 20px);
+    color: #ffcc00;
+    margin-bottom: clamp(6px, 1vw, 12px);
+    padding-bottom: clamp(4px, 0.6vw, 8px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    gap: clamp(6px, 1vw, 10px);
+}
+
+.field-effect-dropdown-desc {
+    font-size: clamp(11px, 1.3vw, 15px);
+    color: #ccc;
+    line-height: 1.5;
+    font-family: 'ZCOOL XiaoWei', sans-serif;
+}
+
+.field-effect-dropdown-effect {
+    margin-top: clamp(6px, 1vw, 10px);
+    padding: clamp(5px, 0.8vw, 10px);
+    background: rgba(255, 255, 255, 0.08);
+    border-left: 2px solid #ffcc00;
+    font-size: clamp(9px, 1.1vw, 13px);
+    color: #fff;
+    line-height: 1.4;
+    word-wrap: break-word;
+}
+
+/* 场地效果触发动画 */
+@keyframes field-effect-appear {
+    0% { opacity: 0; transform: translateY(-10px); }
+    100% { opacity: 1; transform: translateY(0); }
+}
+
+.field-effect-indicator.appearing {
+    animation: field-effect-appear 0.5s ease-out;
+}
+
+/* 场地效果全屏提示 */
+.field-effect-announce {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.7);
+    z-index: 500;
+    pointer-events: none;
+}
+
+.field-effect-announce.active {
+    display: flex;
+    animation: announce-fade 2s ease-out forwards;
+}
+
+@keyframes announce-fade {
+    0% { opacity: 0; }
+    20% { opacity: 1; }
+    80% { opacity: 1; }
+    100% { opacity: 0; }
+}
+
+.field-effect-announce-content {
+    text-align: center;
+    animation: announce-scale 2s ease-out;
+}
+
+@keyframes announce-scale {
+    0% { transform: scale(0.5); opacity: 0; }
+    20% { transform: scale(1.1); opacity: 1; }
+    30% { transform: scale(1); }
+    80% { transform: scale(1); opacity: 1; }
+    100% { transform: scale(1.2); opacity: 0; }
+}
+
+.field-effect-announce-icon {
+    font-size: clamp(48px, 10vw, 80px);
+    margin-bottom: clamp(10px, 2vw, 20px);
+}
+
+.field-effect-announce-name {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: clamp(32px, 6vw, 56px);
+    color: #fff;
+    text-shadow: 0 0 20px rgba(255, 200, 50, 0.8), 2px 2px 4px rgba(0, 0, 0, 0.8);
 }
 
 /* 命令区域 - 水墨风格 */
@@ -746,6 +966,101 @@ body {
     transition: opacity 0.1s;
 }
 
+/* ========== 战斗特效图层 ========== */
+/* 特效基础样式 */
+.battle-effect {
+    position: absolute;
+    pointer-events: none;
+    visibility: hidden;
+    z-index: 5;  /* 高于立绘层z-index:3，确保特效可见 */
+}
+
+.battle-effect.active {
+    visibility: visible;
+}
+
+/* 嘴炮特效 - 玩家（左侧，头部上方偏右） */
+/* 嘴炮是透明PNG，不需要mix-blend-mode */
+.player-taunt-effect {
+    left: 23%;
+    top: 37%;
+    /* width: clamp(80px, 15vw, 180px); */
+    width: 15%;
+    height: auto;
+    transform: scaleX(1);
+}
+
+/* 嘴炮特效 - 敌人（右侧，头部上方偏左） */
+.enemy-taunt-effect {
+    right: 23%;
+    top: 27%;
+    /* width: clamp(100px, 18vw, 220px); */
+    width: 12%;
+    height: auto;
+    transform: scaleX(-1);
+}
+
+/* 集气特效 - 玩家（左侧脚下） */
+.player-gather-effect {
+    left: -13%;
+    bottom: -21%;
+    /* width: clamp(240px, 44vw, 560px); */
+    width:  55%;
+    height: auto;
+}
+
+/* 集气特效 - 敌人（右侧脚下） */
+.enemy-gather-effect {
+    right: -3%;
+    bottom: 4%;
+    /* width: clamp(188px, 35vw, 438px); */
+    width: 40%;
+    height: auto;
+}
+
+/* 攻击特效 - 玩家被击中（左侧身体中央） */
+.player-hit-effect {
+    left: -3%;
+    top: 50%;
+    /* width: clamp(140px, 35vw, 350px); */
+    width: 40%;
+    height: auto;
+}
+
+/* 攻击特效 - 敌人被击中（右侧身体中央） */
+.enemy-hit-effect {
+    right: 0%;
+    top: 35%;
+    /* width: clamp(130px, 25vw, 320px); */
+    width: 27%;
+    height: auto;
+}
+
+/* 特效图片样式 */
+.battle-effect img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+/* 黑底光效GIF使用screen混合模式，让黑色变透明 */
+/* 同时增加对比度，消除边缘灰色/发白问题 */
+.player-gather-effect,
+.enemy-gather-effect,
+.player-hit-effect,
+.enemy-hit-effect {
+    mix-blend-mode: screen;
+}
+
+.player-gather-effect img,
+.enemy-gather-effect img,
+.player-hit-effect img,
+.enemy-hit-effect img {
+    mix-blend-mode: screen;
+    /* 增加对比度，让接近黑色的灰边变成纯黑（透明） */
+    filter: contrast(1.3) brightness(1.1);
+}
+
 #restart-game {
     background: linear-gradient(to bottom, #5c3b1c, #34210f);
     color: white;
@@ -1140,6 +1455,29 @@ body {
         <!-- NPC图层 -->
         <div class="npc-portrait-layer"></div>
         <div class="screen-flash"></div>
+        
+        <!-- 战斗特效图层 -->
+        <!-- 玩家特效 -->
+        <div class="battle-effect player-taunt-effect" id="player-taunt-effect">
+            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/嘴炮.png" alt="嘴炮">
+        </div>
+        <div class="battle-effect player-gather-effect" id="player-gather-effect">
+            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/集气.gif" alt="集气">
+        </div>
+        <div class="battle-effect player-hit-effect" id="player-hit-effect">
+            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/攻击.gif" alt="攻击">
+        </div>
+        <!-- 敌人特效 -->
+        <div class="battle-effect enemy-taunt-effect" id="enemy-taunt-effect">
+            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/嘴炮.png" alt="嘴炮">
+        </div>
+        <div class="battle-effect enemy-gather-effect" id="enemy-gather-effect">
+            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/集气.gif" alt="集气">
+        </div>
+        <div class="battle-effect enemy-hit-effect" id="enemy-hit-effect">
+            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/攻击.gif" alt="攻击">
+        </div>
+        
         <!-- 战斗场景 -->
         <div class="battle-scene">
  
@@ -1185,12 +1523,44 @@ body {
                 </div>
             </div>
 
-            <!-- 回合指示器（点击显示日志） -->
-            <div class="turn-indicator" id="turn-indicator" onclick="toggleLogDropdown()">
-                <div id="turn-text">第1回合</div>
-                <!-- 日志下拉框 -->
-                <div class="log-dropdown" id="log-dropdown">
-                    <p>战斗开始，请选择行动...</p>
+            <!-- 顶部状态栏 -->
+            <div class="top-status-bar">
+                <!-- 场地效果指示器（在上方） -->
+                <div class="field-effect-indicator" id="field-effect-indicator" onclick="toggleFieldEffectDropdown(event)">
+                    <span class="field-effect-icon" id="field-effect-icon">🔥</span>
+                    <span class="field-effect-name" id="field-effect-name">杀意</span>
+                    <span class="field-effect-timer" id="field-effect-timer">(3)</span>
+                </div>
+                
+                <!-- 回合指示器（在下方，点击显示日志） -->
+                <div class="turn-indicator" id="turn-indicator" onclick="toggleLogDropdown()">
+                    <div id="turn-text">第1回合</div>
+                    <!-- 日志下拉框 -->
+                    <div class="log-dropdown" id="log-dropdown">
+                        <p>战斗开始，请选择行动...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 场地效果介绍下拉框 - 独立于指示器，作为game-container的直接子元素 -->
+            <div class="field-effect-dropdown" id="field-effect-dropdown">
+                <div class="field-effect-dropdown-title">
+                    <span id="field-dropdown-icon">🔥</span>
+                    <span id="field-dropdown-name">杀意</span>
+                </div>
+                <div class="field-effect-dropdown-desc" id="field-dropdown-desc">
+                    战场杀气弥漫，激发双方战意
+                </div>
+                <div class="field-effect-dropdown-effect" id="field-dropdown-effect">
+                    双方攻击伤害×1.5，但每次攻击自己也受到25%伤害
+                </div>
+            </div>
+            
+            <!-- 场地效果全屏提示 -->
+            <div class="field-effect-announce" id="field-effect-announce">
+                <div class="field-effect-announce-content">
+                    <div class="field-effect-announce-icon" id="announce-icon">🔥</div>
+                    <div class="field-effect-announce-name" id="announce-name">杀意</div>
                 </div>
             </div>
 
@@ -1351,6 +1721,69 @@ let usedItemKey = null;          // 使用的道具类型
 let damageMultiplier = 1.0;      // 伤害倍率（大力丸效果）
 let defenseMultiplier = 1.0;     // 防御倍率（筋骨贴效果）
 
+// ========== 场地效果系统 ==========
+const FIELD_EFFECTS = {
+    'killing-intent': {
+        id: 'killing-intent',
+        name: '杀意',
+        icon: '🔥',
+        cssClass: 'killing-intent',
+        desc: '战场杀气弥漫，激发双方战意',
+        effectDesc: '双方攻击伤害×1.5，但每次攻击自己也受到造成伤害的25%',
+        duration: 3
+    },
+    'miasma': {
+        id: 'miasma',
+        name: '瘴疠',
+        icon: '☠️',
+        cssClass: 'miasma',
+        desc: '毒瘴笼罩战场，侵蚀双方体魄',
+        effectDesc: '双方每回合损失10%当前生命值',
+        duration: 3
+    },
+    'fortify': {
+        id: 'fortify',
+        name: '固守',
+        icon: '🛡️',
+        cssClass: 'fortify',
+        desc: '天地之气凝聚，护佑守方',
+        effectDesc: '双方防御效果提升为完全免伤',
+        duration: 3
+    },
+    'energy-tide': {
+        id: 'energy-tide',
+        name: '气海',
+        icon: '✨',
+        cssClass: 'energy-tide',
+        desc: '灵气潮涌，充盈周身',
+        effectDesc: '双方每回合自动获得+1气',
+        duration: 3
+    },
+    'melee': {
+        id: 'melee',
+        name: '缠斗',
+        icon: '🤝',
+        cssClass: 'melee',
+        desc: '近身肉搏，无暇言语',
+        effectDesc: '双方无法使用嘴炮',
+        duration: 3
+    },
+    'rejuvenation': {
+        id: 'rejuvenation',
+        name: '回春',
+        icon: '💚',
+        cssClass: 'rejuvenation',
+        desc: '生机盎然，恢复元气',
+        effectDesc: '双方每回合恢复10%最大生命值',
+        duration: 3
+    }
+};
+
+// 场地效果状态
+let activeFieldEffect = null;     // 当前激活的场地效果
+let fieldEffectRemaining = 0;     // 剩余回合数
+let fieldDropdownOpen = false;    // 下拉框是否展开
+
 // 道具配置
 const itemConfig = {
     daliwan: {
@@ -1413,8 +1846,8 @@ const itemConfig = {
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
     name: urlParams.get('playerName') || '你',
-    maxHealth: parseInt(urlParams.get('playerHealth')) || 51,
-    currentHealth: parseInt(urlParams.get('playerHealth')) || 51,
+    maxHealth: parseInt(urlParams.get('playerHealth')) || 5100,
+    currentHealth: parseInt(urlParams.get('playerHealth')) || 5100,
     energy: 0,
     maxEnergy: 10,
     selectedAction: null,
@@ -1425,7 +1858,7 @@ const PLAYER_INFO = {
 // //回合制系统集成更新 - 构建敌方信息文本
 const enemyInfoText = `
 发起战斗，敌方信息如下
-name: ${urlParams.get('enemyName') || '钱塘君'}
+name: ${urlParams.get('enemyName') || '苓雪妃'}
   maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
   basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
 `;
@@ -2213,10 +2646,48 @@ function checkButtonAvailability() {
         document.getElementById('item').classList.add('disabled');
     }
     
+    // 场地效果禁用的行动（缠斗禁用嘴炮）
+    if (isActionDisabledByField('taunt')) {
+        document.getElementById('taunt').classList.add('disabled');
+    }
+    
     // 如果有选中的动作，高亮显示
     if (gameState.player.selectedAction) {
         document.getElementById(gameState.player.selectedAction).classList.add('selected');
     }
+}
+
+// ========== 战斗特效控制函数 ==========
+// 显示战斗特效
+function showBattleEffect(effectId, duration = 1500) {
+    const effect = document.getElementById(effectId);
+    if (effect) {
+        effect.classList.add('active');
+        // 对于GIF，重新加载以从头播放
+        const img = effect.querySelector('img');
+        if (img && img.src.endsWith('.gif')) {
+            const src = img.src;
+            img.src = '';
+            img.src = src;
+        }
+        setTimeout(() => {
+            effect.classList.remove('active');
+        }, duration);
+    }
+}
+
+// 隐藏战斗特效
+function hideBattleEffect(effectId) {
+    const effect = document.getElementById(effectId);
+    if (effect) {
+        effect.classList.remove('active');
+    }
+}
+
+// 隐藏所有战斗特效
+function hideAllBattleEffects() {
+    const effects = document.querySelectorAll('.battle-effect');
+    effects.forEach(effect => effect.classList.remove('active'));
 }
 
 // 添加战斗日志
@@ -2242,14 +2713,256 @@ function toggleLogDropdown() {
     if (logDropdown) {
         logDropdown.classList.toggle('active');
     }
+    // 关闭场地效果下拉框
+    const fieldDropdown = document.getElementById('field-effect-dropdown');
+    if (fieldDropdown) {
+        fieldDropdown.classList.remove('active');
+        fieldDropdownOpen = false;
+    }
 }
 
-// 点击其他区域关闭日志下拉框
+// ========== 场地效果函数 ==========
+// 切换场地效果下拉框
+function toggleFieldEffectDropdown(event) {
+    event.stopPropagation();
+    const fieldDropdown = document.getElementById('field-effect-dropdown');
+    if (fieldDropdown) {
+        fieldDropdownOpen = !fieldDropdownOpen;
+        if (fieldDropdownOpen) {
+            fieldDropdown.classList.add('active');
+        } else {
+            fieldDropdown.classList.remove('active');
+        }
+    }
+    // 关闭日志下拉框
+    const logDropdown = document.getElementById('log-dropdown');
+    if (logDropdown) {
+        logDropdown.classList.remove('active');
+    }
+}
+
+// 检查并触发场地效果
+function checkFieldEffectTrigger() {
+    console.log(`[场地效果检查] 当前回合: ${gameState.turnNumber}, 已有效果: ${activeFieldEffect ? activeFieldEffect.name : '无'}`);
+    
+    // 前5回合不触发
+    if (gameState.turnNumber <= 5) {
+        console.log('[场地效果检查] 前5回合保护期，跳过');
+        return;
+    }
+    
+    // 已有场地效果时不触发
+    if (activeFieldEffect !== null) {
+        console.log('[场地效果检查] 已有场地效果，跳过');
+        return;
+    }
+    
+    // 第6回合稳定触发，之后33%概率触发
+    let shouldTrigger = false;
+    if (gameState.turnNumber === 6) {
+        console.log('[场地效果检查] 第6回合，稳定触发');
+        shouldTrigger = true;
+    } else {
+        const roll = Math.random();
+        console.log(`[场地效果检查] 概率判定: ${(roll * 100).toFixed(1)}% (需要 <= 33%)`);
+        shouldTrigger = roll <= 0.33;
+    }
+    
+    if (!shouldTrigger) {
+        console.log('[场地效果检查] 概率判定失败，不触发');
+        return;
+    }
+    
+    console.log('[场地效果检查] 触发成功！准备触发场地效果');
+    
+    // 随机选择一个场地效果
+    const effectKeys = Object.keys(FIELD_EFFECTS);
+    const randomKey = effectKeys[Math.floor(Math.random() * effectKeys.length)];
+    const effect = FIELD_EFFECTS[randomKey];
+    
+    // 激活场地效果
+    activateFieldEffect(effect);
+}
+
+// 激活场地效果
+function activateFieldEffect(effect) {
+    activeFieldEffect = effect;
+    fieldEffectRemaining = effect.duration;
+    
+    // 更新UI
+    updateFieldEffectUI();
+    
+    // 显示全屏提示
+    showFieldEffectAnnounce(effect);
+    
+    // 添加日志
+    addLog(`【场地效果】${effect.icon} ${effect.name} - ${effect.effectDesc}`);
+    
+    console.log(`[场地效果] 触发: ${effect.name}, 持续${effect.duration}回合`);
+}
+
+// 更新场地效果UI
+function updateFieldEffectUI() {
+    const indicator = document.getElementById('field-effect-indicator');
+    const icon = document.getElementById('field-effect-icon');
+    const name = document.getElementById('field-effect-name');
+    const timer = document.getElementById('field-effect-timer');
+    const dropdown = document.getElementById('field-effect-dropdown');
+    const dropdownIcon = document.getElementById('field-dropdown-icon');
+    const dropdownName = document.getElementById('field-dropdown-name');
+    const dropdownDesc = document.getElementById('field-dropdown-desc');
+    const dropdownEffect = document.getElementById('field-dropdown-effect');
+    
+    if (activeFieldEffect && fieldEffectRemaining > 0) {
+        // 显示场地效果指示器
+        indicator.classList.add('active', 'appearing', activeFieldEffect.cssClass);
+        icon.textContent = activeFieldEffect.icon;
+        name.textContent = activeFieldEffect.name;
+        timer.textContent = `(${fieldEffectRemaining})`;
+        
+        // 更新下拉框内容和颜色
+        dropdownIcon.textContent = activeFieldEffect.icon;
+        dropdownName.textContent = activeFieldEffect.name;
+        dropdownDesc.textContent = activeFieldEffect.desc;
+        dropdownEffect.textContent = activeFieldEffect.effectDesc;
+        
+        // 给下拉框也添加对应的颜色class
+        dropdown.className = 'field-effect-dropdown ' + activeFieldEffect.cssClass;
+        
+        // 移除动画类
+        setTimeout(() => {
+            indicator.classList.remove('appearing');
+        }, 500);
+    } else {
+        // 隐藏场地效果
+        indicator.className = 'field-effect-indicator';
+        if (dropdown) {
+            dropdown.className = 'field-effect-dropdown';
+        }
+        fieldDropdownOpen = false;
+    }
+}
+
+// 显示场地效果全屏提示
+function showFieldEffectAnnounce(effect) {
+    const announce = document.getElementById('field-effect-announce');
+    const announceIcon = document.getElementById('announce-icon');
+    const announceName = document.getElementById('announce-name');
+    
+    announceIcon.textContent = effect.icon;
+    announceName.textContent = effect.name;
+    
+    announce.classList.add('active');
+    
+    // 2秒后隐藏
+    setTimeout(() => {
+        announce.classList.remove('active');
+    }, 2000);
+}
+
+// 处理场地效果回合结束
+function processFieldEffectTurnEnd() {
+    if (activeFieldEffect === null) return;
+    
+    fieldEffectRemaining--;
+    
+    if (fieldEffectRemaining <= 0) {
+        addLog(`【场地效果】${activeFieldEffect.icon} ${activeFieldEffect.name} 效果消散`);
+        activeFieldEffect = null;
+        fieldEffectRemaining = 0;
+    }
+    
+    updateFieldEffectUI();
+}
+
+// 应用场地效果 - 回合开始时（气海、瘴疠、回春）
+function applyFieldEffectOnTurnStart() {
+    if (activeFieldEffect === null) return;
+    
+    const player = gameState.player;
+    const enemy = gameState.enemy;
+    
+    switch (activeFieldEffect.id) {
+        case 'energy-tide':  // 气海：双方+1气
+            if (player.energy < player.maxEnergy) {
+                player.energy += 1;
+                addLog(`【气海】${player.name}获得1点气`);
+            }
+            if (enemy.energy < enemy.maxEnergy) {
+                enemy.energy += 1;
+                addLog(`【气海】${enemy.name}获得1点气`);
+            }
+            break;
+            
+        case 'miasma':  // 瘴疠：双方损失10%当前生命
+            const playerDamage = Math.round(player.currentHealth * 0.1);
+            const enemyDamage = Math.round(enemy.currentHealth * 0.1);
+            player.currentHealth -= playerDamage;
+            enemy.currentHealth -= enemyDamage;
+            if (player.currentHealth < 1) player.currentHealth = 1;  // 至少保留1点
+            if (enemy.currentHealth < 1) enemy.currentHealth = 1;
+            addLog(`【瘴疠】${player.name}损失${playerDamage}点生命，${enemy.name}损失${enemyDamage}点生命`);
+            break;
+            
+        case 'rejuvenation':  // 回春：双方恢复10%最大生命
+            const playerHeal = Math.round(player.maxHealth * 0.1);
+            const enemyHeal = Math.round(enemy.maxHealth * 0.1);
+            player.currentHealth = Math.min(player.currentHealth + playerHeal, player.maxHealth);
+            enemy.currentHealth = Math.min(enemy.currentHealth + enemyHeal, enemy.maxHealth);
+            addLog(`【回春】${player.name}恢复${playerHeal}点生命，${enemy.name}恢复${enemyHeal}点生命`);
+            break;
+    }
+    
+    updateDisplay();
+}
+
+// 检查场地效果是否禁用某行动
+function isActionDisabledByField(action) {
+    if (activeFieldEffect === null) return false;
+    
+    switch (activeFieldEffect.id) {
+        case 'melee':  // 缠斗：禁用嘴炮
+            return action === 'taunt';
+        default:
+            return false;
+    }
+}
+
+// 获取场地效果的伤害修正（杀意效果）
+function getFieldDamageMultiplier() {
+    if (activeFieldEffect && activeFieldEffect.id === 'killing-intent') {
+        return 1.5;
+    }
+    return 1.0;
+}
+
+// 获取场地效果的自伤比例（杀意效果）
+function getFieldSelfDamageRatio() {
+    if (activeFieldEffect && activeFieldEffect.id === 'killing-intent') {
+        return 0.25;
+    }
+    return 0;
+}
+
+// 检查场地效果是否完全免伤（固守效果）
+function isFieldFullDefense() {
+    return activeFieldEffect && activeFieldEffect.id === 'fortify';
+}
+
+// 点击其他区域关闭日志下拉框和场地效果下拉框
 document.addEventListener('click', function(e) {
     const turnIndicator = document.getElementById('turn-indicator');
     const logDropdown = document.getElementById('log-dropdown');
+    const fieldIndicator = document.getElementById('field-effect-indicator');
+    const fieldDropdown = document.getElementById('field-effect-dropdown');
+    
     if (turnIndicator && logDropdown && !turnIndicator.contains(e.target)) {
         logDropdown.classList.remove('active');
+    }
+    
+    if (fieldIndicator && fieldDropdown && !fieldIndicator.contains(e.target)) {
+        fieldDropdown.classList.remove('active');
+        fieldDropdownOpen = false;
     }
 });
 
@@ -2310,8 +3023,8 @@ function confirmAction() {
     // 敌人AI选择动作
     selectEnemyAction();
     
-    // 执行回合结算
-    setTimeout(executeTurn, 1000);
+    // 执行回合结算（减少延迟，提升响应速度）
+    setTimeout(executeTurn, 300);
 }
 
 // 敌人AI选择动作
@@ -2322,12 +3035,15 @@ function selectEnemyAction() {
     
     // 检查是否处于挑衅状态（不能使用防御）
     const canDefend = enemy.tauntedTurns <= 0;
+    
+    // 检查场地效果是否禁用嘴炮（缠斗效果）
+    const canTaunt = !isActionDisabledByField('taunt');
 
     // 玩家气的威胁等级
     const playerEnergy = player.energy;
 
-    // 嘴炮判定：玩家气满5时，敌人有较高概率嘴炮
-    if (playerEnergy >= 5) {
+    // 嘴炮判定：玩家气满5时，敌人有较高概率嘴炮（缠斗时禁用）
+    if (playerEnergy >= 5 && canTaunt) {
         if (style === '山' && Math.random() < 0.6) {
             enemy.selectedAction = 'taunt';
             return;
@@ -2388,6 +3104,11 @@ function selectEnemyAction() {
             delete options['taunt'];
         }
         
+        // 场地效果禁用嘴炮（缠斗）
+        if (!canTaunt) {
+            delete options['taunt'];
+        }
+        
         // 如果过滤后还有选项，使用加权随机选择
         if (Object.keys(options).length > 0) {
             const debugInfo = {
@@ -2414,7 +3135,7 @@ function executeTurn() {
     
     addLog(`${enemy.name}选择了行动...`);
     
-    // 根据行动类型执行特效和结算
+    // 根据行动类型执行特效和结算（减少延迟，提升响应速度）
     setTimeout(() => {
         // 显示双方选择的动作
         const actionNames = {
@@ -2438,7 +3159,7 @@ function executeTurn() {
         
         // 继续下一回合
         continueGame();
-    }, 1000);
+    }, 200);  // 减少延迟，提升响应速度
 }
 
 // 处理双方行动的结果
@@ -2464,8 +3185,18 @@ function processActions(playerAction, enemyAction) {
     let playerHitBySpecial = false;     // 玩家被绝招无视防御
     let enemyHitBySpecial = false;      // 敌人被绝招无视防御
     
+    // 场地效果：追踪本回合双方造成的总伤害（用于杀意自伤）
+    let playerTotalDamageDealt = 0;
+    let enemyTotalDamageDealt = 0;
+    
+    // 场地效果：获取伤害倍率
+    const fieldDamageMultiplier = getFieldDamageMultiplier();  // 杀意：1.5倍
+    const fieldFullDefense = isFieldFullDefense();              // 固守：完全免伤
+    
     // 处理集气
     if (playerAction === 'gather') {
+        // 显示玩家集气特效
+        showBattleEffect('player-gather-effect', 1000);
         if (player.energy < player.maxEnergy) {
             player.energy += 1;
             addLog(`${player.name}集气成功，能量+1！`);
@@ -2475,6 +3206,8 @@ function processActions(playerAction, enemyAction) {
     }
     
     if (enemyAction === 'gather') {
+        // 显示敌人集气特效
+        showBattleEffect('enemy-gather-effect', 1000);
         if (enemy.energy < enemy.maxEnergy) {
             enemy.energy += 1;
             addLog(`${enemy.name}集气成功，能量+1！`);
@@ -2509,10 +3242,15 @@ function processActions(playerAction, enemyAction) {
     
     // 双方同时嘴炮，无事发生
     if (playerAction === 'taunt' && enemyAction === 'taunt') {
+        // 双方都显示嘴炮特效
+        showBattleEffect('player-taunt-effect', 1500);
+        showBattleEffect('enemy-taunt-effect', 1500);
         addLog('双方互相嘴炮，不分高下！');
     } else {
         // 嘴炮对防御的效果：挑衅
         if (playerAction === 'taunt' && enemyDefending) {
+            // 玩家嘴炮成功，显示嘴炮特效
+            showBattleEffect('player-taunt-effect', 1500);
             // 玩家嘴炮 vs 敌人防御：敌人气-1，进入挑衅状态
             if (enemy.energy > 0) {
                 enemy.energy -= 1;
@@ -2526,6 +3264,8 @@ function processActions(playerAction, enemyAction) {
         }
         
         if (enemyAction === 'taunt' && playerDefending) {
+            // 敌人嘴炮成功，显示嘴炮特效
+            showBattleEffect('enemy-taunt-effect', 1500);
             // 敌人嘴炮 vs 玩家防御：玩家气-1，进入挑衅状态
             if (player.energy > 0) {
                 player.energy -= 1;
@@ -2540,15 +3280,29 @@ function processActions(playerAction, enemyAction) {
         
         // 嘴炮对绝招的效果：无效化伤害（保持原有逻辑）
         if (playerAction === 'taunt' && enemyAction === 'special') {
+            // 玩家嘴炮破解绝招，显示嘴炮特效
+            showBattleEffect('player-taunt-effect', 1500);
             playerTauntSuccess = true;
             enemySpecialBroken = true;  // 敌人绝招被破
             addLog(`${player.name}的嘴炮成功无效化了${enemy.name}的绝招伤害！`);
         }
         
         if (enemyAction === 'taunt' && playerAction === 'special') {
+            // 敌人嘴炮破解绝招，显示嘴炮特效
+            showBattleEffect('enemy-taunt-effect', 1500);
             enemyTauntSuccess = true;
             playerSpecialBroken = true;  // 玩家绝招被破
             addLog(`${enemy.name}的嘴炮成功无效化了${player.name}的绝招伤害！`);
+        }
+        
+        // 嘴炮对其他行动（集气、轻击、重击）：无特殊效果，但仍显示特效
+        if (playerAction === 'taunt' && !enemyDefending && enemyAction !== 'special' && enemyAction !== 'taunt') {
+            showBattleEffect('player-taunt-effect', 1500);
+            addLog(`${player.name}嘴炮了一番，但${enemy.name}不为所动！`);
+        }
+        if (enemyAction === 'taunt' && !playerDefending && playerAction !== 'special' && playerAction !== 'taunt') {
+            showBattleEffect('enemy-taunt-effect', 1500);
+            addLog(`${enemy.name}嘴炮了一番，但${player.name}不为所动！`);
         }
     }
     
@@ -2560,13 +3314,16 @@ function processActions(playerAction, enemyAction) {
         
         if (!enemyTauntSuccess) {
             enemyCharacter.classList.add('enemy-hit');
+            // 显示敌人被攻击特效
+            showBattleEffect('enemy-hit-effect', 1200);
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 1000);
             
-            const damage = Math.round(player.basicDamage * 3 * damageMultiplier);
+            const damage = Math.round(player.basicDamage * 3 * damageMultiplier * fieldDamageMultiplier);
             enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;  // 追踪伤害用于杀意自伤
             addLog(`${player.name}使用绝招，对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;           // 玩家造成伤害
@@ -2598,13 +3355,16 @@ function processActions(playerAction, enemyAction) {
         
         if (!playerTauntSuccess) {
             playerCharacter.classList.add('player-hit');
+            // 显示玩家被攻击特效
+            showBattleEffect('player-hit-effect', 1200);
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-hit');
             }, 1000);
             
-            const damage = Math.round(enemy.basicDamage * 3 / defenseMultiplier);
+            const damage = Math.round(enemy.basicDamage * 3 * fieldDamageMultiplier / defenseMultiplier);
             player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;  // 追踪伤害用于杀意自伤
             addLog(`${enemy.name}使用绝招，对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;           // 敌人造成伤害
@@ -2645,10 +3405,17 @@ function processActions(playerAction, enemyAction) {
                 // enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            // 防御重攻击受到25%伤害
-            const reducedDamage = Math.round(player.basicDamage * 1.5 * 0.25 * damageMultiplier);
+            // 防御重攻击受到25%伤害（固守效果下完全免伤）
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(player.basicDamage * 1.5 * 0.25 * damageMultiplier * fieldDamageMultiplier);
             enemy.currentHealth -= reducedDamage;
-            addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            playerTotalDamageDealt += reducedDamage;
+            // 显示敌人被攻击特效
+            showBattleEffect('enemy-hit-effect', 1000);
+            if (fieldFullDefense) {
+                addLog(`${player.name}的重攻击被${enemy.name}完全防御了！`);
+            } else {
+                addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            }
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
@@ -2656,14 +3423,17 @@ function processActions(playerAction, enemyAction) {
             // 重攻击克制轻攻击
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
+            // 显示敌人被攻击特效
+            showBattleEffect('enemy-hit-effect', 1000);
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-attack');
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier);
+            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
             enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;
             enemy.energy -= 1; // 消耗敌人的能量
             addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${damage}点伤害！`);
             enemyWasHit = true;
@@ -2672,14 +3442,17 @@ function processActions(playerAction, enemyAction) {
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
+            // 显示敌人被攻击特效
+            showBattleEffect('enemy-hit-effect', 1000);
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-attack');
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier);
+            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
             enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;
             addLog(`${player.name}的重攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;
@@ -2696,16 +3469,23 @@ function processActions(playerAction, enemyAction) {
         if (playerDefending) {
             enemyCharacter.classList.add('enemy-attack');
             // playerCharacter.classList.add('player-hit');
+            // 显示玩家被攻击特效（防御时也显示）
+            showBattleEffect('player-hit-effect', 1000);
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
                 // playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            // 防御重攻击受到20%伤害
-            const reducedDamage = Math.round(enemy.basicDamage * 1.5 * 0.2 / defenseMultiplier);
+            // 防御重攻击受到20%伤害（固守效果下完全免伤）
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(enemy.basicDamage * 1.5 * 0.2 * fieldDamageMultiplier / defenseMultiplier);
             player.currentHealth -= reducedDamage;
-            addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            enemyTotalDamageDealt += reducedDamage;
+            if (fieldFullDefense) {
+                addLog(`${enemy.name}的重攻击被${player.name}完全防御了！`);
+            } else {
+                addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            }
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -2713,14 +3493,17 @@ function processActions(playerAction, enemyAction) {
             // 重攻击克制轻攻击
             enemyCharacter.classList.add('enemy-attack');
             playerCharacter.classList.add('player-hit');
+            // 显示玩家被攻击特效
+            showBattleEffect('player-hit-effect', 1000);
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const damage = Math.round(enemy.basicDamage * 1.5 / defenseMultiplier);
+            const damage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
             player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;
             player.energy -= 1; // 消耗玩家的能量
             addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${damage}点伤害！`);
             playerWasHit = true;
@@ -2729,14 +3512,17 @@ function processActions(playerAction, enemyAction) {
         } else {
             enemyCharacter.classList.add('enemy-attack');
             playerCharacter.classList.add('player-hit');
+            // 显示玩家被攻击特效
+            showBattleEffect('player-hit-effect', 1000);
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const damage = Math.round(enemy.basicDamage * 1.5 / defenseMultiplier);
+            const damage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
             player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;
             addLog(`${enemy.name}的重攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;
@@ -2754,30 +3540,40 @@ function processActions(playerAction, enemyAction) {
         if (enemyDefending) {
             playerCharacter.classList.add('player-attack');
             // enemyCharacter.classList.add('enemy-hit');
+            // 显示敌人被攻击特效（防御时也显示）
+            showBattleEffect('enemy-hit-effect', 1000);
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-attack');
                 // enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            // 防御轻攻击受到15%伤害
-            const reducedDamage = Math.round(player.basicDamage * 0.15 * damageMultiplier);
+            // 防御轻攻击受到15%伤害（固守效果下完全免伤）
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(player.basicDamage * 0.15 * damageMultiplier * fieldDamageMultiplier);
             enemy.currentHealth -= reducedDamage;
-            addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            playerTotalDamageDealt += reducedDamage;
+            if (fieldFullDefense) {
+                addLog(`${player.name}的轻攻击被${enemy.name}完全防御了！`);
+            } else {
+                addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            }
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
+            // 显示敌人被攻击特效
+            showBattleEffect('enemy-hit-effect', 1000);
             
             setTimeout(() => {
                 playerCharacter.classList.remove('player-attack');
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const damage = Math.round(player.basicDamage * damageMultiplier);
+            const damage = Math.round(player.basicDamage * damageMultiplier * fieldDamageMultiplier);
             enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;
             addLog(`${player.name}的轻攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;
@@ -2794,30 +3590,40 @@ function processActions(playerAction, enemyAction) {
         if (playerDefending) {
             enemyCharacter.classList.add('enemy-attack');
             // playerCharacter.classList.add('player-hit');
+            // 显示玩家被攻击特效（防御时也显示）
+            showBattleEffect('player-hit-effect', 1000);
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
                 // playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            // 防御轻攻击受到15%伤害
-            const reducedDamage = Math.round(enemy.basicDamage * 0.15 / defenseMultiplier);
+            // 防御轻攻击受到15%伤害（固守效果下完全免伤）
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(enemy.basicDamage * 0.15 * fieldDamageMultiplier / defenseMultiplier);
             player.currentHealth -= reducedDamage;
-            addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            enemyTotalDamageDealt += reducedDamage;
+            if (fieldFullDefense) {
+                addLog(`${enemy.name}的轻攻击被${player.name}完全防御了！`);
+            } else {
+                addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
+            }
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'light-attack';
         } else {
             enemyCharacter.classList.add('enemy-attack');
             playerCharacter.classList.add('player-hit');
+            // 显示玩家被攻击特效
+            showBattleEffect('player-hit-effect', 1000);
             
             setTimeout(() => {
                 enemyCharacter.classList.remove('enemy-attack');
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const damage = Math.round(enemy.basicDamage / defenseMultiplier);
+            const damage = Math.round(enemy.basicDamage * fieldDamageMultiplier / defenseMultiplier);
             player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;
             addLog(`${enemy.name}的轻攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;
@@ -2828,6 +3634,23 @@ function processActions(playerAction, enemyAction) {
     // 确保生命值不为负数
     if (player.currentHealth < 0) player.currentHealth = 0;
     if (enemy.currentHealth < 0) enemy.currentHealth = 0;
+    
+    // 场地效果：杀意自伤（攻击者承受造成伤害的25%）
+    const selfDamageRatio = getFieldSelfDamageRatio();
+    if (selfDamageRatio > 0) {
+        if (playerTotalDamageDealt > 0) {
+            const playerSelfDamage = Math.round(playerTotalDamageDealt * selfDamageRatio);
+            player.currentHealth -= playerSelfDamage;
+            if (player.currentHealth < 0) player.currentHealth = 0;
+            addLog(`【杀意反噬】${player.name}受到${playerSelfDamage}点反伤！`);
+        }
+        if (enemyTotalDamageDealt > 0) {
+            const enemySelfDamage = Math.round(enemyTotalDamageDealt * selfDamageRatio);
+            enemy.currentHealth -= enemySelfDamage;
+            if (enemy.currentHealth < 0) enemy.currentHealth = 0;
+            addLog(`【杀意反噬】${enemy.name}受到${enemySelfDamage}点反伤！`);
+        }
+    }
     
     // 受击反馈动画（与立绘受击状态判断一致）
     // 玩家真正受击的情况：绝招被破、被嘴炮破防、被绝招无视防御、非防御状态被打
@@ -2932,19 +3755,35 @@ function continueGame() {
         }
     }
     
+    // 处理场地效果回合结束
+    processFieldEffectTurnEnd();
+    
     // 增加回合数
     gameState.turnNumber++;
     
-    // 更新显示
-    updateDisplay();
+    // 检查并触发新的场地效果
+    checkFieldEffectTrigger();
     
-    // 继续游戏
-    addLog('准备下一回合...');
-    
-    // 更新回合指示
+    // 应用场地效果的回合开始效果
     setTimeout(() => {
-        addLog('请选择你的行动...');
-    }, 1000);
+        applyFieldEffectOnTurnStart();
+        
+        // 检查是否因场地效果导致战斗结束
+        if (checkGameOver()) {
+            return;
+        }
+        
+        // 更新显示
+        updateDisplay();
+        
+        // 继续游戏
+        addLog('准备下一回合...');
+        
+        // 更新回合指示
+        setTimeout(() => {
+            addLog('请选择你的行动...');
+        }, 500);
+    }, activeFieldEffect ? 500 : 0);  // 如果有场地效果，稍微延迟让玩家看清
 }
 
 // 检查游戏是否结束
