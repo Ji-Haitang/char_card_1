@@ -1784,6 +1784,65 @@ let activeFieldEffect = null;     // 当前激活的场地效果
 let fieldEffectRemaining = 0;     // 剩余回合数
 let fieldDropdownOpen = false;    // 下拉框是否展开
 
+// ========== 资源预加载系统 ==========
+const preloadedImages = new Map();  // 缓存已预加载的图片
+
+// 预加载单张图片
+function preloadImage(url) {
+    return new Promise((resolve, reject) => {
+        if (preloadedImages.has(url)) {
+            resolve(preloadedImages.get(url));
+            return;
+        }
+        const img = new Image();
+        img.onload = () => {
+            preloadedImages.set(url, img);
+            console.log(`[预加载] 成功: ${url.split('/').pop()}`);
+            resolve(img);
+        };
+        img.onerror = () => {
+            console.warn(`[预加载] 失败: ${url.split('/').pop()}`);
+            reject(new Error(`Failed to load: ${url}`));
+        };
+        img.src = url;
+    });
+}
+
+// 预加载战斗资源（立绘差分+特效）
+async function preloadBattleResources(enemyName) {
+    console.log('[预加载] 开始预加载战斗资源...');
+    
+    const baseUrl = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main';
+    const states = ['待机', '攻击', '防御', '受击'];
+    const urls = [];
+    
+    // 主角的4个立绘差分
+    states.forEach(state => {
+        urls.push(`${baseUrl}/img/战斗差分/主角-${state}.png`);
+    });
+    
+    // 敌人的4个立绘差分
+    if (enemyName) {
+        states.forEach(state => {
+            urls.push(`${baseUrl}/img/战斗差分/${enemyName}-${state}.png`);
+        });
+    }
+    
+    // 特效文件
+    urls.push(`${baseUrl}/assets/image/static/集气.gif`);
+    urls.push(`${baseUrl}/assets/image/static/攻击.gif`);
+    urls.push(`${baseUrl}/assets/image/static/嘴炮.png`);
+    
+    // 并行预加载所有资源
+    const results = await Promise.allSettled(urls.map(url => preloadImage(url)));
+    
+    const succeeded = results.filter(r => r.status === 'fulfilled').length;
+    const failed = results.filter(r => r.status === 'rejected').length;
+    console.log(`[预加载] 完成: ${succeeded}个成功, ${failed}个失败`);
+    
+    return { succeeded, failed };
+}
+
 // 道具配置
 const itemConfig = {
     daliwan: {
@@ -1846,8 +1905,8 @@ const itemConfig = {
 // //回合制系统集成更新 - 玩家信息从URL参数获取
 const PLAYER_INFO = {
     name: urlParams.get('playerName') || '你',
-    maxHealth: parseInt(urlParams.get('playerHealth')) || 5100,
-    currentHealth: parseInt(urlParams.get('playerHealth')) || 5100,
+    maxHealth: parseInt(urlParams.get('playerHealth')) || 51,
+    currentHealth: parseInt(urlParams.get('playerHealth')) || 51,
     energy: 0,
     maxEnergy: 10,
     selectedAction: null,
@@ -1858,7 +1917,7 @@ const PLAYER_INFO = {
 // //回合制系统集成更新 - 构建敌方信息文本
 const enemyInfoText = `
 发起战斗，敌方信息如下
-name: ${urlParams.get('enemyName') || '苓雪妃'}
+name: ${urlParams.get('enemyName') || '呼延显'}
   maxHealth: ${urlParams.get('enemyMaxHealth') || '极低'}
   basicDamage: ${urlParams.get('enemyBasicDamage') || '极低'}
 `;
@@ -2511,6 +2570,14 @@ function initGame() {
     
     // 键盘控制
     document.addEventListener('keydown', handleKeyPress);
+    
+    // 预加载战斗资源（立绘差分+特效）
+    const enemyName = gameState.enemy.name;
+    preloadBattleResources(enemyName).then(result => {
+        console.log(`[战斗初始化] 资源预加载完成`);
+    }).catch(err => {
+        console.warn('[战斗初始化] 资源预加载出错:', err);
+    });
 }
 
 // 设置按钮事件
