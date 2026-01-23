@@ -1,3 +1,4 @@
+<NPCInformationN>
 <%_ const favor_lcr = gameData.npcFavorability.N; _%>
 鹿椿若:
   基本信息:
@@ -244,3 +245,4 @@
         生气: 这种情绪更多是作为情感生活的调剂，而非真正的冲突。
         难过: 拥有了面对一切未知的勇气，只要对方在侧，便无所畏惧。
       <%_ } _%>
+</NPCInformationN>

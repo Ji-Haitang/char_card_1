@@ -1,3 +1,4 @@
+<NPCInformationJ>
 <%_ const favor_tml = gameData.npcFavorability.J; _%>
 唐沐梨:
   基本信息:
@@ -251,3 +252,4 @@
         生气: 知道他们的爱经得起任何考验
         难过: 只想和{{user}}永远在一起，其他都不重要
       <%_ } _%>
+</NPCInformationJ>

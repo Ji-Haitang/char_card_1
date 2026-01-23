@@ -1,3 +1,4 @@
+<NPCInformationO>
 <%_ const favor_lxf = gameData.npcFavorability.O; _%>
 <%_ const enamor_lxf = gameData.enamor; _%>
 苓雪妃:
@@ -287,3 +288,4 @@
         生气: 极少产生负面情绪，深层安全感带来包容，偶尔的小情绪更接近情趣
         难过: 唯一的恐惧来源于失去的可能性，愿意以任何代价守护这段感情和{{user}}本身
       <%_ } _%>
+</NPCInformationO>

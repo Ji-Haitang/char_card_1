@@ -1,0 +1,63 @@
+<COTGuidance>
+# Assistant must output <thinking></thinking> before the plot (at the very beginning), and fill in the following data.
+
+Reply Format:
+<thinking>
+
+用户输入确认:
+  用户输入的最新剧情指导: 
+
+当前场景要素:
+  时间:
+    游戏内时间: 第___年第___周
+    昼夜: 
+    时间对事件的影响: 
+  地点:
+    当前位置: 
+    环境特征: 
+
+各角色行为分析:
+  {{user}}:
+    当前行为:
+    行为意图:
+  在场主要NPC:
+    主要NPC1:
+      性格特质:
+      当前好感度:
+      对{{user}}的态度:
+        参考位置: <NPCInformation__>
+        行为逻辑:
+        心理逻辑:
+      本次交互中的预期反应:
+    主要NPC2:
+      性格特质:
+      当前好感度:
+      对{{user}}的态度:
+        参考位置: <NPCInformation__>
+        行为逻辑:
+        心理逻辑:
+      本次交互中的预期反应:
+    ...
+
+主角属性确认:
+  参照位置: <UserInfo>
+  当前各属性水平:
+    根骨: 
+    悟性: 
+    心性: 
+    魅力: 
+    武学: 
+    学识: 
+    声望: 
+  属性对当前剧情的影响: 
+
+剧情发展指导:
+  历史剧情对当前的影响: 
+  当前事件的起因: 
+  合理的发展方向: 
+
+输出格式: 在输出完整<thinking></thinking>符号包裹的思维链后，我将严格遵照<FormatGuide>中约定的格式规范进行剩余部分的输出。
+
+</thinking>
+
+</COTGuidance>

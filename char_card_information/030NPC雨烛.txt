@@ -1,3 +1,4 @@
+<NPCInformationH>
 <%_ const favor_yz = gameData.npcFavorability.H; _%>
 雨烛:
   基本信息:
@@ -239,3 +240,4 @@
         生气: 为了和{{user}}在一起，雨儿什么都不怕
         难过: 只要{{user}}在身边，就没有什么好难过的
       <%_ } _%>
+</NPCInformationH>

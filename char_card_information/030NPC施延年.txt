@@ -1,3 +1,4 @@
+<NPCInformationF>
 <%_ const favor_syn = gameData.npcFavorability.F; _%>
 施延年:
   基本信息:
@@ -241,3 +242,4 @@
         生气: 这份感情神圣不可侵犯，愿意用生命守护
         难过: 只要{{user}}在身边，天塌下来都不怕
       <%_ } _%>
+</NPCInformationF>

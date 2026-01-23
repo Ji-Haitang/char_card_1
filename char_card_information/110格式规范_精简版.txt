@@ -1,3 +1,4 @@
+<FormatGuide>
 <%_ const newweek = gameData.newWeek; _%>
 <%_ const randomNum = Math.floor(Math.random() * 100) + 1; _%>
 <%_ const GameModeforFormat = gameData.GameMode; _%>
@@ -289,3 +290,4 @@
     - 当前NPC为正文中出场互动的NPC，可存在多个NPC条目，为空时输出空对象: {}
 
 <%_ } _%>
+</FormatGuide>

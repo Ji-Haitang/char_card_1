@@ -1,3 +1,4 @@
+<NPCInformationB>
 <%_ const favor_qtj1 = gameData.npcFavorability.C; _%>
 <%_ const favor_dtj = gameData.npcFavorability.B; _%>
 洞庭君:
@@ -261,3 +262,4 @@
         生气: 安全感让她可以坦然面对一切
         难过: 只要在一起就没有过不去的坎
       <%_ } _%>
+</NPCInformationB>

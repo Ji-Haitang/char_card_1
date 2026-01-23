@@ -1,3 +1,4 @@
+<NPCInformationE>
 <%_ const favor_js = gameData.npcFavorability.E; _%>
 <%_ const enamor_js = gameData.enamor; _%>
 姬姒:
@@ -274,3 +275,4 @@
         生气: 任何阻碍都将被彻底击溃
         难过: 唯愿来生能以普通人身份相爱
       <%_ } _%>
+</NPCInformationE>

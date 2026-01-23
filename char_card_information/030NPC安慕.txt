@@ -1,3 +1,4 @@
+<NPCInformationI>
 <%_ const favor_am = gameData.npcFavorability.I; _%>
 安慕:
   基本信息:
@@ -242,4 +243,5 @@
         生气: 知道无论怎样{{user}}都不会离开，反而成为生活调剂
         难过: 只有想到可能失去{{user}}才会真正崩溃
       <%_ } _%>
+</NPCInformationI>
 

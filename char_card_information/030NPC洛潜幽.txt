@@ -1,4 +1,5 @@
-﻿<%_ const favor_lqy = gameData.npcFavorability.K; _%>
+﻿<NPCInformationK>
+<%_ const favor_lqy = gameData.npcFavorability.K; _%>
 洛潜幽:
   基本信息:
     性别: 女性
@@ -255,4 +256,4 @@
         生气: 绝对的安全感让她可以尽情任性
         难过: 已学会在{{user}}那里获得所有的安慰和力量
       <%_ } _%>
-
+</NPCInformationK>

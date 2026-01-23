@@ -1,3 +1,4 @@
+<NPCInformationC>
 <%_ const favor_qtj = gameData.npcFavorability.C; _%>
 <%_ const enamor_qtj = gameData.enamor; _%>
 钱塘君:
@@ -274,3 +275,4 @@
         生气: 绝不允许任何威胁，展现极端的病娇特质
         难过: 只有失去{{user}}的可能才会让她真正崩溃
       <%_ } _%>
+</NPCInformationC>

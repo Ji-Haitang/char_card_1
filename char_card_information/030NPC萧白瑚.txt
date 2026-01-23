@@ -1,3 +1,4 @@
+<NPCInformationD>
 <%_ const favor_xbh = gameData.npcFavorability.D; _%>
 萧白瑚:
   基本信息:
@@ -254,3 +255,4 @@
         生气: 知道无论如何都被深爱着，小脾气只是爱的调味剂
         难过: 只有失去{{user}}的可能才会让她真正恐慌
       <%_ } _%>
+</NPCInformationD>
