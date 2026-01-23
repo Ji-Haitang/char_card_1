@@ -1,55 +1,58 @@
 <!-- /**
- * index.html 内联函数说明
+ * index - SR.html - 主游戏界面（流式渲染版本）
+ * 
+ * 文件概述：
+ * 游戏的流式渲染版本入口文件，支持SillyTavern的流式更新。
+ * 使用CDN加载的CSS文件，适合在SillyTavern环境中运行。
+ * 
+ * 与 index.html 的区别：
+ * - 支持流式更新，AI回复实时呈现
+ * - CSS从CDN加载而非本地文件
+ * - 包含流式状态管理(localState)
+ * - 所有函数包裹在 DOMContentLoaded 事件中
  * 
  * 这些函数保留在HTML中是为了支持onclick等内联事件调用。
  * 它们主要是对其他模块函数的封装或直接实现。
  * 
- * 主要函数：
- * 
+ * 界面切换函数：
  * - showPlayerStats(): 显示角色属性界面
- *   作用：切换到属性面板场景，显示玩家的各项数值
- * 
  * - showRelationships(): 显示人际关系界面
- *   作用：切换到关系面板场景，显示与各NPC的好感度
+ * - backToMap(): 返回地图界面
+ * - goToLocation(locationId): 前往指定地点
  * 
- * - skipWeek(): 跳过当前周
- *   作用：推进游戏时间一周，重置行动点
- * 
+ * 游戏操作函数：
+ * - skipWeek(): 跳过当前周，推进游戏时间
  * - performAction(action, location): 执行地点行动
- *   作用：处理玩家在各地点的行动选择，计算结果
- * 
  * - refreshNpcLocations(): 刷新NPC位置
- *   作用：重新随机分配所有NPC的位置
+ * - sendFreeAction(): 发送自由行动内容
  * 
- * - backToMap(): 返回地图
- *   作用：从其他场景返回主地图界面
+ * NPC交互函数：
+ * - sendInteraction(): 发送NPC互动内容
+ * - npcAction(npcId, action): NPC动作处理（切磋/互动）
+ * - toggleNpcVisibility(npcId): 切换NPC可见性
+ * - giveGift(npcId): 送礼功能
  * 
+ * 战斗相关函数：
+ * - addAttack(): 消耗属性点增加攻击力
+ * - addHP(): 消耗属性点增加生命值
+ * - startBattle(): 开始战斗事件
+ * - fleeBattle(): 逃离战斗
+ * 
+ * 系统功能函数：
  * - closeModal(): 关闭弹窗
- *   作用：关闭当前显示的模态弹窗
+ * - toggleDropdown(dropdownId): 下拉菜单控制
+ * - saveGame() / loadGame(): 存档/读档
+ * - showDifficultySettings(): 难度设置
+ * - showCheatMode(): 金手指功能
  * 
- * - sendInteraction(): 发送NPC互动
- *   作用：处理玩家输入的NPC互动内容
+ * 背包和交易函数：
+ * - showInventory() / showEquipment(): 显示背包/装备
+ * - showTrading(type): 显示交易界面
+ * - buyItem() / sellItem(): 买卖物品
  * 
- * - addAttack(): 增加攻击力
- *   作用：消耗属性点增加10点攻击力
- * 
- * - addHP(): 增加生命值
- *   作用：消耗属性点增加25点生命值
- * 
- * - npcAction(npcId, action): NPC动作处理
- *   作用：处理对NPC的切磋或互动操作
- * 
- * - goToLocation(locationId): 前往地点
- *   作用：从地图点击前往具体场景
- * 
- * - sendFreeAction(): 发送自由行动
- *   作用：处理玩家输入的自由行动内容
- * 
- * - startBattle(): 发起战斗
- *   作用：开始战斗事件的战斗
- * 
- * - fleeBattle(): 放弃战斗
- *   作用：放弃战斗事件，避开战斗
+ * 依赖关系：
+ * - 从CDN加载的JS模块和CSS样式
+ * - 需要在SillyTavern环境中运行以获得完整功能
  */ -->
 
 <!DOCTYPE html>

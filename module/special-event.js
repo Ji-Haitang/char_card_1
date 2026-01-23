@@ -2,23 +2,43 @@
  * special-event.js - 特殊事件管理
  * 
  * 文件概述：
- * 定义和管理特殊事件，在跳过一周时检查条件并触发符合条件的事件。
- * 支持复杂的条件检查、变量修改和预设文本发送。
+ * 定义和管理特殊事件，在跳过一周或选择"特殊剧情"选项时检查条件并触发符合条件的事件。
+ * 支持复杂的条件检查、变量修改、预设文本发送和事件链触发。
  * 
  * 主要功能：
- * 1. 定义特殊事件数据结构
- * 2. 检查事件触发条件
- * 3. 应用事件效果（修改游戏变量）
- * 4. 发送预设的事件文本
+ * 1. 定义特殊事件数据结构（支持事件链）
+ * 2. 检查事件触发条件（支持嵌套变量路径）
+ * 3. 应用事件效果（修改游戏变量，支持set/add/push操作）
+ * 4. 发送预设的事件文本（SLG_MODE格式）
  * 5. 防止事件重复触发
+ * 6. 支持通过currentSpecialEvent实现事件链
  * 
  * 对外暴露的主要函数：
- * - checkSpecialEvents(): 检查是否有符合条件的特殊事件
- * - triggerSpecialEvent(event): 触发指定的特殊事件
+ * - checkSpecialEvents(): 检查是否有符合条件的特殊事件（按优先级排序）
+ * - triggerSpecialEvent(event, options): 触发指定的特殊事件
+ * - getTriggeredEvents(): 获取已触发的事件ID列表
+ * - resetEventTrigger(eventId): 重置指定事件的触发状态
+ * 
+ * 内部函数：
+ * - getValueByPath(path): 根据路径获取变量值（支持嵌套如"npcFavorability.C"）
+ * - setValueByPath(path, newValue): 根据路径设置变量值
+ * - checkCondition(value, condition, path): 检查单个条件是否满足
+ * - checkEventConditions(event): 检查事件的所有条件
+ * - applyEventEffects(event): 应用事件效果
+ * - markEventTriggered(eventId): 标记事件已触发
+ * 
+ * 事件数据结构说明：
+ * - id: 唯一标识符（用于防重复和事件链）
+ * - name: 事件名称（调试用）
+ * - priority: 优先级（数字越大越优先）
+ * - conditions: 触发条件对象（支持min/max/equals/in检查）
+ * - effects: 效果对象（支持set/add/push操作）
+ * - text: 预设文本（SLG_MODE格式）
  * 
  * 依赖关系：
  * - 依赖 game-state.js 中的状态变量
  * - 依赖 game-utils.js 中的渲染环境检测函数
+ * - 依赖 game-events.js 中的parseLLMResponse函数
  */
 
 // ==================== 特殊事件定义 ====================

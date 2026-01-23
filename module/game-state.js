@@ -9,33 +9,43 @@
  * 1. 定义和管理所有游戏状态变量
  * 2. 提供游戏数据的持久化存储（通过SillyTavern变量）
  * 3. 同步游戏数据对象与独立变量
+ * 4. 流式版本的本地状态管理
  * 
  * 对外暴露的主要变量：
  * - gameData: 完整的游戏数据对象
- * - userLocation: 用户当前位置
+ * - userLocation / userLocation_old: 用户当前/上一位置
  * - playerTalents: 玩家天赋属性（根骨、悟性、心性、魅力）
  * - playerStats: 玩家数值（武学、学识、声望、金钱）
  * - combatStats: 战斗数值（攻击力、生命值）
  * - playerMood: 玩家体力值
  * - martialArts: 已学武功列表
  * - npcFavorability: NPC好感度
+ * - npcVisibility / npcGiftGiven / npcSparred: NPC可见性/送礼/切磋状态
  * - actionPoints: 当前行动点
  * - currentWeek: 当前周数
- * - currentNpcLocations: NPC当前位置
- * - 各种临时状态变量（currentInteractionNpc等）
- * - summary_Small / summary_Week / newWeek：剧情总结（流式滚动/周度归档/新周标记）
- * - randomEvent / battleEvent：世界地图或SLG中的事件标记
- * - companionNPC / mapLocation：下山随行与目的地
- * - cgContentEnabled：CG内容显示开关
- * - localState：{ turnUpdateApplied, summarySmallUpdateApplied, defaultExpandApplied }
+ * - dayNightStatus / seasonStatus: 昼夜和季节状态
+ * - currentNpcLocations / npcLocationX: NPC当前位置
+ * - GameMode: 游戏模式（0=普通，1=SLG）
+ * - difficulty: 难度设置
+ * - inventory / equipment: 背包和装备
+ * - summary_Small / summary_Week / summary_Backup: 剧情总结
+ * - newWeek / randomEvent / battleEvent: 事件标记
+ * - companionNPC / mapLocation: 下山随行与目的地
+ * - cgContentEnabled / compressSummary: 功能开关
+ * - alchemyDone: 本周是否已炼丹
+ * - triggeredEvents / currentSpecialEvent: 特殊事件触发状态
+ * - inputEnable: 自由行动输入框可用状态
+ * - localState: 流式版本本地状态
  * 
  * 对外暴露的主要函数：
  * - loadOrInitGameData(): 加载或初始化游戏数据
  * - saveGameData(): 保存游戏数据到SillyTavern变量
  * - syncVariablesFromGameData(): 从gameData同步到独立变量
  * - syncGameDataFromVariables(): 从独立变量同步到gameData
+ * - syncGameDatalastUserMessage() / syncGameDatanewWeek(): 局部字段同步
  * - saveLastUserMessage() / saveNewWeek(): 局部快速持久化
  * - mergeWithDefaults(): 存档与默认数据的深度合并（版本兼容）
+ * - resetLocalState() / getLocalState(): 流式状态管理
  * 
  * 依赖关系：
  * - 依赖 game-config.js 中的 defaultGameData

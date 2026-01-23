@@ -9,7 +9,8 @@
  * 1. 随机事件系统（选项事件的显示和处理）
  * 2. 战斗事件系统（战斗准备和结果处理）
  * 3. LLM响应解析（处理AI返回的游戏数据）
- * 4. iframe消息监听（处理21点/战斗/农场/世界地图结果）
+ * 4. iframe消息监听（处理21点/战斗/农场/炼丹/世界地图结果）
+ * 5. 特殊事件触发（与special-event.js联动）
  * 
  * 对外暴露的主要函数：
  * - displayRandomEvent(event): 显示随机事件界面
@@ -17,12 +18,12 @@
  * - displayBattleEvent(event): 显示战斗事件界面
  * - hideBattleEvent(): 隐藏战斗事件界面
  * - parseLLMResponse(response, mainTextContent): 解析LLM返回的JSON响应
- * - setupMessageListeners(): 设置iframe消息监听器
+ * - setupMessageListeners(): 设置iframe消息监听器（21点/战斗/农场/炼丹/世界地图）
  * - applyBattleReward(reward): 应用战斗胜利奖励
  * 
  * 内部函数：
- * - handleEventOption(optionIndex, option): 处理事件选项选择
- * - applyEventReward(reward): 应用事件奖励
+ * - handleEventOption(optionIndex, option): 处理事件选项选择（支持特殊剧情触发）
+ * - applyEventReward(reward): 应用事件奖励（天赋/数值属性）
  * 
  * 依赖关系：
  * - 依赖 game-state.js 中的状态变量和更新
@@ -30,12 +31,14 @@
  * - 依赖 game-utils.js 中的数值检查函数
  * - 依赖 game-ui.js 中的显示更新函数
  * - 依赖 game-helpers.js 中的消息处理和游戏显示函数
+ * - 依赖 special-event.js 中的特殊事件检查和触发函数
  * 
  * 特殊说明：
  * - parseLLMResponse 是与AI系统对接的核心函数；在SLG模式下联动 updateStoryText 渲染页与图层
- * - 支持处理NPC好感度变化（含魅力判定）
+ * - 支持处理NPC好感度变化（含魅力判定和难度调整）
  * - 支持处理NPC位置变动
  * - 支持两种类型的随机事件：选项事件和战斗事件
+ * - handleEventOption 支持"特殊剧情:"前缀选项，自动触发特殊事件
  */
 
 // 显示随机事件

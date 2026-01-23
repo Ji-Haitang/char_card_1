@@ -8,20 +8,28 @@
  * 主要内容：
  * - valueRanges: 各项数值的最小值和最大值范围定义
  * - locationNames: 地点ID到中文名称的映射
+ * - seasonNameMap: 季节英文到中文的映射
  * - npcs: NPC基本信息（名字、描述、头像ID）
  * - npcNameToId: NPC名字到ID的映射表
  * - npcPortraits: NPC立绘图片URL映射
  * - locationBackgrounds: 地点背景图URL映射
  * - actionConfigs: 各种行动的配置（天赋加成、影响属性）
  * - npcLocationProbability: NPC在各地点出现的概率配置
+ * - npcSparRewards: NPC切磋奖励配置
+ * - item_list: 道具列表配置（武器、防具、饰品、食物、材料等）
  * - defaultGameData: 游戏初始数据
+ * - slgEmotionOptions: SLG模式表情选项列表
+ * - slgCGOptions: SLG模式CG选项列表
+ * - emotionSynonyms/sceneSynonyms/npcSynonyms/cgSynonyms: 模糊匹配同义词映射
  * 
  * 对外暴露的主要变量：
  * - valueRanges: 用于数值范围检查
- * - locationNames: 用于显示地点中文名
+ * - locationNames/seasonNameMap: 用于显示地点和季节中文名
  * - npcs/npcNameToId/npcPortraits: 用于NPC相关功能
  * - actionConfigs: 用于计算行动结果
+ * - item_list: 用于道具系统
  * - defaultGameData: 用于初始化游戏数据
+ * - slgEmotionOptions/slgCGOptions: 用于SLG模式文本解析
  * 
  * 依赖关系：
  * 无依赖，是最底层的配置文件

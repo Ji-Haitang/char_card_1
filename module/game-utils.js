@@ -2,13 +2,14 @@
  * game-utils.js - 工具函数库
  * 
  * 文件概述：
- * 提供游戏中常用的工具函数，包括渲染环境检测、数值计算、范围限制等。
+ * 提供游戏中常用的工具函数，包括渲染环境检测、数值计算、范围限制、模糊匹配等。
  * 这些函数被其他模块广泛使用。
  * 
  * 主要功能：
  * 1. 渲染环境检测（检测是否在SillyTavern等环境中）
  * 2. 数值范围限制和检查
  * 3. 武学等级与点数计算系统
+ * 4. 模糊匹配系统（用于SLG模式文本解析）
  * 
  * 对外暴露的主要函数：
  * - isInRenderEnvironment(): 检测是否在渲染环境中（如SillyTavern）
@@ -18,11 +19,18 @@
  * - checkAllValueRanges(): 检查并修正所有游戏数值，确保在合法范围内
  * - calculateLevelFromWuxue(wuxue): 根据武学值计算可获得的等级点数
  * - calculateWuxueForLevel(level): 计算达到某等级需要的武学值
- * - calculateRemainingPoints(): 计算剩余可分配的属性点
+ * - calculateRemainingPoints(): 计算剩余可分配的属性点（考虑装备影响）
+ * - levenshteinDistance(a, b): 计算两个字符串的编辑距离
+ * - stringSimilarity(a, b): 计算两个字符串的相似度（0-1）
+ * - fuzzyMatch(input, options, synonyms, threshold): 通用模糊匹配函数
+ * - matchScene(sceneName): 模糊匹配场景名称
+ * - matchEmotion(emotionName): 模糊匹配表情名称
+ * - matchNPC(npcName): 模糊匹配NPC名称
+ * - matchCG(cgName): 模糊匹配CG名称
  * 
  * 依赖关系：
- * - 依赖 game-config.js 中的 valueRanges
- * - 依赖全局状态变量（playerTalents, playerStats等）
+ * - 依赖 game-config.js 中的 valueRanges、slgEmotionOptions、slgCGOptions 等
+ * - 依赖全局状态变量（playerTalents, playerStats, combatStats, equipment等）
  */
 
 // 渲染环境检测

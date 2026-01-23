@@ -7,27 +7,38 @@
  * 
  * 主要功能：
  * 1. 处理消息输出（支持SillyTavern环境和普通弹窗）
- * 2. 管理小游戏iframe（21点、战斗、农场）
- * 3. NPC相关功能（位置、显示、交互）
+ * 2. 管理小游戏iframe（21点、战斗、农场、炼丹）
+ * 3. NPC相关功能（位置、显示、交互、选择遮罩）
  * 4. 场景切换和地点管理
+ * 5. 季节和昼夜背景更新
  * 
  * 对外暴露的主要函数：
  * - handleMessageOutput(message): 智能处理消息输出（自动判断环境）
  * - showBlackjackGame(): 显示21点赌场游戏
  * - showBattleGame(battleData): 显示回合制战斗游戏
  * - showFarmGame(): 显示农场游戏
+ * - showAlchemyGame(): 显示炼丹游戏
  * - showInteractionInput(npcId, location): 显示NPC互动输入框
  * - getNpcsAtLocation(location): 获取指定地点的NPC列表
  * - getRandomLocation(npcId): 根据概率获取NPC的随机位置
  * - displayNpcs(location): 在指定地点显示NPC立绘
- * - showNpcInfo(npcId, location, event): 显示NPC信息弹窗
+ * - isClickOnOpaquePixel(event, img): 检测点击是否在图片不透明区域
+ * - showNpcInfo(npcId, location, event): 显示NPC信息弹窗（简版）
+ * - showNpcSelectionOverlay(npcId, location, event): 显示NPC选择遮罩（全屏交互）
+ * - closeNpcSelectionOverlay(): 关闭NPC选择遮罩
+ * - showNpcInfoPopup(npcId, location, event): 显示NPC信息弹窗（详细版）
  * - switchScene(sceneName): 切换到指定场景
  * - showLocationInfo(locationId, event): 显示地点信息弹窗
  * - setupLocationEvents(): 初始化地点的鼠标/触摸事件
+ * - updateLocationHeadcountLabels(): 更新地点NPC人数标签
+ * - calculateSeason(week): 根据周数计算当前季节
+ * - updateSceneBackgrounds(): 根据季节和昼夜更新场景背景
  * 
  * 内部函数：
- * - closeNpcInfo(): 关闭NPC信息弹窗
- * - closeLocationInfo(): 关闭地点信息弹窗
+ * - closeNpcInfo(e): 关闭NPC信息弹窗
+ * - closeLocationInfo(e): 关闭地点信息弹窗
+ * - handleNpcOverlayOutsideClick(e): 处理遮罩外点击
+ * - npcActionFromOverlay(npcId, action): 从遮罩执行NPC动作
  * 
  * 依赖关系：
  * - 依赖 game-state.js 中的状态变量和保存函数
