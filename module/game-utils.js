@@ -89,6 +89,46 @@ function checkAllValueRanges() {
     currentWeek = clampValue(currentWeek, valueRanges.currentWeek.min, valueRanges.currentWeek.max);
 }
 
+// 计算每周单个NPC好感度增加上限
+// 公式：基础5点 + 魅力每20点增加1点上限
+function getWeeklyFavorabilityLimit() {
+    return 5 + Math.floor(playerTalents.魅力 / 20);
+}
+
+// 检查并限制好感度增加值
+// 返回实际可增加的值（考虑周上限）
+function clampFavorabilityGain(npcId, changeValue) {
+    // 只限制正向增加，下降不限制
+    if (changeValue <= 0) {
+        return changeValue;
+    }
+    
+    // 计算本周已增加的好感度
+    const startValue = weekStartFavorability[npcId] || 0;
+    const currentValue = npcFavorability[npcId] || 0;
+    const alreadyGained = currentValue - startValue;
+    
+    // 计算上限
+    const weeklyLimit = getWeeklyFavorabilityLimit();
+    
+    // 计算还可以增加多少
+    const remainingAllowance = weeklyLimit - alreadyGained;
+    
+    // 如果已达上限，不再增加
+    if (remainingAllowance <= 0) {
+        console.log(`[好感度上限] ${npcId} 本周已达上限(${weeklyLimit})，不再增加`);
+        return 0;
+    }
+    
+    // 如果新增值超过剩余额度，截断
+    if (changeValue > remainingAllowance) {
+        console.log(`[好感度上限] ${npcId} 增加被截断: ${changeValue} -> ${remainingAllowance}`);
+        return remainingAllowance;
+    }
+    
+    return changeValue;
+}
+
 // 武学等级计算
 function calculateLevelFromWuxue(wuxue) {
     let totalWuxue = 0;

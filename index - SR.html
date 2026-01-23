@@ -1233,6 +1233,11 @@
                     // 重置炼丹状态
                     alchemyDone = false;
                     
+                    // 更新本周好感度快照（用于周好感上限限制）
+                    Object.keys(npcFavorability).forEach(npcId => {
+                        weekStartFavorability[npcId] = npcFavorability[npcId];
+                    });
+                    
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();

@@ -75,6 +75,7 @@ let martialArts = {
     "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
 };
 let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"I":0,"J":0,"K":0,"L":0 };
+let weekStartFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"I":0,"J":0,"K":0,"L":0 };  // 新增：本周开始时的好感度快照
 let actionPoints = 3;
 let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
@@ -176,6 +177,7 @@ function syncVariablesFromGameData() {
     playerMood,
     martialArts,
     npcFavorability,
+    weekStartFavorability,  // 新增：周开始好感度快照
     actionPoints,
     currentWeek,
     dayNightStatus,
@@ -239,6 +241,7 @@ function syncGameDataFromVariables() {
     gameData.playerMood = playerMood;
     gameData.martialArts = martialArts;
     gameData.npcFavorability = npcFavorability;
+    gameData.weekStartFavorability = weekStartFavorability;  // 新增：周开始好感度快照
     gameData.actionPoints = actionPoints;
     gameData.currentWeek = currentWeek;
     gameData.npcLocations = currentNpcLocations;

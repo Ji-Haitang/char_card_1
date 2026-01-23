@@ -1172,6 +1172,7 @@ const defaultGameData = {
         "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
     },
     npcFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0, /* "Z": 0, */ "M": 0, "N": 0, "O": 0},
+    weekStartFavorability: { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H": 0,"I": 0,"J": 0,"K": 0,"L": 0, /* "Z": 0, */ "M": 0, "N": 0, "O": 0},  // 新增：记录本周开始时的好感度快照
     actionPoints: 3,
     currentWeek: 1,
     dayNightStatus: 'daytime',  // 新增：昼夜状况 'daytime' 或 'night'

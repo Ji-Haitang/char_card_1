@@ -304,10 +304,12 @@ function parseLLMResponse(response, mainTextContent) {
                             finalChangeValue = changeValue * 2;
                             charmMessageShown = true;
                         }
+                        // 应用周好感度上限限制
+                        finalChangeValue = clampFavorabilityGain(npcId, finalChangeValue);
                     }
                     npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
                     checkAllValueRanges();
-                    if (charmMessageShown) {
+                    if (charmMessageShown && finalChangeValue > 0) {
                         setTimeout(() => {
                             showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
                         }, 100);
@@ -396,12 +398,14 @@ function parseLLMResponse(response, mainTextContent) {
                             finalChangeValue = changeValue * 2;
                             charmMessageShown = true;
                         }
+                        // 应用周好感度上限限制
+                        finalChangeValue = clampFavorabilityGain(npcId, finalChangeValue);
                     }
                     
                     npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
                     checkAllValueRanges();
                     
-                    if (charmMessageShown) {
+                    if (charmMessageShown && finalChangeValue > 0) {
                         setTimeout(() => {
                             showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
                         }, 100);
