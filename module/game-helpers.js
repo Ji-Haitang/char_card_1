@@ -49,11 +49,22 @@
 
 // 处理消息输出
 async function handleMessageOutput(message) {
+    // 保存原始未处理的消息（用于弹窗展示）
+    const unprocessed_message = message;
+    
+    // 处理消息：去除"属性变化"及其后面的部分
+    const attrChangeIndex = message.indexOf('属性变化');
+    if (attrChangeIndex !== -1) {
+        message = message.substring(0, attrChangeIndex).trim();
+        // 移除末尾可能残留的<br>标签
+        message = message.replace(/(<br>\s*)+$/gi, '');
+        console.log('已移除属性变化部分，处理后消息:', message);
+    }
 
     if (isInRenderEnvironment()) {
         const renderFunc = getRenderFunction();
         
-        // 保存构造的消息到gameData
+        // 保存处理后的消息到gameData
         lastUserMessage = message;
         console.log('user消息存入变量lastMessage_jxz');
         await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
@@ -71,7 +82,7 @@ async function handleMessageOutput(message) {
         }
         
         try {
-            // 显示用户输入信息（仅展示，不等待确认）
+            // 显示用户输入信息（仅展示，不等待确认）- 使用原始未处理的消息
             const modalHTML = `
                 <div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">
                     正在发送以下内容
@@ -85,7 +96,7 @@ async function handleMessageOutput(message) {
                     text-align: left;
                     white-space: pre-wrap;
                     word-break: break-word;
-                ">${message}</div>
+                ">${unprocessed_message}</div>
                 <div style="
                     margin-top: 15px;
                     color: #666;
@@ -105,17 +116,17 @@ async function handleMessageOutput(message) {
             await saveGameData();
             await new Promise(resolve => setTimeout(resolve, 100));
             
-            // 使用inject命令隐式注入user输入
+            // 使用inject命令隐式注入user输入（使用处理后的消息）
             await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${message}`);
             await renderFunc('/trigger');
             console.log('Message injected:', message);
         } catch (error) {
             console.error('Error injecting message:', error);
-            const message_error = `发生失败降级为弹窗<br>` + message;
+            const message_error = `发生失败降级为弹窗<br>` + unprocessed_message;
             showModal(message_error);
         }
     } else {
-        const message_notST = `非酒馆环境以弹窗显示<br>` + message;
+        const message_notST = `非酒馆环境以弹窗显示<br>` + unprocessed_message;
         showModal(message_notST);
     }
 }

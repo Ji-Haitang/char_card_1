@@ -822,6 +822,54 @@
         window.triggerSlash = window.triggerSlash || window.STscript;
         window.STscript = window.STscript || window.triggerSlash;
 
+        // 过滤thinking标签内容（鲁棒匹配：支持空格、下划线、大小写、时态变体）
+        // 流式版本：处理未闭合标签的情况
+        function removeThinkingContent(content) {
+            if (!content) return content;
+            
+            let result = content;
+            
+            // 步骤1: 移除所有完整的 thinking 块
+            // 循环移除，处理可能的嵌套情况
+            let prevResult;
+            do {
+                prevResult = result;
+                result = result.replace(
+                    /<([^>\/]+)>([\s\S]*?)<\/([^>]+)>/g,
+                    (match, openTag, inner, closeTag) => {
+                        // 标准化：移除空格、下划线，转大写
+                        const normOpen = openTag.replace(/[\s_]/g, '').toUpperCase();
+                        const normClose = closeTag.replace(/[\s_]/g, '').toUpperCase();
+                        // 开始或结束标签任一包含 THINK 就移除整个块
+                        if (normOpen.includes('THINK') || normClose.includes('THINK')) {
+                            console.log('已过滤thinking块');
+                            return '';
+                        }
+                        return match;
+                    }
+                );
+            } while (result !== prevResult);
+            
+            // 步骤2: 检查未闭合的 thinking 开始标签（流式场景关键）
+            const openTagPattern = /<([^>\/]+)>/g;
+            let match;
+            let lastThinkingStart = -1;
+            while ((match = openTagPattern.exec(result)) !== null) {
+                const normalized = match[1].replace(/[\s_]/g, '').toUpperCase();
+                if (normalized.includes('THINK')) {
+                    lastThinkingStart = match.index;
+                }
+            }
+            
+            // 如果找到未闭合的thinking标签，截断到该标签之前
+            if (lastThinkingStart !== -1) {
+                console.log('检测到未闭合的thinking标签，截断内容');
+                result = result.substring(0, lastThinkingStart);
+            }
+            
+            return result.trim();
+        }
+        
         window.updateTemplateVariables = function(vars) {
             if (!vars) return;
             
@@ -847,6 +895,9 @@
                 
             // 如果找到了SLG_MODE内容（无论标签写法如何）
             if (slgModeContent !== null && slgModeContent !== undefined) {
+                // 先过滤thinking标签内容
+                slgModeContent = removeThinkingContent(slgModeContent);
+                
                 // 提取正文：从第一个汉字、# 或 * 开始到第一个<为止
                 // 扩展的Unicode范围支持更多中文字符（包括繁体）
                 const mainTextMatch = slgModeContent.match(/[#*\u4e00-\u9fff\u3400-\u4dbf...][^<]*/);

@@ -308,6 +308,16 @@ function matchScene(sceneName) {
         0.4  // 场景匹配阈值稍低一些，更宽容
     );
     
+    // 关键词兜底：当所有匹配方式都失败时，检查是否包含语义关键词
+    if (!result && typeof sceneSemanticKeywords !== 'undefined') {
+        for (const [keyword, defaultScene] of Object.entries(sceneSemanticKeywords)) {
+            if (sceneName.includes(keyword)) {
+                console.log(`[matchScene] 关键词兜底: "${sceneName}" (含"${keyword}") -> "${defaultScene}"`);
+                return defaultScene;
+            }
+        }
+    }
+    
     return result || 'none';
 }
 
@@ -330,6 +340,16 @@ function matchEmotion(emotionName) {
         typeof slgEmotionSynonyms !== 'undefined' ? slgEmotionSynonyms : {},
         0.5
     );
+    
+    // 关键词兜底：当所有匹配方式都失败时，检查是否包含语义关键词
+    if (!result && typeof emotionSemanticKeywords !== 'undefined') {
+        for (const [keyword, defaultEmotion] of Object.entries(emotionSemanticKeywords)) {
+            if (emotionName.includes(keyword)) {
+                console.log(`[matchEmotion] 关键词兜底: "${emotionName}" (含"${keyword}") -> "${defaultEmotion}"`);
+                return defaultEmotion;
+            }
+        }
+    }
     
     return result || 'none';
 }
