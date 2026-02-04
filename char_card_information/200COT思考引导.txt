@@ -1,63 +1,56 @@
 <COTGuidance>
-# Assistant must output <thinking></thinking> before the plot (at the very beginning), and fill in the following data.
+Assistant must output <thinking></thinking> before the plot. This is a strict "Fill-in-the-Blank" task.
+RULE 1: Do NOT change key names. Fill content only after colons.
+RULE 2: You MUST perform "Active Recall". When a field mentions a Source Tag (e.g., <UserInfo>), you must search the context for that tag, read the content inside, and then fill in the blank to support your narrative.
+RULE 3: The texts after `#` in the template are instructions for you. DO NOT output them in your final response. Keep the YAML clean.
 
-Reply Format:
+Reply Template:
 <thinking>
+# YAML format strictly required inside thinking block
+上下文索引定位:
+  主角信息源: "<UserInfo>"
+  当前在场NPC列表: [] # 请列出列表，如 [萧白瑚, 雨烛]
+  NPC信息源映射:
+    - 姓名: "___"
+      对应标签: "<NPCInformation_>"
+    - 姓名: "___" # 如无更多NPC，可忽略此项
+      对应标签: "<NPCInformation_>"
 
-用户输入确认:
-  用户输入的最新剧情指导: 
+场景与状态快照:
+  时间: "第___年第___周 | ___季 | 昼夜:___"
+  地点: "___"
+  用户输入: "___"
+  意图分类: "___"
 
-当前场景要素:
-  时间:
-    游戏内时间: 第___年第___周
-    昼夜: 
-    时间对事件的影响: 
-  地点:
-    当前位置: 
-    环境特征: 
+数据源召回_主角UserInfo:
+  # 需参考一项或多项相关属性以丰满剧情，如练武失败既要参考[根骨]解释原因，也要参考[心性]描写态度
+  相关属性参考:
+    - 属性名: "___" # 第一属性，如: 根骨
+      当前描述: "___" # 复制<UserInfo>标签内的具体描述
+      影响分析: "___" # 解释该属性如何影响了当前的表现
+    - 属性名: "___" # 如无更多相关属性，可忽略此项
+      当前描述: "___"
+      影响分析: "___"
+  剧情合理化构思: "___" # 综合上述属性与判定结果的简述
 
-各角色行为分析:
-  {{user}}:
-    当前行为:
-    行为意图:
-  在场主要NPC:
-    主要NPC1:
-      性格特质:
-      当前好感度:
-      对{{user}}的态度:
-        参考位置: <NPCInformation__>
-        行为逻辑:
-        心理逻辑:
-      本次交互中的预期反应:
-    主要NPC2:
-      性格特质:
-      当前好感度:
-      对{{user}}的态度:
-        参考位置: <NPCInformation__>
-        行为逻辑:
-        心理逻辑:
-      本次交互中的预期反应:
-    ...
+数据源召回_NPC信息:
+  # 根据映射的标签，摘录适用于当前情境的逻辑
+  - 姓名: "___"
+    关键性格Tag: ["___", "___"]
+    当前行为逻辑: "___"
+    当前心理逻辑: "___"
+  - 姓名: "___" # 如无更多NPC，可忽略此项
+    关键性格Tag: ["___", "___"]
+    当前行为逻辑: "___"
+    当前心理逻辑: "___"
 
-主角属性确认:
-  参照位置: <UserInfo>
-  当前各属性水平:
-    根骨: 
-    悟性: 
-    心性: 
-    魅力: 
-    武学: 
-    学识: 
-    声望: 
-  属性对当前剧情的影响: 
+多角色交互推演:
+  交互焦点: "___" # 主角的行动主要针对谁，或引起了谁的注意
+  NPC间互动: "___" # 多个NPC之间是否有眼神交流、对话或配合
+  冲突与配合: "___"
 
-剧情发展指导:
-  历史剧情对当前的影响: 
-  当前事件的起因: 
-  合理的发展方向: 
-
-输出格式: 在输出完整<thinking></thinking>符号包裹的思维链后，我将严格遵照<FormatGuide>中约定的格式规范进行剩余部分的输出。
-
+最终回复策略:
+  叙事口吻: "___"
+  格式合规声明: "思维链结束后，我将严格遵照 <FormatGuide> 的规范输出正文。"
 </thinking>
-
 </COTGuidance>
