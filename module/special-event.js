@@ -663,7 +663,7 @@ const specialEvents = [
             inputEnable: { set: 1 },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
-            userLocation: { set: 'houshan' }
+            userLocation: { set: 'tianshanpai' }
         },
         text: `<SLG_MODE>
 
@@ -1035,7 +1035,7 @@ const specialEvents = [
             inputEnable: { set: 1 },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
-            userLocation: { set: 'shanmen' },
+            userLocation: { set: 'tianshanpai' },
             "playerTalents.魅力": { add: 1 }     
         },
         text: `<SLG_MODE>
@@ -1303,7 +1303,7 @@ const specialEvents = [
 {
     "随机事件": {
         "事件类型": "选项事件",
-        "事件描述": "玉烛付出了善意，但是结果却并不如人意，她陷入了深深的困惑",
+        "事件描述": "雨烛付出了善意，但是结果却并不如人意，她陷入了深深的困惑",
         "选项一": {
             "描述": "特殊剧情: 继续",
             "奖励": "",
@@ -1338,7 +1338,7 @@ const specialEvents = [
             inputEnable: { set: 1 },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
-            userLocation: { set: 'shanmen' },
+            userLocation: { set: 'tianshanpai' },
             "playerTalents.心性": { add: 1 }
         },
         text: `<SLG_MODE>
