@@ -959,7 +959,7 @@
 // `;
 
 const outPut = `
-<thinking>
+<ANAL>
 # YAML format strictly required inside thinking block
 上下文索引定位:
   主角信息源: "<UserInfo>"
@@ -1006,7 +1006,7 @@ const outPut = `
 最终回复策略:
   叙事口吻: "___"
   格式合规声明: "思维链结束后，我将严格遵照 <FormatGuide> 的规范输出正文。"
-</thinking>
+</ANAL>
 
 <MAIN_TEXT>
 清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|姬姒|街道|微笑|none
@@ -1081,10 +1081,10 @@ const outPut = `
 </SIDE_NOTE>`;
 
 // const outPut = `
-// <thinking>
+// <ANAL>
 // <MAIN_TEXT>ana: sadadassfsafafa
 // <SUMMARY>ans: asdadafa
-// </thinking>
+// </ANAL>
 
 // <MAIN_TEXT>
 // 清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|姬姒|街道|微笑|none
@@ -1170,8 +1170,8 @@ const outPut = `
                         // 标准化：移除空格、下划线，转大写
                         const normOpen = openTag.replace(/[\s_]/g, '').toUpperCase();
                         const normClose = closeTag.replace(/[\s_]/g, '').toUpperCase();
-                        // 开始或结束标签任一包含 THINK 就移除整个块
-                        if (normOpen.includes('THINK') || normClose.includes('THINK')) {
+                        // 开始或结束标签任一包含 ANAL 就移除整个块
+                        if (normOpen.includes('ANAL') || normClose.includes('ANAL')) {
                             console.log('已过滤thinking块');
                             return '';
                         }
@@ -1186,7 +1186,7 @@ const outPut = `
             let lastThinkingStart = -1;
             while ((match = openTagPattern.exec(result)) !== null) {
                 const normalized = match[1].replace(/[\s_]/g, '').toUpperCase();
-                if (normalized.includes('THINK')) {
+                if (normalized.includes('ANAL')) {
                     lastThinkingStart = match.index;
                 }
             }

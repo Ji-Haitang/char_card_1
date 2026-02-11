@@ -840,8 +840,8 @@
                         // 标准化：移除空格、下划线，转大写
                         const normOpen = openTag.replace(/[\s_]/g, '').toUpperCase();
                         const normClose = closeTag.replace(/[\s_]/g, '').toUpperCase();
-                        // 开始或结束标签任一包含 THINK 就移除整个块
-                        if (normOpen.includes('THINK') || normClose.includes('THINK')) {
+                        // 开始或结束标签任一包含 ANAL 就移除整个块
+                        if (normOpen.includes('ANAL') || normClose.includes('ANAL')) {
                             console.log('已过滤thinking块');
                             return '';
                         }
@@ -856,7 +856,7 @@
             let lastThinkingStart = -1;
             while ((match = openTagPattern.exec(result)) !== null) {
                 const normalized = match[1].replace(/[\s_]/g, '').toUpperCase();
-                if (normalized.includes('THINK')) {
+                if (normalized.includes('ANAL')) {
                     lastThinkingStart = match.index;
                 }
             }

@@ -357,6 +357,12 @@
             "经史传家": { "根骨": 10, "悟性": 40, "心性": 15, "魅力": 15 },
             "天潢贵胄": { "根骨": 10, "悟性": 15, "心性": 15, "魅力": 40 }
         };
+        const ORIGIN_STATS = {
+            "农家子弟": { "武学": 30, "学识": 30, "声望": 20, "金钱": 1500 },
+            "府兵军户": { "武学": 45, "学识": 20, "声望": 20, "金钱": 500 },
+            "经史传家": { "武学": 20, "学识": 40, "声望": 20, "金钱": 1000 },
+            "天潢贵胄": { "武学": 20, "学识": 20, "声望": 40, "金钱": 2000 }
+        };
         const DIFF_POINTS = { "简单": 60, "普通": 40, "困难": 20 };
         const DIFF_CODE   = { "简单": 'easy', "普通": 'normal', "困难": 'hard' };
         const ORIGIN_INTROS = {
@@ -514,12 +520,15 @@
                     state.origin = origin;
                     state.talents = { ...ORIGIN_PRESETS[origin] };
                     state.baseTalents = { ...ORIGIN_PRESETS[origin] };
+                    state.stats = { ...ORIGIN_STATS[origin] };
                     // 出身编码映射
                     const bgMap = { '农家子弟': 'A', '府兵军户': 'B', '经史传家': 'C', '天潢贵胄': 'D' };
                     state.userBackground = bgMap[origin] || 'A';
                     try {
                         if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
                         if (window.gameData) window.gameData.playerTalents = { ...state.talents };
+                        if (typeof playerStats !== 'undefined') playerStats = { ...state.stats };
+                        if (window.gameData) window.gameData.playerStats = { ...state.stats };
                         if (typeof userBackground !== 'undefined') userBackground = state.userBackground;
                         if (window.gameData) window.gameData.userBackground = state.userBackground;
                     } catch(_){ }
@@ -663,11 +672,13 @@
                 // 先更新运行时全局变量（注意：这些是以 let 声明的全局，不在 window 上）
                 if (typeof difficulty !== 'undefined') difficulty = code;
                 if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
+                if (typeof playerStats !== 'undefined') playerStats = { ...state.stats };
                 if (typeof userBackground !== 'undefined') userBackground = state.userBackground || 'A';
                 // 同步到 gameData（防止 sync 覆盖时回滚）
                 if (window.gameData) {
                     window.gameData.difficulty = code;
                     window.gameData.playerTalents = { ...state.talents };
+                    window.gameData.playerStats = { ...state.stats };
                     window.gameData.userBackground = state.userBackground || 'A';
                 }
                 if (typeof syncGameDataFromVariables === 'function') {
