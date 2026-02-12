@@ -63,8 +63,8 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-styles.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-styles-theme.css" id="theme-css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-styles-theme.css" id="theme-css">
 </head>
 <body>
     <div class="container">
@@ -408,6 +408,7 @@
                 placeholder="输入自由行动内容"
                 rows="1"
             ></textarea>
+            <button class="free-action-send-btn" id="regenerate-btn" onclick="handleRegenerate()">重生成</button>
             <button class="free-action-send-btn" id="free-action-send-btn" onclick="sendFreeAction()">发送</button>
         </div>
 
@@ -802,13 +803,13 @@
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-state.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-ui.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/game-events.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@829f5eb/module/special-event.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/special-event.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -3081,10 +3082,23 @@
             if (story) story.style.fontSize = size + 'px';
         }
 
+        // 重生成按钮：删除最后一条回复并重新触发生成
+        async function handleRegenerate() {
+            showConfirmModal('重新生成', '是否要重新生成回复？').then(async () => {
+                const renderFunc = getRenderFunction();
+                if (renderFunc) {
+                    await renderFunc('/del 1 | /trigger');
+                }
+            }).catch(() => {
+                // 用户点击取消，不做任何操作
+            });
+        }
+
         // 根据inputEnable控制自由行动输入框、发送按钮、跳过一周按钮和返回天山派按钮
         function updateFreeActionInputState() {
             const inputElement = document.getElementById('free-action-input');
             const sendButton = document.getElementById('free-action-send-btn');
+            const regenerateBtn = document.getElementById('regenerate-btn');
             const skipWeekBtn = document.getElementById('skip-week-btn');
             const slgReturnBtn = document.getElementById('slg-return-btn');
             
@@ -3100,6 +3114,11 @@
                     sendButton.disabled = true;
                     sendButton.style.opacity = '0.5';
                     sendButton.style.cursor = 'not-allowed';
+                }
+                if (regenerateBtn) {
+                    regenerateBtn.disabled = true;
+                    regenerateBtn.style.opacity = '0.5';
+                    regenerateBtn.style.cursor = 'not-allowed';
                 }
                 // 禁用跳过一周按钮
                 if (skipWeekBtn) {
@@ -3125,6 +3144,11 @@
                     sendButton.disabled = false;
                     sendButton.style.opacity = '1';
                     sendButton.style.cursor = '';
+                }
+                if (regenerateBtn) {
+                    regenerateBtn.disabled = false;
+                    regenerateBtn.style.opacity = '1';
+                    regenerateBtn.style.cursor = '';
                 }
                 // 启用跳过一周按钮
                 if (skipWeekBtn) {
@@ -3304,6 +3328,7 @@
         window.toggleUIStyle = toggleUIStyle;
         // 暴露 updateFreeActionInputState 到全局，供 game-events.js 调用
         window.updateFreeActionInputState = updateFreeActionInputState;
+        window.handleRegenerate = handleRegenerate;
         initializeOrSync();
     });
 

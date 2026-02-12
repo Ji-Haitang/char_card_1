@@ -46,6 +46,7 @@ body {
     border: var(--border-double);
     box-shadow: 0 0 40px rgba(0,0,0,0.4);
     border-radius: 2px;
+    overflow: visible !important; /* 覆盖共享CSS的 overflow: hidden，防止内容被裁切 */
     /* 这里给视窗本身加上纸质背景，这样当场景透明时就能看到纸纹 */
     background-color: var(--paper-base) !important;
     background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.1'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E") !important;
@@ -155,6 +156,7 @@ body {
     border-top: none !important;
     font-family: var(--font-serif);
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    padding: 0 clamp(5px, 1.5vw, 10px) !important; /* 缩减 padding：20px → 10px，节省水平空间 */
     /* 纸张纹理 */
     background-image: 
         linear-gradient(to bottom, 
@@ -190,6 +192,13 @@ body {
     background: rgba(230, 226, 216, 0.6) !important;
     border-radius: 2px !important;
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
+    min-width: 80px !important; /* 缩减体力条最小宽度：120px → 80px，允许更多弹性收缩 */
+}
+
+/* 体力条外层容器：同步缩减最小宽度，与内层 .mood-bar 保持一致的弹性 */
+.status-display .mood-display {
+    min-width: clamp(80px, 18vw, 280px) !important; /* 从 clamp(140px, 28vw, 360px) 缩减 */
+    gap: clamp(4px, 0.8vw, 8px) !important; /* 缩减间距 */
 }
 
 .mood-fill {
