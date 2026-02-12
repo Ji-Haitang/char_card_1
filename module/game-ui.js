@@ -133,8 +133,9 @@ function parseSlgMainText(mainText) {
 
         // 验证各字段
         const npcOk = isNpcAllowed(normalizedNpc);
-        const sceneOk = normalizedScene !== 'none' || sceneRaw === 'none' || sceneRaw === '无';  // 原始值为none时允许
-        const emoOk = normalizedEmotion !== 'none' || emotionRaw === 'none' || emotionRaw === '无';  // 原始值为none时允许
+        const sceneOk = normalizedScene !== 'none'; 
+        const emoOk = true;
+        //const emoOk = normalizedEmotion !== 'none' || emotionRaw === 'none' || emotionRaw === '无';  // 原始值为none时允许
         const cgOk = cgRaw !== '';
 
         if (!(npcOk && sceneOk && emoOk && cgOk)) {
