@@ -63,8 +63,8 @@
     <title>类脑群侠传</title>
     
     <!-- 从GitHub加载CSS -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-styles.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-styles-theme.css" id="theme-css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-styles.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-styles-theme.css" id="theme-css">
 </head>
 <body>
     <div class="container">
@@ -803,13 +803,13 @@
     <!-- 加载外部库 -->
     <script src="https://cdn.jsdelivr.net/npm/markdown-it/dist/markdown-it.min.js"></script>
     <!-- 从GitHub加载游戏模块 -->
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-state.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-ui.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-helpers.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/game-events.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@165b104/module/special-event.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-ui.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-helpers.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/game-events.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@ca90b6c/module/special-event.js"></script>
      
     <script>
     document.addEventListener('DOMContentLoaded', function() {  
@@ -3084,13 +3084,11 @@
 
         // 重生成按钮：删除最后一条回复并重新触发生成
         async function handleRegenerate() {
-            showConfirmModal('重新生成', '是否要重新生成回复？').then(async () => {
+            showConfirmModal('重新生成', '是否要重新生成回复？', async () => {
                 const renderFunc = getRenderFunction();
                 if (renderFunc) {
                     await renderFunc('/del 1 | /trigger');
                 }
-            }).catch(() => {
-                // 用户点击取消，不做任何操作
             });
         }
 

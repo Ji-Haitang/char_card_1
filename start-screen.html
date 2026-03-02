@@ -361,7 +361,13 @@
             "农家子弟": { "武学": 30, "学识": 30, "声望": 20, "金钱": 1500 },
             "府兵军户": { "武学": 45, "学识": 20, "声望": 20, "金钱": 500 },
             "经史传家": { "武学": 20, "学识": 40, "声望": 20, "金钱": 1000 },
-            "天潢贵胄": { "武学": 20, "学识": 20, "声望": 40, "金钱": 2000 }
+            "天潢贵胄": { "武学": 20, "学识": 20, "声望": 40, "金钱": 3000 }
+        };
+        const ORIGIN_INVENTORY = {
+            "农家子弟": { "胡饼": 5, "小麦种子": 5 },
+            "府兵军户": { "制式铁剑": 1 },
+            "经史传家": { "普通弟子服": 1 },
+            "天潢贵胄": { "胡饼": 5, "小麦种子": 5 }
         };
         const DIFF_POINTS = { "简单": 60, "普通": 40, "困难": 20 };
         const DIFF_CODE   = { "简单": 'easy', "普通": 'normal', "困难": 'hard' };
@@ -521,6 +527,7 @@
                     state.talents = { ...ORIGIN_PRESETS[origin] };
                     state.baseTalents = { ...ORIGIN_PRESETS[origin] };
                     state.stats = { ...ORIGIN_STATS[origin] };
+                    state.inventory = { ...ORIGIN_INVENTORY[origin] };
                     // 出身编码映射
                     const bgMap = { '农家子弟': 'A', '府兵军户': 'B', '经史传家': 'C', '天潢贵胄': 'D' };
                     state.userBackground = bgMap[origin] || 'A';
@@ -529,6 +536,8 @@
                         if (window.gameData) window.gameData.playerTalents = { ...state.talents };
                         if (typeof playerStats !== 'undefined') playerStats = { ...state.stats };
                         if (window.gameData) window.gameData.playerStats = { ...state.stats };
+                        if (typeof inventory !== 'undefined') inventory = { ...state.inventory };
+                        if (window.gameData) window.gameData.inventory = { ...state.inventory };
                         if (typeof userBackground !== 'undefined') userBackground = state.userBackground;
                         if (window.gameData) window.gameData.userBackground = state.userBackground;
                     } catch(_){ }
@@ -674,12 +683,14 @@
                 if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
                 if (typeof playerStats !== 'undefined') playerStats = { ...state.stats };
                 if (typeof userBackground !== 'undefined') userBackground = state.userBackground || 'A';
+                if (typeof inventory !== 'undefined') inventory = { ...(state.inventory || {}) };
                 // 同步到 gameData（防止 sync 覆盖时回滚）
                 if (window.gameData) {
                     window.gameData.difficulty = code;
                     window.gameData.playerTalents = { ...state.talents };
                     window.gameData.playerStats = { ...state.stats };
                     window.gameData.userBackground = state.userBackground || 'A';
+                    window.gameData.inventory = { ...(state.inventory || {}) };
                 }
                 if (typeof syncGameDataFromVariables === 'function') {
                     syncGameDataFromVariables();

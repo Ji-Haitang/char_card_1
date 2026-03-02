@@ -1322,10 +1322,7 @@ const defaultGameData = {
     npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, /* "Z": false, */ "M": false, "N": false, "O": false}, // 新增：本周是否已切磋
     lastFarmWeek: 1,  // 新增：上次耕种的周数
     farmGrid: [],     // 新增：农场地块状态
-    inventory: {
-        "胡饼": 5,
-        "小麦种子": 5
-    },
+    inventory: {},
     equipment: {
         "武器": null,
         "防具": null,

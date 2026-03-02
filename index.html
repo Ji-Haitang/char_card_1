@@ -1040,22 +1040,6 @@ const outPut = `
 
 <SIDE_NOTE>
 {
-    "随机事件": {
-        "事件类型": "战斗事件",
-        "事件描述": "你在山门附近训练，发现一人形迹可疑，你上前盘查，对方居然是吐蕃的细作！",
-        "敌方信息": {
-        "名称": "吐蕃探子",
-        "类别": "军士",
-        "属性": {
-            "攻击力": "低",
-            "生命力": "中"
-        },
-        "战斗报酬": {
-            "类型": "金钱",
-            "数值": 500
-        }
-        }
-    },
     "用户": {
     "位置变动": "后山"
     },
@@ -3179,13 +3163,11 @@ const outPut = `
 
         // 重生成按钮：删除最后一条回复并重新触发生成
         async function handleRegenerate() {
-            showConfirmModal('重新生成', '是否要重新生成回复？').then(async () => {
+            showConfirmModal('重新生成', '是否要重新生成回复？', async () => {
                 const renderFunc = getRenderFunction();
                 if (renderFunc) {
                     await renderFunc('/del 1 | /trigger');
                 }
-            }).catch(() => {
-                // 用户点击取消，不做任何操作
             });
         }
 
