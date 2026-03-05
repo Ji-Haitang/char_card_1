@@ -64,6 +64,7 @@ let userLocation_old = "shanmen";
 let playerTalents = { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 };
 let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50 };
+let equipStats = { "攻击力": 0, "生命值": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
 let userBackground = "A"; // 新增：出身编码
 let textFontLevel = 2; // 新增：正文字体档位 1~5
 let uiStyle = 0; // 新增：UI风格（0=古风UI，1=扁平化UI）
@@ -172,6 +173,7 @@ function syncVariablesFromGameData() {
     playerTalents,
     playerStats,
     combatStats,
+    equipStats,
     userBackground,
     textFontLevel,
     playerMood,
@@ -211,6 +213,10 @@ function syncVariablesFromGameData() {
     inputEnable        // 新增：自由行动输入框可用状态
     } = gameData);
 
+    if (!equipStats || typeof equipStats !== 'object') {
+        equipStats = calculateEquipStatsFromEquipment(equipment);
+    }
+
     npcLocationA = currentNpcLocations.A;
     npcLocationB = currentNpcLocations.B;
     npcLocationC = currentNpcLocations.C;
@@ -237,6 +243,7 @@ function syncGameDataFromVariables() {
     gameData.playerTalents = playerTalents;
     gameData.playerStats = playerStats;
     gameData.combatStats = combatStats;
+    gameData.equipStats = equipStats;
     gameData.userBackground = userBackground;
     gameData.playerMood = playerMood;
     gameData.martialArts = martialArts;
@@ -318,6 +325,21 @@ function mergeWithDefaults(loadedData, defaultData) {
     }
     return result;
 }
+
+function migrateLegacyEquipStats(gameData, hadEquipStats) {
+    if (!gameData) return gameData;
+    const equipTotals = calculateEquipStatsFromEquipment(gameData.equipment);
+    gameData.equipStats = equipTotals;
+
+    if (!hadEquipStats && gameData.combatStats) {
+        const baseAttack = gameData.combatStats.攻击力 - (equipTotals.攻击力 || 0);
+        const baseHP = gameData.combatStats.生命值 - (equipTotals.生命值 || 0);
+        gameData.combatStats.攻击力 = clampValue(baseAttack, valueRanges.combatStats.攻击力.min, valueRanges.combatStats.攻击力.max);
+        gameData.combatStats.生命值 = clampValue(baseHP, valueRanges.combatStats.生命值.min, valueRanges.combatStats.生命值.max);
+    }
+
+    return gameData;
+}
 // 修改后的 loadOrInitGameData 函数
 async function loadOrInitGameData() {
     const renderFunc = getRenderFunction();
@@ -333,6 +355,7 @@ async function loadOrInitGameData() {
     } else {
         const renderer = getCurrentRenderer();
         let loadedData;
+        let hadEquipStats = false;
         if (renderer === 'xiaobaiX') {
             loadedData = probe;
         } else {
@@ -343,8 +366,10 @@ async function loadOrInitGameData() {
                 loadedData = null;
             }
         }
+        hadEquipStats = !!(loadedData && typeof loadedData.equipStats === 'object');
         // 使用mergeWithDefaults确保所有必要的字段都存在
         gameData = mergeWithDefaults(loadedData, defaultGameData);
+        gameData = migrateLegacyEquipStats(gameData, hadEquipStats);
         // 如果有字段被添加，保存更新后的数据
         if (JSON.stringify(loadedData) !== JSON.stringify(gameData)) {
             console.log('检测到版本更新，正在保存补充后的游戏数据...');

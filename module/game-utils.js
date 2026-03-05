@@ -19,7 +19,7 @@
  * - checkAllValueRanges(): 检查并修正所有游戏数值，确保在合法范围内
  * - calculateLevelFromWuxue(wuxue): 根据武学值计算可获得的等级点数
  * - calculateWuxueForLevel(level): 计算达到某等级需要的武学值
- * - calculateRemainingPoints(): 计算剩余可分配的属性点（考虑装备影响）
+ * - calculateRemainingPoints(): 计算剩余可分配的属性点（仅人物基础属性）
  * - levenshteinDistance(a, b): 计算两个字符串的编辑距离
  * - stringSimilarity(a, b): 计算两个字符串的相似度（0-1）
  * - fuzzyMatch(input, options, synonyms, threshold): 通用模糊匹配函数
@@ -78,6 +78,16 @@ function checkAllValueRanges() {
         const range = valueRanges.combatStats[key];
         combatStats[key] = clampValue(combatStats[key], range.min, range.max);
     }
+
+    // 检查装备加成数值
+    if (typeof equipStats === 'object' && equipStats) {
+        for (let key in equipStats) {
+            const range = valueRanges.equipStats[key];
+            if (range) {
+                equipStats[key] = clampValue(equipStats[key], range.min, range.max);
+            }
+        }
+    }
     
     playerMood = clampValue(playerMood, valueRanges.playerMood.min, valueRanges.playerMood.max);
     
@@ -89,10 +99,50 @@ function checkAllValueRanges() {
     currentWeek = clampValue(currentWeek, valueRanges.currentWeek.min, valueRanges.currentWeek.max);
 }
 
+function getEmptyEquipStats() {
+    return { "攻击力": 0, "生命值": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
+}
+
+function calculateEquipStatsFromEquipment(equipmentData) {
+    const totals = getEmptyEquipStats();
+    if (!equipmentData) return totals;
+    for (const itemName of Object.values(equipmentData)) {
+        if (!itemName) continue;
+        const item = item_list[itemName];
+        if (!item || !item.装备属性) continue;
+        if (totals.hasOwnProperty(item.装备属性)) {
+            totals[item.装备属性] += item.装备数值 || 0;
+        }
+    }
+    return totals;
+}
+
+function refreshEquipStatsFromEquipment() {
+    equipStats = calculateEquipStatsFromEquipment(equipment);
+    checkAllValueRanges();
+}
+
+function getTotalCombatStats() {
+    return {
+        "攻击力": combatStats.攻击力 + (equipStats?.攻击力 || 0),
+        "生命值": combatStats.生命值 + (equipStats?.生命值 || 0)
+    };
+}
+
+function getTotalTalents() {
+    return {
+        "根骨": playerTalents.根骨 + (equipStats?.根骨 || 0),
+        "悟性": playerTalents.悟性 + (equipStats?.悟性 || 0),
+        "心性": playerTalents.心性 + (equipStats?.心性 || 0),
+        "魅力": playerTalents.魅力 + (equipStats?.魅力 || 0)
+    };
+}
+
 // 计算每周单个NPC好感度增加上限
 // 公式：基础5点 + 魅力每20点增加1点上限
 function getWeeklyFavorabilityLimit() {
-    return 5 + Math.floor(playerTalents.魅力 / 20);
+    const totalTalents = getTotalTalents();
+    return 5 + Math.floor(totalTalents.魅力 / 20);
 }
 
 // 检查并限制好感度增加值
@@ -434,30 +484,10 @@ function matchCG(cgName) {
 
 function calculateRemainingPoints() {
     const earnedLevels = calculateLevelFromWuxue(playerStats.武学);
-    
-    // 计算装备的总加成
-    let equipmentAttackBonus = 0;
-    let equipmentHPBonus = 0;
-    
-    // 遍历所有装备
-    for (const [slot, itemName] of Object.entries(equipment)) {
-        if (itemName && item_list[itemName]) {
-            const item = item_list[itemName];
-            if (item.装备属性 === '攻击力') {
-                equipmentAttackBonus += item.装备数值;
-            } else if (item.装备属性 === '生命值') {
-                equipmentHPBonus += item.装备数值;
-            }
-        }
-    }
-    
-    // 计算基础数值（排除装备加成）
-    const baseAttack = combatStats.攻击力 - equipmentAttackBonus;
-    const baseHP = combatStats.生命值 - equipmentHPBonus;
-    
-    // 基于基础数值计算已使用的点数
-    const usedForAttack = (baseAttack - 20) / 10;
-    const usedForHP = (baseHP - 50) / 25;
+
+    // 基于人物基础数值计算已使用的点数
+    const usedForAttack = (combatStats.攻击力 - 20) / 10;
+    const usedForHP = (combatStats.生命值 - 50) / 25;
     const totalUsed = usedForAttack + usedForHP;
     
     return Math.max(0, earnedLevels - totalUsed);

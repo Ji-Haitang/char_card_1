@@ -1327,7 +1327,8 @@
                 }
                 
                 let actionPointConsumed = true;
-                const mindChance = playerTalents.心性 / 2;
+                const totalTalents = getTotalTalents();
+                const mindChance = totalTalents.心性 / 2;
                 if (Math.random() * 100 < mindChance) {
                     actionPointConsumed = false;
                 } else {
@@ -1380,7 +1381,8 @@
 
             let actionPointConsumed = true;
             let mindMessageShown = false;
-            const mindChance = playerTalents.心性 / 2;
+            const totalTalents = getTotalTalents();
+            const mindChance = totalTalents.心性 / 2;
             if (Math.random() * 100 < mindChance) {
                 actionPointConsumed = false;
                 mindMessageShown = true;
@@ -1389,7 +1391,9 @@
             }
             
             const config = actionConfigs[action];
-            const talentBonus = playerTalents[config.talentBonus] / 2;
+            const totalTalentsForAction = getTotalTalents();
+            const talentBase = totalTalentsForAction[config.talentBonus];
+            const talentBonus = talentBase / 2;
             
             // 根据难度调整成功率计算
             let moodBonus = 10; // 默认普通难度
@@ -1407,7 +1411,8 @@
             }
             
             const randomRoll = Math.random() * 100;
-            const finalValue = (randomRoll + talentBonus) * (playerMood + moodBonus) / 100;
+            const moodFactor = (playerMood + moodBonus) / 100;
+            const finalValue = (randomRoll + talentBonus) * moodFactor;
 
             let successLevel, successText, moodCost;
             let statChange = {};
@@ -1500,6 +1505,7 @@
 
             const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
 
+            const calcText = `(${randomRoll.toFixed(2)}+${config.talentBonus}补正${talentBonus.toFixed(2)}) x 体力和难度系数${moodFactor.toFixed(2)} = ${finalValue.toFixed(2)}`;
             let changeText = '';
             Object.entries(statChange).forEach(([key, value]) => {
                 changeText += `<br>${key}: ${value > 0 ? '+' : ''}${value}`;
@@ -1536,6 +1542,7 @@
                 `{{user}}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
                 `选择结果：${successLevel} - ${successText}<br><br>` +
+                `计算过程：${calcText}<br>` +
                 `属性变化：${changeText}`;
 
             updateAllDisplays();
@@ -1757,8 +1764,9 @@
                         combatStats.攻击力 += 10;
                         checkAllValueRanges();
                         updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
                         setTimeout(() => {
-                            showModal(`攻击力提升至 ${combatStats.攻击力}`);
+                            showModal(`攻击力提升至 ${totalCombat.攻击力}`);
                         }, 100);
                     }
                 );
@@ -1776,8 +1784,9 @@
                         combatStats.生命值 += 25;
                         checkAllValueRanges();
                         updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
                         setTimeout(() => {
-                            showModal(`生命值提升至 ${combatStats.生命值}`);
+                            showModal(`生命值提升至 ${totalCombat.生命值}`);
                         }, 100);
                     }
                 );
@@ -1809,8 +1818,8 @@
                 const battleData = {
                     player: {
                         name: '你',
-                        attack: combatStats.攻击力,
-                        health: combatStats.生命值
+                        attack: getTotalCombatStats().攻击力,
+                        health: getTotalCombatStats().生命值
                     },
                     enemy: {
                         name: npc.name,
@@ -1947,8 +1956,8 @@
             const battleData = {
                 player: {
                     name: '你',
-                    attack: combatStats.攻击力,
-                    health: combatStats.生命值
+                    attack: getTotalCombatStats().攻击力,
+                    health: getTotalCombatStats().生命值
                 },
                 enemy: {
                     name: enemyInfo.名称,
@@ -2443,6 +2452,24 @@
             updateEquipmentSlot('armor-slot', equipment.防具);
             updateEquipmentSlot('accessory1-slot', equipment.饰品1);
             updateEquipmentSlot('accessory2-slot', equipment.饰品2);
+
+            const slotBindings = [
+                { id: 'weapon-slot', item: equipment.武器 },
+                { id: 'armor-slot', item: equipment.防具 },
+                { id: 'accessory1-slot', item: equipment.饰品1 },
+                { id: 'accessory2-slot', item: equipment.饰品2 }
+            ];
+            slotBindings.forEach(({ id, item }) => {
+                const slot = document.getElementById(id);
+                if (!slot) return;
+                if (item) {
+                    slot.onclick = () => showEquippedItemDetail(item);
+                    slot.style.cursor = 'pointer';
+                } else {
+                    slot.onclick = null;
+                    slot.style.cursor = 'default';
+                }
+            });
             
             // 显示当前装备效果
             const effectDiv = document.getElementById('equipment-effect');
@@ -2471,6 +2498,61 @@
             });
             
             toggleDropdown('attribute-dropdown');
+        }
+
+        // 显示已装备物品详情
+        function showEquippedItemDetail(itemName) {
+            const item = item_list[itemName];
+            if (!item) return;
+
+            const existingDetailModal = document.getElementById('item-detail-modal');
+            if (existingDetailModal.style.display === 'block') {
+                closeItemDetailModal();
+            }
+
+            document.getElementById('item-name').textContent = itemName;
+            document.getElementById('item-description').textContent = item.描述;
+
+            let infoHTML = '';
+            if (item.可交易) {
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">买入价格：</span>${item.买入价格} 金</div>`;
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">卖出价格：</span>${item.卖出价格} 金</div>`;
+            }
+            if (item.可装备) {
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">装备类型：</span>${item.装备类型}</div>`;
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+            }
+            if (item.可使用) {
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;
+            }
+            document.getElementById('item-info').innerHTML = infoHTML;
+
+            const actionsDiv = document.getElementById('item-actions');
+            actionsDiv.innerHTML = '';
+
+            const unequipBtn = document.createElement('button');
+            unequipBtn.className = 'modal-btn unequip-btn';
+            unequipBtn.textContent = '卸下';
+            unequipBtn.onclick = () => unequipItem(itemName);
+            actionsDiv.appendChild(unequipBtn);
+
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'modal-btn cancel';
+            closeBtn.textContent = '关闭';
+            closeBtn.onclick = () => closeItemDetailModal();
+            actionsDiv.appendChild(closeBtn);
+
+            const modal = document.getElementById('item-detail-modal');
+            modal.style.display = 'block';
+
+            const equipmentModal = document.getElementById('equipment-modal');
+            const equipmentRect = equipmentModal.getBoundingClientRect();
+            const detailContent = modal.querySelector('.modal-content');
+
+            detailContent.style.position = 'fixed';
+            detailContent.style.left = equipmentRect.left + equipmentRect.width / 2 + 'px';
+            detailContent.style.top = equipmentRect.top + equipmentRect.height / 2 + 'px';
+            detailContent.style.transform = 'translate(-50%, -50%)';
         }
 
         // 关闭弹窗函数

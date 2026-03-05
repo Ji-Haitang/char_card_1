@@ -242,18 +242,21 @@ function updateAllDisplays() {
 
 // 更新属性显示
 function updateStatsDisplay() {
+    const totalTalents = getTotalTalents();
+    const totalCombat = getTotalCombatStats();
+
     // 更新天赋
-    document.getElementById('talent-gengu').style.width = playerTalents.根骨 + '%';
-    document.getElementById('talent-gengu-value').textContent = playerTalents.根骨;
+    document.getElementById('talent-gengu').style.width = Math.min(100, totalTalents.根骨) + '%';
+    document.getElementById('talent-gengu-value').textContent = totalTalents.根骨;
     
-    document.getElementById('talent-wuxing').style.width = playerTalents.悟性 + '%';
-    document.getElementById('talent-wuxing-value').textContent = playerTalents.悟性;
+    document.getElementById('talent-wuxing').style.width = Math.min(100, totalTalents.悟性) + '%';
+    document.getElementById('talent-wuxing-value').textContent = totalTalents.悟性;
     
-    document.getElementById('talent-xinxing').style.width = playerTalents.心性 + '%';
-    document.getElementById('talent-xinxing-value').textContent = playerTalents.心性;
+    document.getElementById('talent-xinxing').style.width = Math.min(100, totalTalents.心性) + '%';
+    document.getElementById('talent-xinxing-value').textContent = totalTalents.心性;
     
-    document.getElementById('talent-meili').style.width = playerTalents.魅力 + '%';
-    document.getElementById('talent-meili-value').textContent = playerTalents.魅力;
+    document.getElementById('talent-meili').style.width = Math.min(100, totalTalents.魅力) + '%';
+    document.getElementById('talent-meili-value').textContent = totalTalents.魅力;
     
     // 更新人物数值
     document.getElementById('stat-wuxue-value').textContent = playerStats.武学;
@@ -262,8 +265,8 @@ function updateStatsDisplay() {
     document.getElementById('stat-jinqian-value').textContent = playerStats.金钱;
     
     // 更新战斗数值
-    document.getElementById('combat-attack-value').textContent = combatStats.攻击力;
-    document.getElementById('combat-hp-value').textContent = combatStats.生命值;
+    document.getElementById('combat-attack-value').textContent = totalCombat.攻击力;
+    document.getElementById('combat-hp-value').textContent = totalCombat.生命值;
     
     // 更新剩余点数
     const remainingPoints = calculateRemainingPoints();

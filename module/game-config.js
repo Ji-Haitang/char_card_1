@@ -53,6 +53,14 @@ const valueRanges = {
         攻击力: { min: 10, max: 300 },
         生命值: { min: 25, max: 600 }
     },
+    equipStats: {
+        攻击力: { min: 0, max: 300 },
+        生命值: { min: 0, max: 600 },
+        根骨: { min: 0, max: 100 },
+        悟性: { min: 0, max: 100 },
+        心性: { min: 0, max: 100 },
+        魅力: { min: 0, max: 100 }
+    },
     playerMood: { min: 0, max: 120 },
     npcFavorability: { min: 0, max: 100 },
     actionPoints: { min: 0, max: 3 },
@@ -1077,8 +1085,8 @@ const item_list = {
         "影响数值": null,
         "可装备": true,
         "装备类型": "饰品",
-        "装备属性": "悟性",
-        "装备数值": 5
+        "装备属性": "心性",
+        "装备数值": 999
     },
     // 心性类饰品
     "凝神香囊": {
@@ -1303,6 +1311,7 @@ const defaultGameData = {
     playerTalents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
     playerStats:   { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 },
     combatStats:   { "攻击力": 20, "生命值": 50 },
+    equipStats:    { "攻击力": 0, "生命值": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 },
     playerMood: 100,
     martialArts: {
         "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
@@ -1322,7 +1331,7 @@ const defaultGameData = {
     npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, /* "Z": false, */ "M": false, "N": false, "O": false}, // 新增：本周是否已切磋
     lastFarmWeek: 1,  // 新增：上次耕种的周数
     farmGrid: [],     // 新增：农场地块状态
-    inventory: {},
+    inventory: {"星罗盘坠": 1}, // 新增：玩家物品栏，初始拥有一个星罗盘坠
     equipment: {
         "武器": null,
         "防具": null,

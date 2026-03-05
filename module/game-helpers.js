@@ -52,13 +52,22 @@ async function handleMessageOutput(message) {
     // 保存原始未处理的消息（用于弹窗展示）
     const unprocessed_message = message;
     
-    // 处理消息：去除"属性变化"及其后面的部分
+    // 处理消息：先去除"属性变化"及其后面的部分
     const attrChangeIndex = message.indexOf('属性变化');
     if (attrChangeIndex !== -1) {
         message = message.substring(0, attrChangeIndex).trim();
         // 移除末尾可能残留的<br>标签
         message = message.replace(/(<br>\s*)+$/gi, '');
         console.log('已移除属性变化部分，处理后消息:', message);
+    }
+
+    // 再去除"计算过程"及其后面的部分
+    const calcProcessIndex = message.indexOf('计算过程');
+    if (calcProcessIndex !== -1) {
+        message = message.substring(0, calcProcessIndex).trim();
+        // 移除末尾可能残留的<br>标签
+        message = message.replace(/(<br>\s*)+$/gi, '');
+        console.log('已移除计算过程部分，处理后消息:', message);
     }
 
     if (isInRenderEnvironment()) {
@@ -266,7 +275,8 @@ function showAlchemyGame() {
     // 调试日志：输出传递的数据
     console.log('[炼丹] 准备传递数据到alchemy.html:');
     console.log('[炼丹] 金钱:', playerStats.金钱);
-    console.log('[炼丹] 天赋属性:', playerTalents);
+    const totalTalents = getTotalTalents();
+    console.log('[炼丹] 天赋属性:', totalTalents);
     console.log('[炼丹] 药材数量:', herbCounts);
     console.log('[炼丹] 丹药数量:', pillCounts);
     
@@ -274,10 +284,10 @@ function showAlchemyGame() {
     const params = new URLSearchParams({
         money: playerStats.金钱,
         // 天赋属性（用于属性提升计算）
-        rootBone: playerTalents.根骨,
-        comprehension: playerTalents.悟性,
-        nature: playerTalents.心性,
-        charm: playerTalents.魅力,
+        rootBone: totalTalents.根骨,
+        comprehension: totalTalents.悟性,
+        nature: totalTalents.心性,
+        charm: totalTalents.魅力,
         // 药材数量
         ...herbCounts,
         // 丹药数量
@@ -1060,6 +1070,12 @@ async function useItem(itemName) {
     
     if (item.影响属性 === 'playerMood') {
         playerMood = Math.min(120, playerMood + item.影响数值);  // 从100改为120
+    } else if (playerTalents.hasOwnProperty(item.影响属性)) {
+        playerTalents[item.影响属性] += item.影响数值;
+    } else if (playerStats.hasOwnProperty(item.影响属性)) {
+        playerStats[item.影响属性] += item.影响数值;
+    } else if (combatStats.hasOwnProperty(item.影响属性)) {
+        combatStats[item.影响属性] += item.影响数值;
     }
     
     inventory[itemName]--;
@@ -1103,31 +1119,18 @@ async function equipItem(itemName) {
     // 如果槽位已有装备，先卸下旧装备
     const oldEquipment = equipment[targetSlot];
     if (oldEquipment) {
-        const oldItem = item_list[oldEquipment];
-        if (oldItem) {
-            // 减去旧装备的属性
-            if (oldItem.装备属性 === '攻击力') {
-                combatStats.攻击力 -= oldItem.装备数值;
-            } else if (oldItem.装备属性 === '生命值') {
-                combatStats.生命值 -= oldItem.装备数值;
-            }
-        }
         inventory[oldEquipment] = (inventory[oldEquipment] || 0) + 1;
     }
     
-    // 装备新道具，直接加上属性
+    // 装备新道具，更新装备槽
     equipment[targetSlot] = itemName;
-    if (item.装备属性 === '攻击力') {
-        combatStats.攻击力 += item.装备数值;
-    } else if (item.装备属性 === '生命值') {
-        combatStats.生命值 += item.装备数值;
-    }
     
     inventory[itemName]--;
     if (inventory[itemName] <= 0) {
         delete inventory[itemName];
     }
     
+    refreshEquipStatsFromEquipment();
     checkAllValueRanges();
     updateAllDisplays();
     // await saveGameData();
@@ -1150,19 +1153,10 @@ async function unequipItem(itemName) {
     
     if (!slot) return;
     
-    const item = item_list[itemName];
-    if (item) {
-        // 减去装备的属性
-        if (item.装备属性 === '攻击力') {
-            combatStats.攻击力 -= item.装备数值;
-        } else if (item.装备属性 === '生命值') {
-            combatStats.生命值 -= item.装备数值;
-        }
-    }
-    
     equipment[slot] = null;
     inventory[itemName] = (inventory[itemName] || 0) + 1;
     
+    refreshEquipStatsFromEquipment();
     checkAllValueRanges();
     updateAllDisplays();
     // await saveGameData();

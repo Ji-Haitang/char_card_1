@@ -299,7 +299,8 @@ function parseLLMResponse(response, mainTextContent) {
                     let finalChangeValue = changeValue;
                     let charmMessageShown = false;
                     if (changeValue > 0) {
-                        const charmChance = playerTalents.魅力 / 2;
+                        const totalTalents = getTotalTalents();
+                        const charmChance = totalTalents.魅力 / 2;
                         if (Math.random() * 100 < charmChance) {
                             finalChangeValue = changeValue * 2;
                             charmMessageShown = true;
@@ -393,7 +394,8 @@ function parseLLMResponse(response, mainTextContent) {
                     let finalChangeValue = changeValue;
                     let charmMessageShown = false;
                     if (changeValue > 0) {
-                        const charmChance = playerTalents.魅力 / 2;
+                        const totalTalents = getTotalTalents();
+                        const charmChance = totalTalents.魅力 / 2;
                         if (Math.random() * 100 < charmChance) {
                             finalChangeValue = changeValue * 2;
                             charmMessageShown = true;
@@ -743,12 +745,18 @@ function setupMessageListeners() {
                 inventory['霹雳丸'] = event.data.pills.piliwan || 0;
             }
             
-            // 更新天赋属性（直接赋值，因为alchemy返回的是完整值而非增量）
+            // 更新天赋属性（alchemy返回的是总值，需要扣除装备加成）
             if (event.data.playerStats) {
-                playerTalents.根骨 = event.data.playerStats.rootBone ?? playerTalents.根骨;
-                playerTalents.悟性 = event.data.playerStats.comprehension ?? playerTalents.悟性;
-                playerTalents.心性 = event.data.playerStats.nature ?? playerTalents.心性;
-                playerTalents.魅力 = event.data.playerStats.charm ?? playerTalents.魅力;
+                const equipBonus = (typeof equipStats === 'object' && equipStats) ? equipStats : { "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
+                const totalRoot = event.data.playerStats.rootBone ?? playerTalents.根骨 + (equipBonus.根骨 || 0);
+                const totalComp = event.data.playerStats.comprehension ?? playerTalents.悟性 + (equipBonus.悟性 || 0);
+                const totalNature = event.data.playerStats.nature ?? playerTalents.心性 + (equipBonus.心性 || 0);
+                const totalCharm = event.data.playerStats.charm ?? playerTalents.魅力 + (equipBonus.魅力 || 0);
+
+                playerTalents.根骨 = clampValue(totalRoot - (equipBonus.根骨 || 0), valueRanges.playerTalents.根骨.min, valueRanges.playerTalents.根骨.max);
+                playerTalents.悟性 = clampValue(totalComp - (equipBonus.悟性 || 0), valueRanges.playerTalents.悟性.min, valueRanges.playerTalents.悟性.max);
+                playerTalents.心性 = clampValue(totalNature - (equipBonus.心性 || 0), valueRanges.playerTalents.心性.min, valueRanges.playerTalents.心性.max);
+                playerTalents.魅力 = clampValue(totalCharm - (equipBonus.魅力 || 0), valueRanges.playerTalents.魅力.min, valueRanges.playerTalents.魅力.max);
             }
             
             // 清理数量为0的物品
