@@ -179,11 +179,60 @@
                                     </div>
                                 </div>
                                 <div class="simple-stat-item">
+                                    <span class="simple-stat-name">暴击率</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-crit-rate-value">10%</span>
+                                        <button class="add-point-btn" id="add-crit-rate-btn" onclick="addCritRate()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">暴击伤害</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-crit-damage-value">150%</span>
+                                        <button class="add-point-btn" id="add-crit-damage-btn" onclick="addCritDamage()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">格挡</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-block-value">0</span>
+                                        <button class="add-point-btn" id="add-block-btn" onclick="addBlock()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">穿甲</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-armor-pen-value">0</span>
+                                        <button class="add-point-btn" id="add-armor-pen-btn" onclick="addArmorPen()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">回转</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-turnover-value">0.00</span>
+                                        <button class="add-point-btn" id="add-turnover-btn" onclick="addTurnover()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">吸血</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-lifesteal-value">0%</span>
+                                        <button class="add-point-btn" id="add-lifesteal-btn" onclick="addLifesteal()">+</button>
+                                    </div>
+                                </div>
+                                <div class="simple-stat-item">
+                                    <span class="simple-stat-name">反伤</span>
+                                    <div class="point-control">
+                                        <span class="simple-stat-value" id="combat-thorns-value">0%</span>
+                                        <button class="add-point-btn" id="add-thorns-btn" onclick="addThorns()">+</button>
+                                    </div>
+                                </div>
+                                <div class="stats-divider"></div>
+                                <div class="simple-stat-item remaining-points-row">
                                     <span class="simple-stat-name">剩余点数</span>
                                     <span class="simple-stat-value" id="remaining-points-value">0</span>
                                 </div>
                                 <div class="skill-list">
-                                    <div class="simple-stat-name" style="margin-bottom: 10px;">已学武功</div>
                                     <div id="learned-skills"></div>
                                 </div>
                             </div>
@@ -1787,6 +1836,139 @@
                         const totalCombat = getTotalCombatStats();
                         setTimeout(() => {
                             showModal(`生命值提升至 ${totalCombat.生命值}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addCritRate() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加15%暴击率？',
+                    () => {
+                        combatStats.暴击率 += 15;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`暴击率提升至 ${totalCombat.暴击率}%`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addCritDamage() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加20%暴击伤害？',
+                    () => {
+                        combatStats.暴击伤害 += 20;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`暴击伤害提升至 ${totalCombat.暴击伤害}%`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addBlock() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加10点格挡？',
+                    () => {
+                        combatStats.格挡 += 10;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`格挡提升至 ${totalCombat.格挡}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addArmorPen() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加10点穿甲？',
+                    () => {
+                        combatStats.穿甲 += 10;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`穿甲提升至 ${totalCombat.穿甲}`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addLifesteal() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加15%吸血？',
+                    () => {
+                        combatStats.吸血 += 15;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`吸血提升至 ${totalCombat.吸血}%`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addThorns() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加15%反伤？',
+                    () => {
+                        combatStats.反伤 += 15;
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`反伤提升至 ${totalCombat.反伤}%`);
+                        }, 100);
+                    }
+                );
+            }
+        }
+
+        function addTurnover() {
+            const remainingPoints = calculateRemainingPoints();
+            if (remainingPoints > 0) {
+                showConfirmModal(
+                    '确认加点',
+                    '消耗1点分配点数，增加0.10回转？',
+                    () => {
+                        combatStats.回转 = Number((combatStats.回转 + 0.1).toFixed(2));
+                        checkAllValueRanges();
+                        updateStatsDisplay();
+                        const totalCombat = getTotalCombatStats();
+                        setTimeout(() => {
+                            showModal(`回转提升至 ${Number(totalCombat.回转 || 0).toFixed(2)}`);
                         }, 100);
                     }
                 );

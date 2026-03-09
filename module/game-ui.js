@@ -267,6 +267,13 @@ function updateStatsDisplay() {
     // 更新战斗数值
     document.getElementById('combat-attack-value').textContent = totalCombat.攻击力;
     document.getElementById('combat-hp-value').textContent = totalCombat.生命值;
+    document.getElementById('combat-crit-rate-value').textContent = `${totalCombat.暴击率}%`;
+    document.getElementById('combat-crit-damage-value').textContent = `${totalCombat.暴击伤害}%`;
+    document.getElementById('combat-block-value').textContent = totalCombat.格挡;
+    document.getElementById('combat-armor-pen-value').textContent = totalCombat.穿甲;
+    document.getElementById('combat-turnover-value').textContent = Number(totalCombat.回转 || 0).toFixed(2);
+    document.getElementById('combat-lifesteal-value').textContent = `${totalCombat.吸血}%`;
+    document.getElementById('combat-thorns-value').textContent = `${totalCombat.反伤}%`;
     
     // 更新剩余点数
     const remainingPoints = calculateRemainingPoints();
@@ -275,6 +282,21 @@ function updateStatsDisplay() {
     // 更新加点按钮状态
     document.getElementById('add-attack-btn').disabled = remainingPoints <= 0;
     document.getElementById('add-hp-btn').disabled = remainingPoints <= 0;
+    const extraButtons = [
+        'add-crit-rate-btn',
+        'add-crit-damage-btn',
+        'add-block-btn',
+        'add-armor-pen-btn',
+        'add-turnover-btn',
+        'add-lifesteal-btn',
+        'add-thorns-btn'
+    ];
+    extraButtons.forEach(id => {
+        const btn = document.getElementById(id);
+        if (btn) {
+            btn.disabled = remainingPoints <= 0;
+        }
+    });
     
     // 更新已学武功列表
     const skillsContainer = document.getElementById('learned-skills');

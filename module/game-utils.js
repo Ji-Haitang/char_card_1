@@ -61,6 +61,13 @@ function clampValue(value, min, max) {
 }
 
 function checkAllValueRanges() {
+    if (!combatStats || typeof combatStats !== 'object') {
+        combatStats = {};
+    }
+    if (!equipStats || typeof equipStats !== 'object') {
+        equipStats = getEmptyEquipStats();
+    }
+
     // 检查天赋属性
     for (let key in playerTalents) {
         const range = valueRanges.playerTalents[key];
@@ -73,20 +80,31 @@ function checkAllValueRanges() {
         playerStats[key] = clampValue(playerStats[key], range.min, range.max);
     }
     
-    // 检查战斗数值
-    for (let key in combatStats) {
-        const range = valueRanges.combatStats[key];
-        combatStats[key] = clampValue(combatStats[key], range.min, range.max);
-    }
-
     // 检查装备加成数值
     if (typeof equipStats === 'object' && equipStats) {
-        for (let key in equipStats) {
+        for (let key in valueRanges.equipStats) {
             const range = valueRanges.equipStats[key];
-            if (range) {
-                equipStats[key] = clampValue(equipStats[key], range.min, range.max);
+            if (!range) continue;
+            if (typeof equipStats[key] !== 'number') {
+                equipStats[key] = 0;
             }
+            equipStats[key] = clampValue(equipStats[key], range.min, range.max);
         }
+    }
+
+    // 检查战斗数值（按“总值范围”约束基础值）
+    for (let key in valueRanges.combatStats) {
+        const range = valueRanges.combatStats[key];
+        const equipBonus = (equipStats && typeof equipStats === 'object') ? (equipStats[key] || 0) : 0;
+        if (typeof combatStats[key] !== 'number') {
+            const fallback = (defaultGameData && defaultGameData.combatStats && typeof defaultGameData.combatStats[key] === 'number')
+                ? defaultGameData.combatStats[key]
+                : range.min;
+            combatStats[key] = fallback;
+        }
+        const baseMin = Math.max(0, range.min - equipBonus);
+        const baseMax = Math.max(baseMin, range.max - equipBonus);
+        combatStats[key] = clampValue(combatStats[key], baseMin, baseMax);
     }
     
     playerMood = clampValue(playerMood, valueRanges.playerMood.min, valueRanges.playerMood.max);
@@ -100,7 +118,21 @@ function checkAllValueRanges() {
 }
 
 function getEmptyEquipStats() {
-    return { "攻击力": 0, "生命值": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
+    return {
+        "攻击力": 0,
+        "生命值": 0,
+        "暴击率": 0,
+        "暴击伤害": 0,
+        "格挡": 0,
+        "穿甲": 0,
+        "回转": 0,
+        "吸血": 0,
+        "反伤": 0,
+        "根骨": 0,
+        "悟性": 0,
+        "心性": 0,
+        "魅力": 0
+    };
 }
 
 function calculateEquipStatsFromEquipment(equipmentData) {
@@ -123,10 +155,14 @@ function refreshEquipStatsFromEquipment() {
 }
 
 function getTotalCombatStats() {
-    return {
-        "攻击力": combatStats.攻击力 + (equipStats?.攻击力 || 0),
-        "生命值": combatStats.生命值 + (equipStats?.生命值 || 0)
-    };
+    const totals = {};
+    for (let key in valueRanges.combatStats) {
+        const baseValue = (combatStats && typeof combatStats === 'object') ? (combatStats[key] || 0) : 0;
+        const equipValue = (equipStats && typeof equipStats === 'object') ? (equipStats[key] || 0) : 0;
+        const range = valueRanges.combatStats[key];
+        totals[key] = clampValue(baseValue + equipValue, range.min, range.max);
+    }
+    return totals;
 }
 
 function getTotalTalents() {
@@ -184,8 +220,8 @@ function calculateLevelFromWuxue(wuxue) {
     let totalWuxue = 0;
     let level = 0;
     
-    for (let i = 1; i <= 20; i++) {
-        const requiredWuxue = 4 + i;
+    for (let i = 1; i <= 30; i++) {
+        const requiredWuxue = Math.ceil(2 + i / 2);
         if (totalWuxue + requiredWuxue <= wuxue) {
             totalWuxue += requiredWuxue;
             level = i;
@@ -200,7 +236,7 @@ function calculateLevelFromWuxue(wuxue) {
 function calculateWuxueForLevel(level) {
     let totalWuxue = 0;
     for (let i = 1; i <= level; i++) {
-        totalWuxue += (4 + i);
+        totalWuxue += Math.ceil(2 + i / 2);
     }
     return totalWuxue;
 }
@@ -488,8 +524,17 @@ function calculateRemainingPoints() {
     // 基于人物基础数值计算已使用的点数
     const usedForAttack = (combatStats.攻击力 - 20) / 10;
     const usedForHP = (combatStats.生命值 - 50) / 25;
-    const totalUsed = usedForAttack + usedForHP;
+    const usedForCritRate = (combatStats.暴击率 - 10) / 15;
+    const usedForCritDamage = (combatStats.暴击伤害 - 150) / 20;
+    const usedForBlock = (combatStats.格挡 - 0) / 10;
+    const usedForArmorPen = (combatStats.穿甲 - 0) / 10;
+    const usedForLifesteal = (combatStats.吸血 - 0) / 15;
+    const usedForThorns = (combatStats.反伤 - 0) / 15;
+    const usedForTurnover = (combatStats.回转 - 0) / 0.1;
+    const totalUsed = usedForAttack + usedForHP + usedForCritRate + usedForCritDamage + usedForBlock + usedForArmorPen + usedForLifesteal + usedForThorns + usedForTurnover;
+    const remaining = earnedLevels - totalUsed;
+    const integerRemaining = Math.round(remaining);
     
-    return Math.max(0, earnedLevels - totalUsed);
+    return Math.max(0, integerRemaining);
 }
 

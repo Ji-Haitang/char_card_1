@@ -63,8 +63,8 @@ let userLocation = "shanmen";
 let userLocation_old = "shanmen";
 let playerTalents = { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 };
 let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
-let combatStats = { "攻击力": 20, "生命值": 50 };
-let equipStats = { "攻击力": 0, "生命值": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
+let combatStats = { "攻击力": 20, "生命值": 50, "暴击率": 10, "暴击伤害": 150, "格挡": 0, "穿甲": 0, "回转": 0, "吸血": 0, "反伤": 0 };
+let equipStats = { "攻击力": 0, "生命值": 0, "暴击率": 0, "暴击伤害": 0, "格挡": 0, "穿甲": 0, "回转": 0, "吸血": 0, "反伤": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
 let userBackground = "A"; // 新增：出身编码
 let textFontLevel = 2; // 新增：正文字体档位 1~5
 let uiStyle = 0; // 新增：UI风格（0=古风UI，1=扁平化UI）

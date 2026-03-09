@@ -195,10 +195,22 @@ function showBattleGame(battleData) {
         piliwan: inventory['霹雳丸'] || 0
     };
 
+    const totalCombat = getTotalCombatStats();
+    const playerName = battleData.player?.name || '你';
+    const playerAttack = (typeof battleData.player?.attack === 'number') ? battleData.player.attack : totalCombat.攻击力;
+    const playerHealth = (typeof battleData.player?.health === 'number') ? battleData.player.health : totalCombat.生命值;
+
     const params = new URLSearchParams({
-        playerName: battleData.player.name,
-        playerAttack: battleData.player.attack,
-        playerHealth: battleData.player.health,
+        playerName: playerName,
+        playerAttack: playerAttack,
+        playerHealth: playerHealth,
+        playerCritRate: totalCombat.暴击率,
+        playerCritDamage: totalCombat.暴击伤害,
+        playerBlock: totalCombat.格挡,
+        playerArmorPen: totalCombat.穿甲,
+        playerTurnover: totalCombat.回转,
+        playerLifesteal: totalCombat.吸血,
+        playerThorns: totalCombat.反伤,
         enemyName: battleData.enemy.name,
         enemyMaxHealth: battleData.enemy.maxHealth,
         enemyBasicDamage: battleData.enemy.basicDamage,
@@ -209,8 +221,8 @@ function showBattleGame(battleData) {
         ...itemCounts
     });
     
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
-    // const gameUrl = `turn-based-battle.html?${params.toString()}`;
+    // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
+    const gameUrl = `turn-based-battle.html?${params.toString()}`;
     iframe.src = gameUrl;
     
     modal.style.display = 'block';

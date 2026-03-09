@@ -775,6 +775,18 @@ body {
     color: #4a4a4a;
 }
 
+.stats-divider {
+    height: 1px;
+    background: #d6d6d6;
+    margin: clamp(4px, 1vw, 8px) 0 clamp(10px, 2vw, 15px);
+}
+
+.remaining-points-row .simple-stat-name,
+.remaining-points-row .simple-stat-value,
+.skill-list .simple-stat-name {
+    font-size: clamp(0.9rem, 2.2vw, 1.1rem);
+}
+
 /* 加点按钮 */
 .point-control {
     display: flex;

@@ -491,6 +491,10 @@ body {
     border-color: var(--accent-red) !important;
 }
 
+.stats-divider {
+    background: var(--ink-light) !important;
+}
+
 /* 强制所有文字使用衬线体 */
 .stat-name, .simple-stat-name, .simple-stat-value, .stat-value, 
 .relationship-name, .relationship-value, .checkbox-label, .npc-info-desc, .npc-info-name {
