@@ -1669,39 +1669,6 @@ body {
 // //回合制系统集成更新 - 获取URL参数
 const urlParams = new URLSearchParams(window.location.search);
 
-const DEFAULT_COMBAT_STATS = {
-    critRate: 10,
-    critDamage: 150,
-    block: 0,
-    armorPen: 0,
-    turnover: 0,
-    lifesteal: 0,
-    thorns: 0
-};
-
-function parseStatParam(name, fallback) {
-    const raw = urlParams.get(name);
-    if (raw === null || raw === '') return fallback;
-    const value = Number(raw);
-    return Number.isFinite(value) ? value : fallback;
-}
-
-function clampStat(value, min, max) {
-    return Math.max(min, Math.min(max, value));
-}
-
-function getCombatParams(prefix) {
-    return {
-        critRate: clampStat(parseStatParam(`${prefix}CritRate`, DEFAULT_COMBAT_STATS.critRate), 0, 100),
-        critDamage: clampStat(parseStatParam(`${prefix}CritDamage`, DEFAULT_COMBAT_STATS.critDamage), 0, 250),
-        block: Math.max(0, parseStatParam(`${prefix}Block`, DEFAULT_COMBAT_STATS.block)),
-        armorPen: Math.max(0, parseStatParam(`${prefix}ArmorPen`, DEFAULT_COMBAT_STATS.armorPen)),
-        turnover: clampStat(parseStatParam(`${prefix}Turnover`, DEFAULT_COMBAT_STATS.turnover), 0, 1),
-        lifesteal: clampStat(parseStatParam(`${prefix}Lifesteal`, DEFAULT_COMBAT_STATS.lifesteal), 0, 100),
-        thorns: clampStat(parseStatParam(`${prefix}Thorns`, DEFAULT_COMBAT_STATS.thorns), 0, 100)
-    };
-}
-
 // 敌人类别列表（用于模糊匹配）
 const ENEMY_CATEGORIES = ['正派弟子', '反派弟子', '游侠', '军士', '匪徒', '平民', '蒙面人', '野兽', '未知'];
 
@@ -1941,11 +1908,9 @@ const PLAYER_INFO = {
     maxHealth: parseInt(urlParams.get('playerHealth')) || 51,
     currentHealth: parseInt(urlParams.get('playerHealth')) || 51,
     energy: 0,
-    energyPrecise: 0,
     maxEnergy: 10,
     selectedAction: null,
     basicDamage: parseInt(urlParams.get('playerAttack')) || 20,
-    ...getCombatParams('player'),
     tauntedTurns: 0  // 挑衅状态剩余回合数
 };
 
@@ -2144,68 +2109,6 @@ const STYLE_STRATEGIES = {
     }
 };
 
-// 武学阶段定义（点数区间依据武学->点数公式）
-const WUXUE_STAGE_DEFS = [
-    { index: 0, pointsRange: [0, 7], label: '未曾习武' },
-    { index: 1, pointsRange: [8, 11], label: '初学乍练' },
-    { index: 2, pointsRange: [12, 14], label: '小有所成' },
-    { index: 3, pointsRange: [15, 17], label: '融会贯通' },
-    { index: 4, pointsRange: [18, 20], label: '驾轻就熟' },
-    { index: 5, pointsRange: [21, 22], label: '登堂入室' },
-    { index: 6, pointsRange: [23, 24], label: '炉火纯青' },
-    { index: 7, pointsRange: [25, 26], label: '一代宗师' },
-    { index: 8, pointsRange: [27, 28], label: '登峰造极' },
-    { index: 9, pointsRange: [29, 30], label: '武林至尊' }
-];
-
-// 随机NPC加点权重（每项总和=100，攻击力+生命值=66，其余=34）
-const STYLE_ATTRIBUTE_WEIGHTS = {
-    '风': {
-        攻击力: 40,
-        生命值: 26,
-        回转: 10,
-        穿甲: 10,
-        暴击率: 7,
-        暴击伤害: 5,
-        吸血: 1,
-        反伤: 1,
-        格挡: 0
-    },
-    '火': {
-        攻击力: 46,
-        生命值: 20,
-        暴击率: 10,
-        暴击伤害: 10,
-        穿甲: 6,
-        吸血: 4,
-        回转: 2,
-        格挡: 1,
-        反伤: 1
-    },
-    '林': {
-        攻击力: 30,
-        生命值: 36,
-        回转: 10,
-        格挡: 10,
-        暴击率: 5,
-        暴击伤害: 5,
-        穿甲: 2,
-        吸血: 1,
-        反伤: 1
-    },
-    '山': {
-        攻击力: 26,
-        生命值: 40,
-        格挡: 12,
-        反伤: 10,
-        吸血: 5,
-        回转: 5,
-        穿甲: 1,
-        暴击率: 1,
-        暴击伤害: 0
-    }
-};
-
 // 根据能量获取对应的策略配置
 function getEnergyRangeKey(energy) {
     if (energy === 0) return 0;
@@ -2218,154 +2121,106 @@ function getEnergyRangeKey(energy) {
 const commonNPCs = {
     '破阵子': {
         name: '破阵子',
-        maxHealth: 200, // Lv18 -> Lv27 (+9)
+        maxHealth: 200,
         basicDamage: 140,
-        critRate: 70,
-        critDamage: 210,
-        armorPen: 10,
-        lifesteal: 15,
         style: '火',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.png'
     },
     '洞庭君': {
         name: '洞庭君',
-        maxHealth: 275, // Lv17 -> Lv26 (+9)
+        maxHealth: 275,
         basicDamage: 100,
-        turnover: 0.4,
-        block: 30,
-        critRate: 25,
-        critDamage: 170,
         style: '林',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.png'
     },
     '苓雪妃': {
         name: '苓雪妃',
-        maxHealth: 250, // Lv22 -> Lv33 (+11)
+        maxHealth: 250,
         basicDamage: 160,
-        turnover: 0.4,
-        armorPen: 40,
-        critRate: 40,
-        critDamage: 170,
         style: '风',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/苓雪妃.png'
     },    
     '玄天青': {
         name: '玄天青',
-        maxHealth: 300, // Lv14 -> Lv21 (+7)
+        maxHealth: 300,
         basicDamage: 60,
-        block: 30,
-        thorns: 30,
-        turnover: 0.1,
-        lifesteal: 15,
         style: '山',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/玄天青.png'
     },
     '钱塘君': {
         name: '钱塘君',
-        maxHealth: 150, // Lv12 -> Lv18 (+6)
+        maxHealth: 150,
         basicDamage: 100,
-        critRate: 55,
-        critDamage: 190,
-        armorPen: 10,
         style: '火',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.png'
     },
     '萧白瑚': {
         name: '萧白瑚',
-        maxHealth: 125, // Lv7 -> Lv11 (+4)
+        maxHealth: 125,
         basicDamage: 60,
-        turnover: 0.2,
-        armorPen: 20,
         style: '风',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.png'
     },
     '姬姒': {
         name: '姬姒',
-        maxHealth: 350, // Lv17 -> Lv26 (+9)
+        maxHealth: 350,
         basicDamage: 70,
-        block: 40,
-        thorns: 45,
-        turnover: 0.1,
-        lifesteal: 15,
         style: '山',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png'
     },
     '施延年': {
         name: '施延年',
-        maxHealth: 200, // Lv9 -> Lv14 (+5)
+        maxHealth: 200,
         basicDamage: 50,
-        block: 20,
-        thorns: 30,
-        turnover: 0.1,
         style: '山',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.png'
     },
     '呼延显': {
         name: '呼延显',
-        maxHealth: 200, // Lv14 -> Lv21 (+7)
+        maxHealth: 200,
         basicDamage: 100,
-        turnover: 0.3,
-        block: 20,
-        critRate: 25,
-        critDamage: 170,
         style: '林',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png'
     },
     '雨烛': {
         name: '雨烛',
-        maxHealth: 100, // Lv9 -> Lv14 (+5)
+        maxHealth: 100,
         basicDamage: 90,
-        turnover: 0.2,
-        armorPen: 20,
-        critRate: 25,
         style: '风',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.png'
     },
     '安慕': {
         name: '安慕',
-        maxHealth: 75, // Lv10 -> Lv15 (+5)
+        maxHealth: 75,
         basicDamage: 110,
-        critRate: 40,
-        critDamage: 190,
-        armorPen: 10,
         style: '火',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.png'
     },
     '唐沐梨': {
         name: '唐沐梨',
-        maxHealth: 175, // Lv11 -> Lv17 (+6)
+        maxHealth: 175,
         basicDamage: 80,
-        turnover: 0.2,
-        armorPen: 20,
-        critRate: 25,
-        critDamage: 170,
         style: '风',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.png'
     },
     '洛潜幽': {
         name: '洛潜幽',
-        maxHealth: 50, // Lv0 -> Lv0 (+0)
+        maxHealth: 50,
         basicDamage: 20,
         style: '山',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.png'
     },
     '神秘杂役': {
         name: '神秘杂役',
-        maxHealth: 75, // Lv29 -> Lv44 (+15)
+        maxHealth: 75,
         basicDamage: 300,
-        turnover: 0.6,
-        armorPen: 50,
-        critRate: 40,
-        critDamage: 190,
         style: '风',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.png'
     },
     '鹿椿若': {
         name: '鹿椿若',
-        maxHealth: 150, // Lv5 -> Lv8 (+3)
+        maxHealth: 150,
         basicDamage: 30,
-        turnover: 0.2,
-        block: 10,
         style: '林',
         portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/鹿椿若.png'
     }
@@ -2379,7 +2234,6 @@ const genericNPCPortraits = [
 
 // 解析敌方信息的函数
 function parseEnemyInfo(text) {
-    const enemyCombatStats = getCombatParams('enemy');
     // 提取名称
     const nameMatch = text.match(/name:\s*([^\n]+)/);
     const npcName = nameMatch ? nameMatch[1].trim() : '';
@@ -2396,23 +2250,6 @@ function parseEnemyInfo(text) {
     // 优先查找常见NPC
     if (npcName && commonNPCs[npcName]) {
         const npc = commonNPCs[npcName];
-        const overrideStats = {
-            critRate: npc.critRate,
-            critDamage: npc.critDamage,
-            block: npc.block,
-            armorPen: npc.armorPen,
-            turnover: npc.turnover,
-            lifesteal: npc.lifesteal,
-            thorns: npc.thorns
-        };
-        const resolvedStats = { ...enemyCombatStats };
-        const appliedKeys = [];
-        Object.entries(overrideStats).forEach(([key, value]) => {
-            if (typeof value === 'number' && Number.isFinite(value)) {
-                resolvedStats[key] = value;
-                appliedKeys.push(`${key}=${value}`);
-            }
-        });
         // 更新敌人立绘 - 使用战斗差分目录
         const npcBattlePortrait = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分/${npc.name}-待机.png`;
         updateEnemyPortrait(npcBattlePortrait);
@@ -2429,20 +2266,14 @@ function parseEnemyInfo(text) {
             basicDamage = Math.round(basicDamage * 1.5);
         }
         
-        if (appliedKeys.length > 0) {
-            console.log(`[敌人信息] ${npc.name} 使用commonNPCs属性覆盖: ${appliedKeys.join(', ')}`);
-        }
-
         return {
             name: npc.name,
             maxHealth: maxHealth,
             currentHealth: maxHealth,
             energy: 0,
-            energyPrecise: 0,
             maxEnergy: 10,
             selectedAction: null,
             basicDamage: basicDamage,
-            ...resolvedStats,
             style: npc.style,
             category: enemyCategory,  // 添加类别字段
             tauntedTurns: 0  // 挑衅状态剩余回合数
@@ -2456,15 +2287,9 @@ function parseEnemyInfo(text) {
     // 走原有解析逻辑，风格随机
     const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
     const basicDamageMatch = text.match(/basicDamage:\s*([^\n]+)/);
-    const maxHealthRaw = maxHealthMatch ? maxHealthMatch[1].trim() : '';
-    const basicDamageRaw = basicDamageMatch ? basicDamageMatch[1].trim() : '';
-    const maxHealthNumeric = Number(maxHealthRaw);
-    const basicDamageNumeric = Number(basicDamageRaw);
-    const maxHealthIsNumber = maxHealthRaw !== '' && !Number.isNaN(maxHealthNumeric) && /^\d+(\.\d+)?$/.test(maxHealthRaw);
-    const basicDamageIsNumber = basicDamageRaw !== '' && !Number.isNaN(basicDamageNumeric) && /^\d+(\.\d+)?$/.test(basicDamageRaw);
     
-    let baseHealth = maxHealthIsNumber ? maxHealthNumeric : (healthMap[maxHealthRaw] || 80);
-    let baseDamage = basicDamageIsNumber ? basicDamageNumeric : (damageMap[basicDamageRaw] || 30);
+    let baseHealth = maxHealthMatch ? healthMap[maxHealthMatch[1].trim()] || 80 : 80;
+    let baseDamage = basicDamageMatch ? damageMap[basicDamageMatch[1].trim()] || 30 : 30;
     
     // 根据难度调整属性
     if (currentDifficulty === 'normal') {
@@ -2480,11 +2305,9 @@ function parseEnemyInfo(text) {
         maxHealth: baseHealth,
         currentHealth: baseHealth,
         energy: 0,
-        energyPrecise: 0,
         maxEnergy: 10,
         selectedAction: null,
         basicDamage: baseDamage,
-        ...enemyCombatStats,
         style: styles[Math.floor(Math.random() * styles.length)],
         category: enemyCategory,  // 添加类别字段
         tauntedTurns: 0  // 挑衅状态剩余回合数
@@ -2901,30 +2724,6 @@ function checkButtonAvailability() {
     }
 }
 
-function initEnergyState(actor) {
-    if (typeof actor.energyPrecise !== 'number') {
-        actor.energyPrecise = actor.energy || 0;
-    }
-}
-
-function addEnergy(actor, amount) {
-    initEnergyState(actor);
-    const maxEnergy = actor.maxEnergy || 10;
-    actor.energyPrecise = Math.min(maxEnergy, actor.energyPrecise + amount);
-    actor.energy = Math.min(maxEnergy, Math.floor(actor.energyPrecise));
-}
-
-function consumeEnergy(actor, amount) {
-    initEnergyState(actor);
-    actor.energyPrecise = Math.max(0, actor.energyPrecise - amount);
-    actor.energy = Math.floor(actor.energyPrecise);
-}
-
-function canGainEnergy(actor) {
-    initEnergyState(actor);
-    return actor.energyPrecise < (actor.maxEnergy || 10);
-}
-
 // ========== 战斗特效控制函数 ==========
 // 显示战斗特效
 function showBattleEffect(effectId, duration = 1500) {
@@ -3152,17 +2951,13 @@ function applyFieldEffectOnTurnStart() {
     
     switch (activeFieldEffect.id) {
         case 'energy-tide':  // 气海：双方+1气
-            if (canGainEnergy(player)) {
-                const beforeEnergy = player.energy;
-                addEnergy(player, 1);
-                const gained = player.energy - beforeEnergy;
-                addLog(`【气海】${player.name}获得${gained}点气`);
+            if (player.energy < player.maxEnergy) {
+                player.energy += 1;
+                addLog(`【气海】${player.name}获得1点气`);
             }
-            if (canGainEnergy(enemy)) {
-                const beforeEnergy = enemy.energy;
-                addEnergy(enemy, 1);
-                const gained = enemy.energy - beforeEnergy;
-                addLog(`【气海】${enemy.name}获得${gained}点气`);
+            if (enemy.energy < enemy.maxEnergy) {
+                enemy.energy += 1;
+                addLog(`【气海】${enemy.name}获得1点气`);
             }
             break;
             
@@ -3434,76 +3229,6 @@ function executeTurn() {
     }, 200);  // 减少延迟，提升响应速度
 }
 
-function applyCombatDamage(attacker, defender, baseDamage, defenseFactor) {
-    const result = {
-        damage: 0,
-        crit: false,
-        lifesteal: 0,
-        thorns: 0
-    };
-
-    if (!baseDamage || baseDamage <= 0) {
-        return result;
-    }
-
-    const factor = (typeof defenseFactor === 'number') ? defenseFactor : 1;
-    const defenseDamage = factor <= 0 ? 0 : (baseDamage * factor);
-    const blockValue = Math.max(0, defender.block || 0);
-    const armorPenValue = Math.max(0, attacker.armorPen || 0);
-    let damage = defenseDamage - blockValue + armorPenValue;
-    damage = Math.max(0, Math.min(baseDamage, damage));
-    damage = Math.round(damage);
-
-    if (damage > 0 && (attacker.critRate || 0) > 0) {
-        const roll = Math.random() * 100;
-        if (roll < attacker.critRate) {
-            result.crit = true;
-            const critMultiplier = Math.max(0, (attacker.critDamage || 0) / 100);
-            damage = Math.round(damage * critMultiplier);
-        }
-    }
-
-    result.damage = damage;
-
-    if (damage > 0 && (attacker.lifesteal || 0) > 0) {
-        result.lifesteal = Math.round(damage * attacker.lifesteal / 100);
-    }
-
-    if (damage > 0 && (defender.thorns || 0) > 0) {
-        result.thorns = Math.round(damage * defender.thorns / 100);
-    }
-
-    return result;
-}
-
-function resolveDamage(attacker, defender, baseDamage, defenseFactor) {
-    const result = applyCombatDamage(attacker, defender, baseDamage, defenseFactor);
-    if (result.damage > 0) {
-        defender.currentHealth -= result.damage;
-    }
-    if (result.lifesteal > 0) {
-        attacker.currentHealth = Math.min(attacker.currentHealth + result.lifesteal, attacker.maxHealth);
-    }
-    if (result.thorns > 0) {
-        attacker.currentHealth -= result.thorns;
-    }
-    if (defender.currentHealth < 0) defender.currentHealth = 0;
-    if (attacker.currentHealth < 0) attacker.currentHealth = 0;
-    return result;
-}
-
-function logDamageEffects(attacker, defender, result) {
-    if (result.crit) {
-        addLog(`【暴击】${attacker.name}造成暴击！`);
-    }
-    if (result.lifesteal > 0) {
-        addLog(`【吸血】${attacker.name}恢复${result.lifesteal}点生命！`);
-    }
-    if (result.thorns > 0) {
-        addLog(`【反伤】${defender.name}反弹${result.thorns}点伤害！`);
-    }
-}
-
 // 处理双方行动的结果
 function processActions(playerAction, enemyAction) {
     const player = gameState.player;
@@ -3539,11 +3264,9 @@ function processActions(playerAction, enemyAction) {
     if (playerAction === 'gather') {
         // 显示玩家集气特效
         showBattleEffect('player-gather-effect', 1000);
-        if (canGainEnergy(player)) {
-            const beforeEnergy = player.energy;
-            addEnergy(player, 1 + (player.turnover || 0));
-            const gained = player.energy - beforeEnergy;
-            addLog(`${player.name}集气成功，能量+${gained}！`);
+        if (player.energy < player.maxEnergy) {
+            player.energy += 1;
+            addLog(`${player.name}集气成功，能量+1！`);
         } else {
             addLog(`${player.name}的能量已满！`);
         }
@@ -3552,11 +3275,9 @@ function processActions(playerAction, enemyAction) {
     if (enemyAction === 'gather') {
         // 显示敌人集气特效
         showBattleEffect('enemy-gather-effect', 1000);
-        if (canGainEnergy(enemy)) {
-            const beforeEnergy = enemy.energy;
-            addEnergy(enemy, 1 + (enemy.turnover || 0));
-            const gained = enemy.energy - beforeEnergy;
-            addLog(`${enemy.name}集气成功，能量+${gained}！`);
+        if (enemy.energy < enemy.maxEnergy) {
+            enemy.energy += 1;
+            addLog(`${enemy.name}集气成功，能量+1！`);
         } else {
             addLog(`${enemy.name}的能量已满！`);
         }
@@ -3599,7 +3320,7 @@ function processActions(playerAction, enemyAction) {
             showBattleEffect('player-taunt-effect', 1500);
             // 玩家嘴炮 vs 敌人防御：敌人气-1，进入挑衅状态
             if (enemy.energy > 0) {
-                consumeEnergy(enemy, 1);
+                enemy.energy -= 1;
                 addLog(`${player.name}的嘴炮激怒了${enemy.name}！${enemy.name}气-1，进入挑衅状态！`);
             } else {
                 addLog(`${player.name}的嘴炮激怒了${enemy.name}！${enemy.name}进入挑衅状态！`);
@@ -3614,7 +3335,7 @@ function processActions(playerAction, enemyAction) {
             showBattleEffect('enemy-taunt-effect', 1500);
             // 敌人嘴炮 vs 玩家防御：玩家气-1，进入挑衅状态
             if (player.energy > 0) {
-                consumeEnergy(player, 1);
+                player.energy -= 1;
                 addLog(`${enemy.name}的嘴炮激怒了${player.name}！${player.name}气-1，进入挑衅状态！`);
             } else {
                 addLog(`${enemy.name}的嘴炮激怒了${player.name}！${player.name}进入挑衅状态！`);
@@ -3655,7 +3376,7 @@ function processActions(playerAction, enemyAction) {
     // 处理绝招（无视防御）
     if (playerAction === 'special') {
         // 无论绝招是否被嘴炮无效化，都消耗能量
-        consumeEnergy(player, 5);
+        player.energy -= 5;
         playerCharacter.classList.add('player-special');
         
         if (!enemyTauntSuccess) {
@@ -3667,11 +3388,10 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 1000);
             
-            const baseDamage = Math.round(player.basicDamage * 3 * damageMultiplier * fieldDamageMultiplier);
-            const result = resolveDamage(player, enemy, baseDamage, null);
-            playerTotalDamageDealt += result.damage;  // 追踪伤害用于杀意自伤
-            addLog(`${player.name}使用绝招，对${enemy.name}造成${result.damage}点伤害！`);
-            logDamageEffects(player, enemy, result);
+            const damage = Math.round(player.basicDamage * 3 * damageMultiplier * fieldDamageMultiplier);
+            enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;  // 追踪伤害用于杀意自伤
+            addLog(`${player.name}使用绝招，对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;           // 玩家造成伤害
             playerDamageAction = 'special';     // 记录攻击类型
@@ -3690,14 +3410,14 @@ function processActions(playerAction, enemyAction) {
         if (enemyAction === 'light-attack' || enemyAction === 'heavy-attack') {
             addLog(`${enemy.name}的攻击被${player.name}的绝招无效化了！`);
             // 敌人消耗的能量不返还
-            if (enemyAction === 'light-attack') consumeEnergy(enemy, 1);
-            if (enemyAction === 'heavy-attack') consumeEnergy(enemy, 2);
+            if (enemyAction === 'light-attack') enemy.energy -= 1;
+            if (enemyAction === 'heavy-attack') enemy.energy -= 2;
         }
     }
     
     if (enemyAction === 'special') {
         // 无论绝招是否被嘴炮无效化，都消耗能量
-        consumeEnergy(enemy, 5);
+        enemy.energy -= 5;
         enemyCharacter.classList.add('enemy-special');
         
         if (!playerTauntSuccess) {
@@ -3709,11 +3429,10 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 1000);
             
-            const baseDamage = Math.round(enemy.basicDamage * 3 * fieldDamageMultiplier / defenseMultiplier);
-            const result = resolveDamage(enemy, player, baseDamage, null);
-            enemyTotalDamageDealt += result.damage;  // 追踪伤害用于杀意自伤
-            addLog(`${enemy.name}使用绝招，对${player.name}造成${result.damage}点伤害！`);
-            logDamageEffects(enemy, player, result);
+            const damage = Math.round(enemy.basicDamage * 3 * fieldDamageMultiplier / defenseMultiplier);
+            player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;  // 追踪伤害用于杀意自伤
+            addLog(`${enemy.name}使用绝招，对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;           // 敌人造成伤害
             enemyDamageAction = 'special';     // 记录攻击类型
@@ -3732,8 +3451,8 @@ function processActions(playerAction, enemyAction) {
         if (playerAction === 'light-attack' || playerAction === 'heavy-attack') {
             addLog(`${player.name}的攻击被${enemy.name}的绝招无效化了！`);
             // 玩家消耗的能量不返还
-            if (playerAction === 'light-attack') consumeEnergy(player, 1);
-            if (playerAction === 'heavy-attack') consumeEnergy(player, 2);
+            if (playerAction === 'light-attack') player.energy -= 1;
+            if (playerAction === 'heavy-attack') player.energy -= 2;
         }
     }
     
@@ -3741,7 +3460,7 @@ function processActions(playerAction, enemyAction) {
     if (playerAction === 'heavy-attack' &&
         enemyAction !== 'special' &&
         playerAction !== 'special') {
-        consumeEnergy(player, 2);
+        player.energy -= 2;
         
         // 检查是否被防御或是否无效对方轻攻击
         if (enemyDefending) {
@@ -3754,18 +3473,16 @@ function processActions(playerAction, enemyAction) {
             }, 600);
             
             // 防御重攻击受到25%伤害（固守效果下完全免伤）
-            const baseDamage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
-            const defenseFactor = fieldFullDefense ? 0 : 0.25;
-            const result = resolveDamage(player, enemy, baseDamage, defenseFactor);
-            playerTotalDamageDealt += result.damage;
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(player.basicDamage * 1.5 * 0.25 * damageMultiplier * fieldDamageMultiplier);
+            enemy.currentHealth -= reducedDamage;
+            playerTotalDamageDealt += reducedDamage;
             // 显示敌人被攻击特效
             showBattleEffect('enemy-hit-effect', 1000);
             if (fieldFullDefense) {
                 addLog(`${player.name}的重攻击被${enemy.name}完全防御了！`);
             } else {
-                addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${result.damage}点伤害！`);
+                addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
             }
-            logDamageEffects(player, enemy, result);
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
@@ -3781,12 +3498,11 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const baseDamage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
-            const result = resolveDamage(player, enemy, baseDamage, null);
-            playerTotalDamageDealt += result.damage;
-            consumeEnergy(enemy, 1); // 消耗敌人的能量
-            addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${result.damage}点伤害！`);
-            logDamageEffects(player, enemy, result);
+            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
+            enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;
+            enemy.energy -= 1; // 消耗敌人的能量
+            addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
@@ -3801,11 +3517,10 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const baseDamage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
-            const result = resolveDamage(player, enemy, baseDamage, null);
-            playerTotalDamageDealt += result.damage;
-            addLog(`${player.name}的重攻击对${enemy.name}造成${result.damage}点伤害！`);
-            logDamageEffects(player, enemy, result);
+            const damage = Math.round(player.basicDamage * 1.5 * damageMultiplier * fieldDamageMultiplier);
+            enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;
+            addLog(`${player.name}的重攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
@@ -3815,7 +3530,7 @@ function processActions(playerAction, enemyAction) {
     if (enemyAction === 'heavy-attack' &&
         playerAction !== 'special' &&
         enemyAction !== 'special') {
-        consumeEnergy(enemy, 2);
+        enemy.energy -= 2;
         
         // 检查是否被防御或是否无效对方轻攻击
         if (playerDefending) {
@@ -3829,17 +3544,15 @@ function processActions(playerAction, enemyAction) {
                 // playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            // 防御重攻击受到25%伤害（固守效果下完全免伤）
-            const baseDamage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
-            const defenseFactor = fieldFullDefense ? 0 : 0.25;
-            const result = resolveDamage(enemy, player, baseDamage, defenseFactor);
-            enemyTotalDamageDealt += result.damage;
+            // 防御重攻击受到20%伤害（固守效果下完全免伤）
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(enemy.basicDamage * 1.5 * 0.2 * fieldDamageMultiplier / defenseMultiplier);
+            player.currentHealth -= reducedDamage;
+            enemyTotalDamageDealt += reducedDamage;
             if (fieldFullDefense) {
                 addLog(`${enemy.name}的重攻击被${player.name}完全防御了！`);
             } else {
-                addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${result.damage}点伤害！`);
+                addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
             }
-            logDamageEffects(enemy, player, result);
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -3855,12 +3568,11 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const baseDamage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
-            const result = resolveDamage(enemy, player, baseDamage, null);
-            enemyTotalDamageDealt += result.damage;
-            consumeEnergy(player, 1); // 消耗玩家的能量
-            addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${result.damage}点伤害！`);
-            logDamageEffects(enemy, player, result);
+            const damage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
+            player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;
+            player.energy -= 1; // 消耗玩家的能量
+            addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -3875,11 +3587,10 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const baseDamage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
-            const result = resolveDamage(enemy, player, baseDamage, null);
-            enemyTotalDamageDealt += result.damage;
-            addLog(`${enemy.name}的重攻击对${player.name}造成${result.damage}点伤害！`);
-            logDamageEffects(enemy, player, result);
+            const damage = Math.round(enemy.basicDamage * 1.5 * fieldDamageMultiplier / defenseMultiplier);
+            player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;
+            addLog(`${enemy.name}的重攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -3890,7 +3601,7 @@ function processActions(playerAction, enemyAction) {
     if (playerAction === 'light-attack' && 
         enemyAction !== 'heavy-attack' && 
         enemyAction !== 'special') {
-        consumeEnergy(player, 1);
+        player.energy -= 1;
         
         // 检查是否被防御
         if (enemyDefending) {
@@ -3905,16 +3616,14 @@ function processActions(playerAction, enemyAction) {
             }, 600);
             
             // 防御轻攻击受到15%伤害（固守效果下完全免伤）
-            const baseDamage = Math.round(player.basicDamage * damageMultiplier * fieldDamageMultiplier);
-            const defenseFactor = fieldFullDefense ? 0 : 0.15;
-            const result = resolveDamage(player, enemy, baseDamage, defenseFactor);
-            playerTotalDamageDealt += result.damage;
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(player.basicDamage * 0.15 * damageMultiplier * fieldDamageMultiplier);
+            enemy.currentHealth -= reducedDamage;
+            playerTotalDamageDealt += reducedDamage;
             if (fieldFullDefense) {
                 addLog(`${player.name}的轻攻击被${enemy.name}完全防御了！`);
             } else {
-                addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${result.damage}点伤害！`);
+                addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${reducedDamage}点伤害！`);
             }
-            logDamageEffects(player, enemy, result);
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
@@ -3929,11 +3638,10 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 600);
             
-            const baseDamage = Math.round(player.basicDamage * damageMultiplier * fieldDamageMultiplier);
-            const result = resolveDamage(player, enemy, baseDamage, null);
-            playerTotalDamageDealt += result.damage;
-            addLog(`${player.name}的轻攻击对${enemy.name}造成${result.damage}点伤害！`);
-            logDamageEffects(player, enemy, result);
+            const damage = Math.round(player.basicDamage * damageMultiplier * fieldDamageMultiplier);
+            enemy.currentHealth -= damage;
+            playerTotalDamageDealt += damage;
+            addLog(`${player.name}的轻攻击对${enemy.name}造成${damage}点伤害！`);
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
@@ -3943,7 +3651,7 @@ function processActions(playerAction, enemyAction) {
     if (enemyAction === 'light-attack' && 
         playerAction !== 'heavy-attack' && 
         playerAction !== 'special') {
-        consumeEnergy(enemy, 1);
+        enemy.energy -= 1;
         
         // 检查是否被防御
         if (playerDefending) {
@@ -3958,16 +3666,14 @@ function processActions(playerAction, enemyAction) {
             }, 600);
             
             // 防御轻攻击受到15%伤害（固守效果下完全免伤）
-            const baseDamage = Math.round(enemy.basicDamage * fieldDamageMultiplier / defenseMultiplier);
-            const defenseFactor = fieldFullDefense ? 0 : 0.15;
-            const result = resolveDamage(enemy, player, baseDamage, defenseFactor);
-            enemyTotalDamageDealt += result.damage;
+            const reducedDamage = fieldFullDefense ? 0 : Math.round(enemy.basicDamage * 0.15 * fieldDamageMultiplier / defenseMultiplier);
+            player.currentHealth -= reducedDamage;
+            enemyTotalDamageDealt += reducedDamage;
             if (fieldFullDefense) {
                 addLog(`${enemy.name}的轻攻击被${player.name}完全防御了！`);
             } else {
-                addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${result.damage}点伤害！`);
+                addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${reducedDamage}点伤害！`);
             }
-            logDamageEffects(enemy, player, result);
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'light-attack';
@@ -3982,11 +3688,10 @@ function processActions(playerAction, enemyAction) {
                 playerCharacter.classList.remove('player-hit');
             }, 600);
             
-            const baseDamage = Math.round(enemy.basicDamage * fieldDamageMultiplier / defenseMultiplier);
-            const result = resolveDamage(enemy, player, baseDamage, null);
-            enemyTotalDamageDealt += result.damage;
-            addLog(`${enemy.name}的轻攻击对${player.name}造成${result.damage}点伤害！`);
-            logDamageEffects(enemy, player, result);
+            const damage = Math.round(enemy.basicDamage * fieldDamageMultiplier / defenseMultiplier);
+            player.currentHealth -= damage;
+            enemyTotalDamageDealt += damage;
+            addLog(`${enemy.name}的轻攻击对${player.name}造成${damage}点伤害！`);
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'light-attack';

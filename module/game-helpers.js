@@ -222,7 +222,7 @@ function showBattleGame(battleData) {
     });
     
     // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
-    const gameUrl = `turn-based-battle.html?${params.toString()}`;
+    const gameUrl = `turn-based-battle-new.html?${params.toString()}`;
     iframe.src = gameUrl;
     
     modal.style.display = 'block';
