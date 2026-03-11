@@ -952,16 +952,6 @@
             log(`参数 ${key} = ${value}`);
         }
         
-        // ========== 角色属性 ==========
-        let playerStats = {
-            rootBone: parseInt(urlParams.get('rootBone')) || 0,      // 根骨
-            comprehension: parseInt(urlParams.get('comprehension')) || 0, // 悟性
-            nature: parseInt(urlParams.get('nature')) || 0,        // 心性
-            charm: parseInt(urlParams.get('charm')) || 0          // 魅力
-        };
-        
-        log(`解析后的角色属性: ${JSON.stringify(playerStats)}`);
-
         let money = parseInt(urlParams.get('money')) || 5000;
         log(`解析后的金钱: ${money} (原始值: ${urlParams.get('money')})`);
 
@@ -978,7 +968,19 @@
             daliwan: parseInt(urlParams.get('daliwan')) || 0,      // 大力丸
             jingutie: parseInt(urlParams.get('jingutie')) || 0,     // 筋骨贴
             jinchuangyao: parseInt(urlParams.get('jinchuangyao')) || 0, // 金疮药
-            piliwan: parseInt(urlParams.get('piliwan')) || 0       // 霹雳丸
+            piliwan: parseInt(urlParams.get('piliwan')) || 0,      // 霹雳丸
+            peiyuan_rootBone: parseInt(urlParams.get('peiyuan_rootBone')) || 0,
+            peiyuan_comprehension: parseInt(urlParams.get('peiyuan_comprehension')) || 0,
+            peiyuan_nature: parseInt(urlParams.get('peiyuan_nature')) || 0,
+            peiyuan_charm: parseInt(urlParams.get('peiyuan_charm')) || 0,
+            yijin_rootBone: parseInt(urlParams.get('yijin_rootBone')) || 0,
+            yijin_comprehension: parseInt(urlParams.get('yijin_comprehension')) || 0,
+            yijin_nature: parseInt(urlParams.get('yijin_nature')) || 0,
+            yijin_charm: parseInt(urlParams.get('yijin_charm')) || 0,
+            jiuzhuan_rootBone: parseInt(urlParams.get('jiuzhuan_rootBone')) || 0,
+            jiuzhuan_comprehension: parseInt(urlParams.get('jiuzhuan_comprehension')) || 0,
+            jiuzhuan_nature: parseInt(urlParams.get('jiuzhuan_nature')) || 0,
+            jiuzhuan_charm: parseInt(urlParams.get('jiuzhuan_charm')) || 0
         };
         
         log(`解析后的丹药: ${JSON.stringify(pills)}`);
@@ -995,10 +997,22 @@
             daliwan: '大力丸',
             jingutie: '筋骨贴',
             jinchuangyao: '金疮药',
-            piliwan: '霹雳丸'
+            piliwan: '霹雳丸',
+            peiyuan_rootBone: '培元丹-根骨',
+            peiyuan_comprehension: '培元丹-悟性',
+            peiyuan_nature: '培元丹-心性',
+            peiyuan_charm: '培元丹-魅力',
+            yijin_rootBone: '易筋丹-根骨',
+            yijin_comprehension: '易筋丹-悟性',
+            yijin_nature: '易筋丹-心性',
+            yijin_charm: '易筋丹-魅力',
+            jiuzhuan_rootBone: '九转金丹-根骨',
+            jiuzhuan_comprehension: '九转金丹-悟性',
+            jiuzhuan_nature: '九转金丹-心性',
+            jiuzhuan_charm: '九转金丹-魅力'
         };
 
-        const statNames = {
+        const statLabels = {
             rootBone: '根骨',
             comprehension: '悟性',
             nature: '心性',
@@ -1020,7 +1034,7 @@
             chenxiang: 0
         };
 
-        // 记录炼丹时投入的药材（用于计算属性）
+        // 记录炼丹时投入的药材（用于决定丹药属性）
         let herbsUsedForAlchemy = {};
 
         let gameState = {
@@ -1096,16 +1110,6 @@
             const inventoryContent = document.getElementById('inventory-content');
             inventoryContent.innerHTML = '';
             
-            // 显示属性
-            let statsHtml = '<div class="inventory-section"><div class="inventory-title">角色属性</div><div class="stats-grid">';
-            Object.keys(playerStats).forEach(stat => {
-                statsHtml += `<div class="inventory-item">
-                    <div class="inventory-item-name">${statNames[stat]}</div>
-                    <div class="inventory-item-count">${playerStats[stat]}</div>
-                </div>`;
-            });
-            statsHtml += '</div></div>';
-            
             // 显示药材
             let herbsHtml = '<div class="inventory-section"><div class="inventory-title">药材</div><div class="inventory-grid">';
             Object.keys(herbs).forEach(herbKey => {
@@ -1126,7 +1130,7 @@
             });
             pillsHtml += '</div></div>';
             
-            inventoryContent.innerHTML = statsHtml + herbsHtml + pillsHtml;
+            inventoryContent.innerHTML = herbsHtml + pillsHtml;
             document.getElementById('inventory-modal-overlay').classList.add('active');
         }
 
@@ -1236,41 +1240,32 @@
             document.querySelectorAll('.control-btn').forEach(btn => btn.disabled = false);
         }
 
-        // ========== 属性提升功能 ==========
-        function addRandomAttribute(points) {
-            // 计算总投入
-            const totalHerbs = Object.values(herbsUsedForAlchemy).reduce((a, b) => a + b, 0);
-            if (totalHerbs === 0) return;
-            
-            // 计算每种药材的概率权重
+        function pickPillAttribute() {
             const weights = [];
             const stats = [];
-            
+
             Object.keys(herbsUsedForAlchemy).forEach(herbKey => {
                 if (herbsUsedForAlchemy[herbKey] > 0) {
                     weights.push(herbsUsedForAlchemy[herbKey]);
                     stats.push(herbToStat[herbKey]);
                 }
             });
-            
-            // 随机选择属性
+
+            if (!stats.length) {
+                const fallback = ['rootBone', 'comprehension', 'nature', 'charm'];
+                return fallback[Math.floor(Math.random() * fallback.length)];
+            }
+
             const totalWeight = weights.reduce((a, b) => a + b, 0);
             let random = Math.random() * totalWeight;
-            let selectedStat = null;
-            
             for (let i = 0; i < weights.length; i++) {
                 random -= weights[i];
                 if (random <= 0) {
-                    selectedStat = stats[i];
-                    break;
+                    return stats[i];
                 }
             }
-            
-            if (selectedStat) {
-                playerStats[selectedStat] += points;
-                log(`属性提升：${statNames[selectedStat]} +${points}，当前值：${playerStats[selectedStat]}`);
-                showToast(`${statNames[selectedStat]} +${points}！`, 'success');
-            }
+
+            return stats[0];
         }
 
         // Tooltip
@@ -1449,15 +1444,24 @@
         function getProduct(q) {
             let productName = '';
             let points = 0;
+            let tierKey = '';
+            let tierName = '';
+            let tierLabel = '';
             
             if(q >= 100) {
-                productName = '【九转金丹】(传说)';
+                tierKey = 'jiuzhuan';
+                tierName = '九转金丹';
+                tierLabel = '传说';
                 points = 3;
             } else if(q >= 90) {
-                productName = '【易筋丹】(史诗)';
+                tierKey = 'yijin';
+                tierName = '易筋丹';
+                tierLabel = '史诗';
                 points = 2;
             } else if(q >= 75) {
-                productName = '【培元丹】(稀有)';
+                tierKey = 'peiyuan';
+                tierName = '培元丹';
+                tierLabel = '稀有';
                 points = 1;
             } else if(q >= 50) {
                 const commonPills = ['daliwan', 'jingutie', 'jinchuangyao', 'piliwan'];
@@ -1475,9 +1479,12 @@
                 productName = '无产出';
             }
             
-            // 根据品质添加属性
             if (points > 0) {
-                addRandomAttribute(points);
+                const attribute = pickPillAttribute();
+                const pillKey = `${tierKey}_${attribute}`;
+                pills[pillKey] = (pills[pillKey] || 0) + 1;
+                productName = `【${tierName}-${statLabels[attribute]}】(${tierLabel})`;
+                log(`获得丹药：${tierName}-${statLabels[attribute]}，当前库存：${pills[pillKey]}`);
             }
             
             log(`炼丹结果：品质${q}，${productName}`);
@@ -1508,13 +1515,19 @@
                         daliwan: pills.daliwan,
                         jingutie: pills.jingutie,
                         jinchuangyao: pills.jinchuangyao,
-                        piliwan: pills.piliwan
-                    },
-                    playerStats: {
-                        rootBone: playerStats.rootBone,
-                        comprehension: playerStats.comprehension,
-                        nature: playerStats.nature,
-                        charm: playerStats.charm
+                        piliwan: pills.piliwan,
+                        peiyuan_rootBone: pills.peiyuan_rootBone,
+                        peiyuan_comprehension: pills.peiyuan_comprehension,
+                        peiyuan_nature: pills.peiyuan_nature,
+                        peiyuan_charm: pills.peiyuan_charm,
+                        yijin_rootBone: pills.yijin_rootBone,
+                        yijin_comprehension: pills.yijin_comprehension,
+                        yijin_nature: pills.yijin_nature,
+                        yijin_charm: pills.yijin_charm,
+                        jiuzhuan_rootBone: pills.jiuzhuan_rootBone,
+                        jiuzhuan_comprehension: pills.jiuzhuan_comprehension,
+                        jiuzhuan_nature: pills.jiuzhuan_nature,
+                        jiuzhuan_charm: pills.jiuzhuan_charm
                     }
                 };
                 
@@ -1571,13 +1584,19 @@
                     daliwan: pills.daliwan,
                     jingutie: pills.jingutie,
                     jinchuangyao: pills.jinchuangyao,
-                    piliwan: pills.piliwan
-                },
-                playerStats: {
-                    rootBone: playerStats.rootBone,
-                    comprehension: playerStats.comprehension,
-                    nature: playerStats.nature,
-                    charm: playerStats.charm
+                    piliwan: pills.piliwan,
+                    peiyuan_rootBone: pills.peiyuan_rootBone,
+                    peiyuan_comprehension: pills.peiyuan_comprehension,
+                    peiyuan_nature: pills.peiyuan_nature,
+                    peiyuan_charm: pills.peiyuan_charm,
+                    yijin_rootBone: pills.yijin_rootBone,
+                    yijin_comprehension: pills.yijin_comprehension,
+                    yijin_nature: pills.yijin_nature,
+                    yijin_charm: pills.yijin_charm,
+                    jiuzhuan_rootBone: pills.jiuzhuan_rootBone,
+                    jiuzhuan_comprehension: pills.jiuzhuan_comprehension,
+                    jiuzhuan_nature: pills.jiuzhuan_nature,
+                    jiuzhuan_charm: pills.jiuzhuan_charm
                 }
             };
             

@@ -334,8 +334,8 @@ function migrateLegacyEquipStats(gameData, hadEquipStats) {
     if (!hadEquipStats && gameData.combatStats) {
         const baseAttack = gameData.combatStats.攻击力 - (equipTotals.攻击力 || 0);
         const baseHP = gameData.combatStats.生命值 - (equipTotals.生命值 || 0);
-        gameData.combatStats.攻击力 = clampValue(baseAttack, valueRanges.combatStats.攻击力.min, valueRanges.combatStats.攻击力.max);
-        gameData.combatStats.生命值 = clampValue(baseHP, valueRanges.combatStats.生命值.min, valueRanges.combatStats.生命值.max);
+        gameData.combatStats.攻击力 = baseAttack;
+        gameData.combatStats.生命值 = baseHP;
     }
 
     return gameData;

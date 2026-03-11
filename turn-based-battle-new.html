@@ -730,6 +730,27 @@ body {
         2px 2px 3px rgba(0, 0, 0, 0.8);
 }
 
+.stats-modal-body {
+    text-align: left;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: clamp(6px, 1.2vw, 10px) clamp(10px, 2vw, 14px);
+}
+
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+.stats-row span:last-child {
+    color: #ffd27a;
+}
+
 .modal-footer {
     padding: clamp(6px, 2vw, 12px);
     display: flex;
@@ -1652,6 +1673,17 @@ body {
             </div>
         </div>
 
+        <!-- 属性查看弹窗 -->
+        <div id="stats-modal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header" id="stats-modal-title">属性查看</div>
+                <div class="modal-body stats-modal-body" id="stats-modal-body"></div>
+                <div class="modal-actions">
+                    <button id="stats-modal-close" class="btn btn-cancel">返回战斗</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 道具选择弹窗 -->
         <div id="item-modal" class="modal">
             <div class="item-modal-content">
@@ -1700,6 +1732,31 @@ function getCombatParams(prefix) {
         lifesteal: clampStat(parseStatParam(`${prefix}Lifesteal`, DEFAULT_COMBAT_STATS.lifesteal), 0, 100),
         thorns: clampStat(parseStatParam(`${prefix}Thorns`, DEFAULT_COMBAT_STATS.thorns), 0, 100)
     };
+}
+
+function parseEnemyWuxueParam() {
+    const raw = urlParams.get('enemyWuxue');
+    if (raw === null || raw === '') return null;
+    const value = Number(raw);
+    if (!Number.isInteger(value) || value < 0 || value > 9) return null;
+    return value;
+}
+
+function rollInt(min, max) {
+    const low = Math.min(min, max);
+    const high = Math.max(min, max);
+    return Math.floor(Math.random() * (high - low + 1)) + low;
+}
+
+function pickWeightedKey(weights) {
+    const entries = Object.entries(weights);
+    const totalWeight = entries.reduce((sum, [, weight]) => sum + weight, 0);
+    let roll = Math.random() * totalWeight;
+    for (const [key, weight] of entries) {
+        roll -= weight;
+        if (roll <= 0) return key;
+    }
+    return entries[0]?.[0] || null;
 }
 
 // 敌人类别列表（用于模糊匹配）
@@ -2380,6 +2437,7 @@ const genericNPCPortraits = [
 // 解析敌方信息的函数
 function parseEnemyInfo(text) {
     const enemyCombatStats = getCombatParams('enemy');
+    const enemyWuxue = parseEnemyWuxueParam();
     // 提取名称
     const nameMatch = text.match(/name:\s*([^\n]+)/);
     const npcName = nameMatch ? nameMatch[1].trim() : '';
@@ -2452,6 +2510,111 @@ function parseEnemyInfo(text) {
     // 没有匹配到常见NPC，根据类别选择立绘
     const categoryPortrait = getCategoryPortrait(enemyCategory);
     updateEnemyPortrait(categoryPortrait);
+
+    if (Number.isInteger(enemyWuxue)) {
+        const stageDef = WUXUE_STAGE_DEFS.find(def => def.index === enemyWuxue);
+        const pointsRange = stageDef ? stageDef.pointsRange : null;
+        if (pointsRange && pointsRange.length === 2) {
+            const rolledLevel = rollInt(pointsRange[0], pointsRange[1]);
+            const style = styles[Math.floor(Math.random() * styles.length)];
+            const weightSource = STYLE_ATTRIBUTE_WEIGHTS[style] || STYLE_ATTRIBUTE_WEIGHTS['风'];
+            const rollCounts = {};
+            const generated = {
+                basicDamage: 20,
+                maxHealth: 50,
+                critRate: 10,
+                critDamage: 150,
+                block: 0,
+                armorPen: 0,
+                turnover: 0,
+                lifesteal: 0,
+                thorns: 0
+            };
+
+            console.log(`[敌人信息] 武学=${enemyWuxue} 区间=${pointsRange[0]}-${pointsRange[1]} 等级=${rolledLevel} 风格=${style}`);
+
+            for (let i = 0; i < rolledLevel; i++) {
+                const rollKey = pickWeightedKey(weightSource);
+                rollCounts[rollKey] = (rollCounts[rollKey] || 0) + 1;
+                switch (rollKey) {
+                    case '攻击力':
+                        generated.basicDamage += 10;
+                        break;
+                    case '生命值':
+                        generated.maxHealth += 25;
+                        break;
+                    case '暴击率':
+                        generated.critRate += 15;
+                        break;
+                    case '暴击伤害':
+                        generated.critDamage += 20;
+                        break;
+                    case '格挡':
+                        generated.block += 10;
+                        break;
+                    case '穿甲':
+                        generated.armorPen += 10;
+                        break;
+                    case '回转':
+                        generated.turnover = Number((generated.turnover + 0.1).toFixed(2));
+                        break;
+                    case '吸血':
+                        generated.lifesteal += 15;
+                        break;
+                    case '反伤':
+                        generated.thorns += 15;
+                        break;
+                    default:
+                        break;
+                }
+            }
+
+            const beforeDifficulty = {
+                basicDamage: generated.basicDamage,
+                maxHealth: generated.maxHealth,
+                critRate: generated.critRate,
+                critDamage: generated.critDamage,
+                block: generated.block,
+                armorPen: generated.armorPen,
+                turnover: generated.turnover,
+                lifesteal: generated.lifesteal,
+                thorns: generated.thorns
+            };
+
+            if (currentDifficulty === 'normal') {
+                generated.maxHealth = Math.round(generated.maxHealth * 1.25);
+                generated.basicDamage = Math.round(generated.basicDamage * 1.25);
+            } else if (currentDifficulty === 'hard') {
+                generated.maxHealth = Math.round(generated.maxHealth * 1.5);
+                generated.basicDamage = Math.round(generated.basicDamage * 1.5);
+            }
+
+            console.log(`[敌人信息] roll命中分布: ${JSON.stringify(rollCounts)}`);
+            console.log(`[敌人信息] 生成前(未套难度): ${JSON.stringify(beforeDifficulty)}`);
+            console.log(`[敌人信息] 生成后(难度=${currentDifficulty}): ${JSON.stringify(generated)}`);
+
+            return {
+                name: npcName,
+                maxHealth: generated.maxHealth,
+                currentHealth: generated.maxHealth,
+                energy: 0,
+                energyPrecise: 0,
+                maxEnergy: 10,
+                selectedAction: null,
+                basicDamage: generated.basicDamage,
+                critRate: generated.critRate,
+                critDamage: generated.critDamage,
+                block: generated.block,
+                armorPen: generated.armorPen,
+                turnover: generated.turnover,
+                lifesteal: generated.lifesteal,
+                thorns: generated.thorns,
+                style: style,
+                category: enemyCategory,
+                tauntedTurns: 0
+            };
+        }
+    }
     
     // 走原有解析逻辑，风格随机
     const maxHealthMatch = text.match(/maxHealth:\s*([^\n]+)/);
@@ -2729,6 +2892,10 @@ const gameOverModal = document.getElementById('game-over-modal');
 const gameOverTitle = document.getElementById('game-over-title');
 const gameOverMessage = document.getElementById('game-over-message');
 const restartGameButton = document.getElementById('restart-game');
+const statsModal = document.getElementById('stats-modal');
+const statsModalTitle = document.getElementById('stats-modal-title');
+const statsModalBody = document.getElementById('stats-modal-body');
+const statsModalClose = document.getElementById('stats-modal-close');
 
 // 角色元素
 const playerCharacter = document.querySelector('.player-character');
@@ -2755,6 +2922,8 @@ function initGame() {
     }).catch(err => {
         console.warn('[战斗初始化] 资源预加载出错:', err);
     });
+
+    setupPortraitClickEvents();
 }
 
 // 设置按钮事件
@@ -2788,6 +2957,144 @@ function setupButtonEvents() {
             exitBattle('restart');
         } else {
             window.location.reload();
+        }
+    });
+
+    if (statsModalClose) {
+        statsModalClose.addEventListener('click', () => {
+            if (statsModal) statsModal.style.display = 'none';
+        });
+    }
+}
+
+const portraitImageCache = new Map();
+
+function getBackgroundImageUrl(element) {
+    if (!element) return '';
+    const bg = window.getComputedStyle(element).backgroundImage || '';
+    if (bg === 'none') return '';
+    const match = bg.match(/url\(["']?(.*?)["']?\)/);
+    return match ? match[1] : '';
+}
+
+function getCachedPortraitImage(url) {
+    if (!url) return null;
+    if (portraitImageCache.has(url)) return portraitImageCache.get(url);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = url;
+    const cacheEntry = { img, canvas: null, ctx: null };
+    portraitImageCache.set(url, cacheEntry);
+    return cacheEntry;
+}
+
+function isClickOnOpaqueBackground(event, layer) {
+    if (!layer) return false;
+    const url = getBackgroundImageUrl(layer);
+    if (!url) return false;
+
+    const cache = getCachedPortraitImage(url);
+    if (!cache || !cache.img.complete || cache.img.naturalWidth === 0) {
+        return true;
+    }
+
+    try {
+        const rect = layer.getBoundingClientRect();
+        const clickX = event.clientX - rect.left;
+        const clickY = event.clientY - rect.top;
+
+        const imgAspect = cache.img.naturalWidth / cache.img.naturalHeight;
+        const containerAspect = rect.width / rect.height;
+
+        let displayWidth, displayHeight, offsetX, offsetY;
+        if (imgAspect > containerAspect) {
+            displayWidth = rect.width;
+            displayHeight = rect.width / imgAspect;
+            offsetX = 0;
+            offsetY = rect.height - displayHeight;
+        } else {
+            displayHeight = rect.height;
+            displayWidth = rect.height * imgAspect;
+            offsetX = (rect.width - displayWidth) / 2;
+            offsetY = 0;
+        }
+
+        if (clickX < offsetX || clickX > offsetX + displayWidth ||
+            clickY < offsetY || clickY > offsetY + displayHeight) {
+            return false;
+        }
+
+        const pixelX = Math.floor((clickX - offsetX) / displayWidth * cache.img.naturalWidth);
+        const pixelY = Math.floor((clickY - offsetY) / displayHeight * cache.img.naturalHeight);
+
+        if (!cache.canvas) {
+            cache.canvas = document.createElement('canvas');
+            cache.canvas.width = cache.img.naturalWidth;
+            cache.canvas.height = cache.img.naturalHeight;
+            cache.ctx = cache.canvas.getContext('2d');
+            cache.ctx.drawImage(cache.img, 0, 0);
+        }
+
+        const pixelData = cache.ctx.getImageData(pixelX, pixelY, 1, 1).data;
+        return pixelData[3] > 30;
+    } catch (error) {
+        console.warn('透明度检测失败，使用默认点击行为:', error.message);
+        return true;
+    }
+}
+
+function buildStatsHtml(entity, label) {
+    const rows = [
+        ['攻击力', entity.basicDamage],
+        ['生命值', `${entity.currentHealth}/${entity.maxHealth}`],
+        ['气', `${entity.energy}/${entity.maxEnergy}`],
+        ['暴击率', `${entity.critRate}%`],
+        ['暴击伤害', `${entity.critDamage}%`],
+        ['格挡', entity.block],
+        ['穿甲', entity.armorPen],
+        ['回转', Number(entity.turnover || 0).toFixed(2)],
+        ['吸血', `${entity.lifesteal}%`],
+        ['反伤', `${entity.thorns}%`]
+    ];
+
+    return `
+        <div class="stats-grid">
+            ${rows.map(([name, value]) => `
+                <div class="stats-row"><span>${name}</span><span>${value}</span></div>
+            `).join('')}
+        </div>
+    `;
+}
+
+function showStatsModal(target) {
+    if (!statsModal || !statsModalBody || !statsModalTitle) return;
+    const entity = target === 'player' ? gameState.player : gameState.enemy;
+    statsModalTitle.textContent = target === 'player' ? '我方属性' : '敌方属性';
+    statsModalBody.innerHTML = buildStatsHtml(entity, target);
+    statsModal.style.display = 'flex';
+}
+
+function setupPortraitClickEvents() {
+    document.addEventListener('click', (event) => {
+        if (!gameState || !gameState.player || !gameState.enemy) return;
+        if (statsModal && statsModal.style.display === 'flex') return;
+
+        const target = event.target;
+        if (target && target.closest('.command-buttons-floating')) return;
+        if (target && target.closest('.modal-content')) return;
+        if (target && target.closest('.item-modal-content')) return;
+        if (target && target.closest('.log-dropdown')) return;
+        if (target && target.closest('.field-effect-dropdown')) return;
+
+        const playerLayer = document.querySelector('.player-portrait-layer');
+        const enemyLayer = document.querySelector('.npc-portrait-layer');
+
+        if (isClickOnOpaqueBackground(event, playerLayer)) {
+            showStatsModal('player');
+            return;
+        }
+        if (isClickOnOpaqueBackground(event, enemyLayer)) {
+            showStatsModal('enemy');
         }
     });
 }

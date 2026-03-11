@@ -743,20 +743,18 @@ function setupMessageListeners() {
                 inventory['筋骨贴'] = event.data.pills.jingutie || 0;
                 inventory['金疮药'] = event.data.pills.jinchuangyao || 0;
                 inventory['霹雳丸'] = event.data.pills.piliwan || 0;
-            }
-            
-            // 更新天赋属性（alchemy返回的是总值，需要扣除装备加成）
-            if (event.data.playerStats) {
-                const equipBonus = (typeof equipStats === 'object' && equipStats) ? equipStats : { "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
-                const totalRoot = event.data.playerStats.rootBone ?? playerTalents.根骨 + (equipBonus.根骨 || 0);
-                const totalComp = event.data.playerStats.comprehension ?? playerTalents.悟性 + (equipBonus.悟性 || 0);
-                const totalNature = event.data.playerStats.nature ?? playerTalents.心性 + (equipBonus.心性 || 0);
-                const totalCharm = event.data.playerStats.charm ?? playerTalents.魅力 + (equipBonus.魅力 || 0);
-
-                playerTalents.根骨 = clampValue(totalRoot - (equipBonus.根骨 || 0), valueRanges.playerTalents.根骨.min, valueRanges.playerTalents.根骨.max);
-                playerTalents.悟性 = clampValue(totalComp - (equipBonus.悟性 || 0), valueRanges.playerTalents.悟性.min, valueRanges.playerTalents.悟性.max);
-                playerTalents.心性 = clampValue(totalNature - (equipBonus.心性 || 0), valueRanges.playerTalents.心性.min, valueRanges.playerTalents.心性.max);
-                playerTalents.魅力 = clampValue(totalCharm - (equipBonus.魅力 || 0), valueRanges.playerTalents.魅力.min, valueRanges.playerTalents.魅力.max);
+                inventory['培元丹-根骨'] = event.data.pills.peiyuan_rootBone || 0;
+                inventory['培元丹-悟性'] = event.data.pills.peiyuan_comprehension || 0;
+                inventory['培元丹-心性'] = event.data.pills.peiyuan_nature || 0;
+                inventory['培元丹-魅力'] = event.data.pills.peiyuan_charm || 0;
+                inventory['易筋丹-根骨'] = event.data.pills.yijin_rootBone || 0;
+                inventory['易筋丹-悟性'] = event.data.pills.yijin_comprehension || 0;
+                inventory['易筋丹-心性'] = event.data.pills.yijin_nature || 0;
+                inventory['易筋丹-魅力'] = event.data.pills.yijin_charm || 0;
+                inventory['九转金丹-根骨'] = event.data.pills.jiuzhuan_rootBone || 0;
+                inventory['九转金丹-悟性'] = event.data.pills.jiuzhuan_comprehension || 0;
+                inventory['九转金丹-心性'] = event.data.pills.jiuzhuan_nature || 0;
+                inventory['九转金丹-魅力'] = event.data.pills.jiuzhuan_charm || 0;
             }
             
             // 清理数量为0的物品

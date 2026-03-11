@@ -68,10 +68,14 @@ function checkAllValueRanges() {
         equipStats = getEmptyEquipStats();
     }
 
-    // 检查天赋属性
+    // 检查天赋属性（仅确保为数值，不做范围夹紧）
     for (let key in playerTalents) {
-        const range = valueRanges.playerTalents[key];
-        playerTalents[key] = clampValue(playerTalents[key], range.min, range.max);
+        if (typeof playerTalents[key] !== 'number') {
+            const fallback = (defaultGameData && defaultGameData.playerTalents && typeof defaultGameData.playerTalents[key] === 'number')
+                ? defaultGameData.playerTalents[key]
+                : 0;
+            playerTalents[key] = fallback;
+        }
     }
     
     // 检查人物数值
@@ -80,31 +84,14 @@ function checkAllValueRanges() {
         playerStats[key] = clampValue(playerStats[key], range.min, range.max);
     }
     
-    // 检查装备加成数值
-    if (typeof equipStats === 'object' && equipStats) {
-        for (let key in valueRanges.equipStats) {
-            const range = valueRanges.equipStats[key];
-            if (!range) continue;
-            if (typeof equipStats[key] !== 'number') {
-                equipStats[key] = 0;
-            }
-            equipStats[key] = clampValue(equipStats[key], range.min, range.max);
-        }
-    }
-
-    // 检查战斗数值（按“总值范围”约束基础值）
+    // 检查战斗基础数值（仅保证为合法数值，不做范围夹紧）
     for (let key in valueRanges.combatStats) {
-        const range = valueRanges.combatStats[key];
-        const equipBonus = (equipStats && typeof equipStats === 'object') ? (equipStats[key] || 0) : 0;
         if (typeof combatStats[key] !== 'number') {
             const fallback = (defaultGameData && defaultGameData.combatStats && typeof defaultGameData.combatStats[key] === 'number')
                 ? defaultGameData.combatStats[key]
-                : range.min;
+                : 0;
             combatStats[key] = fallback;
         }
-        const baseMin = Math.max(0, range.min - equipBonus);
-        const baseMax = Math.max(baseMin, range.max - equipBonus);
-        combatStats[key] = clampValue(combatStats[key], baseMin, baseMax);
     }
     
     playerMood = clampValue(playerMood, valueRanges.playerMood.min, valueRanges.playerMood.max);
@@ -141,9 +128,11 @@ function calculateEquipStatsFromEquipment(equipmentData) {
     for (const itemName of Object.values(equipmentData)) {
         if (!itemName) continue;
         const item = item_list[itemName];
-        if (!item || !item.装备属性) continue;
-        if (totals.hasOwnProperty(item.装备属性)) {
-            totals[item.装备属性] += item.装备数值 || 0;
+        if (!item || !item.装备属性 || typeof item.装备属性 !== 'object') continue;
+        for (const [attr, value] of Object.entries(item.装备属性)) {
+            if (totals.hasOwnProperty(attr)) {
+                totals[attr] += Number(value) || 0;
+            }
         }
     }
     return totals;
@@ -166,12 +155,22 @@ function getTotalCombatStats() {
 }
 
 function getTotalTalents() {
-    return {
+    const totals = {
         "根骨": playerTalents.根骨 + (equipStats?.根骨 || 0),
         "悟性": playerTalents.悟性 + (equipStats?.悟性 || 0),
         "心性": playerTalents.心性 + (equipStats?.心性 || 0),
         "魅力": playerTalents.魅力 + (equipStats?.魅力 || 0)
     };
+
+    for (let key in valueRanges.playerTalents) {
+        const range = valueRanges.playerTalents[key];
+        if (typeof totals[key] !== 'number') {
+            totals[key] = range.min;
+        }
+        totals[key] = clampValue(totals[key], range.min, range.max);
+    }
+
+    return totals;
 }
 
 // 计算每周单个NPC好感度增加上限
@@ -521,7 +520,7 @@ function matchCG(cgName) {
 function calculateRemainingPoints() {
     const earnedLevels = calculateLevelFromWuxue(playerStats.武学);
 
-    // 基于人物基础数值计算已使用的点数
+    // 基于人物基础战斗属性计算已使用的点数（不含装备）
     const usedForAttack = (combatStats.攻击力 - 20) / 10;
     const usedForHP = (combatStats.生命值 - 50) / 25;
     const usedForCritRate = (combatStats.暴击率 - 10) / 15;

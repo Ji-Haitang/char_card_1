@@ -879,6 +879,7 @@
         // 游戏模块列表
         const gameModules = [
             'game-config.js',
+            'item-list.js',
             'game-utils.js',
             'game-state.js',
             'game-ui.js',
@@ -895,6 +896,7 @@
     </script> -->
 
     <script src="module/game-config.js"></script>
+    <script src="module/item-list.js"></script>
     <script src="module/game-utils.js"></script>
     <script src="module/game-state.js"></script>
     <script src="module/game-ui.js"></script>
@@ -2385,6 +2387,7 @@ const outPut = `
                     name: enemyInfo.名称,
                     maxHealth: enemyInfo.属性?.生命力 || '中',
                     basicDamage: enemyInfo.属性?.攻击力 || '中',
+                    wuxue: enemyInfo.属性?.武学,
                     category: enemyInfo.类别 || '未知'  // 从敌方信息中提取类别
                 }
             };
@@ -2815,7 +2818,7 @@ const outPut = `
             for (const [slot, itemName] of Object.entries(equipment)) {
                 if (itemName && item_list[itemName]) {
                     const item = item_list[itemName];
-                    effectDiv.innerHTML += `<div class="stat-effect">${itemName}: ${item.装备属性} +${item.装备数值}</div>`;
+                    effectDiv.innerHTML += `<div class="stat-effect">${itemName}: ${getEquipEffectText(item)}</div>`;
                     hasEffect = true;
                 }
             }
@@ -2856,7 +2859,7 @@ const outPut = `
             }
             if (item.可装备) {
                 infoHTML += `<div class="item-stat"><span class="item-stat-label">装备类型：</span>${item.装备类型}</div>`;
-                infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+                infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${getEquipEffectText(item)}</div>`;
             }
             if (item.可使用) {
                 infoHTML += `<div class="item-stat"><span class="item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;
@@ -3056,7 +3059,7 @@ const outPut = `
             let infoHTML = '';
             if (item.可装备) {
                 infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">装备类型：</span>${item.装备类型}</div>`;
-                infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+                infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">装备属性：</span>${getEquipEffectText(item)}</div>`;
             }
             if (item.可使用) {
                 infoHTML += `<div class="shop-item-stat"><span class="shop-item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;

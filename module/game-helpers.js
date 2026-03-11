@@ -199,6 +199,9 @@ function showBattleGame(battleData) {
     const playerName = battleData.player?.name || '你';
     const playerAttack = (typeof battleData.player?.attack === 'number') ? battleData.player.attack : totalCombat.攻击力;
     const playerHealth = (typeof battleData.player?.health === 'number') ? battleData.player.health : totalCombat.生命值;
+    const enemyWuxueRaw = battleData.enemy?.wuxue;
+    const enemyWuxue = Number(enemyWuxueRaw);
+    const hasEnemyWuxue = Number.isInteger(enemyWuxue) && enemyWuxue >= 0 && enemyWuxue <= 9;
 
     const params = new URLSearchParams({
         playerName: playerName,
@@ -220,6 +223,10 @@ function showBattleGame(battleData) {
         // 道具数量
         ...itemCounts
     });
+
+    if (hasEnemyWuxue) {
+        params.set('enemyWuxue', String(enemyWuxue));
+    }
     
     // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
     const gameUrl = `turn-based-battle-new.html?${params.toString()}`;
@@ -281,25 +288,30 @@ function showAlchemyGame() {
         daliwan: inventory['大力丸'] || 0,
         jingutie: inventory['筋骨贴'] || 0,
         jinchuangyao: inventory['金疮药'] || 0,
-        piliwan: inventory['霹雳丸'] || 0
+        piliwan: inventory['霹雳丸'] || 0,
+        peiyuan_rootBone: inventory['培元丹-根骨'] || 0,
+        peiyuan_comprehension: inventory['培元丹-悟性'] || 0,
+        peiyuan_nature: inventory['培元丹-心性'] || 0,
+        peiyuan_charm: inventory['培元丹-魅力'] || 0,
+        yijin_rootBone: inventory['易筋丹-根骨'] || 0,
+        yijin_comprehension: inventory['易筋丹-悟性'] || 0,
+        yijin_nature: inventory['易筋丹-心性'] || 0,
+        yijin_charm: inventory['易筋丹-魅力'] || 0,
+        jiuzhuan_rootBone: inventory['九转金丹-根骨'] || 0,
+        jiuzhuan_comprehension: inventory['九转金丹-悟性'] || 0,
+        jiuzhuan_nature: inventory['九转金丹-心性'] || 0,
+        jiuzhuan_charm: inventory['九转金丹-魅力'] || 0
     };
     
     // 调试日志：输出传递的数据
     console.log('[炼丹] 准备传递数据到alchemy.html:');
     console.log('[炼丹] 金钱:', playerStats.金钱);
-    const totalTalents = getTotalTalents();
-    console.log('[炼丹] 天赋属性:', totalTalents);
     console.log('[炼丹] 药材数量:', herbCounts);
     console.log('[炼丹] 丹药数量:', pillCounts);
     
     // 构建URL参数
     const params = new URLSearchParams({
         money: playerStats.金钱,
-        // 天赋属性（用于属性提升计算）
-        rootBone: totalTalents.根骨,
-        comprehension: totalTalents.悟性,
-        nature: totalTalents.心性,
-        charm: totalTalents.魅力,
         // 药材数量
         ...herbCounts,
         // 丹药数量
@@ -307,8 +319,8 @@ function showAlchemyGame() {
     });
     
     // 使用本地URL进行调试
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
-    //const gameUrl = `alchemy.html?${params.toString()}`;
+    //const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
+    const gameUrl = `alchemy.html?${params.toString()}`;
     
     console.log('[炼丹] 完整URL:', gameUrl);
     
@@ -1079,16 +1091,55 @@ window.updateLocationHeadcountLabels = updateLocationHeadcountLabels;
 async function useItem(itemName) {
     const item = item_list[itemName];
     if (!item || !item.可使用 || inventory[itemName] <= 0) return;
-    
-    if (item.影响属性 === 'playerMood') {
-        playerMood = Math.min(120, playerMood + item.影响数值);  // 从100改为120
-    } else if (playerTalents.hasOwnProperty(item.影响属性)) {
-        playerTalents[item.影响属性] += item.影响数值;
-    } else if (playerStats.hasOwnProperty(item.影响属性)) {
-        playerStats[item.影响属性] += item.影响数值;
-    } else if (combatStats.hasOwnProperty(item.影响属性)) {
-        combatStats[item.影响属性] += item.影响数值;
+
+    const effects = (item.影响属性 && typeof item.影响属性 === 'object') ? item.影响属性 : {};
+    const effectEntries = Object.entries(effects);
+    const getAttrValue = (attr) => {
+        if (attr === 'playerMood') return playerMood;
+        if (playerTalents.hasOwnProperty(attr)) return playerTalents[attr];
+        if (playerStats.hasOwnProperty(attr)) return playerStats[attr];
+        if (combatStats.hasOwnProperty(attr)) return combatStats[attr];
+        return undefined;
+    };
+    const beforeValues = {};
+    for (const [attr] of effectEntries) {
+        beforeValues[attr] = getAttrValue(attr);
     }
+    console.log('[道具使用] 开始', {
+        item: itemName,
+        effects: { ...effects },
+        inventoryBefore: inventory[itemName] || 0,
+        before: beforeValues
+    });
+
+    for (const [attr, rawValue] of effectEntries) {
+        const value = Number(rawValue) || 0;
+        if (attr === 'playerMood') {
+            playerMood = Math.min(120, playerMood + value);
+        } else if (playerTalents.hasOwnProperty(attr)) {
+            playerTalents[attr] += value;
+        } else if (playerStats.hasOwnProperty(attr)) {
+            playerStats[attr] += value;
+        } else if (combatStats.hasOwnProperty(attr)) {
+            combatStats[attr] += value;
+        }
+    }
+
+    const afterApply = {};
+    const delta = {};
+    for (const [attr] of effectEntries) {
+        afterApply[attr] = getAttrValue(attr);
+        if (typeof beforeValues[attr] === 'number' && typeof afterApply[attr] === 'number') {
+            delta[attr] = afterApply[attr] - beforeValues[attr];
+        } else {
+            delta[attr] = null;
+        }
+    }
+    console.log('[道具使用] 效果已应用', {
+        item: itemName,
+        afterApply,
+        delta
+    });
     
     inventory[itemName]--;
     if (inventory[itemName] <= 0) {
@@ -1096,10 +1147,20 @@ async function useItem(itemName) {
     }
     
     checkAllValueRanges();
+
+    const afterClamp = {};
+    for (const [attr] of effectEntries) {
+        afterClamp[attr] = getAttrValue(attr);
+    }
+    console.log('[道具使用] 约束后', {
+        item: itemName,
+        afterClamp,
+        inventoryAfter: inventory[itemName] || 0
+    });
     updateAllDisplays();
     // await saveGameData();
     
-    // showModal(`使用了${itemName}！<br>体力 +${item.影响数值}`);
+    // showModal(`使用了${itemName}！`);
     
     closeItemDetailModal();
     showInventory();
@@ -1110,6 +1171,8 @@ async function equipItem(itemName) {
     const item = item_list[itemName];
     if (!item || !item.可装备 || inventory[itemName] <= 0) return;
     
+    const equipStatsBefore = { ...(equipStats || {}) };
+    const totalsBefore = getTotalCombatStats();
     let targetSlot = null;
     
     if (item.装备类型 === '武器') {
@@ -1142,12 +1205,31 @@ async function equipItem(itemName) {
         delete inventory[itemName];
     }
     
+    console.log('[装备] 开始', {
+        item: itemName,
+        slot: targetSlot,
+        oldEquipment: oldEquipment || null,
+        inventoryBefore: inventory[itemName] || 0,
+        equipStatsBefore
+    });
+
     refreshEquipStatsFromEquipment();
     checkAllValueRanges();
+
+    const equipStatsAfter = { ...(equipStats || {}) };
+    const totalsAfter = getTotalCombatStats();
+    console.log('[装备] 完成', {
+        item: itemName,
+        slot: targetSlot,
+        equipStatsAfter,
+        totalsBefore,
+        totalsAfter,
+        inventoryAfter: inventory[itemName] || 0
+    });
     updateAllDisplays();
     // await saveGameData();
     
-    // showModal(`装备了${itemName}！<br>${item.装备属性} +${item.装备数值}`);
+    // showModal(`装备了${itemName}！`);
     
     closeItemDetailModal();
     showEquipment();
@@ -1165,11 +1247,26 @@ async function unequipItem(itemName) {
     
     if (!slot) return;
     
+    const equipStatsBefore = { ...(equipStats || {}) };
+    const totalsBefore = getTotalCombatStats();
+
     equipment[slot] = null;
     inventory[itemName] = (inventory[itemName] || 0) + 1;
     
     refreshEquipStatsFromEquipment();
     checkAllValueRanges();
+
+    const equipStatsAfter = { ...(equipStats || {}) };
+    const totalsAfter = getTotalCombatStats();
+    console.log('[卸下装备] 完成', {
+        item: itemName,
+        slot,
+        equipStatsBefore,
+        equipStatsAfter,
+        totalsBefore,
+        totalsAfter,
+        inventoryAfter: inventory[itemName] || 0
+    });
     updateAllDisplays();
     // await saveGameData();
     

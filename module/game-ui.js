@@ -998,7 +998,7 @@ function showItemDetail(itemName) {
     }
     if (item.可装备) {
         infoHTML += `<div class="item-stat"><span class="item-stat-label">装备类型：</span>${item.装备类型}</div>`;
-        infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${item.装备属性} +${item.装备数值}</div>`;
+        infoHTML += `<div class="item-stat"><span class="item-stat-label">装备属性：</span>${getEquipEffectText(item)}</div>`;
     }
     if (item.可使用) {
         infoHTML += `<div class="item-stat"><span class="item-stat-label">使用效果：</span>${getItemEffectText(item)}</div>`;
@@ -1056,11 +1056,23 @@ function showItemDetail(itemName) {
 }
 
 // 获取道具效果文本
+function formatEffectText(effects) {
+    if (!effects || typeof effects !== 'object') return '无';
+    const entries = Object.entries(effects).filter(([, value]) => Number(value) !== 0);
+    if (entries.length === 0) return '无';
+    return entries.map(([attr, value]) => {
+        const label = attr === 'playerMood' ? '体力' : attr;
+        const sign = Number(value) >= 0 ? '+' : '';
+        return `${label} ${sign}${value}`;
+    }).join('，');
+}
+
 function getItemEffectText(item) {
-    if (item.影响属性 === 'playerMood') {
-        return `体力 +${item.影响数值}`;
-    }
-    return `${item.影响属性} +${item.影响数值}`;
+    return formatEffectText(item.影响属性);
+}
+
+function getEquipEffectText(item) {
+    return formatEffectText(item.装备属性);
 }
 
 function closeItemDetailModal() {
