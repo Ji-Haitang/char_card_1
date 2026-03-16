@@ -3821,6 +3821,13 @@ function processActions(playerAction, enemyAction) {
     const screenFlash = document.querySelector('.screen-flash');
     let playerWasHit = false;
     let enemyWasHit = false;
+    let turnEnded = false;
+
+    const markTurnEndedIfDead = () => {
+        if (player.currentHealth <= 0 || enemy.currentHealth <= 0) {
+            turnEnded = true;
+        }
+    };
     
     // 立绘动画状态追踪
     let playerDealtDamage = false;      // 玩家是否造成伤害
@@ -3979,6 +3986,7 @@ function processActions(playerAction, enemyAction) {
             playerTotalDamageDealt += result.damage;  // 追踪伤害用于杀意自伤
             addLog(`${player.name}使用绝招，对${enemy.name}造成${result.damage}点伤害！`);
             logDamageEffects(player, enemy, result);
+            markTurnEndedIfDead();
             enemyWasHit = true;
             playerDealtDamage = true;           // 玩家造成伤害
             playerDamageAction = 'special';     // 记录攻击类型
@@ -4002,7 +4010,7 @@ function processActions(playerAction, enemyAction) {
         }
     }
     
-    if (enemyAction === 'special') {
+    if (!turnEnded && enemyAction === 'special') {
         // 无论绝招是否被嘴炮无效化，都消耗能量
         consumeEnergy(enemy, 5);
         enemyCharacter.classList.add('enemy-special');
@@ -4021,6 +4029,7 @@ function processActions(playerAction, enemyAction) {
             enemyTotalDamageDealt += result.damage;  // 追踪伤害用于杀意自伤
             addLog(`${enemy.name}使用绝招，对${player.name}造成${result.damage}点伤害！`);
             logDamageEffects(enemy, player, result);
+            markTurnEndedIfDead();
             playerWasHit = true;
             enemyDealtDamage = true;           // 敌人造成伤害
             enemyDamageAction = 'special';     // 记录攻击类型
@@ -4045,7 +4054,7 @@ function processActions(playerAction, enemyAction) {
     }
     
     // 如果没有被绝招无效，处理重攻击
-    if (playerAction === 'heavy-attack' &&
+    if (!turnEnded && playerAction === 'heavy-attack' &&
         enemyAction !== 'special' &&
         playerAction !== 'special') {
         consumeEnergy(player, 2);
@@ -4073,6 +4082,7 @@ function processActions(playerAction, enemyAction) {
                 addLog(`${player.name}的重攻击被${enemy.name}防御了，但仍造成${result.damage}点伤害！`);
             }
             logDamageEffects(player, enemy, result);
+            markTurnEndedIfDead();
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
@@ -4094,6 +4104,7 @@ function processActions(playerAction, enemyAction) {
             consumeEnergy(enemy, 1); // 消耗敌人的能量
             addLog(`${player.name}的重攻击无效化了${enemy.name}的轻攻击，并造成${result.damage}点伤害！`);
             logDamageEffects(player, enemy, result);
+            markTurnEndedIfDead();
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
@@ -4113,13 +4124,14 @@ function processActions(playerAction, enemyAction) {
             playerTotalDamageDealt += result.damage;
             addLog(`${player.name}的重攻击对${enemy.name}造成${result.damage}点伤害！`);
             logDamageEffects(player, enemy, result);
+            markTurnEndedIfDead();
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
         }
     }
     
-    if (enemyAction === 'heavy-attack' &&
+    if (!turnEnded && enemyAction === 'heavy-attack' &&
         playerAction !== 'special' &&
         enemyAction !== 'special') {
         consumeEnergy(enemy, 2);
@@ -4147,6 +4159,7 @@ function processActions(playerAction, enemyAction) {
                 addLog(`${enemy.name}的重攻击被${player.name}防御了，但仍造成${result.damage}点伤害！`);
             }
             logDamageEffects(enemy, player, result);
+            markTurnEndedIfDead();
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -4168,6 +4181,7 @@ function processActions(playerAction, enemyAction) {
             consumeEnergy(player, 1); // 消耗玩家的能量
             addLog(`${enemy.name}的重攻击无效化了${player.name}的轻攻击，并造成${result.damage}点伤害！`);
             logDamageEffects(enemy, player, result);
+            markTurnEndedIfDead();
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -4187,6 +4201,7 @@ function processActions(playerAction, enemyAction) {
             enemyTotalDamageDealt += result.damage;
             addLog(`${enemy.name}的重攻击对${player.name}造成${result.damage}点伤害！`);
             logDamageEffects(enemy, player, result);
+            markTurnEndedIfDead();
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'heavy-attack';
@@ -4194,7 +4209,7 @@ function processActions(playerAction, enemyAction) {
     }
     
     // 如果没有被重攻击或绝招无效，处理轻攻击
-    if (playerAction === 'light-attack' && 
+    if (!turnEnded && playerAction === 'light-attack' && 
         enemyAction !== 'heavy-attack' && 
         enemyAction !== 'special') {
         consumeEnergy(player, 1);
@@ -4222,6 +4237,7 @@ function processActions(playerAction, enemyAction) {
                 addLog(`${player.name}的轻攻击被${enemy.name}防御了，但仍造成${result.damage}点伤害！`);
             }
             logDamageEffects(player, enemy, result);
+            markTurnEndedIfDead();
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
@@ -4241,13 +4257,14 @@ function processActions(playerAction, enemyAction) {
             playerTotalDamageDealt += result.damage;
             addLog(`${player.name}的轻攻击对${enemy.name}造成${result.damage}点伤害！`);
             logDamageEffects(player, enemy, result);
+            markTurnEndedIfDead();
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
         }
     }
     
-    if (enemyAction === 'light-attack' && 
+    if (!turnEnded && enemyAction === 'light-attack' && 
         playerAction !== 'heavy-attack' && 
         playerAction !== 'special') {
         consumeEnergy(enemy, 1);
@@ -4275,6 +4292,7 @@ function processActions(playerAction, enemyAction) {
                 addLog(`${enemy.name}的轻攻击被${player.name}防御了，但仍造成${result.damage}点伤害！`);
             }
             logDamageEffects(enemy, player, result);
+            markTurnEndedIfDead();
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'light-attack';
@@ -4294,6 +4312,7 @@ function processActions(playerAction, enemyAction) {
             enemyTotalDamageDealt += result.damage;
             addLog(`${enemy.name}的轻攻击对${player.name}造成${result.damage}点伤害！`);
             logDamageEffects(enemy, player, result);
+            markTurnEndedIfDead();
             playerWasHit = true;
             enemyDealtDamage = true;
             enemyDamageAction = 'light-attack';

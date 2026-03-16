@@ -200,6 +200,124 @@ function applyBattleReward(reward) {
     updateStatsDisplay();
 }
 
+function getTierValue(tierLabel) {
+    const tierMap = {
+        '极低': 0,
+        '低': 1,
+        '中': 2,
+        '高': 3,
+        '极高': 4
+    };
+
+    if (typeof tierLabel === 'number' && Number.isFinite(tierLabel)) {
+        return tierLabel;
+    }
+
+    if (typeof tierLabel === 'string' && tierMap.hasOwnProperty(tierLabel)) {
+        return tierMap[tierLabel];
+    }
+
+    return null;
+}
+
+function resolveEnemyBattlePower(enemyInfo) {
+    const wuxueRaw = enemyInfo?.属性?.武学;
+    const wuxueValue = Number(wuxueRaw);
+
+    if (Number.isFinite(wuxueValue) && wuxueValue >= 0 && wuxueValue <= 9) {
+        if (wuxueValue === 0) {
+            console.log('[战斗-掉落] 武学为0，按1处理');
+            return 1;
+        }
+        return wuxueValue;
+    }
+
+    if (wuxueRaw !== undefined && wuxueRaw !== null) {
+        console.log('[战斗-掉落] 武学无效，改用生命/攻击档位:', wuxueRaw);
+    }
+
+    const healthTier = getTierValue(enemyInfo?.属性?.生命力);
+    const attackTier = getTierValue(enemyInfo?.属性?.攻击力);
+
+    const healthValue = Number.isFinite(healthTier) ? healthTier : 0;
+    const attackValue = Number.isFinite(attackTier) ? attackTier : 0;
+    const total = healthValue + attackValue;
+
+    if (!Number.isFinite(healthTier) && !Number.isFinite(attackTier)) {
+        console.log('[战斗-掉落] 生命/攻击档位无效，按0处理');
+    }
+
+    return total;
+}
+
+function rollRarityByPower(powerValue) {
+    if (!Number.isFinite(powerValue) || powerValue <= 0) {
+        return 1;
+    }
+
+    const maxRarity = Math.max(1, Math.floor(powerValue));
+    const minRarity = Math.max(1, maxRarity - 3);
+    let totalWeight = 0;
+    const weights = [];
+
+    for (let rarity = minRarity; rarity <= maxRarity; rarity++) {
+        const weight = Math.max(1, 10 - rarity);
+        weights.push({ rarity, weight });
+        totalWeight += weight;
+    }
+
+    const roll = Math.random() * totalWeight;
+    let cumulative = 0;
+    for (const entry of weights) {
+        cumulative += entry.weight;
+        if (roll <= cumulative) {
+            console.log('[战斗-掉落] 稀有度roll:', {
+                powerValue,
+                minRarity,
+                maxRarity,
+                totalWeight,
+                roll,
+                picked: entry.rarity
+            });
+            return entry.rarity;
+        }
+    }
+
+    return maxRarity;
+}
+
+function generateBattleEventDrop(enemyInfo) {
+    if (!enemyInfo || typeof item_list !== 'object') {
+        console.log('[战斗-掉落] 掉落条件不足，跳过');
+        return null;
+    }
+
+    const powerValue = resolveEnemyBattlePower(enemyInfo);
+    const targetRarity = rollRarityByPower(powerValue);
+
+    const candidates = Object.entries(item_list).filter(([name, item]) => {
+        return item && Number(item.稀有度) === targetRarity;
+    });
+
+    if (candidates.length === 0) {
+        console.log('[战斗-掉落] 未找到对应稀有度道具:', targetRarity);
+        return null;
+    }
+
+    const pickIndex = Math.floor(Math.random() * candidates.length);
+    const [itemName] = candidates[pickIndex];
+
+    inventory[itemName] = (inventory[itemName] || 0) + 1;
+    console.log('[战斗-掉落] 掉落道具:', {
+        itemName,
+        targetRarity,
+        powerValue,
+        candidates: candidates.length
+    });
+
+    return { itemName, targetRarity };
+}
+
 // 解析LLM响应
 function parseLLMResponse(response, mainTextContent) {
     // 在函数开头添加时间解析
@@ -658,14 +776,26 @@ function setupMessageListeners() {
                 }
                 
                 if (result === 'victory') {
-                    let rewardMessage = '';
-                    if (currentBattleReward) {
-                        applyBattleReward(currentBattleReward);
-                        rewardMessage = `<br>获得奖励：${currentBattleReward.类型}+${currentBattleReward.数值}`;
+                    let rewardText = '';
+                    let dropText = '';
+                    const rewardSource = currentBattleEvent?.敌方信息?.战斗报酬 || currentBattleReward;
+                    if (rewardSource) {
+                        applyBattleReward(rewardSource);
+                        rewardText = `获得奖励：${rewardSource.类型}+${rewardSource.数值}`;
+                    } else {
+                        console.log('[战斗-事件] 未找到战斗报酬来源');
+                    }
+
+                    const dropResult = generateBattleEventDrop(currentBattleEvent?.敌方信息);
+                    if (dropResult && dropResult.itemName) {
+                        dropText = `获得掉落：${dropResult.itemName}`;
                     }
                     await handleMessageOutput(currentBattleEvent.事件描述 + 
-                        `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！` + 
-                        rewardMessage);
+                        `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！`);
+                    if (rewardText || dropText) {
+                        const modalLines = [rewardText, dropText].filter(Boolean).join('<br>');
+                        showModal(modalLines);
+                    }
                 } else if (result === 'defeat' || result === 'quit') {
                     await handleMessageOutput(currentBattleEvent.事件描述 + 
                         `<br><br>你迎战${currentBattleEvent.敌方信息.名称}但是不幸败北。`);
