@@ -444,6 +444,7 @@
                 <div id="system-dropdown" class="dropdown-menu">
                     <button class="dropdown-item" id="toggle-ui-btn" onclick="toggleUIStyle()">风格(古风)</button>
                     <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容(关)</button>
+                    <button class="dropdown-item" id="toggle-event-btn" onclick="toggleHaveEvent()">随机事件(开)</button>
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
                     <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
@@ -2282,28 +2283,44 @@ const outPut = `
             const week = remainingWeeks % 4 + 1;
             
             if (!actionContent) {
-                alert('请输入自由行动内容！');
+                if (lastUserMessage) {
+                    showConfirmModal(
+                        '输入为空',
+                        `当前输入为空，将默认发送上轮输入内容：<br><br><div style="text-align:left;padding:8px 12px;background:rgba(0,0,0,0.05);border-radius:4px;max-height:120px;overflow-y:auto;font-size:0.9em;line-height:1.5;word-break:break-all;">${lastUserMessage}</div>`,
+                        () => {
+                            inputElement.value = lastUserMessage;
+                            sendFreeAction();
+                        }
+                    );
+                } else {
+                    showModal('请输入自由行动内容！');
+                }
                 return;
             }
             let resultMessage = '';
             // GameMode为1时的特殊处理
             if (GameMode === 1) {
-                // 根据mapLocation的危险度进行事件判定
-                const dangerLevel = locationDangerLevels[mapLocation] || '低';
-                const eventChance = dangerEventChance[dangerLevel];
-                
-                const eventRoll = Math.random() * 100;
-                
-                // 先判断战斗事件（优先级更高）
-                if (eventRoll < eventChance.battle) {
-                    battleEvent = 1;
-                    randomEvent = 0;
-                    console.log(`在${mapLocation}触发战斗事件！危险度：${dangerLevel}`);
-                } else if (eventRoll < (eventChance.battle + eventChance.random)) {
-                    // 战斗事件没触发时，再判断随机事件
-                    randomEvent = 1;
-                    battleEvent = 0;
-                    console.log(`在${mapLocation}触发随机事件！危险度：${dangerLevel}`);
+                // 根据mapLocation的危险度进行事件判定（仅在haveEvent开启时）
+                if (haveEvent) {
+                    const dangerLevel = locationDangerLevels[mapLocation] || '低';
+                    const eventChance = dangerEventChance[dangerLevel];
+                    
+                    const eventRoll = Math.random() * 100;
+                    
+                    // 先判断战斗事件（优先级更高）
+                    if (eventRoll < eventChance.battle) {
+                        battleEvent = 1;
+                        randomEvent = 0;
+                        console.log(`在${mapLocation}触发战斗事件！危险度：${dangerLevel}`);
+                    } else if (eventRoll < (eventChance.battle + eventChance.random)) {
+                        // 战斗事件没触发时，再判断随机事件
+                        randomEvent = 1;
+                        battleEvent = 0;
+                        console.log(`在${mapLocation}触发随机事件！危险度：${dangerLevel}`);
+                    } else {
+                        randomEvent = 0;
+                        battleEvent = 0;
+                    }
                 } else {
                     randomEvent = 0;
                     battleEvent = 0;
@@ -3382,6 +3399,18 @@ const outPut = `
             toggleDropdown('system-dropdown');
         }
 
+        // 随机事件开关
+        function updateHaveEventLabel() {
+            const btn = document.getElementById('toggle-event-btn');
+            if (btn) btn.textContent = `随机事件(${haveEvent ? '开' : '关'})`;
+        }
+
+        function toggleHaveEvent() {
+            haveEvent = haveEvent ? 0 : 1;
+            updateHaveEventLabel();
+            toggleDropdown('system-dropdown');
+        }
+
         // 切换强力总结开关
         async function toggleCompressSummary() {
             compressSummary = !compressSummary;
@@ -3569,6 +3598,7 @@ const outPut = `
             // 新增：初始化时更新SLG返回按钮显示
             updateSLGReturnButton();
             updateCgToggleLabel();
+            updateHaveEventLabel();
             // 初始化UI风格
             updateUIStyleLabel();
             if (typeof applyUIStyle === 'function') {

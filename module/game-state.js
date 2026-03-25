@@ -83,6 +83,7 @@ let GameMode = 0;  // 新增：游戏模式变量
 let difficulty = 'normal';
 let cgContentEnabled = false;   // 新增：CG内容开关运行时变量（默认false）
 let compressSummary = false;    // 新增：强力总结运行时变量（默认false）
+let haveEvent = 1;              // 新增：随机事件开关（1=开，0=关，默认1）
 let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
 let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
 let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
@@ -206,6 +207,7 @@ function syncVariablesFromGameData() {
     mapLocation,      // 新增
     cgContentEnabled,  // 新增
     compressSummary,
+    haveEvent,         // 新增：随机事件开关
     uiStyle,           // 新增：UI风格
     alchemyDone,       // 新增：本周是否已炼丹
     triggeredEvents,   // 新增：已触发的特殊事件ID列表
@@ -276,6 +278,7 @@ function syncGameDataFromVariables() {
     gameData.mapLocation = mapLocation;
     gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
     gameData.compressSummary = compressSummary;    // 新增：写回存档
+    gameData.haveEvent = haveEvent;                // 新增：随机事件开关
     gameData.uiStyle = uiStyle;                    // 新增：UI风格
     gameData.alchemyDone = alchemyDone;            // 新增：本周是否已炼丹
     gameData.triggeredEvents = triggeredEvents;    // 新增：已触发的特殊事件ID列表

@@ -852,7 +852,7 @@ const defaultGameData = {
     npcSparred: { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false, /* "Z": false, */ "M": false, "N": false, "O": false}, // 新增：本周是否已切磋
     lastFarmWeek: 1,  // 新增：上次耕种的周数
     farmGrid: [],     // 新增：农场地块状态
-    inventory: {"星罗盘坠": 1,"制式铁剑": 1,"精钢长剑": 1}, // 新增：玩家物品栏，初始拥有一个星罗盘坠
+    inventory: {}, 
     equipment: {
         "武器": null,
         "防具": null,
@@ -870,6 +870,7 @@ const defaultGameData = {
     mapLocation: '天山派', // 地图位置
     cgContentEnabled: false,  // 新增：CG内容开关（默认关）
     compressSummary: false,    // 新增：强力总结（默认关）
+    haveEvent: 1,              // 新增：随机事件开关（1=开，0=关）
     enamor: 0,              // 新增：倾慕触发标记（默认0）
     alchemyDone: false,      // 新增：本周是否已炼丹（默认false）
     triggeredEvents: [],     // 新增：已触发的特殊事件ID列表
