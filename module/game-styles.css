@@ -930,6 +930,11 @@ body {
     padding: 20px;
 }
 
+#modal {
+    position: fixed;
+    z-index: 4000;
+}
+
 .modal-content {
     background-color: #fff;
     margin: auto;
@@ -2157,6 +2162,396 @@ body {
     max-width: 600px;
     max-height: 80vh;
     overflow-y: auto;
+}
+
+.skill-library-content,
+.skill-equip-content {
+    width: min(760px, 100%);
+    max-width: min(760px, 100%);
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+}
+
+.skill-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    text-align: left;
+}
+
+.skill-modal-header h3 {
+    margin: 0 0 4px;
+}
+
+.skill-modal-subtitle {
+    color: #666;
+    font-size: 13px;
+    line-height: 1.5;
+}
+
+.skill-memory-summary {
+    min-width: 120px;
+    text-align: right;
+    font-weight: bold;
+    color: #2c2c2c;
+}
+
+.skill-filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.skill-filter-btn,
+.skill-action-btn {
+    padding: 8px 14px;
+    border: 1px solid #cfd8dc;
+    border-radius: 8px;
+    background: #f5f7f8;
+    color: #2c2c2c;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 13px;
+    font-weight: bold;
+}
+
+.skill-filter-btn:hover,
+.skill-action-btn:hover:not(:disabled) {
+    border-color: #4ecdc4;
+    transform: translateY(-1px);
+}
+
+.skill-filter-btn.active,
+.skill-action-btn {
+    background: #2c2c2c;
+    color: #fff;
+    border-color: #1a1a1a;
+}
+
+.skill-action-btn.ghost {
+    background: #fff;
+    color: #2c2c2c;
+    border-color: #d5dce0;
+}
+
+.skill-action-btn.disabled,
+.skill-action-btn:disabled {
+    background: #eceff1;
+    color: #999;
+    border-color: #d7dbdd;
+    cursor: not-allowed;
+    transform: none;
+}
+
+.skill-list-container {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    gap: 12px;
+    min-height: 0;
+    overflow-y: auto;
+    padding-right: 4px;
+    overscroll-behavior: contain;
+}
+
+.skill-list-container.compact {
+    gap: 10px;
+}
+
+.skill-equipment-sections {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    flex: 1 1 auto;
+    gap: 14px;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.skill-library-content .modal-buttons,
+.skill-equip-content .modal-buttons {
+    margin-top: auto;
+    flex-shrink: 0;
+}
+
+.skill-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    min-height: 0;
+}
+
+.skill-panel-title {
+    font-weight: bold;
+    text-align: left;
+    color: #2c2c2c;
+}
+
+.skill-card {
+    background: #f8fafb;
+    border: 1px solid #dfe6e9;
+    border-radius: 10px;
+    padding: 14px;
+    text-align: left;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.skill-card.compact {
+    padding: 12px;
+}
+
+.skill-card.locked {
+    opacity: 0.68;
+}
+
+.skill-card.maxed {
+    border-color: #90a4ae;
+}
+
+.skill-card-top,
+.skill-title-row,
+.skill-card-actions,
+.skill-equip-actions,
+.skill-level-head,
+.skill-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.skill-title {
+    font-size: 16px;
+    font-weight: bold;
+    color: #1f1f1f;
+}
+
+.skill-badge,
+.skill-tag,
+.skill-level-chip,
+.skill-requirement {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 8px;
+    border-radius: 999px;
+    font-size: 12px;
+    line-height: 1.2;
+}
+
+.skill-badge {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.skill-badge.success,
+.skill-tag.equipped,
+.skill-level-chip.active {
+    background: #e8f8f7;
+    color: #0f766e;
+}
+
+.skill-tag {
+    background: #eceff1;
+    color: #455a64;
+}
+
+.skill-card-tags,
+.skill-level-chip-list,
+.skill-requirement-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+.skill-desc,
+.skill-level-effect,
+.skill-effect-row {
+    color: #4a4a4a;
+    line-height: 1.6;
+    font-size: 13px;
+}
+
+.skill-meta-row,
+.skill-level-meta {
+    color: #607d8b;
+    font-size: 12px;
+}
+
+.skill-requirement.ok {
+    background: #eef7ef;
+    color: #2e7d32;
+}
+
+.skill-requirement.failed {
+    background: #fff0f0;
+    color: #c62828;
+}
+
+.skill-level-details {
+    border-top: 1px dashed #d0d7de;
+    padding-top: 10px;
+}
+
+.skill-level-details summary {
+    cursor: pointer;
+    color: #455a64;
+    font-weight: bold;
+}
+
+.skill-level-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.skill-level-row {
+    padding: 10px;
+    border-radius: 8px;
+    background: #fff;
+    border: 1px solid #eceff1;
+}
+
+.skill-level-row.learned {
+    border-color: #b2dfdb;
+}
+
+.skill-level-row.next {
+    border-color: #90caf9;
+}
+
+.skill-level-row.locked {
+    opacity: 0.7;
+}
+
+.skill-level-name,
+.skill-level-state {
+    font-weight: bold;
+    font-size: 13px;
+}
+
+.skill-memory-bar {
+    width: 100%;
+    height: 10px;
+    border-radius: 999px;
+    background: #e0e0e0;
+    overflow: hidden;
+}
+
+.skill-memory-fill {
+    width: 0;
+    height: 100%;
+    background: linear-gradient(90deg, #4ecdc4, #2c7a7b);
+    transition: width 0.25s ease;
+}
+
+.skill-select-label {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: #455a64;
+}
+
+.skill-level-select {
+    min-width: 72px;
+    padding: 6px 10px;
+    border: 1px solid #cfd8dc;
+    border-radius: 6px;
+    background: #fff;
+    color: #2c2c2c;
+}
+
+.skill-empty-state {
+    padding: 28px 16px;
+    border-radius: 10px;
+    background: #f7f7f7;
+    color: #78909c;
+    text-align: center;
+}
+
+@media (max-width: 700px) {
+    .skill-equipment-sections {
+        grid-template-columns: 1fr;
+    }
+
+    .skill-modal-header {
+        flex-direction: column;
+    }
+
+    .skill-memory-summary {
+        min-width: 0;
+        text-align: left;
+    }
+}
+
+@media (max-width: 480px) {
+    .skill-library-content,
+    .skill-equip-content {
+        gap: 10px;
+    }
+
+    .skill-filter-row {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 6px;
+    }
+
+    .skill-filter-btn {
+        width: 100%;
+        min-width: 0;
+        padding: 7px 10px;
+        font-size: 12px;
+    }
+
+    .skill-card,
+    .skill-card.compact,
+    .skill-level-row {
+        padding: 10px;
+    }
+
+    .skill-card-top,
+    .skill-title-row,
+    .skill-card-actions,
+    .skill-equip-actions,
+    .skill-level-head,
+    .skill-meta-row {
+        align-items: stretch;
+    }
+
+    .skill-card-actions .skill-action-btn,
+    .skill-equip-actions .skill-action-btn,
+    .skill-level-select {
+        width: 100%;
+    }
+
+    .skill-title {
+        font-size: 15px;
+    }
+
+    .skill-desc,
+    .skill-level-effect,
+    .skill-effect-row {
+        font-size: 12px;
+        line-height: 1.5;
+    }
+
+    .skill-meta-row,
+    .skill-level-meta,
+    .skill-select-label {
+        font-size: 11px;
+    }
+
+    .skill-memory-summary {
+        font-size: 12px;
+    }
 }
 
 .inventory-grid {

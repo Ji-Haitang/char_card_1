@@ -240,6 +240,146 @@ function calculateWuxueForLevel(level) {
     return totalWuxue;
 }
 
+function calculateMemorySlots(xueshi) {
+    let totalCost = 0;
+    let slots = 0;
+
+    for (let i = 1; i <= 10; i++) {
+        totalCost += 8 + 4 * i;
+        if (xueshi >= totalCost) {
+            slots = i;
+        } else {
+            break;
+        }
+    }
+
+    return slots;
+}
+
+function getMaxMemorySlots() {
+    return calculateMemorySlots(playerStats?.学识 || 0);
+}
+
+function getSkillMemorySlots(skillId) {
+    const skill = skillList?.[skillId];
+    if (!skill) return 0;
+
+    if (typeof skill.memorySlots === 'number') {
+        return Number(skill.memorySlots) || 0;
+    }
+
+    const firstLevelData = Array.isArray(skill.levels) ? skill.levels[0] : null;
+    return Number(firstLevelData?.memorySlots) || 0;
+}
+
+function getUsedMemorySlots() {
+    let used = 0;
+
+    for (const skillId of Object.keys(equippedSkills || {})) {
+        used += getSkillMemorySlots(skillId);
+    }
+
+    return used;
+}
+
+function getSkillLevelData(skillId, level) {
+    const skill = skillList?.[skillId];
+    if (!skill || !Array.isArray(skill.levels)) return null;
+
+    const index = Number(level) - 1;
+    if (!Number.isInteger(index) || index < 0 || index >= skill.levels.length) {
+        return null;
+    }
+
+    return skill.levels[index] || null;
+}
+
+function getValueByPathForSkill(path) {
+    if (!path || typeof path !== 'string') return undefined;
+
+    const parts = path.split('.');
+    const rootValueMap = {
+        playerTalents,
+        playerStats,
+        combatStats,
+        equipStats,
+        npcFavorability,
+        weekStartFavorability,
+        inventory,
+        equipment,
+        learnedSkills,
+        equippedSkills,
+        currentWeek,
+        actionPoints,
+        playerMood,
+        GameMode,
+        difficulty,
+        mapLocation,
+        companionNPC,
+        randomEvent,
+        battleEvent,
+        haveEvent,
+        enamor,
+        inputEnable
+    };
+
+    let current = rootValueMap[parts[0]];
+    if (typeof current === 'undefined') {
+        return undefined;
+    }
+
+    for (let i = 1; i < parts.length; i++) {
+        const part = parts[i];
+        if (current == null || typeof current !== 'object' || !(part in current)) {
+            return undefined;
+        }
+        current = current[part];
+    }
+
+    return current;
+}
+
+function checkSkillRequirementCondition(value, condition) {
+    if (!condition || typeof condition !== 'object') return true;
+
+    if (Object.prototype.hasOwnProperty.call(condition, 'min') && !(value >= condition.min)) {
+        return false;
+    }
+    if (Object.prototype.hasOwnProperty.call(condition, 'max') && !(value <= condition.max)) {
+        return false;
+    }
+    if (Object.prototype.hasOwnProperty.call(condition, 'equals') && value !== condition.equals) {
+        return false;
+    }
+    if (Array.isArray(condition.in) && !condition.in.includes(value)) {
+        return false;
+    }
+
+    return true;
+}
+
+function checkSkillRequirements(skillId, level) {
+    const levelData = getSkillLevelData(skillId, level);
+    if (!levelData) {
+        return { ok: false, failed: ['技能等级数据不存在'] };
+    }
+
+    const failed = [];
+    const requires = levelData.requires || {};
+
+    for (const [path, condition] of Object.entries(requires)) {
+        const value = getValueByPathForSkill(path);
+        if (!checkSkillRequirementCondition(value, condition)) {
+            failed.push(path);
+        }
+    }
+
+    return {
+        ok: failed.length === 0,
+        failed
+    };
+}
+
 // ==================== 模糊匹配系统 ====================
 
 /**

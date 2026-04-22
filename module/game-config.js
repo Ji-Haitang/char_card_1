@@ -123,7 +123,7 @@ const npcs = {
     },
     G: {
         name: "呼延显",
-        description: "24岁匈奴族男性，天山派内门弟子，第八代大师兄，破阵子之徒，带发修行的僧侣。",
+        description: "24岁汉族男性，天山派内门弟子，第八代大师兄，破阵子之徒，带发修行的僧侣。",
         avatar: "G"
     },
     H: {
@@ -859,6 +859,8 @@ const defaultGameData = {
         "饰品1": null,
         "饰品2": null
     },
+    learnedSkills: {},
+    equippedSkills: {},
     lastUserMessage: "",     // 已存在：储存上轮用户输入
     summary_Small: "",
     summary_Week: "",

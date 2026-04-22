@@ -202,6 +202,37 @@ function showBattleGame(battleData) {
     const enemyWuxueRaw = battleData.enemy?.wuxue;
     const enemyWuxue = Number(enemyWuxueRaw);
     const hasEnemyWuxue = Number.isInteger(enemyWuxue) && enemyWuxue >= 0 && enemyWuxue <= 9;
+    const equippedSkillsData = {};
+
+    for (const [skillId, level] of Object.entries(equippedSkills || {})) {
+        const skill = skillList?.[skillId];
+        const levelData = getSkillLevelData(skillId, level);
+        if (!skill || !levelData) continue;
+
+        equippedSkillsData[skillId] = {
+            id: skillId,
+            name: skill.name,
+            level: Number(level),
+            triggerTiming: skill.triggerTiming,
+            params: levelData.params || {},
+            effectDesc: levelData.effectDesc || ''
+        };
+    }
+
+    console.groupCollapsed('[SkillTest] showBattleGame 技能传参');
+    console.log('[SkillTest] 已装备技能原始状态:', equippedSkills || {});
+    console.log('[SkillTest] 准备传入战斗的技能数据:', equippedSkillsData);
+    if (Object.keys(equippedSkillsData).length === 0) {
+        console.warn('[SkillTest] 当前没有已装备技能，本场战斗不会收到 equippedSkills 参数');
+    }
+    console.log('[SkillTest] 玩家战斗面板:', {
+        playerName,
+        playerAttack,
+        playerHealth,
+        totalCombat
+    });
+    console.log('[SkillTest] 敌人战斗面板:', battleData.enemy || {});
+    console.groupEnd();
 
     const params = new URLSearchParams({
         playerName: playerName,
@@ -224,12 +255,17 @@ function showBattleGame(battleData) {
         ...itemCounts
     });
 
+    if (Object.keys(equippedSkillsData).length > 0) {
+        params.set('equippedSkills', JSON.stringify(equippedSkillsData));
+    }
+
     if (hasEnemyWuxue) {
         params.set('enemyWuxue', String(enemyWuxue));
     }
     
-    // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle.html?${params.toString()}`;
-    const gameUrl = `turn-based-battle-new.html?${params.toString()}`;
+    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle-new.html?${params.toString()}`;
+    // const gameUrl = `turn-based-battle-new.html?${params.toString()}`;
+    console.log('[SkillTest] 战斗页面URL:', gameUrl);
     iframe.src = gameUrl;
     
     modal.style.display = 'block';
@@ -319,8 +355,8 @@ function showAlchemyGame() {
     });
     
     // 使用本地URL进行调试
-    //const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
-    const gameUrl = `alchemy.html?${params.toString()}`;
+    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
+    // const gameUrl = `alchemy.html?${params.toString()}`;
     
     console.log('[炼丹] 完整URL:', gameUrl);
     

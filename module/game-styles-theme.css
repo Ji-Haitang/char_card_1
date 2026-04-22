@@ -304,6 +304,105 @@ body {
     padding-left: 25px !important; /* 悬停右移（小屏幕基础值15px → 25px，+10px） */
 }
 
+.skill-library-content,
+.skill-equip-content,
+.skill-card,
+.skill-panel,
+.skill-empty-state,
+.skill-level-row {
+    background: var(--paper-base) !important;
+    color: var(--ink-dark) !important;
+    border: 2px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.08) !important;
+}
+
+.skill-modal-subtitle,
+.skill-desc,
+.skill-effect-row,
+.skill-level-effect,
+.skill-level-meta,
+.skill-select-label,
+.skill-empty-state {
+    color: var(--ink-dark) !important;
+    font-family: var(--font-serif) !important;
+}
+
+.skill-panel-title,
+.skill-title,
+.skill-level-name,
+.skill-level-state,
+.skill-memory-summary,
+.skill-level-details summary {
+    color: var(--ink-dark) !important;
+    font-family: var(--font-serif) !important;
+}
+
+.skill-filter-btn,
+.skill-action-btn,
+.skill-level-select {
+    background: var(--paper-base) !important;
+    color: var(--ink-dark) !important;
+    border: 2px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.08) !important;
+}
+
+.skill-filter-btn.active,
+.skill-action-btn:not(.ghost) {
+    background: var(--ink-dark) !important;
+    color: var(--paper-base) !important;
+}
+
+.skill-action-btn.ghost {
+    background: var(--paper-light) !important;
+}
+
+.skill-filter-btn:hover,
+.skill-action-btn:hover:not(:disabled) {
+    color: var(--accent-red) !important;
+    border-color: var(--accent-red) !important;
+}
+
+.skill-badge,
+.skill-tag,
+.skill-level-chip,
+.skill-requirement {
+    border: 1px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+}
+
+.skill-badge,
+.skill-tag,
+.skill-level-chip {
+    background: rgba(0, 0, 0, 0.04) !important;
+    color: var(--ink-dark) !important;
+}
+
+.skill-badge.success,
+.skill-tag.equipped,
+.skill-level-chip.active,
+.skill-requirement.ok {
+    background: rgba(36, 113, 163, 0.10) !important;
+    color: var(--accent-cyan) !important;
+}
+
+.skill-requirement.failed {
+    background: rgba(169, 50, 38, 0.08) !important;
+    color: var(--accent-red) !important;
+}
+
+.skill-memory-bar {
+    background: rgba(0, 0, 0, 0.08) !important;
+    border: 1px solid var(--ink-dark) !important;
+}
+
+.skill-memory-fill {
+    background: linear-gradient(90deg, var(--accent-cyan), var(--accent-gold)) !important;
+}
+
 /* 中等屏幕：增强右移效果 */
 @media (min-width: 768px) {
     .dropdown-item:hover {

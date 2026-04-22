@@ -1742,6 +1742,325 @@ function parseEnemyWuxueParam() {
     return value;
 }
 
+function parseEquippedSkillsParam() {
+    const raw = urlParams.get('equippedSkills');
+    if (!raw) {
+        console.log('[SkillTest] 本场战斗未收到 equippedSkills 参数');
+        return {};
+    }
+
+    try {
+        const parsed = JSON.parse(raw);
+        console.log('[SkillTest] 解析战斗技能参数成功:', parsed);
+        return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (error) {
+        console.error('技能参数解析失败:', error);
+        return {};
+    }
+}
+
+const playerEquippedSkills = parseEquippedSkillsParam();
+console.log('[SkillTest] 当前玩家技能列表:', playerEquippedSkills);
+
+function getPlayerSkillEntriesByTiming(timing) {
+    const entries = Object.values(playerEquippedSkills).filter(skill => skill && skill.triggerTiming === timing);
+    console.log(`[SkillTest] timing=${timing} 命中的技能:`, entries);
+    return entries;
+}
+
+function formatSkillValue(value) {
+    if (!Number.isFinite(value)) return '0';
+    return Number.isInteger(value) ? String(value) : value.toFixed(1).replace(/\.0$/, '');
+}
+
+function applyPlayerSkillEffects(timing, context = {}) {
+    const result = {
+        damageMultiplier: 1,
+        extraDamage: 0,
+        extraEnergy: 0,
+        extraHeal: 0,
+        damageReduction: 0,
+        extraReflect: 0,
+        energyDrain: 0,
+        energySteal: 0,
+        grantNextAttackBonus: 0,
+        messages: []
+    };
+
+    const entries = getPlayerSkillEntriesByTiming(timing);
+    if (entries.length > 0) {
+        console.groupCollapsed(`[SkillTest] 计算技能效果 timing=${timing}`);
+        console.log('[SkillTest] 输入上下文:', context);
+    }
+    for (const skill of entries) {
+        const params = skill.params || {};
+        const label = `【${skill.name} Lv${skill.level}】`;
+
+        switch (timing) {
+            case 'onTauntHitDefend': {
+                const extraDamageRatio = Number(params.extraDamageRatio) || 0;
+                const extraDamage = Math.round((context.basicDamage || 0) * extraDamageRatio);
+                console.log('[SkillTest] onTauntHitDefend 计算:', {
+                    skill: skill.name,
+                    level: skill.level,
+                    basicDamage: context.basicDamage || 0,
+                    extraDamageRatio,
+                    extraDamage
+                });
+                if (extraDamage > 0) {
+                    result.extraDamage += extraDamage;
+                    result.messages.push(`${label}发动，追加 ${extraDamage} 点伤害！`);
+                }
+                break;
+            }
+            case 'onGather': {
+                const extraEnergy = Number(params.extraEnergy) || 0;
+                const healRatio = Number(params.healRatio) || 0;
+                const previousAction = context.previousAction || null;
+                const consecutiveGather = previousAction === 'gather';
+                const nonConsecutiveGather = previousAction !== 'gather';
+                console.log('[SkillTest] onGather 计算:', {
+                    skill: skill.name,
+                    level: skill.level,
+                    previousAction,
+                    consecutiveGather,
+                    nonConsecutiveGather,
+                    extraEnergy,
+                    healRatio
+                });
+                if (consecutiveGather && extraEnergy > 0) {
+                    result.extraEnergy += extraEnergy;
+                    result.messages.push(`${label}发动，额外获得 ${formatSkillValue(extraEnergy)} 点能量！`);
+                }
+                if (params.requireNonConsecutiveGather && nonConsecutiveGather && healRatio > 0) {
+                    const extraHeal = Math.round((context.actor?.maxHealth || 0) * healRatio);
+                    if (extraHeal > 0) {
+                        result.extraHeal += extraHeal;
+                        result.messages.push(`${label}发动，恢复 ${extraHeal} 点生命！`);
+                    }
+                }
+                break;
+            }
+            case 'onDefend': {
+                const healRatio = Number(params.healRatio) || 0;
+                const extraHeal = Math.round((context.actor?.maxHealth || 0) * healRatio);
+                console.log('[SkillTest] onDefend 计算:', {
+                    skill: skill.name,
+                    level: skill.level,
+                    actorMaxHealth: context.actor?.maxHealth || 0,
+                    healRatio,
+                    extraHeal
+                });
+                if (extraHeal > 0) {
+                    result.extraHeal += extraHeal;
+                    result.messages.push(`${label}发动，恢复 ${extraHeal} 点生命！`);
+                }
+                break;
+            }
+            case 'onSpecialUse': {
+                const actor = context.actor;
+                if (!actor || !(actor.maxHealth > 0)) break;
+                const missingRatio = 1 - (actor.currentHealth / actor.maxHealth);
+                const totalBonus = (Number(params.baseBonusRatio) || 0) + (Number(params.maxBonusRatio) || 0) * missingRatio;
+                console.log('[SkillTest] onSpecialUse 计算:', {
+                    skill: skill.name,
+                    level: skill.level,
+                    currentHealth: actor.currentHealth,
+                    maxHealth: actor.maxHealth,
+                    missingRatio,
+                    baseBonusRatio: Number(params.baseBonusRatio) || 0,
+                    maxBonusRatio: Number(params.maxBonusRatio) || 0,
+                    totalBonus
+                });
+                if (totalBonus > 0) {
+                    result.damageMultiplier += totalBonus;
+                    result.messages.push(`${label}发动，绝招伤害提高 ${Math.round(totalBonus * 100)}%！`);
+                }
+                break;
+            }
+            case 'onTakeDamage': {
+                const damageReduction = Number(params.damageReduction) || 0;
+                const reflectRatio = Number(params.reflectRatio) || 0;
+                const nextAttackBonusRatio = Number(params.nextAttackBonusRatio) || 0;
+                const energyRecovery = Number(params.energyRecovery) || 0;
+                const gatherDamageReduction = Number(params.gatherDamageReduction) || 0;
+                const defenderAction = context.defender?.selectedAction || '';
+                console.log('[SkillTest] onTakeDamage 计算:', {
+                    skill: skill.name,
+                    level: skill.level,
+                    incomingDamage: context.damage || 0,
+                    damageReduction,
+                    reflectRatio,
+                    nextAttackBonusRatio,
+                    energyRecovery,
+                    gatherDamageReduction,
+                    defenderAction
+                });
+                result.damageReduction += damageReduction;
+                result.extraReflect += reflectRatio;
+                if (nextAttackBonusRatio > 0) {
+                    result.grantNextAttackBonus = Math.max(result.grantNextAttackBonus, nextAttackBonusRatio);
+                }
+                if (params.requirePlayerDefending && defenderAction === 'defend' && energyRecovery > 0) {
+                    result.extraEnergy += energyRecovery;
+                    result.messages.push(`${label}发动，回复 ${formatSkillValue(energyRecovery)} 点能量！`);
+                }
+                if (params.requirePlayerGathering && defenderAction === 'gather' && gatherDamageReduction > 0) {
+                    result.damageReduction += gatherDamageReduction;
+                    result.messages.push(`${label}发动，本次伤害减免 ${Math.round(gatherDamageReduction * 100)}%！`);
+                }
+                break;
+            }
+            case 'onAttackHit': {
+                const playerAction = context.playerAction || '';
+                const enemyAction = context.enemyAction || '';
+                const basicDamage = context.basicDamage || 0;
+                const targetCurrentHealth = context.targetCurrentHealth || 0;
+                const targetMaxHealth = context.targetMaxHealth || 1;
+                const previousAction = context.previousAction || null;
+
+                // 灵狐剑法：连续攻击命中
+                if (params.requireConsecutiveAttack) {
+                    const isCurrentAttack = playerAction === 'light-attack' || playerAction === 'heavy-attack' || playerAction === 'special';
+                    const wasPreviousAttack = previousAction === 'light-attack' || previousAction === 'heavy-attack' || previousAction === 'special';
+                    if (isCurrentAttack && wasPreviousAttack) {
+                        const extraDamageRatio = Number(params.extraDamageRatio) || 0;
+                        const extraDamage = Math.round(basicDamage * extraDamageRatio);
+                        console.log('[SkillTest] 灵狐剑法触发:', { basicDamage, extraDamageRatio, extraDamage, previousAction, playerAction });
+                        if (extraDamage > 0) {
+                            result.extraDamage += extraDamage;
+                            result.messages.push(`${label}发动，连斩追加 ${extraDamage} 点伤害！`);
+                        }
+                    }
+                    break;
+                }
+
+                // 小梨飞刀 / 霜雪葬花：轻击命中集气/嘲讽目标
+                if (params.requireLightAttack && params.requireTargetGatherOrTaunt) {
+                    if (playerAction === 'light-attack' && (enemyAction === 'gather' || enemyAction === 'taunt')) {
+                        // 霜雪葬花：能量回复
+                        const energyRecoveryRatio = Number(params.energyRecoveryRatio) || 0;
+                        if (energyRecoveryRatio > 0) {
+                            result.extraEnergy += energyRecoveryRatio;
+                            console.log('[SkillTest] 霜雪葬花触发:', { energyRecoveryRatio, enemyAction });
+                            result.messages.push(`${label}发动，回复 ${formatSkillValue(energyRecoveryRatio)} 点能量！`);
+                            break;
+                        }
+                        // 小梨飞刀：追加伤害
+                        const extraDamageRatio = Number(params.extraDamageRatio) || 0;
+                        let extraDamage = Math.round(basicDamage * extraDamageRatio);
+                        const lowHealthBonusMultiplier = Number(params.lowHealthBonusMultiplier) || 1;
+                        if (targetCurrentHealth / targetMaxHealth < 0.5 && lowHealthBonusMultiplier > 1) {
+                            extraDamage = Math.round(extraDamage * lowHealthBonusMultiplier);
+                        }
+                        console.log('[SkillTest] 小梨飞刀触发:', { basicDamage, extraDamageRatio, extraDamage, enemyAction });
+                        if (extraDamage > 0) {
+                            result.extraDamage += extraDamage;
+                            const lowHpNote = (targetCurrentHealth / targetMaxHealth < 0.5) ? '（残血加成！）' : '';
+                            result.messages.push(`${label}发动，暗器追加 ${extraDamage} 点伤害！${lowHpNote}`);
+                        }
+                    }
+                    break;
+                }
+
+                // 连羽缠丝：重击命中非防御、非绝招目标
+                if (params.requireHeavyAttack && params.requireTargetNonDefendOrSpecial) {
+                    if (playerAction === 'heavy-attack' && enemyAction !== 'defend' && enemyAction !== 'special') {
+                        const energyDrain = Number(params.energyDrain) || 0;
+                        console.log('[SkillTest] 连羽缠丝触发:', { energyDrain, enemyAction });
+                        if (energyDrain > 0) {
+                            result.energyDrain += energyDrain;
+                            result.messages.push(`${label}发动，削减敌方 ${formatSkillValue(energyDrain)} 点能量！`);
+                        }
+                    }
+                    break;
+                }
+
+                // 开山九式：重击命中防御目标 或 重击克制轻击
+                if (params.requireHeavyAttack && params.requireTargetDefendOrCountered) {
+                    if (playerAction === 'heavy-attack' && (enemyAction === 'defend' || enemyAction === 'light-attack')) {
+                        const extraDamageRatio = Number(params.extraDamageRatio) || 0;
+                        let extraDamage = Math.round(basicDamage * extraDamageRatio);
+                        const defendBonusMultiplier = Number(params.defendBonusMultiplier) || 1;
+                        if (enemyAction === 'defend' && defendBonusMultiplier > 1) {
+                            extraDamage = Math.round(extraDamage * defendBonusMultiplier);
+                        }
+                        console.log('[SkillTest] 开山九式触发:', { basicDamage, extraDamageRatio, extraDamage, enemyAction });
+                        if (extraDamage > 0) {
+                            result.extraDamage += extraDamage;
+                            const defNote = (enemyAction === 'defend') ? '（破防加成！）' : '（重克轻！）';
+                            result.messages.push(`${label}发动，追加 ${extraDamage} 点伤害！${defNote}`);
+                        }
+                    }
+                    break;
+                }
+
+                // 冰川点穴手：攻击命中集气中目标
+                if (params.requireTargetGather) {
+                    if (enemyAction === 'gather') {
+                        const fixedEnergyLoss = Number(params.fixedEnergyLoss) || 0;
+                        const extraEnergyLoss = Number(params.extraEnergyLoss) || 0;
+                        const highEnergyThreshold = Number(params.highEnergyThreshold) || 5;
+                        const targetEnergy = context.targetEnergy || 0;
+                        let totalDrain = fixedEnergyLoss;
+                        if (targetEnergy >= highEnergyThreshold) {
+                            totalDrain += extraEnergyLoss;
+                        }
+                        console.log('[SkillTest] 冰川点穴手触发:', { fixedEnergyLoss, extraEnergyLoss, targetEnergy, totalDrain });
+                        if (totalDrain > 0) {
+                            result.energyDrain += totalDrain;
+                            const highNote = (targetEnergy >= highEnergyThreshold) ? `（高能量追加削气！）` : '';
+                            result.messages.push(`${label}发动，削减敌方 ${formatSkillValue(totalDrain)} 点能量！${highNote}`);
+                        }
+                    }
+                    break;
+                }
+
+                // 造化度厄针：绝招命中时窃气
+                if (params.requireSpecialAttack) {
+                    if (playerAction === 'special') {
+                        const energySteal = Number(params.energySteal) || 0;
+                        console.log('[SkillTest] 造化度厄针触发:', { energySteal, enemyAction });
+                        if (energySteal > 0) {
+                            result.energySteal += energySteal;
+                        }
+                    }
+                    break;
+                }
+                break;
+            }
+            case 'onCrit': {
+                const basicDamage = context.basicDamage || 0;
+                const extraDamageRatio = Number(params.extraDamageRatio) || 0;
+                const bonusArmorPen = Number(params.bonusArmorPen) || 0;
+                let extraDamage = Math.round(basicDamage * extraDamageRatio) + bonusArmorPen;
+                console.log('[SkillTest] onCrit 计算:', {
+                    skill: skill.name,
+                    level: skill.level,
+                    basicDamage,
+                    extraDamageRatio,
+                    bonusArmorPen,
+                    extraDamage
+                });
+                if (extraDamage > 0) {
+                    result.extraDamage += extraDamage;
+                    result.messages.push(`${label}发动，剑气追击 ${extraDamage} 点伤害！`);
+                }
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    if (entries.length > 0) {
+        console.log('[SkillTest] 技能计算结果:', result);
+        console.groupEnd();
+    }
+
+    return result;
+}
+
 function rollInt(min, max) {
     const low = Math.min(min, max);
     const high = Math.max(min, max);
@@ -2001,6 +2320,10 @@ const PLAYER_INFO = {
     energyPrecise: 0,
     maxEnergy: 10,
     selectedAction: null,
+    lastAction: null,
+    previousAction: null,
+    swordIntent: 0,
+    yuanBiQuanBonus: 0,
     basicDamage: parseInt(urlParams.get('playerAttack')) || 20,
     ...getCombatParams('player'),
     tauntedTurns: 0  // 挑衅状态剩余回合数
@@ -3746,7 +4069,8 @@ function applyCombatDamage(attacker, defender, baseDamage, defenseFactor) {
         damage: 0,
         crit: false,
         lifesteal: 0,
-        thorns: 0
+        thorns: 0,
+        skillMessages: []
     };
 
     if (!baseDamage || baseDamage <= 0) {
@@ -3767,6 +4091,52 @@ function applyCombatDamage(attacker, defender, baseDamage, defenseFactor) {
             result.crit = true;
             const critMultiplier = Math.max(0, (attacker.critDamage || 0) / 100);
             damage = Math.round(damage * critMultiplier);
+        }
+    }
+
+    if (defender === gameState.player && damage > 0) {
+        const skillEffect = applyPlayerSkillEffects('onTakeDamage', {
+            attacker,
+            defender,
+            damage
+        });
+        console.log('[SkillTest] 玩家受击前技能修正:', {
+            attacker: attacker?.name,
+            defender: defender?.name,
+            incomingDamage: damage,
+            skillEffect
+        });
+
+        if (skillEffect.damageReduction > 0) {
+            const previousDamage = damage;
+            damage = Math.max(0, Math.round(damage * (1 - skillEffect.damageReduction)));
+            const reduced = previousDamage - damage;
+            if (reduced > 0) {
+                result.skillMessages.push(`【以牙还牙】化解了 ${reduced} 点伤害。`);
+            }
+        }
+
+        if (skillEffect.extraReflect > 0 && damage > 0) {
+            const reflectedDamage = Math.round(damage * skillEffect.extraReflect);
+            if (reflectedDamage > 0) {
+                result.thorns += reflectedDamage;
+                result.skillMessages.push(`【以牙还牙】追加反击 ${reflectedDamage} 点伤害！`);
+            }
+        }
+
+        if (skillEffect.extraEnergy > 0) {
+            const beforeEnergy = gameState.player.energyPrecise || gameState.player.energy || 0;
+            addEnergy(gameState.player, skillEffect.extraEnergy);
+            const recovered = (gameState.player.energyPrecise || gameState.player.energy || 0) - beforeEnergy;
+            if (recovered > 0) {
+                result.skillMessages.push(`【青鸟衔书】回复 ${formatSkillValue(recovered)} 点能量！`);
+            }
+        }
+
+        // 猿臂拳：受伤后下次攻击追加伤害
+        if (skillEffect.grantNextAttackBonus > 0 && damage > 0) {
+            gameState.player.yuanBiQuanBonus = skillEffect.grantNextAttackBonus;
+            result.skillMessages.push(`【猿臂拳】以伤化力，蓄势待发！`);
         }
     }
 
@@ -3809,6 +4179,97 @@ function logDamageEffects(attacker, defender, result) {
     if (result.thorns > 0) {
         addLog(`【反伤】${defender.name}反弹${result.thorns}点伤害！`);
     }
+    if (Array.isArray(result.skillMessages)) {
+        result.skillMessages.forEach(message => addLog(message));
+    }
+}
+
+// 处理玩家命中后的技能效果（onAttackHit、猿臂拳消耗、无剑真意消耗）
+function processPlayerHitSkills(playerAction, enemyAction, player, enemy) {
+    const messages = [];
+    let totalExtraDamage = 0;
+
+    // onAttackHit 技能（小梨飞刀、开山九式、冰川点穴手、霜雪葬花、灵狐剑法、连羽缠丝、造化度厄针）
+    const hitEffect = applyPlayerSkillEffects('onAttackHit', {
+        playerAction,
+        enemyAction,
+        basicDamage: player.basicDamage || 0,
+        targetCurrentHealth: enemy.currentHealth,
+        targetMaxHealth: enemy.maxHealth,
+        targetEnergy: enemy.energy || 0,
+        previousAction: player.lastAction || null
+    });
+    if (hitEffect.extraDamage > 0) {
+        totalExtraDamage += hitEffect.extraDamage;
+    }
+    if (hitEffect.energyDrain > 0) {
+        const beforeEnergy = enemy.energyPrecise || enemy.energy || 0;
+        consumeEnergy(enemy, hitEffect.energyDrain);
+        console.log('[SkillTest] 冰川点穴手削气:', { beforeEnergy, drain: hitEffect.energyDrain, afterEnergy: enemy.energyPrecise || enemy.energy || 0 });
+    }
+    if (hitEffect.extraEnergy > 0) {
+        const beforeEnergy = player.energyPrecise || player.energy || 0;
+        addEnergy(player, hitEffect.extraEnergy);
+        console.log('[SkillTest] 霜雪葬花回气:', { beforeEnergy, recovery: hitEffect.extraEnergy, afterEnergy: player.energyPrecise || player.energy || 0 });
+    }
+    if (hitEffect.energySteal > 0) {
+        const beforeEnemyEnergy = enemy.energyPrecise || enemy.energy || 0;
+        const actualSteal = Math.min(beforeEnemyEnergy, hitEffect.energySteal);
+        consumeEnergy(enemy, actualSteal);
+        const beforePlayerEnergy = player.energyPrecise || player.energy || 0;
+        addEnergy(player, actualSteal);
+        console.log('[SkillTest] 造化度厄针窃气:', {
+            beforeEnemyEnergy,
+            beforePlayerEnergy,
+            energySteal: hitEffect.energySteal,
+            actualSteal,
+            enemyAfter: enemy.energyPrecise || enemy.energy || 0,
+            playerAfter: player.energyPrecise || player.energy || 0
+        });
+        if (actualSteal > 0) {
+            messages.push(`【造化度厄针】窃取 ${formatSkillValue(actualSteal)} 点能量！`);
+        }
+    }
+    if (hitEffect.messages.length > 0) {
+        messages.push(...hitEffect.messages);
+    }
+
+    // 猿臂拳：消耗受伤蓄力 buff
+    if (player.yuanBiQuanBonus > 0 && (playerAction === 'light-attack' || playerAction === 'heavy-attack')) {
+        const bonusDamage = Math.round((player.basicDamage || 0) * player.yuanBiQuanBonus);
+        if (bonusDamage > 0) {
+            totalExtraDamage += bonusDamage;
+            messages.push(`【猿臂拳】反击追加 ${bonusDamage} 点伤害！`);
+        }
+        player.yuanBiQuanBonus = 0;
+    }
+
+    // 无剑真意：消耗剑意层
+    if (player.swordIntent > 0) {
+        const passiveSkills = getPlayerSkillEntriesByTiming('passive');
+        for (const skill of passiveSkills) {
+            const params = skill.params || {};
+            const perStackDamageRatio = Number(params.perStackDamageRatio) || 0;
+            if (perStackDamageRatio > 0) {
+                const stacks = player.swordIntent;
+                const bonusDamage = Math.round((player.basicDamage || 0) * perStackDamageRatio * stacks);
+                if (bonusDamage > 0) {
+                    totalExtraDamage += bonusDamage;
+                    messages.push(`【无剑真意】${stacks} 层剑意爆发，追加 ${bonusDamage} 点伤害！`);
+                }
+                player.swordIntent = 0;
+                break;
+            }
+        }
+    }
+
+    // 应用追加伤害
+    if (totalExtraDamage > 0) {
+        enemy.currentHealth = Math.max(0, enemy.currentHealth - totalExtraDamage);
+    }
+    messages.forEach(msg => addLog(msg));
+
+    return { extraDamage: totalExtraDamage, messages };
 }
 
 // 处理双方行动的结果
@@ -3858,6 +4319,32 @@ function processActions(playerAction, enemyAction) {
             addEnergy(player, 1 + (player.turnover || 0));
             const gained = player.energy - beforeEnergy;
             addLog(`${player.name}集气成功，能量+${gained}！`);
+
+            const gatherSkillEffect = applyPlayerSkillEffects('onGather', {
+                actor: player,
+                previousAction: player.lastAction
+            });
+            if (gatherSkillEffect.extraEnergy > 0) {
+                addEnergy(player, gatherSkillEffect.extraEnergy);
+                console.log('[SkillTest] 集气技能生效:', {
+                    beforeEnergy,
+                    afterBaseEnergy: beforeEnergy + gained,
+                    previousAction: player.lastAction || null,
+                    extraEnergy: gatherSkillEffect.extraEnergy,
+                    finalEnergy: player.energy
+                });
+                gatherSkillEffect.messages.forEach(message => addLog(message));
+            }
+            if (gatherSkillEffect.extraHeal > 0) {
+                const beforeHealth = player.currentHealth;
+                player.currentHealth = Math.min(player.maxHealth, player.currentHealth + gatherSkillEffect.extraHeal);
+                console.log('[SkillTest] 集气回血技能生效:', {
+                    beforeHealth,
+                    extraHeal: gatherSkillEffect.extraHeal,
+                    finalHealth: player.currentHealth
+                });
+                gatherSkillEffect.messages.forEach(message => addLog(message));
+            }
         } else {
             addLog(`${player.name}的能量已满！`);
         }
@@ -3886,6 +4373,18 @@ function processActions(playerAction, enemyAction) {
             playerCharacter.classList.remove('player-defend');
         }, 1000);
         addLog(`${player.name}进入防御状态！`);
+
+        const defendSkillEffect = applyPlayerSkillEffects('onDefend', { actor: player });
+        if (defendSkillEffect.extraHeal > 0) {
+            const beforeHealth = player.currentHealth;
+            player.currentHealth = Math.min(player.maxHealth, player.currentHealth + defendSkillEffect.extraHeal);
+            console.log('[SkillTest] 防御技能生效:', {
+                beforeHealth,
+                extraHeal: defendSkillEffect.extraHeal,
+                finalHealth: player.currentHealth
+            });
+            defendSkillEffect.messages.forEach(message => addLog(message));
+        }
     }
     
     if (enemyDefending) {
@@ -3921,6 +4420,24 @@ function processActions(playerAction, enemyAction) {
             enemy.tauntedTurns = 3;
             enemyWasHit = true;
             enemyBrokenByTaunt = true;  // 敌人被嘴炮破防
+
+            const tauntSkillEffect = applyPlayerSkillEffects('onTauntHitDefend', {
+                attacker: player,
+                defender: enemy,
+                basicDamage: player.basicDamage
+            });
+            if (tauntSkillEffect.extraDamage > 0) {
+                const beforeHealth = enemy.currentHealth;
+                enemy.currentHealth = Math.max(0, enemy.currentHealth - tauntSkillEffect.extraDamage);
+                playerTotalDamageDealt += tauntSkillEffect.extraDamage;
+                console.log('[SkillTest] 嘴炮命中防御技能生效:', {
+                    beforeHealth,
+                    extraDamage: tauntSkillEffect.extraDamage,
+                    finalHealth: enemy.currentHealth
+                });
+                tauntSkillEffect.messages.forEach(message => addLog(message));
+                markTurnEndedIfDead();
+            }
         }
         
         if (enemyAction === 'taunt' && playerDefending) {
@@ -3981,7 +4498,16 @@ function processActions(playerAction, enemyAction) {
                 enemyCharacter.classList.remove('enemy-hit');
             }, 1000);
             
-            const baseDamage = Math.round(player.basicDamage * 3 * damageMultiplier * fieldDamageMultiplier);
+            const specialSkillEffect = applyPlayerSkillEffects('onSpecialUse', { actor: player });
+            specialSkillEffect.messages.forEach(message => addLog(message));
+            const baseDamage = Math.round(player.basicDamage * 3 * damageMultiplier * fieldDamageMultiplier * specialSkillEffect.damageMultiplier);
+            console.log('[SkillTest] 绝招技能生效前伤害:', {
+                playerBasicDamage: player.basicDamage,
+                damageMultiplier,
+                fieldDamageMultiplier,
+                skillDamageMultiplier: specialSkillEffect.damageMultiplier,
+                finalBaseDamage: baseDamage
+            });
             const result = resolveDamage(player, enemy, baseDamage, null);
             playerTotalDamageDealt += result.damage;  // 追踪伤害用于杀意自伤
             addLog(`${player.name}使用绝招，对${enemy.name}造成${result.damage}点伤害！`);
@@ -3992,6 +4518,12 @@ function processActions(playerAction, enemyAction) {
             playerDamageAction = 'special';     // 记录攻击类型
             if (enemyDefending) {
                 enemyHitBySpecial = true;       // 敌人防御被绝招无视
+            }
+            // 技能追加效果
+            if (!turnEnded) {
+                const hitSkills = processPlayerHitSkills(playerAction, enemyAction, player, enemy);
+                playerTotalDamageDealt += hitSkills.extraDamage;
+                markTurnEndedIfDead();
             }
         } else {
             addLog(`${player.name}使用绝招，但伤害被${enemy.name}的嘴炮无效化了！`);
@@ -4086,6 +4618,12 @@ function processActions(playerAction, enemyAction) {
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
+            // 技能追加效果
+            if (!turnEnded) {
+                const hitSkills = processPlayerHitSkills(playerAction, enemyAction, player, enemy);
+                playerTotalDamageDealt += hitSkills.extraDamage;
+                markTurnEndedIfDead();
+            }
         } else if (enemyAction === 'light-attack') {
             // 重攻击克制轻攻击
             playerCharacter.classList.add('player-attack');
@@ -4108,6 +4646,12 @@ function processActions(playerAction, enemyAction) {
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
+            // 技能追加效果
+            if (!turnEnded) {
+                const hitSkills = processPlayerHitSkills(playerAction, enemyAction, player, enemy);
+                playerTotalDamageDealt += hitSkills.extraDamage;
+                markTurnEndedIfDead();
+            }
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
@@ -4128,6 +4672,12 @@ function processActions(playerAction, enemyAction) {
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'heavy-attack';
+            // 技能追加效果
+            if (!turnEnded) {
+                const hitSkills = processPlayerHitSkills(playerAction, enemyAction, player, enemy);
+                playerTotalDamageDealt += hitSkills.extraDamage;
+                markTurnEndedIfDead();
+            }
         }
     }
     
@@ -4241,6 +4791,12 @@ function processActions(playerAction, enemyAction) {
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
+            // 技能追加效果
+            if (!turnEnded) {
+                const hitSkills = processPlayerHitSkills(playerAction, enemyAction, player, enemy);
+                playerTotalDamageDealt += hitSkills.extraDamage;
+                markTurnEndedIfDead();
+            }
         } else {
             playerCharacter.classList.add('player-attack');
             enemyCharacter.classList.add('enemy-hit');
@@ -4261,6 +4817,12 @@ function processActions(playerAction, enemyAction) {
             enemyWasHit = true;
             playerDealtDamage = true;
             playerDamageAction = 'light-attack';
+            // 技能追加效果
+            if (!turnEnded) {
+                const hitSkills = processPlayerHitSkills(playerAction, enemyAction, player, enemy);
+                playerTotalDamageDealt += hitSkills.extraDamage;
+                markTurnEndedIfDead();
+            }
         }
     }
     
@@ -4423,11 +4985,35 @@ function processActions(playerAction, enemyAction) {
 
 // 继续游戏
 function continueGame() {
+    const playerResolvedAction = gameState.player.selectedAction;
+
     // 重置选择状态
     gameState.player.selectedAction = null;
     gameState.enemy.selectedAction = null;
     gameState.waitingForConfirmation = false;
     selectedActionText.textContent = '无';
+    gameState.player.lastAction = playerResolvedAction || null;
+    
+    // 无剑真意：行动轮转时积累剑意
+    const passiveSkills = getPlayerSkillEntriesByTiming('passive');
+    for (const skill of passiveSkills) {
+        const params = skill.params || {};
+        const maxStacks = Number(params.maxStacks) || 3;
+        const perStackDamageRatio = Number(params.perStackDamageRatio) || 0;
+        if (perStackDamageRatio > 0) {
+            if (!gameState.player.previousAction) {
+                // 第一回合不积层
+            } else if (playerResolvedAction && playerResolvedAction !== gameState.player.previousAction) {
+                gameState.player.swordIntent = Math.min((gameState.player.swordIntent || 0) + 1, maxStacks);
+                addLog(`【无剑真意】招式变化，剑意 +1（当前 ${gameState.player.swordIntent} 层）`);
+            }
+            break;
+        }
+    }
+    gameState.player.previousAction = playerResolvedAction || null;
+    
+    // 猿臂拳：如果本回合没有轻击/重击命中，清除蓄力（保留到下次出手）
+    // buff在processPlayerHitSkills中消耗，这里不额外清除，让buff持续到下次攻击命中
     
     // 递减挑衅状态计数
     if (gameState.player.tauntedTurns > 0) {
@@ -4638,6 +5224,1163 @@ function handleResize() {
     setAspectRatio(); 
 }
 
+function installSkillTestBattleHelper() {
+    if (window.skillTestBattleHelper) {
+        return window.skillTestBattleHelper;
+    }
+
+    function safeClone(value) {
+        try {
+            return JSON.parse(JSON.stringify(value));
+        } catch (error) {
+            return value;
+        }
+    }
+
+    function actionLabel(action) {
+        const labelMap = {
+            'gather': '集气',
+            'defend': '防御',
+            'light-attack': '轻攻击',
+            'heavy-attack': '重攻击',
+            'special': '绝招',
+            'taunt': '嘴炮'
+        };
+        return labelMap[action] || action;
+    }
+
+    function installDebugLogCapture() {
+        if (!window.__skillTestCapturedLogs) {
+            window.__skillTestCapturedLogs = [];
+        }
+        if (window.__skillTestConsolePatched) {
+            return;
+        }
+
+        function formatDebugArg(arg) {
+            if (typeof arg === 'string') {
+                return arg;
+            }
+            try {
+                return JSON.stringify(arg);
+            } catch (error) {
+                return String(arg);
+            }
+        }
+
+        function captureDebugLog(args) {
+            if (!args || args.length === 0) {
+                return;
+            }
+
+            const first = typeof args[0] === 'string' ? args[0] : '';
+            if (!first.startsWith('[SkillTest]') && !first.startsWith('[SkillTestHelper]')) {
+                return;
+            }
+
+            window.__skillTestCapturedLogs.push(args.map(formatDebugArg).join(' '));
+            if (window.__skillTestCapturedLogs.length > 400) {
+                window.__skillTestCapturedLogs = window.__skillTestCapturedLogs.slice(-400);
+            }
+        }
+
+        const originalLog = console.log.bind(console);
+        const originalWarn = console.warn.bind(console);
+
+        console.log = function patchedSkillTestLog(...args) {
+            captureDebugLog(args);
+            return originalLog(...args);
+        };
+
+        console.warn = function patchedSkillTestWarn(...args) {
+            captureDebugLog(args);
+            return originalWarn(...args);
+        };
+
+        window.__skillTestConsolePatched = true;
+    }
+
+    installDebugLogCapture();
+
+    function snapshot() {
+        return {
+            currentTurn: gameState.currentTurn,
+            turnNumber: gameState.turnNumber,
+            waitingForConfirmation: gameState.waitingForConfirmation,
+            player: {
+                name: gameState.player.name,
+                currentHealth: gameState.player.currentHealth,
+                maxHealth: gameState.player.maxHealth,
+                energy: gameState.player.energy,
+                energyPrecise: gameState.player.energyPrecise,
+                selectedAction: gameState.player.selectedAction,
+                lastAction: gameState.player.lastAction,
+                previousAction: gameState.player.previousAction,
+                tauntedTurns: gameState.player.tauntedTurns,
+                swordIntent: gameState.player.swordIntent || 0,
+                yuanBiQuanBonus: gameState.player.yuanBiQuanBonus || 0
+            },
+            enemy: {
+                name: gameState.enemy.name,
+                currentHealth: gameState.enemy.currentHealth,
+                maxHealth: gameState.enemy.maxHealth,
+                energy: gameState.enemy.energy,
+                energyPrecise: gameState.enemy.energyPrecise,
+                selectedAction: gameState.enemy.selectedAction,
+                tauntedTurns: gameState.enemy.tauntedTurns,
+                style: gameState.enemy.style
+            },
+            playerEquippedSkills: safeClone(playerEquippedSkills || {})
+        };
+    }
+
+    function logSnapshot() {
+        const data = snapshot();
+        console.group('[SkillTestHelper] battle snapshot');
+        console.log(data);
+        console.groupEnd();
+        return data;
+    }
+
+    function recentLogs(count = 12) {
+        const lines = Array.from(document.querySelectorAll('#battle-log *'))
+            .map(node => (node.textContent || '').trim())
+            .filter(Boolean);
+        return lines.slice(-count);
+    }
+
+    function allLogs() {
+        return Array.from(document.querySelectorAll('#battle-log *'))
+            .map(node => (node.textContent || '').trim())
+            .filter(Boolean);
+    }
+
+    function recentDebugLogs(count = 20) {
+        return (window.__skillTestCapturedLogs || []).slice(-count);
+    }
+
+    function allDebugLogs() {
+        return (window.__skillTestCapturedLogs || []).slice();
+    }
+
+    function logSkillsByTiming() {
+        const grouped = {};
+        Object.values(playerEquippedSkills || {}).forEach(skill => {
+            if (!skill || !skill.triggerTiming) return;
+            if (!grouped[skill.triggerTiming]) {
+                grouped[skill.triggerTiming] = [];
+            }
+            grouped[skill.triggerTiming].push(skill.name + ' Lv' + skill.level);
+        });
+        console.group('[SkillTestHelper] 技能分组');
+        console.log(grouped);
+        console.groupEnd();
+        return grouped;
+    }
+
+    if (!window.__skillTestOriginalSelectEnemyAction) {
+        window.__skillTestOriginalSelectEnemyAction = selectEnemyAction;
+        selectEnemyAction = function patchedSelectEnemyAction() {
+            if (window.__skillTestForcedEnemyAction) {
+                const forcedAction = window.__skillTestForcedEnemyAction;
+                window.__skillTestForcedEnemyAction = null;
+                gameState.enemy.selectedAction = forcedAction;
+                addLog('【SkillTest】敌方动作已强制为' + actionLabel(forcedAction));
+                console.log('[SkillTestHelper] force enemy action:', forcedAction);
+                return;
+            }
+            return window.__skillTestOriginalSelectEnemyAction.apply(this, arguments);
+        };
+    }
+
+    function forceNextEnemyAction(action) {
+        const validActions = ['gather', 'defend', 'light-attack', 'heavy-attack', 'special', 'taunt'];
+        if (!validActions.includes(action)) {
+            throw new Error('无效敌方动作: ' + action);
+        }
+        window.__skillTestForcedEnemyAction = action;
+        console.log('[SkillTestHelper] 下一回合敌方动作将强制为:', action);
+        return action;
+    }
+
+    function setPlayerState(patch) {
+        Object.assign(gameState.player, patch || {});
+        updateDisplay();
+        return snapshot();
+    }
+
+    function setEnemyState(patch) {
+        Object.assign(gameState.enemy, patch || {});
+        updateDisplay();
+        return snapshot();
+    }
+
+    function setPlayerHealthRatio(ratio) {
+        const boundedRatio = Math.max(0.01, Math.min(1, Number(ratio) || 1));
+        gameState.player.currentHealth = Math.max(1, Math.round(gameState.player.maxHealth * boundedRatio));
+        updateDisplay();
+        console.log('[SkillTestHelper] 玩家血量已设置为比例:', boundedRatio, gameState.player.currentHealth + '/' + gameState.player.maxHealth);
+        return snapshot();
+    }
+
+    function setPlayerEnergy(value) {
+        const next = Math.max(0, Math.min(gameState.player.maxEnergy || 10, Number(value) || 0));
+        gameState.player.energy = next;
+        gameState.player.energyPrecise = next;
+        updateDisplay();
+        console.log('[SkillTestHelper] 玩家能量已设置为:', next);
+        return snapshot();
+    }
+
+    function setEnemyEnergy(value) {
+        const next = Math.max(0, Math.min(gameState.enemy.maxEnergy || 10, Number(value) || 0));
+        gameState.enemy.energy = next;
+        gameState.enemy.energyPrecise = next;
+        updateDisplay();
+        console.log('[SkillTestHelper] 敌方能量已设置为:', next);
+        return snapshot();
+    }
+
+    function normalizeBattleState(options = {}) {
+        const playerHealthRatio = options.playerHealthRatio == null ? 1 : Number(options.playerHealthRatio);
+        const enemyHealthRatio = options.enemyHealthRatio == null ? 1 : Number(options.enemyHealthRatio);
+        const playerEnergy = options.playerEnergy == null ? 0 : Number(options.playerEnergy);
+        const enemyEnergy = options.enemyEnergy == null ? 0 : Number(options.enemyEnergy);
+        const disableFieldEffect = options.disableFieldEffect == null ? true : Boolean(options.disableFieldEffect);
+
+        gameState.currentTurn = 'player';
+        gameState.waitingForConfirmation = false;
+        gameState.player.selectedAction = null;
+        gameState.player.lastAction = options.playerLastAction == null ? null : options.playerLastAction;
+        gameState.player.previousAction = options.playerPreviousAction == null ? null : options.playerPreviousAction;
+        gameState.player.swordIntent = options.swordIntent == null ? 0 : Number(options.swordIntent);
+        gameState.player.yuanBiQuanBonus = options.yuanBiQuanBonus == null ? 0 : Number(options.yuanBiQuanBonus);
+        gameState.enemy.selectedAction = null;
+        gameState.player.tauntedTurns = 0;
+        gameState.enemy.tauntedTurns = 0;
+
+        // 清除当前场地效果
+        if (typeof activeFieldEffect !== 'undefined') {
+            activeFieldEffect = null;
+        }
+        if (typeof fieldEffectRemaining !== 'undefined') {
+            fieldEffectRemaining = 0;
+        }
+        if (typeof updateFieldEffectUI === 'function') {
+            updateFieldEffectUI();
+        }
+
+        // 禁用/恢复场地效果触发
+        if (disableFieldEffect) {
+            if (!window.__skillTestOriginalCheckFieldEffect && typeof checkFieldEffectTrigger === 'function') {
+                window.__skillTestOriginalCheckFieldEffect = checkFieldEffectTrigger;
+            }
+            if (window.__skillTestOriginalCheckFieldEffect) {
+                checkFieldEffectTrigger = function skillTestNoFieldEffect() {
+                    console.log('[SkillTestHelper] 场地效果已禁用（测试模式）');
+                };
+            }
+        } else if (window.__skillTestOriginalCheckFieldEffect) {
+            checkFieldEffectTrigger = window.__skillTestOriginalCheckFieldEffect;
+        }
+        gameState.player.currentHealth = Math.max(1, Math.round(gameState.player.maxHealth * Math.max(0.01, Math.min(1, playerHealthRatio || 1))));
+        gameState.enemy.currentHealth = Math.max(1, Math.round(gameState.enemy.maxHealth * Math.max(0.01, Math.min(1, enemyHealthRatio || 1))));
+        gameState.player.energy = Math.max(0, Math.min(gameState.player.maxEnergy || 10, playerEnergy || 0));
+        gameState.player.energyPrecise = gameState.player.energy;
+        gameState.enemy.energy = Math.max(0, Math.min(gameState.enemy.maxEnergy || 10, enemyEnergy || 0));
+        gameState.enemy.energyPrecise = gameState.enemy.energy;
+
+        if (typeof selectedActionText !== 'undefined' && selectedActionText) {
+            selectedActionText.textContent = '无';
+        }
+        if (typeof confirmModal !== 'undefined' && confirmModal) {
+            confirmModal.style.display = 'none';
+        }
+        if (typeof gameOverModal !== 'undefined' && gameOverModal) {
+            gameOverModal.style.display = 'none';
+        }
+        if (typeof commandButtons !== 'undefined' && commandButtons) {
+            commandButtons.forEach(btn => {
+                btn.classList.remove('disabled');
+                btn.classList.remove('selected');
+            });
+        }
+        if (typeof updateDisplay === 'function') {
+            updateDisplay();
+        }
+        if (typeof checkButtonAvailability === 'function') {
+            checkButtonAvailability();
+        }
+
+        console.log('[SkillTestHelper] 已标准化战斗状态:', {
+            playerHealthRatio,
+            enemyHealthRatio,
+            playerEnergy,
+            enemyEnergy
+        });
+        return snapshot();
+    }
+
+    function runTurn(playerAction, enemyAction) {
+        if (enemyAction) {
+            forceNextEnemyAction(enemyAction);
+        }
+        selectAction(playerAction);
+        confirmAction();
+        return {
+            playerAction: playerAction,
+            enemyAction: enemyAction || 'AI'
+        };
+    }
+
+    function wait(ms = 800) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    async function waitForTurnAdvance(startTurn, timeoutMs = 6000) {
+        const start = Date.now();
+        while (Date.now() - start < timeoutMs) {
+            const gameEnded = document.getElementById('game-over-modal')?.style.display === 'flex';
+            if (gameState.turnNumber > startTurn || gameEnded) {
+                await wait(250);
+                return true;
+            }
+            await wait(100);
+        }
+        return false;
+    }
+
+    function pickRecentSkillLogs(logs) {
+        return logs.filter(function(line) {
+            return line.includes('【SkillTest】') || line.includes('【以牙还牙】') || line.includes('【猿臂拳】') || line.includes('【无剑真意】') || line.includes('【小梨飞刀】') || line.includes('【开山九式】') || line.includes('【冰川点穴手】') || line.includes('【归义剑诀】') || line.includes('【');
+        });
+    }
+
+    function summarizeExpectation(expectation, logs, debugLogs) {
+        debugLogs = debugLogs || [];
+        const combined = logs.concat(debugLogs).join('\n');
+        return expectation.map(function(item) {
+            return { text: item, matched: combined.includes(item) };
+        });
+    }
+
+    function extractBoostPercent(logs, debugLogs) {
+        debugLogs = debugLogs || [];
+        const combined = logs.concat(debugLogs).join('\n');
+        var match = combined.match(/绝招伤害提高\s*(\d+)%/);
+        if (match) {
+            return Number(match[1]);
+        }
+        var multiplierMatch = combined.match(/skillDamageMultiplier["']?\s*[:=]\s*(\d+(?:\.\d+)?)/);
+        if (multiplierMatch) {
+            var multiplier = Number(multiplierMatch[1]);
+            if (Number.isFinite(multiplier)) {
+                return Math.max(0, Math.round((multiplier - 1) * 100));
+            }
+        }
+        return null;
+    }
+
+    async function runCase(caseName, setupFn, playerAction, enemyAction, expectation) {
+        expectation = expectation || [];
+        const before = snapshot();
+        const beforeLogs = allLogs();
+        const beforeDebugLogs = allDebugLogs();
+        const startTurn = gameState.turnNumber;
+
+        if (typeof setupFn === 'function') {
+            setupFn();
+        }
+
+        runTurn(playerAction, enemyAction);
+        const advanced = await waitForTurnAdvance(startTurn);
+        const after = snapshot();
+        const afterLogs = allLogs();
+        const afterDebugLogs = allDebugLogs();
+        const newLogs = afterLogs.slice(beforeLogs.length);
+        const debugLogs = afterDebugLogs.slice(beforeDebugLogs.length);
+        const skillLogs = pickRecentSkillLogs(newLogs);
+        const expectationResult = summarizeExpectation(expectation, newLogs, debugLogs);
+
+        const result = {
+            caseName: caseName,
+            advanced: advanced,
+            playerAction: playerAction,
+            enemyAction: enemyAction,
+            before: before,
+            after: after,
+            newLogs: newLogs,
+            debugLogs: debugLogs,
+            skillLogs: skillLogs,
+            expectation: expectation,
+            expectationResult: expectationResult,
+            passed: advanced && expectationResult.every(function(item) { return item.matched; })
+        };
+
+        console.group('[SkillTestHelper] oneClick result: ' + caseName);
+        console.log(result);
+        console.groupEnd();
+        return result;
+    }
+
+    const cases = {
+        tauntVsDefend: function() { return runTurn('taunt', 'defend'); },
+        gather: function() { return runTurn('gather', 'gather'); },
+        defendVsLightAttack: function() { return runTurn('defend', 'light-attack'); },
+        specialAtHealthRatio: function(ratio, enemyAction) {
+            enemyAction = enemyAction || 'gather';
+            setPlayerHealthRatio(ratio);
+            setPlayerEnergy(5);
+            return runTurn('special', enemyAction);
+        },
+        lightAttackVsGather: function() {
+            normalizeBattleState({ playerEnergy: 1, enemyEnergy: 0 });
+            return runTurn('light-attack', 'gather');
+        },
+        heavyAttackVsDefend: function() {
+            normalizeBattleState({ playerEnergy: 2, enemyEnergy: 0 });
+            return runTurn('heavy-attack', 'defend');
+        },
+        heavyAttackVsLightAttack: function() {
+            normalizeBattleState({ playerEnergy: 2, enemyEnergy: 1 });
+            return runTurn('heavy-attack', 'light-attack');
+        }
+    };
+
+    const oneClick = {
+        async tauntVsDefend() {
+            return runCase(
+                '绷急孝典乐_嘴炮对防御',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'taunt',
+                'defend',
+                ['嘴炮', '追加', 'onTauntHitDefend']
+            );
+        },
+        async gather() {
+            return runCase(
+                '冰心诀_连续集气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 0 });
+                    setPlayerState({ lastAction: 'gather' });
+                },
+                'gather',
+                'gather',
+                ['额外获得', '能量', 'onGather']
+            );
+        },
+        async defendVsLightAttack() {
+            return runCase(
+                '不动明王诀_防御回血',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 0.6, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'defend',
+                'light-attack',
+                ['恢复', '生命', 'onDefend']
+            );
+        },
+        async specialAtHealthRatio(ratio, enemyAction) {
+            enemyAction = enemyAction || 'gather';
+            return runCase(
+                '肉斩骨断_绝招增伤_' + ratio,
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: ratio, enemyHealthRatio: 1, playerEnergy: 5, enemyEnergy: 0 });
+                    setPlayerHealthRatio(ratio);
+                    setPlayerEnergy(5);
+                },
+                'special',
+                enemyAction,
+                ['绝招伤害提高', 'onSpecialUse']
+            );
+        },
+        async xiaoLiFeiDao() {
+            return runCase(
+                '小梨飞刀_轻击命中集气目标',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'gather',
+                ['小梨飞刀', '暗器追加', 'onAttackHit']
+            );
+        },
+        async xiaoLiFeiDaoLowHp() {
+            return runCase(
+                '小梨飞刀_残血加成',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 0.3, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'gather',
+                ['小梨飞刀', '暗器追加', '残血加成']
+            );
+        },
+        async xiaoLiFeiDaoVsTaunt() {
+            return runCase(
+                '小梨飞刀_轻击命中嘲讽目标',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'taunt',
+                ['小梨飞刀', '暗器追加', 'onAttackHit']
+            );
+        },
+        async xiaoLiFeiDaoNoTrigger() {
+            return runCase(
+                '小梨飞刀_轻击命中防御不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'defend',
+                ['轻攻击']
+            );
+        },
+        async kaiShanJiuShi() {
+            return runCase(
+                '开山九式_重击命中防御',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 2, enemyEnergy: 0 });
+                },
+                'heavy-attack',
+                'defend',
+                ['开山九式', '追加', '破防加成', 'onAttackHit']
+            );
+        },
+        async kaiShanJiuShiCounter() {
+            return runCase(
+                '开山九式_重击克制轻击',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 2, enemyEnergy: 1 });
+                },
+                'heavy-attack',
+                'light-attack',
+                ['开山九式', '追加', '重克轻', 'onAttackHit']
+            );
+        },
+        async kaiShanJiuShiNoTrigger() {
+            return runCase(
+                '开山九式_重击命中集气不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 2, enemyEnergy: 0 });
+                },
+                'heavy-attack',
+                'gather',
+                ['重攻击']
+            );
+        },
+        async bingChuanDianXueShou() {
+            return runCase(
+                '冰川点穴手_攻击命中集气目标',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 3 });
+                },
+                'light-attack',
+                'gather',
+                ['冰川点穴手', '削减', '能量', 'onAttackHit']
+            );
+        },
+        async bingChuanDianXueShouHighEnergy() {
+            return runCase(
+                '冰川点穴手_高能量追加削气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 6 });
+                },
+                'light-attack',
+                'gather',
+                ['冰川点穴手', '削减', '高能量追加']
+            );
+        },
+        async bingChuanDianXueShouNoTrigger() {
+            return runCase(
+                '冰川点穴手_攻击命中防御不触发削气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 3 });
+                },
+                'light-attack',
+                'defend',
+                ['轻攻击']
+            );
+        },
+        async yuanBiQuan() {
+            return runCase(
+                '猿臂拳_受伤后蓄力',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'gather',
+                'light-attack',
+                ['猿臂拳', '以伤化力', 'onTakeDamage']
+            );
+        },
+        async yuanBiQuanConsume() {
+            return runCase(
+                '猿臂拳_蓄力后轻击消耗',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0, yuanBiQuanBonus: 0.45 });
+                },
+                'light-attack',
+                'gather',
+                ['猿臂拳', '反击追加']
+            );
+        },
+        async shuangXueZangHua() {
+            return runCase(
+                '霜雪葬花_轻击命中集气回气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'gather',
+                ['霜雪葬花', '回复', '能量', 'onAttackHit']
+            );
+        },
+        async shuangXueZangHuaVsTaunt() {
+            return runCase(
+                '霜雪葬花_轻击命中嘲讽回气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'taunt',
+                ['霜雪葬花', '回复', '能量']
+            );
+        },
+        async shuangXueZangHuaNoTrigger() {
+            return runCase(
+                '霜雪葬花_轻击命中防御不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0 });
+                },
+                'light-attack',
+                'defend',
+                ['轻攻击']
+            );
+        },
+        async wuJianZhenYiAccumulate() {
+            return runCase(
+                '无剑真意_切换行动积层',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 0, playerLastAction: 'light-attack', playerPreviousAction: 'light-attack' });
+                },
+                'gather',
+                'gather',
+                ['无剑真意', '剑意']
+            );
+        },
+        async wuJianZhenYiConsume() {
+            return runCase(
+                '无剑真意_剑意爆发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0, swordIntent: 2 });
+                },
+                'light-attack',
+                'gather',
+                ['无剑真意', '剑意爆发', '追加']
+            );
+        },
+        async wuJianZhenYiNoAccumulate() {
+            return runCase(
+                '无剑真意_相同行动不积层',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 0, playerLastAction: 'gather', playerPreviousAction: 'gather' });
+                },
+                'gather',
+                'gather',
+                ['集气成功']
+            );
+        },
+        async lingHuJianFa() {
+            return runCase(
+                '灵狐剑法_连续攻击追加',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0, playerLastAction: 'light-attack' });
+                },
+                'light-attack',
+                'gather',
+                ['灵狐剑法', '连斩追加', 'onAttackHit']
+            );
+        },
+        async lingHuJianFaNoTrigger() {
+            return runCase(
+                '灵狐剑法_非连续攻击不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 0, playerLastAction: 'gather' });
+                },
+                'light-attack',
+                'gather',
+                ['轻攻击']
+            );
+        },
+        async qingNiaoXianShu() {
+            return runCase(
+                '青鸟衔书_防御受击回气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'defend',
+                'light-attack',
+                ['青鸟衔书', '回复', '能量', 'onTakeDamage']
+            );
+        },
+        async qingNiaoXianShuNoTrigger() {
+            return runCase(
+                '青鸟衔书_集气受击不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'gather',
+                'light-attack',
+                ['集气']
+            );
+        },
+        async lianYuChanSi() {
+            return runCase(
+                '连羽缠丝_重击命中集气削气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 2, enemyEnergy: 3 });
+                },
+                'heavy-attack',
+                'gather',
+                ['连羽缠丝', '削减', '能量', 'onAttackHit']
+            );
+        },
+        async lianYuChanSiVsTaunt() {
+            return runCase(
+                '连羽缠丝_重击命中嘲讽削气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 2, enemyEnergy: 3 });
+                },
+                'heavy-attack',
+                'taunt',
+                ['连羽缠丝', '削减', '能量']
+            );
+        },
+        async lianYuChanSiNoTrigger() {
+            return runCase(
+                '连羽缠丝_重击命中防御不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 2, enemyEnergy: 3 });
+                },
+                'heavy-attack',
+                'defend',
+                ['重攻击']
+            );
+        },
+        async tianXiangShiJing() {
+            return runCase(
+                '天象示警_集气受击减伤',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'gather',
+                'light-attack',
+                ['天象示警', '减免', 'onTakeDamage']
+            );
+        },
+        async tianXiangShiJingNoTrigger() {
+            return runCase(
+                '天象示警_防御受击不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 1 });
+                },
+                'defend',
+                'light-attack',
+                ['防御']
+            );
+        },
+        async zaoHuaDuEZhen() {
+            return runCase(
+                '造化度厄针_绝招命中窃气',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 5, enemyEnergy: 5 });
+                    setEnemyState({ currentHealth: 9999, maxHealth: 9999 });
+                },
+                'special',
+                'gather',
+                ['造化度厄针', '窃取', '能量', 'onAttackHit']
+            );
+        },
+        async zaoHuaDuEZhenNoTrigger() {
+            return runCase(
+                '造化度厄针_轻击不触发',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 1, enemyHealthRatio: 1, playerEnergy: 1, enemyEnergy: 3 });
+                },
+                'light-attack',
+                'gather',
+                ['轻攻击']
+            );
+        },
+        async baiCaoXinJing() {
+            return runCase(
+                '百草心经_非连续集气回血',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 0.6, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 0, playerLastAction: 'light-attack' });
+                },
+                'gather',
+                'gather',
+                ['百草心经', '恢复', '生命', 'onGather']
+            );
+        },
+        async baiCaoXinJingNoTrigger() {
+            return runCase(
+                '百草心经_连续集气不触发回血',
+                function setup() {
+                    normalizeBattleState({ playerHealthRatio: 0.6, enemyHealthRatio: 1, playerEnergy: 0, enemyEnergy: 0, playerLastAction: 'gather' });
+                },
+                'gather',
+                'gather',
+                ['集气成功']
+            );
+        },
+        async compareSpecialDamage(lowRatio) {
+            lowRatio = lowRatio || 0.2;
+            const full = await this.specialAtHealthRatio(1, 'gather');
+            const low = await this.specialAtHealthRatio(lowRatio, 'gather');
+            const fullBoost = extractBoostPercent(full.newLogs, full.debugLogs);
+            const lowBoost = extractBoostPercent(low.newLogs, low.debugLogs);
+            const result = {
+                caseName: '肉斩骨断_满血对比残血',
+                full: full,
+                low: low,
+                fullBoost: fullBoost,
+                lowBoost: lowBoost,
+                boostComparisonPassed: fullBoost != null && lowBoost != null ? lowBoost > fullBoost : null,
+                note: '对比两次 oneClick 返回结果中的 newLogs，残血倍率应更高。'
+            };
+            console.group('[SkillTestHelper] oneClick compareSpecialDamage');
+            console.log(result);
+            console.groupEnd();
+            return result;
+        },
+        printBatchPlan() {
+            const plan = {
+                'A (10点)': '绷急孝典乐(1) + 小梨飞刀(2) + 开山九式(2) + 冰川点穴手(2) + 灵狐剑法(1) + 连羽缠丝(1) + 百草心经(1)',
+                'B (10点)': '冰心诀(3) + 肉斩骨断(1) + 不动明王诀(2) + 猿臂拳(2) + 青鸟衔书(2)',
+                'C (10点)': '霜雪葬花(3) + 无剑真意(3) + 天象示警(1) + 造化度厄针(3)'
+            };
+            console.group('[SkillTestHelper] 分批测试计划');
+            console.table(plan);
+            console.groupEnd();
+            return plan;
+        },
+        async runBatchA() {
+            var results = [];
+            var totalExpected = 18;
+            try {
+            results.push(await this.tauntVsDefend());
+            results.push(await this.xiaoLiFeiDao());
+            results.push(await this.xiaoLiFeiDaoLowHp());
+            results.push(await this.xiaoLiFeiDaoVsTaunt());
+            results.push(await this.xiaoLiFeiDaoNoTrigger());
+            results.push(await this.kaiShanJiuShi());
+            results.push(await this.kaiShanJiuShiCounter());
+            results.push(await this.kaiShanJiuShiNoTrigger());
+            results.push(await this.bingChuanDianXueShou());
+            results.push(await this.bingChuanDianXueShouHighEnergy());
+            results.push(await this.bingChuanDianXueShouNoTrigger());
+            results.push(await this.lingHuJianFa());
+            results.push(await this.lingHuJianFaNoTrigger());
+            results.push(await this.lianYuChanSi());
+            results.push(await this.lianYuChanSiVsTaunt());
+            results.push(await this.lianYuChanSiNoTrigger());
+            results.push(await this.baiCaoXinJing());
+            results.push(await this.baiCaoXinJingNoTrigger());
+            } catch (err) {
+                console.error('[SkillTestHelper] 批次A 执行中断于第 ' + (results.length + 1) + ' 个用例:', err);
+            }
+
+            while (results.length < totalExpected) {
+                results.push({ caseName: '❌ 未执行(前序用例出错)', advanced: false, passed: false, newLogs: [], debugLogs: [], skillLogs: [], expectation: [], expectationResult: [] });
+            }
+
+            try {
+            const summaryRows = [
+                { skill: '绷急孝典乐', caseName: results[0].caseName, advanced: results[0].advanced, passed: results[0].passed, keyObservation: results[0].skillLogs.join(' | ') || '无' },
+                { skill: '小梨飞刀', caseName: results[1].caseName + ' / ' + results[2].caseName + ' / ' + results[3].caseName, advanced: results[1].advanced && results[2].advanced && results[3].advanced, passed: results[1].passed && results[2].passed && results[3].passed, keyObservation: results[1].skillLogs.join(' | ') || '无' },
+                { skill: '小梨飞刀(不触发)', caseName: results[4].caseName, advanced: results[4].advanced, passed: results[4].passed && !results[4].newLogs.some(function(l) { return l.includes('小梨飞刀'); }), keyObservation: results[4].newLogs.some(function(l) { return l.includes('小梨飞刀'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '开山九式', caseName: results[5].caseName + ' / ' + results[6].caseName, advanced: results[5].advanced && results[6].advanced, passed: results[5].passed && results[6].passed, keyObservation: results[5].skillLogs.join(' | ') || '无' },
+                { skill: '开山九式(不触发)', caseName: results[7].caseName, advanced: results[7].advanced, passed: results[7].passed && !results[7].newLogs.some(function(l) { return l.includes('开山九式'); }), keyObservation: results[7].newLogs.some(function(l) { return l.includes('开山九式'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '冰川点穴手', caseName: results[8].caseName + ' / ' + results[9].caseName, advanced: results[8].advanced && results[9].advanced, passed: results[8].passed && results[9].passed, keyObservation: results[8].skillLogs.join(' | ') || '无' },
+                { skill: '冰川点穴手(不触发)', caseName: results[10].caseName, advanced: results[10].advanced, passed: results[10].passed && !results[10].newLogs.some(function(l) { return l.includes('冰川点穴手'); }), keyObservation: results[10].newLogs.some(function(l) { return l.includes('冰川点穴手'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '灵狐剑法', caseName: results[11].caseName, advanced: results[11].advanced, passed: results[11].passed, keyObservation: results[11].skillLogs.join(' | ') || '无' },
+                { skill: '灵狐剑法(不触发)', caseName: results[12].caseName, advanced: results[12].advanced, passed: results[12].passed && !results[12].newLogs.some(function(l) { return l.includes('灵狐剑法'); }), keyObservation: results[12].newLogs.some(function(l) { return l.includes('灵狐剑法'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '连羽缠丝', caseName: results[13].caseName + ' / ' + results[14].caseName, advanced: results[13].advanced && results[14].advanced, passed: results[13].passed && results[14].passed, keyObservation: results[13].skillLogs.join(' | ') || '无' },
+                { skill: '连羽缠丝(不触发)', caseName: results[15].caseName, advanced: results[15].advanced, passed: results[15].passed && !results[15].newLogs.some(function(l) { return l.includes('连羽缠丝'); }), keyObservation: results[15].newLogs.some(function(l) { return l.includes('连羽缠丝'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '百草心经', caseName: results[16].caseName, advanced: results[16].advanced, passed: results[16].passed, keyObservation: results[16].skillLogs.join(' | ') || '无' },
+                { skill: '百草心经(不触发)', caseName: results[17].caseName, advanced: results[17].advanced, passed: results[17].passed && !results[17].newLogs.some(function(l) { return l.includes('百草心经'); }), keyObservation: results[17].newLogs.some(function(l) { return l.includes('百草心经'); }) ? '错误：不该触发但触发了' : '正确：未触发' }
+            ];
+            return this._finishBatch('批次A', summaryRows, results);
+            } catch (summaryErr) {
+                console.error('[SkillTestHelper] 批次A 汇总构建出错:', summaryErr);
+                var b = '❌';
+                console.log('');
+                console.log(b + ' ═══════════════════════════════════════');
+                console.log(b + '  批次A 汇总构建出错: ' + (summaryErr.message || summaryErr));
+                results.forEach(function(r, i) { console.log(b + '  #' + (i+1) + ' ' + (r.passed ? '✅' : '❌') + ' ' + r.caseName); });
+                console.log(b + ' ═══════════════════════════════════════');
+                console.log('');
+                return { caseName: '批次A_汇总异常', passed: false, error: summaryErr.message || String(summaryErr), completedResults: results };
+            }
+        },
+        async runBatchB() {
+            var results = [];
+            var totalExpected = 6;
+            var specialCompare = null;
+            try {
+            results.push(await this.gather());
+            specialCompare = await this.compareSpecialDamage(0.2);
+            results.push(await this.defendVsLightAttack());
+            results.push(await this.yuanBiQuan());
+            results.push(await this.yuanBiQuanConsume());
+            results.push(await this.qingNiaoXianShu());
+            results.push(await this.qingNiaoXianShuNoTrigger());
+            } catch (err) {
+                console.error('[SkillTestHelper] 批次B 执行中断于第 ' + (results.length + 1) + ' 个用例:', err);
+            }
+
+            while (results.length < totalExpected) {
+                results.push({ caseName: '❌ 未执行(前序用例出错)', advanced: false, passed: false, newLogs: [], debugLogs: [], skillLogs: [], expectation: [], expectationResult: [] });
+            }
+            if (!specialCompare) {
+                specialCompare = { caseName: '❌ 未执行', fullBoost: null, lowBoost: null, full: null, low: null, boostComparisonPassed: false };
+            }
+
+            try {
+            const summaryRows = [
+                { skill: '冰心诀', caseName: results[0].caseName, advanced: results[0].advanced, passed: results[0].passed, keyObservation: results[0].skillLogs.join(' | ') || results[0].debugLogs.join(' | ') || '无' },
+                { skill: '肉斩骨断', caseName: specialCompare.caseName, advanced: Boolean(specialCompare.full && specialCompare.full.advanced && specialCompare.low && specialCompare.low.advanced), passed: Boolean(specialCompare.full && specialCompare.full.passed && specialCompare.low && specialCompare.low.passed && specialCompare.boostComparisonPassed), keyObservation: '满血+' + String(specialCompare.fullBoost) + '% / 残血+' + String(specialCompare.lowBoost) + '%' },
+                { skill: '不动明王诀', caseName: results[1].caseName, advanced: results[1].advanced, passed: results[1].passed, keyObservation: results[1].skillLogs.join(' | ') || results[1].debugLogs.join(' | ') || '无' },
+                { skill: '猿臂拳', caseName: results[2].caseName + ' / ' + results[3].caseName, advanced: results[2].advanced && results[3].advanced, passed: results[2].passed && results[3].passed, keyObservation: (results[2].skillLogs.join(' | ') || '无') + ' → ' + (results[3].skillLogs.join(' | ') || '无') },
+                { skill: '青鸟衔书', caseName: results[4].caseName, advanced: results[4].advanced, passed: results[4].passed, keyObservation: results[4].skillLogs.join(' | ') || results[4].debugLogs.join(' | ') || '无' },
+                { skill: '青鸟衔书(不触发)', caseName: results[5].caseName, advanced: results[5].advanced, passed: results[5].passed && !results[5].newLogs.some(function(l) { return l.includes('青鸟衔书'); }), keyObservation: results[5].newLogs.some(function(l) { return l.includes('青鸟衔书'); }) ? '错误：不该触发但触发了' : '正确：未触发' }
+            ];
+            return this._finishBatch('批次B', summaryRows, results, specialCompare);
+            } catch (summaryErr) {
+                console.error('[SkillTestHelper] 批次B 汇总构建出错:', summaryErr);
+                var b = '❌';
+                console.log('');
+                console.log(b + ' ═══════════════════════════════════════');
+                console.log(b + '  批次B 汇总构建出错: ' + (summaryErr.message || summaryErr));
+                results.forEach(function(r, i) { console.log(b + '  #' + (i+1) + ' ' + (r.passed ? '✅' : '❌') + ' ' + r.caseName); });
+                console.log(b + ' ═══════════════════════════════════════');
+                console.log('');
+                return { caseName: '批次B_汇总异常', passed: false, error: summaryErr.message || String(summaryErr), completedResults: results };
+            }
+        },
+        async runBatchC() {
+            var results = [];
+            var totalExpected = 10;
+            try {
+            results.push(await this.shuangXueZangHua());
+            results.push(await this.shuangXueZangHuaVsTaunt());
+            results.push(await this.shuangXueZangHuaNoTrigger());
+            results.push(await this.wuJianZhenYiAccumulate());
+            results.push(await this.wuJianZhenYiConsume());
+            results.push(await this.wuJianZhenYiNoAccumulate());
+            results.push(await this.tianXiangShiJing());
+            results.push(await this.tianXiangShiJingNoTrigger());
+            results.push(await this.zaoHuaDuEZhen());
+            results.push(await this.zaoHuaDuEZhenNoTrigger());
+            } catch (err) {
+                console.error('[SkillTestHelper] 批次C 执行中断于第 ' + (results.length + 1) + ' 个用例:', err);
+            }
+
+            while (results.length < totalExpected) {
+                results.push({ caseName: '❌ 未执行(前序用例出错)', advanced: false, passed: false, newLogs: [], debugLogs: [], skillLogs: [], expectation: [], expectationResult: [] });
+            }
+
+            try {
+            const summaryRows = [
+                { skill: '霜雪葬花', caseName: results[0].caseName + ' / ' + results[1].caseName, advanced: results[0].advanced && results[1].advanced, passed: results[0].passed && results[1].passed, keyObservation: results[0].skillLogs.join(' | ') || results[0].debugLogs.join(' | ') || '无' },
+                { skill: '霜雪葬花(不触发)', caseName: results[2].caseName, advanced: results[2].advanced, passed: results[2].passed && !results[2].newLogs.some(function(l) { return l.includes('霜雪葬花'); }), keyObservation: results[2].newLogs.some(function(l) { return l.includes('霜雪葬花'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '无剑真意(积层)', caseName: results[3].caseName, advanced: results[3].advanced, passed: results[3].passed, keyObservation: results[3].skillLogs.join(' | ') || results[3].newLogs.join(' | ') || '无' },
+                { skill: '无剑真意(爆发)', caseName: results[4].caseName, advanced: results[4].advanced, passed: results[4].passed, keyObservation: results[4].skillLogs.join(' | ') || '无' },
+                { skill: '无剑真意(不积层)', caseName: results[5].caseName, advanced: results[5].advanced, passed: results[5].passed && !results[5].newLogs.some(function(l) { return l.includes('剑意 +1'); }), keyObservation: results[5].newLogs.some(function(l) { return l.includes('剑意 +1'); }) ? '错误：不该积层但积了' : '正确：未积层' },
+                { skill: '天象示警', caseName: results[6].caseName, advanced: results[6].advanced, passed: results[6].passed, keyObservation: results[6].skillLogs.join(' | ') || results[6].debugLogs.join(' | ') || '无' },
+                { skill: '天象示警(不触发)', caseName: results[7].caseName, advanced: results[7].advanced, passed: results[7].passed && !results[7].newLogs.some(function(l) { return l.includes('天象示警'); }), keyObservation: results[7].newLogs.some(function(l) { return l.includes('天象示警'); }) ? '错误：不该触发但触发了' : '正确：未触发' },
+                { skill: '造化度厄针', caseName: results[8].caseName, advanced: results[8].advanced, passed: results[8].passed, keyObservation: results[8].skillLogs.join(' | ') || results[8].debugLogs.join(' | ') || '无' },
+                { skill: '造化度厄针(不触发)', caseName: results[9].caseName, advanced: results[9].advanced, passed: results[9].passed && !results[9].newLogs.some(function(l) { return l.includes('造化度厄针'); }), keyObservation: results[9].newLogs.some(function(l) { return l.includes('造化度厄针'); }) ? '错误：不该触发但触发了' : '正确：未触发' }
+            ];
+            return this._finishBatch('批次C', summaryRows, results);
+            } catch (summaryErr) {
+                console.error('[SkillTestHelper] 批次C 汇总构建出错:', summaryErr);
+                var b = '❌';
+                console.log('');
+                console.log(b + ' ═══════════════════════════════════════');
+                console.log(b + '  批次C 汇总构建出错: ' + (summaryErr.message || summaryErr));
+                results.forEach(function(r, i) { console.log(b + '  #' + (i+1) + ' ' + (r.passed ? '✅' : '❌') + ' ' + r.caseName); });
+                console.log(b + ' ═══════════════════════════════════════');
+                console.log('');
+                return { caseName: '批次C_汇总异常', passed: false, error: summaryErr.message || String(summaryErr), completedResults: results };
+            }
+        },
+        _finishBatch(batchName, summaryRows, results, extra) {
+            const passCount = summaryRows.filter(function(r) { return r.passed; }).length;
+            const failCount = summaryRows.length - passCount;
+            const allPassed = failCount === 0;
+            const suiteResult = {
+                caseName: batchName + '_批量执行',
+                rows: summaryRows,
+                detail: results,
+                extra: extra || null,
+                passed: allPassed,
+                passCount: passCount,
+                failCount: failCount,
+                total: summaryRows.length
+            };
+            console.group('[SkillTestHelper] ' + batchName + ' summary');
+            console.table(summaryRows);
+            console.log(suiteResult);
+            console.groupEnd();
+
+            // 醒目的最终总结
+            var banner = allPassed ? '✅' : '❌';
+            var statusText = allPassed ? 'ALL PASSED' : 'HAS FAILURES';
+            console.log('');
+            console.log(banner + ' ═══════════════════════════════════════');
+            console.log(banner + '  ' + batchName + ' 最终结果: ' + statusText);
+            console.log(banner + '  通过: ' + passCount + '/' + summaryRows.length);
+            if (failCount > 0) {
+                var failedNames = summaryRows.filter(function(r) { return !r.passed; }).map(function(r) { return r.skill; });
+                console.log(banner + '  失败: ' + failedNames.join(', '));
+            }
+            console.log(banner + ' ═══════════════════════════════════════');
+            console.log('');
+
+            return suiteResult;
+        }
+    };
+
+    function help() {
+        console.log('skillTestBattleHelper 可用方法:');
+        console.log('=== 基础工具 ===');
+        console.log('1. skillTestBattleHelper.snapshot()');
+        console.log('2. skillTestBattleHelper.logSnapshot()');
+        console.log('3. skillTestBattleHelper.logSkillsByTiming()');
+        console.log('4. skillTestBattleHelper.forceNextEnemyAction("defend")');
+        console.log('5. skillTestBattleHelper.runTurn("taunt", "defend")');
+        console.log('6. skillTestBattleHelper.setPlayerHealthRatio(0.2)');
+        console.log('7. skillTestBattleHelper.setPlayerEnergy(5)');
+        console.log('8. skillTestBattleHelper.recentLogs(12)');
+        console.log('=== 分批测试 ===');
+        console.log('9.  skillTestBattleHelper.oneClick.printBatchPlan()');
+        console.log('10. skillTestBattleHelper.oneClick.runBatchA()');
+        console.log('11. skillTestBattleHelper.oneClick.runBatchB()');
+        console.log('12. skillTestBattleHelper.oneClick.runBatchC()');
+        console.log('=== 单项技能测试 ===');
+        console.log('13. skillTestBattleHelper.oneClick.tauntVsDefend()');
+        console.log('14. skillTestBattleHelper.oneClick.gather()');
+        console.log('15. skillTestBattleHelper.oneClick.defendVsLightAttack()');
+        console.log('16. skillTestBattleHelper.oneClick.xiaoLiFeiDao()');
+        console.log('17. skillTestBattleHelper.oneClick.kaiShanJiuShi()');
+        console.log('18. skillTestBattleHelper.oneClick.bingChuanDianXueShou()');
+        console.log('19. skillTestBattleHelper.oneClick.yuanBiQuan()');
+        console.log('20. skillTestBattleHelper.oneClick.shuangXueZangHua()');
+        console.log('21. skillTestBattleHelper.oneClick.wuJianZhenYiAccumulate()');
+        console.log('22. skillTestBattleHelper.oneClick.lingHuJianFa()');
+        console.log('23. skillTestBattleHelper.oneClick.qingNiaoXianShu()');
+        console.log('24. skillTestBattleHelper.oneClick.lianYuChanSi()');
+        console.log('25. skillTestBattleHelper.oneClick.tianXiangShiJing()');
+        console.log('26. skillTestBattleHelper.oneClick.zaoHuaDuEZhen()');
+        console.log('27. skillTestBattleHelper.oneClick.baiCaoXinJing()');
+        console.log('28. skillTestBattleHelper.oneClick.compareSpecialDamage(0.2)');
+    }
+
+    window.skillTestBattleHelper = {
+        snapshot: snapshot,
+        logSnapshot: logSnapshot,
+        logSkillsByTiming: logSkillsByTiming,
+        forceNextEnemyAction: forceNextEnemyAction,
+        setPlayerState: setPlayerState,
+        setEnemyState: setEnemyState,
+        setPlayerHealthRatio: setPlayerHealthRatio,
+        setPlayerEnergy: setPlayerEnergy,
+        setEnemyEnergy: setEnemyEnergy,
+        normalizeBattleState: normalizeBattleState,
+        runTurn: runTurn,
+        recentLogs: recentLogs,
+        recentDebugLogs: recentDebugLogs,
+        allLogs: allLogs,
+        allDebugLogs: allDebugLogs,
+        wait: wait,
+        waitForTurnAdvance: waitForTurnAdvance,
+        runCase: runCase,
+        cases: cases,
+        oneClick: oneClick,
+        help: help
+    };
+
+    console.log('[SkillTestHelper] battle helper ready');
+    return window.skillTestBattleHelper;
+}
+
+function installSkillTestMessageBridge() {
+    if (window.__skillTestBridgeReady) {
+        return;
+    }
+
+    function resolveMethod(target, methodPath) {
+        const keys = String(methodPath || '').split('.').filter(Boolean);
+        let context = target;
+
+        for (let index = 0; index < keys.length - 1; index++) {
+            context = context == null ? undefined : context[keys[index]];
+        }
+
+        const lastKey = keys[keys.length - 1];
+        const method = lastKey ? (context == null ? undefined : context[lastKey]) : target;
+        return {
+            context: context == null ? target : context,
+            method: method
+        };
+    }
+
+    window.addEventListener('message', async event => {
+        const data = event.data;
+        if (!data || data.type !== 'skill-test-request' || !data.requestId) {
+            return;
+        }
+
+        const reply = payload => {
+            if (!event.source || typeof event.source.postMessage !== 'function') {
+                return;
+            }
+            event.source.postMessage({
+                type: 'skill-test-response',
+                requestId: data.requestId,
+                ...payload
+            }, '*');
+        };
+
+        try {
+            if (data.methodPath === '__bridgePing') {
+                reply({ success: true, result: { ready: true } });
+                return;
+            }
+
+            const helper = installSkillTestBattleHelper();
+            const resolved = resolveMethod(helper, data.methodPath);
+            if (typeof resolved.method !== 'function') {
+                throw new Error('未找到战斗测试方法: ' + data.methodPath);
+            }
+
+            const result = await resolved.method.apply(resolved.context, Array.isArray(data.args) ? data.args : []);
+            reply({ success: true, result: result });
+        } catch (error) {
+            reply({ success: false, error: error && error.message ? error.message : String(error) });
+        }
+    });
+
+    window.__skillTestBridgeReady = true;
+    console.log('[SkillTestHelper] battle bridge ready');
+}
+
 // 初始化尺寸设置 
 function initAspectRatio() { 
     setAspectRatio();
@@ -4675,6 +6418,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // 初始化游戏
     initGame();
+    installSkillTestBattleHelper();
+    installSkillTestMessageBridge();
 });
 
     </script> 

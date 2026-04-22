@@ -148,6 +148,8 @@ let equipment = {
     "饰品1": null,
     "饰品2": null
 };
+let learnedSkills = {};
+let equippedSkills = {};
 
 // 流式版本的本地状态
 let localState = {
@@ -195,6 +197,8 @@ function syncVariablesFromGameData() {
     farmGrid,     
     inventory,
     equipment,
+    learnedSkills,
+    equippedSkills,
     lastUserMessage,
     summary_Small,
     summary_Week,
@@ -264,6 +268,8 @@ function syncGameDataFromVariables() {
     gameData.farmGrid = farmGrid;
     gameData.inventory = inventory;
     gameData.equipment = equipment;
+    gameData.learnedSkills = learnedSkills;
+    gameData.equippedSkills = equippedSkills;
     gameData.dayNightStatus = dayNightStatus;
     gameData.seasonStatus = seasonStatus;
     gameData.lastUserMessage = lastUserMessage;

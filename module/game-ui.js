@@ -851,8 +851,9 @@ function fitModalToViewport(modal) {
     let targetHeight = vpRect.height;
     let allowScroll = false;
 
-    // 汗青集：高度改为“container底边 - viewport顶边”，并允许在遮罩内滚动
-    if (modal.id === 'history-summary-modal') {
+    // 长内容弹窗：高度改为“container底边 - viewport顶边”，并允许在遮罩内滚动
+    const tallModalIds = ['history-summary-modal', 'skill-library-modal', 'skill-equipment-modal'];
+    if (tallModalIds.includes(modal.id)) {
         const container = document.querySelector('.container') || document.body;
         const containerRect = container.getBoundingClientRect();
 
@@ -934,6 +935,16 @@ function closeAllSpecialModals() {
     const equipmentModal = document.getElementById('equipment-modal');
     if (equipmentModal.style.display === 'block') {
         closeEquipmentModal();
+    }
+
+    const skillLibraryModal = document.getElementById('skill-library-modal');
+    if (skillLibraryModal && skillLibraryModal.style.display === 'block' && typeof closeSkillLibraryModal === 'function') {
+        closeSkillLibraryModal();
+    }
+
+    const skillEquipmentModal = document.getElementById('skill-equipment-modal');
+    if (skillEquipmentModal && skillEquipmentModal.style.display === 'block' && typeof closeSkillEquipmentModal === 'function') {
+        closeSkillEquipmentModal();
     }
     
     // 关闭难度设置
