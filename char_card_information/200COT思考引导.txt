@@ -9,8 +9,7 @@ Reply Template:
 # YAML format strictly required inside ANAL block
 上下文索引定位:
   主角信息源: "<UserInfo>"
-  当前在场NPC列表: [] # 请列出列表，如 [萧白瑚, 雨烛]
-  NPC信息源映射:
+  当前在场NPC列表: [] # 请列出NPC人名的列表
     - 姓名: "___"
       对应标签: "<NPCInformation_>"
     - 姓名: "___" # 如无更多NPC，可忽略此项
