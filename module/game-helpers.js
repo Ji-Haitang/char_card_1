@@ -135,6 +135,37 @@ async function handleMessageOutput(message) {
             showModal(message_error);
         }
     } else {
+        // 独立模式：委托给 Pipeline
+        if (!getRenderFunction()) {
+            // 检测是否为新周消息
+            var newWeekPattern = /^行动选择:新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
+            var match = message.match(newWeekPattern);
+            if (match) {
+                newWeek = 1;
+            } else {
+                newWeek = 0;
+            }
+
+            var modalHTML = '<div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">正在发送以下内容</div>' +
+                '<div style="background: #f5f5f5; padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto; text-align: left; white-space: pre-wrap; word-break: break-word;">' + unprocessed_message + '</div>' +
+                '<div style="margin-top: 15px; color: #666; font-size: 14px; text-align: center;">自动发送中...</div>';
+            showModal(modalHTML);
+
+            // 保存用户消息，供重新生成时复用
+            lastUserMessage = message;
+
+            // 发送时第一阶段：全量同步 + 快照 + 持久化
+            syncGameDataFromVariables();
+            storageService.saveSnapshot(structuredClone(gameData));
+            storageService.saveAppState({ gameData: gameData });
+
+            setTimeout(async function() {
+                try {
+                    await pipeline.runTurn(message);
+                } catch (e) {}
+            }, 500);
+            return;
+        }
         const message_notST = `非酒馆环境以弹窗显示<br>` + unprocessed_message;
         showModal(message_notST);
     }

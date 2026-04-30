@@ -448,6 +448,7 @@
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
                     <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
                     <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
+                    <button class="dropdown-item" onclick="showConfigModal()">⚙ API 配置</button>
                 </div>
             </div>
             
@@ -461,6 +462,9 @@
                     <button class="dropdown-item" onclick="saveGame()">存档</button>
                     <button class="dropdown-item" onclick="loadGame()">读档</button>
                     <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
+                    <button class="dropdown-item" onclick="exportSave()">导出存档</button>
+                    <button class="dropdown-item" onclick="importSave()">导入存档</button>
+                    <button class="dropdown-item" id="btn-return-menu" onclick="returnToStartScreen()" style="display:none">返回主菜单</button>
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
                     <button class="dropdown-item" onclick="showFontSettings()">正文字体</button>
                 </div>
@@ -907,6 +911,21 @@
     <script src="module/special-event.js"></script>
     <script src="module/game-skills.js"></script>
     
+    <!-- 独立前端新增模块 -->
+    <script src="module/variable-system.js"></script>
+    <script src="module/template-engine.js"></script>
+    <script src="module/prompt-data-core.js"></script>
+    <script src="module/api-service.js"></script>
+    <script src="module/prompt-builder.js"></script>
+    <script src="module/response-parser.js"></script>
+    <script src="module/summary-history-service.js"></script>
+    <script src="module/storage-service.js"></script>
+    <script src="module/sync-utils.js"></script>
+    <script src="module/pipeline.js"></script>
+    
+    <!-- UI 模块 -->
+    <script src="ui/config-modal.js"></script>
+    
     <script>
         // 记录原始渲染环境状态
         window._originalRenderer = {
@@ -1063,61 +1082,159 @@ const outPut = `
   格式合规声明: "思维链结束后，我将严格遵照 <FormatGuide> 的规范输出正文。"
 </ANAL>
 
+<SLG_MODE>
+    
 <MAIN_TEXT>
-清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|姬姒|街道|微笑|none
-
-测试场景关键词兜底——沙州城门口|钱塘君|沙州城门口|微笑|无
-
-测试表情关键词兜底——红透了脸|姬姒|街道|红透了脸|none
-
-测试场景错误|钱塘君|不存在的地方|不满|无
-
-测试表情错误|姬姒|山门|阿黑颜|none
-
-穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。|钱塘君|客房|尴-尬|亲吻
-
-呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。|呼延显|演武场|微笑|无
-
-
-测试内容缺失|姬姒|山门|none
-
-
-就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」|姬姒| 浴室|严肃|none
-
-测试最后一段格式错误|钱塘君|严肃|后背位
-
+清晨，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天是你正式拜入天山派的日子——一个改变命运的神圣时刻。你却想着：「要命，石阶怎么这么多，爬上去不得累死？」
+「喂！你还在那里发什么呆！」一个清脆的声音把你拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」她顿了顿，小声嘀咕：「……虽然我自己也经常爬到一半想哭。」
+你连忙点头，跟在这个只到你胸口的小师妹身后，开始了漫长的登山之路。山道蜿蜒曲折，两旁古松参天，偶尔能看到雪白的瀑布从崖壁倾泻而下，宛如天河倒挂，气势磅礴——然后你看到瀑布边有个师兄在撒尿。萧白瑚一边走一边叽叽喳喳：「这里是解剑池，登门上山的客人都要在这里暂存兵器，以前我们门派显赫的时候，这里都摆不下……」她突然压低声音：「不过现在基本没人来了，池子里养了王八。」「那边是温泉，冬天也不会结冰，师兄师姐们经常在那里……」「在那里干嘛？」「泡脚啊！你想什么呢！」
+穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练——说是晨练，其实大半都在偷懒。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上，姿势之懒散，仿佛下一秒就要滑到地上。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意七分贱，灰色的狼耳懒洋洋地耷拉着。
+「师兄！」萧白瑚立刻炸毛，狐尾都竖起来了，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着欠揍的笑容，「佛曰：相由心生。小师妹心中有『小』，所以听什么都是『小』」「你——！」「阿弥陀佛，生气会长不高的哦就像现在这样，永远需要踮脚才能打到我的膝盖~」「我打死你这个假和尚！」呼延显轻飘飘躲开萧白瑚的飞扑，笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派大师兄......」
+话没说完，一个娇小的身影从天而降。砰。呼延显被砸趴在地。来人稳稳地站在他背上，看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，」她的声音稚嫩却带着不容置疑的威严，「不要教坏新来的弟子。」「是是是，洞庭师叔说得是~」呼延显脸贴着地面，声音闷闷的，「小僧这就去藏经阁抄经了~可以先让我起来吗？」「不急。」洞庭君淡淡道，「再躺会儿，反省一下。」她轻巧地从呼延显背上跳下，转身打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「因为她会踩人，你不会。」地上的呼延显幽幽道。「你说什么？」洞庭君回头，眼神危险。「没、没什么！」三人异口同声。
+议事厅庄严肃穆，供奉着天山派历代掌门的牌位。洞庭君站在一旁，虽然需要微微踮起脚尖才能显得威严些，但她认真的表情让人不敢轻视——至少表面上不敢。你心里却想：「好可爱，好想摸摸龙角。」「跪下，向历代掌门行礼。」你恭恭敬敬地跪下，三叩九拜，膝盖真疼。「从今日起，你便是天山派外门弟子。当谨记门规，勤修武学，行侠仗义……」洞庭君一本正经地训话，你一本正经地走神。
+就在这时——「砰！」议事厅的大门被人一脚踹开。「姐~我来找——」一个活泼的少女风风火火冲进来，看到跪在地上的你，眼睛瞬间亮了：「咦咦咦？这不是{{user}}吗！」你惊讶地看着面前的少女——那张俏丽的脸庞你再熟悉不过。是钱塘君，你打小就认识的损友！准确说是经常坑你的损友！「哈哈哈哈！」钱塘君笑得花枝乱颤，「你终于也爬上山来了！我还以为你会在山脚下哭鼻子呢！」
+「钱塘君，」洞庭君皱眉，「我在举行入门仪式。」「哎呀姐姐~」钱塘君大大咧咧地走过来，一把搭住你的肩膀，差点把你压趴下，「仪式都快结束了嘛！再说了，这可是我从小一起长大的跟班呢！」「谁是你跟班了！」「诶？不是吗？」她眨眨眼，坏笑着凑到你耳边，「小时候谁哭着喊着要跟我一起玩？谁被我骗去偷鸡摸狗？谁——」「住口！」「哈哈哈！现在我先入门，你得叫我师姐哦~」她笑得更欢了，「来来来，叫一声听听？」「我……」「快点快点！」她的笑容突然变得『危险』起来，「不叫的话，我就把你小时候尿床的事告诉大家哦~」「我没有！」「还有你偷看寡妇洗——」「师姐！」你立刻改口，「师姐好！师姐最棒了！」「这还差不多~」钱塘君满意地拍拍你的头，像在摸狗。
+「钱塘君！」洞庭君终于忍无可忍。「好啦好啦，我这就带新师弟去熟悉环境！」钱塘君拉起你就往外跑，力气大得吓人，「走！师姐带你去后山玩！那里可好玩了，有个特别深的悬崖！」「等等，什么悬崖——」「推人下去可好玩了！」「救命啊！」就这样，你还没来得及消化自己已经成为天山弟子的事实，就被儿时的恶霸拖出了议事厅。身后传来洞庭君无奈的叹息声。萧白瑚气呼呼的声音远远传来：「喂——！带新师弟参观明明是我的工作！钱塘君你个强盗——」「我不管我不管！」「还给我——」「不给！」「你们别抢了行吗，」你夹在中间，欲哭无泪......
 </MAIN_TEXT>
 
 <SUMMARY>
-清晨，user在演武场练功。姬姒外出采购药材。萧白瑚去议事厅整理文书。
+{{user}}正式拜师入门天山派，负责接引的师妹萧白瑚在登山途中介绍了门派现状——曾经显赫如今已经落寞。穿过山门到达演武场后，遇到了呼延显师兄，他调侃了一番萧白瑚的身高。随后洞庭君长老出现并引领{{user}}前往议事厅完成入门仪式。仪式到一半时，钱塘君突然闯入，她仗着先入门的身份，强迫{{user}}叫她师姐，还抢着要带{{user}}参观后山。
 </SUMMARY>
 
 <SIDE_NOTE>
 {
-    "用户": {
-    "位置变动": "后山"
+"时间": "11:00",
+"用户": {
+      "位置变动": "后山"
+},
+"当前NPC": {
+    "呼延显": {
+        "好感变化": "上升",
+        "位置变动": "藏经阁"
     },
-    "当前NPC": {
-        "呼延显": {
+    "萧白瑚": {
         "好感变化": "上升",
-        "位置变动": "演武场|藏经阁"
-        },
-        "萧白瑚": {
-        "好感变化": "上升",
-        "位置变动": "山门|议事厅"
-        },
-        "洞庭君": {
+        "位置变动": "议事厅"
+    },
+    "洞庭君": {
         "好感变化": "不变",
         "位置变动": "议事厅"
-        },
-        "钱塘君": {
-        "好感变化": "大幅上升",
-        "位置变动": "议事厅|后山"
-        }
     },
-    "其他NPC": "无"
+    "钱塘君": {
+        "好感变化": "大幅上升",
+        "位置变动": "后山"
+    }
 }
-</SIDE_NOTE>`;
+}
+</SIDE_NOTE>
+
+</SLG_MODE>`;
+
+// const outPut = `
+// <ANAL>
+// # YAML format strictly required inside thinking block
+// 上下文索引定位:
+//   主角信息源: "<UserInfo>"
+//   当前在场NPC列表: [] # 请列出列表，如 [萧白瑚, 雨烛]
+//   NPC信息源映射:
+//     - 姓名: "___"
+//       对应标签: "<NPCInformation_>"
+//     - 姓名: "___" # 如无更多NPC，可忽略此项
+//       对应标签: "<NPCInformation_>"
+
+// 场景与状态快照:
+//   时间: "第___年第___周 | ___季 | 昼夜:___"
+//   地点: "___"
+//   用户输入: "___"
+//   意图分类: "___"
+
+// 数据源召回_主角UserInfo:
+//   # 需参考一项或多项相关属性以丰满剧情，如练武失败既要参考[根骨]解释原因，也要参考[心性]描写态度
+//   相关属性参考:
+//     - 属性名: "___" # 第一属性，如: 根骨
+//       当前描述: "___" # 复制<UserInfo>标签内的具体描述
+//       影响分析: "___" # 解释该属性如何影响了当前的表现
+//     - 属性名: "___" # 如无更多相关属性，可忽略此项
+//       当前描述: "___"
+//       影响分析: "___"
+//   剧情合理化构思: "___" # 综合上述属性与判定结果的简述
+
+// 数据源召回_NPC信息:
+//   # 根据映射的标签，摘录适用于当前情境的逻辑
+//   - 姓名: "___"
+//     关键性格Tag: ["___", "___"]
+//     当前行为逻辑: "___"
+//     当前心理逻辑: "___"
+//   - 姓名: "___" # 如无更多NPC，可忽略此项
+//     关键性格Tag: ["___", "___"]
+//     当前行为逻辑: "___"
+//     当前心理逻辑: "___"
+
+// 多角色交互推演:
+//   交互焦点: "___" # 主角的行动主要针对谁，或引起了谁的注意
+//   NPC间互动: "___" # 多个NPC之间是否有眼神交流、对话或配合
+//   冲突与配合: "___"
+
+// 最终回复策略:
+//   叙事口吻: "___"
+//   格式合规声明: "思维链结束后，我将严格遵照 <FormatGuide> 的规范输出正文。"
+// </ANAL>
+
+// <MAIN_TEXT>
+// 清晨的第一缕阳光洒在天山雪峰上，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天，是你正式拜入天山派的日子。「喂！你还在那里发什么呆！」一个清脆的声音把你从思绪中拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」|姬姒|街道|微笑|none
+
+// 测试场景关键词兜底——沙州城门口|钱塘君|沙州城门口|微笑|无
+
+// 测试表情关键词兜底——红透了脸|姬姒|街道|红透了脸|none
+
+// 测试场景错误|钱塘君|不存在的地方|不满|无
+
+// 测试表情错误|姬姒|山门|阿黑颜|none
+
+// 穿过云雾缭绕的山门，眼前豁然开朗。巨大的演武场上，已经有不少弟子在晨练。「哟，这不是我们的小白狐吗？」一个青年男子的声音传来。你抬头一看，只见一个身穿黑色僧袍的青年正倚在演武场边的石柱上偷懒。他有着一张比女子还要俊美的脸庞，琥珀色的眼眸带着三分笑意，灰色的狼耳懒洋洋地耷拉着。「师兄！」萧白瑚立刻炸毛，「我说过多少次了，不要叫我『小』白狐！」「善哉善哉，」呼延显双手合十，嘴角却带着贱兮兮的笑容，「小师妹不要生气嘛，生气会长不高的哦~」「你！」萧白瑚气得狐尾都炸开了。|钱塘君|客房|尴-尬|亲吻
+
+// 呼延显笑嘻嘻地转向你：「哎呀，原来是新入门的师弟！阿弥陀佛，小僧呼延显，忝为本派师兄。」他绕着你转了一圈，摇头晃脑：「《华严经》有云：『一花一世界，一叶一如来。』意思就是说——」他凑近你，神秘兮兮地说，「师弟你看，萧师妹头上那朵小花，里面可能住着一个小师妹，那个小师妹头上还有朵花，里面又住着更小的师妹……所以啊，你欺负一个萧白瑚，就等于欺负了无数个萧白瑚！帮无数个小师妹试炼心性，这也是修行中的大功德......」「谁头上有花了！你这个假和尚又在胡说八道！」萧白瑚跳脚。|呼延显|演武场|微笑|无
+
+
+// 测试内容缺失|姬姒|山门|none
+
+
+// 就在这时，一个娇小的身影从天而降，稳稳落在你们三人中间。来人看上去只有十四五岁的样子，额头长着一对精致的青色龙角。「呼延显，不要教坏新来的弟子。」她的声音稚嫩却带着不容置疑的威严。「是是是，洞庭师叔说得是~」呼延显笑嘻嘻地行了个礼，「小僧这就去藏经阁抄经了~」说完，他身形一闪便消失在演武场上。洞庭君转过身，打量着你：「你就是今天要入门的新弟子？跟我来议事厅吧。」萧白瑚小声嘀咕：「明明都是小孩，大师兄凭什么就只对洞庭君客客气气的……」「你说什么？」洞庭君回头。「没、没什么！」|姬姒| 浴室|严肃|none
+
+// 测试最后一段格式错误|钱塘君|严肃|后背位
+
+// </MAIN_TEXT>
+
+// <SUMMARY>
+// 清晨，user在演武场练功。姬姒外出采购药材。萧白瑚去议事厅整理文书。
+// </SUMMARY>
+
+// <SIDE_NOTE>
+// {
+//     "用户": {
+//     "位置变动": "后山"
+//     },
+//     "当前NPC": {
+//         "呼延显": {
+//         "好感变化": "上升",
+//         "位置变动": "演武场|藏经阁"
+//         },
+//         "萧白瑚": {
+//         "好感变化": "上升",
+//         "位置变动": "山门|议事厅"
+//         },
+//         "洞庭君": {
+//         "好感变化": "不变",
+//         "位置变动": "议事厅"
+//         },
+//         "钱塘君": {
+//         "好感变化": "大幅上升",
+//         "位置变动": "议事厅|后山"
+//         }
+//     },
+//     "其他NPC": "无"
+// }
+// </SIDE_NOTE>`;
 
 // const outPut = `
 // <ANAL>
@@ -1237,6 +1354,59 @@ const outPut = `
             }
             
             return result.trim();
+        }
+
+        /**
+         * 使用统一解析器 (responseParser) 的结果执行初始化提交
+         * 渲染正文 + 应用 SUMMARY + 应用 SIDE_NOTE
+         */
+        function applyParsedInit(parsed) {
+            if (parsed.mainText) {
+                updateStoryText(parsed.mainText);
+            }
+            if (parsed.summaries && parsed.summaries.length > 0) {
+                var sumContent = parsed.summaries.join('\n');
+                var year = Math.floor((currentWeek - 1) / 48) + 1;
+                var remW = (currentWeek - 1) % 48;
+                var month = Math.floor(remW / 4) + 1;
+                var week = remW % 4 + 1;
+                var ts = '[第' + year + '年第' + month + '月第' + week + '周]';
+                var exists = (summary_Small && summary_Small.indexOf(sumContent) !== -1) ||
+                             (summary_Week && summary_Week.indexOf(sumContent) !== -1) ||
+                             (summary_Backup && summary_Backup.indexOf(sumContent) !== -1);
+                if (!exists) {
+                    if (newWeek === 1) {
+                        summary_Week = summary_Week ? summary_Week + '\n\n' + sumContent : sumContent;
+                        if (summary_Small) { summary_Backup = summary_Backup ? summary_Backup + '\n\n' + summary_Small : summary_Small; }
+                        summary_Small = '';
+                    } else {
+                        summary_Small = summary_Small ? summary_Small + '\n\n' + ts + '\n' + sumContent : ts + '\n' + sumContent;
+                    }
+                    console.log('[applyParsedInit] summary_Small 已更新:', summary_Small.substring(0, 80));
+                } else {
+                    console.log('[applyParsedInit] summary 已存在，跳过');
+                }
+            } else {
+                console.warn('[applyParsedInit] 未提取到 summaries，parsed.summaries:', parsed.summaries);
+            }
+            // parseLLMResponse 单独 try-catch，防止其异常阻断后续 sync
+            if (parsed.sideNote && typeof parseLLMResponse === 'function') {
+                try {
+                    parseLLMResponse(parsed.sideNote, parsed.mainText);
+                } catch (e) {
+                    console.error('[applyParsedInit] parseLLMResponse 异常:', e);
+                }
+            }
+
+            // 独立模式：将开场白解析产生的全局变量变更同步回 gameData → localStorage
+            if (!isInRenderEnvironment()) {
+                if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+                if (typeof hydrateVariableSystemFromGameData === 'function') hydrateVariableSystemFromGameData(gameData);
+                if (typeof storageService !== 'undefined') {
+                    try { storageService.saveAppState({ gameData: gameData }); } catch(_){}
+                }
+                console.log('[applyParsedInit] 同步完成, gameData.summary_Small:', (gameData.summary_Small || '').substring(0, 80));
+            }
         }
         
         function parseOutput(slgModeContent) {
@@ -2555,6 +2725,15 @@ const outPut = `
             // 构建存档名称
             const saveName = `第${year}年第${month}月第${week}周_所在地${locationName}`;
             
+            // 独立模式：使用 localStorage 存档
+            if (!isInRenderEnvironment()) {
+                syncGameDataFromVariables();
+                storageService.createSave(saveName);
+                showModal('存档成功！<br>存档名称：' + saveName);
+                toggleDropdown('system-dropdown');
+                return;
+            }
+            
             // 调用SillyTavern的checkpoint命令
             if (isInRenderEnvironment()) {
                 const renderFunc = getRenderFunction();
@@ -2575,6 +2754,13 @@ const outPut = `
 
         // 读档功能
         async function loadGame() {
+            // 独立模式：显示自定义存档列表
+            if (!isInRenderEnvironment()) {
+                showSaveListModal();
+                toggleDropdown('system-dropdown');
+                return;
+            }
+            
             if (isInRenderEnvironment()) {
                 const renderFunc = getRenderFunction();
                 try {
@@ -2586,10 +2772,185 @@ const outPut = `
             } else {
                 showModal('当前环境不支持读档功能');
             }
-            
-            // 关闭下拉菜单
-            toggleDropdown('system-dropdown');
+    }
+    function showSaveListModal() {
+    var saves = storageService.listSaves();
+    var html = '<div id="save-list-modal" class="modal viewport-overlay" style="display:block;"><div class="modal-content" style="max-width:500px;"><h3>存档管理</h3>';
+    if (saves.length === 0) {
+        html += '<p style="text-align:center;color:#888;margin:20px 0;">暂无存档</p>';
+    } else {
+        html += '<div style="max-height:400px;overflow-y:auto;margin:15px 0;">';
+        for (var i = 0; i < saves.length; i++) {
+            var s = saves[i];
+            var previewText = (s.previewLocation || '未知') + ' - 第' + s.previewWeek + '周';
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px;border-bottom:1px solid #eee;"><div><strong>' + _escapeHtml(s.saveName) + '</strong><br><small style="color:#888;">' + previewText + '</small></div><div><button class="modal-btn" style="padding:4px 12px;font-size:12px;" onclick="loadSaveSlot(\'' + s.id + '\')">加载</button> <button class="modal-btn cancel" style="padding:4px 12px;font-size:12px;" onclick="deleteSaveSlot(\'' + s.id + '\')">删除</button></div></div>';
         }
+        html += '</div>';
+    }
+    html += '<div class="modal-buttons"><button class="modal-btn cancel" onclick="closeSaveListModal()">关闭</button></div></div></div>';
+    document.body.insertAdjacentHTML('beforeend', html);
+    try {
+        requestAnimationFrame(function() {
+            var modal = document.getElementById('save-list-modal');
+            if (typeof fitModalToViewport === 'function') fitModalToViewport(modal);
+            if (typeof bindModalAutoFit === 'function') bindModalAutoFit(modal);
+        });
+    } catch(e) {}
+}
+
+function closeSaveListModal() {
+    var modal = document.getElementById('save-list-modal');
+    if (modal) modal.remove();
+}
+
+function loadSaveSlot(saveId) {
+    var payload = storageService.loadSave(saveId);
+    if (!payload) { showModal('存档加载失败'); return; }
+    gameData = mergeWithDefaults(payload.gameData, defaultGameData);
+    hydrateVariableSystemFromGameData(gameData);
+    var summaryHistory = payload.summaryHistory || [];
+    if (summaryHistory.length > 0) {
+        summaryHistoryService.save(summaryHistory);
+    } else if (gameData.summary_Small) {
+        // 降级：老存档无 summaryHistory，从 summary_Small 重建
+        summaryHistoryService.rebuildFromSummarySmall(gameData.summary_Small);
+    } else {
+        summaryHistoryService.save([]);
+    }
+    var uiConv = payload.uiConversation || [];
+    localStorage.setItem('jxz_uiConversation', JSON.stringify(uiConv));
+    // 恢复快照（用于重生成回退）
+    if (payload.snapshot) {
+        storageService.saveSnapshot(payload.snapshot);
+    } else {
+        storageService.clearSnapshot();
+    }
+    syncVariablesFromGameData();
+    updateAllDisplays();
+    // 根据存档中的 userLocation 恢复主角所在场景
+    if (userLocation === 'tianshanpai' || !userLocation) {
+        switchScene('map');
+        document.getElementById('map-scene').classList.add('active');
+    } else {
+        switchScene(userLocation);
+    }
+    // NPC位置已由存档中的 npcLocations 恢复，刷新显示
+    if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
+    var _activeScene = document.querySelector('.scene.active');
+    if (_activeScene && _activeScene.id !== 'map-scene') {
+        if (typeof displayNpcs === 'function') displayNpcs(_activeScene.id.replace('-scene', ''));
+    }
+    // 从 uiConversation 恢复最后一条正文显示
+    if (uiConv.length > 0) {
+        for (var i = uiConv.length - 1; i >= 0; i--) {
+            if (uiConv[i].role === 'assistant') {
+                if (typeof renderMainText === 'function') renderMainText(uiConv[i].content);
+                break;
+            }
+        }
+    }
+    closeSaveListModal();
+    showModal('存档加载成功！');
+    // 持久化存档恢复后的状态到 localStorage
+    storageService.saveAppState({ gameData: gameData });
+}
+
+function deleteSaveSlot(saveId) {
+    showConfirmModal('确认删除', '确定要删除这个存档吗？此操作不可撤销。', function() {
+        storageService.deleteSave(saveId);
+        closeSaveListModal();
+        showSaveListModal();
+    });
+}
+
+function returnToStartScreen() {
+    if (!confirm('确定返回主菜单？未存档的进度将丢失。')) return;
+    location.href = 'start-screen-noST.html';
+}
+
+function exportSave() {
+    syncGameDataFromVariables();
+    var saveName = buildSaveName();
+    var json = storageService.exportSaveToJson(saveName);
+    var filename = 'jxz_save_' + saveName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') + '.json';
+    storageService.downloadJson(filename, json);
+    toggleDropdown('history-dropdown');
+    showModal('存档已导出！');
+}
+
+function importSave() {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json';
+    input.onchange = async function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        try {
+            var payload = await storageService.importSaveFromJson(file);
+            gameData = mergeWithDefaults(payload.gameData, defaultGameData);
+            hydrateVariableSystemFromGameData(gameData);
+            var summaryHistory = payload.summaryHistory || [];
+            if (summaryHistory.length > 0) {
+                summaryHistoryService.save(summaryHistory);
+            } else if (gameData.summary_Small) {
+                // 降级：老存档无 summaryHistory，从 summary_Small 重建
+                summaryHistoryService.rebuildFromSummarySmall(gameData.summary_Small);
+            } else {
+                summaryHistoryService.save([]);
+            }
+            var uiConv = payload.uiConversation || [];
+            localStorage.setItem('jxz_uiConversation', JSON.stringify(uiConv));
+            // 恢复快照（用于重生成回退）
+            if (payload.snapshot) {
+                storageService.saveSnapshot(payload.snapshot);
+            } else {
+                storageService.clearSnapshot();
+            }
+            syncVariablesFromGameData();
+            updateAllDisplays();
+            // 根据存档中的 userLocation 恢复主角所在场景
+            if (userLocation === 'tianshanpai' || !userLocation) {
+                switchScene('map');
+                document.getElementById('map-scene').classList.add('active');
+            } else {
+                switchScene(userLocation);
+            }
+            // NPC位置已由存档中的 npcLocations 恢复，刷新显示
+            if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
+            var _activeScene = document.querySelector('.scene.active');
+            if (_activeScene && _activeScene.id !== 'map-scene') {
+                if (typeof displayNpcs === 'function') displayNpcs(_activeScene.id.replace('-scene', ''));
+            }
+            // 从 uiConversation 恢复最后一条正文显示
+            if (uiConv.length > 0) {
+                for (var i = uiConv.length - 1; i >= 0; i--) {
+                    if (uiConv[i].role === 'assistant') {
+                        if (typeof renderMainText === 'function') renderMainText(uiConv[i].content);
+                        break;
+                    }
+                }
+            }
+            showModal('存档导入成功！');
+            // 持久化存档恢复后的状态到 localStorage
+            storageService.saveAppState({ gameData: gameData });
+        } catch (e) {
+            showModal('存档导入失败：' + e.message);
+        }
+        toggleDropdown('history-dropdown');
+    };
+    input.click();
+}
+
+function buildSaveName() {
+    var year = Math.floor((currentWeek - 1) / 48) + 1;
+    var remainingWeeks = (currentWeek - 1) % 48;
+    var month = Math.floor(remainingWeeks / 4) + 1;
+    var week = remainingWeeks % 4 + 1;
+    var locationKey = (GameMode === 1 ? mapLocation : userLocation);
+    var locationName = locationNames[locationKey] || locationKey || '未知地点';
+    return '第' + year + '年第' + month + '月第' + week + '周_所在地' + locationName;
+}
+
 
         // 显示难度设置
         function showDifficultySettings() {
@@ -3462,6 +3823,48 @@ const outPut = `
         // 重生成按钮：删除最后一条回复并重新触发生成
         async function handleRegenerate() {
             showConfirmModal('重新生成', '是否要重新生成回复？', async () => {
+                // 独立模式
+                if (!isInRenderEnvironment()) {
+                    if (!storageService.hasSnapshot()) {
+                        showModal('没有可重新生成的操作');
+                        return;
+                    }
+                    // 从快照恢复到发送时状态
+                    var snapshot = storageService.loadSnapshot();
+                    if (!snapshot) {
+                        showModal('快照数据损坏，无法重新生成');
+                        return;
+                    }
+                    gameData = mergeWithDefaults(snapshot, defaultGameData);
+                    syncVariablesFromGameData();
+                    // 回滚摘要历史和 UI 对话
+                    summaryHistoryService.popLast();
+                    storageService.popLastAssistantUI();
+                    // 恢复后刷新 UI（不调用 refreshNpcLocations 避免随机重分配）
+                    if (typeof updateAllDisplays === 'function') updateAllDisplays();
+                    if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
+                    // 仅刷新 NPC 显示，不随机化位置
+                    var activeScene = document.querySelector('.scene.active');
+                    if (activeScene && activeScene.id !== 'map-scene') {
+                        var locName = activeScene.id.replace('-scene', '');
+                        if (typeof displayNpcs === 'function') displayNpcs(locName);
+                    }
+                    if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
+                    storageService.saveAppState({ gameData: gameData });
+
+                    var lastMsg = lastUserMessage || '';
+                    if (lastMsg) {
+                        console.log('[Regenerate] 从快照恢复，使用 lastUserMessage 重新发起请求:', lastMsg.substring(0, 50));
+                        pipeline.runTurn(lastMsg, { isRegenerate: true }).catch(function(e) {
+                            console.error('[Regenerate] 重新生成失败:', e);
+                        });
+                    } else {
+                        console.warn('[Regenerate] lastUserMessage 为空，无法重新生成');
+                        showModal('没有可重新生成的用户消息');
+                    }
+                    return;
+                }
+                // ST 模式
                 const renderFunc = getRenderFunction();
                 if (renderFunc) {
                     await renderFunc('/del 1 | /trigger');
@@ -3542,7 +3945,92 @@ const outPut = `
 
         // ========== 初始化 ==========
         window.onload = async function() {
+            // === 游戏入口 intent 路由（优先 URL 参数，回退 localStorage）===
+            var _urlParams = new URLSearchParams(location.search);
+            var launchIntent = _urlParams.get('intent') || localStorage.getItem('jxz_launchIntent');
+            var loadSaveId = _urlParams.get('saveId') || localStorage.getItem('jxz_loadSaveId');
+            var _creationRaw = _urlParams.get('creation');
+            // 清除 URL 参数（不触发刷新）和 localStorage 标记
+            if (_urlParams.has('intent')) {
+                try { history.replaceState(null, '', location.pathname); } catch(_){}
+            }
+            try { localStorage.removeItem('jxz_launchIntent'); localStorage.removeItem('jxz_loadSaveId'); } catch(_){}
+
+            var isStandalone = !isInRenderEnvironment();
+
+            if (isStandalone && !launchIntent) {
+                // 独立模式 + 无意图：检查是否有已有数据
+                var existing = storageService.loadAppState();
+                if (!existing) {
+                    // 完全无数据，跳回开始画面
+                    location.href = 'start-screen-noST.html';
+                    return;
+                }
+                // 有数据：视为刷新恢复，正常继续
+            }
+
             await loadOrInitGameData();
+            // 独立模式：初始化新增服务模块
+            if (!isInRenderEnvironment()) {
+                apiService.loadConfig();
+                promptBuilder.init();
+
+                // newGame 意图：从 URL 参数应用创建数据（file:// 下 localStorage 跨页不可用）
+                if (launchIntent === 'newGame') {
+                    // ★ 先重置为干净默认值，避免上一局数据残留
+                    gameData = structuredClone(defaultGameData);
+                    syncVariablesFromGameData();
+
+                    if (_creationRaw) {
+                        try {
+                            var _cd = JSON.parse(decodeURIComponent(_creationRaw));
+                            if (_cd.d) { difficulty = _cd.d; gameData.difficulty = _cd.d; }
+                            if (_cd.t) { playerTalents = _cd.t; gameData.playerTalents = { ..._cd.t }; }
+                            if (_cd.s) { playerStats = _cd.s; gameData.playerStats = { ..._cd.s }; }
+                            if (_cd.bg) { userBackground = _cd.bg; gameData.userBackground = _cd.bg; }
+                            if (_cd.inv) { inventory = _cd.inv; gameData.inventory = { ..._cd.inv }; }
+                            if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+                        } catch(e) { console.warn('解析创建数据失败', e); }
+                    }
+                }
+
+                hydrateVariableSystemFromGameData(gameData);
+
+                // newGame 意图：保存初始状态到本页 localStorage（确保刷新可恢复）
+                if (launchIntent === 'newGame') {
+                    try { storageService.saveAppState({ gameData: gameData }); } catch(_){}
+                }
+
+                // 读档意图：加载指定存档
+                if (launchIntent === 'loadSave' && loadSaveId) {
+                    var savePayload = storageService.loadSave(loadSaveId);
+                    if (savePayload && savePayload.gameData) {
+                        gameData = mergeWithDefaults(savePayload.gameData, defaultGameData);
+                        hydrateVariableSystemFromGameData(gameData);
+                        syncVariablesFromGameData();
+                        if (savePayload.summaryHistory && savePayload.summaryHistory.length > 0 && typeof summaryHistoryService !== 'undefined') {
+                            summaryHistoryService.importAll(savePayload.summaryHistory);
+                        } else if (gameData.summary_Small && typeof summaryHistoryService !== 'undefined') {
+                            // 降级：老存档无 summaryHistory，从 summary_Small 重建
+                            summaryHistoryService.rebuildFromSummarySmall(gameData.summary_Small);
+                        } else if (typeof summaryHistoryService !== 'undefined') {
+                            summaryHistoryService.save([]);
+                        }
+                        if (savePayload.uiConversation) {
+                            try { localStorage.setItem('jxz_uiConversation', JSON.stringify(savePayload.uiConversation)); } catch(e){}
+                        }
+                        // 恢复快照（用于重生成回退）
+                        if (savePayload.snapshot) {
+                            storageService.saveSnapshot(savePayload.snapshot);
+                        } else {
+                            storageService.clearSnapshot();
+                        }
+                        // 持久化存档恢复后的状态到 localStorage
+                        storageService.saveAppState({ gameData: gameData });
+                    }
+                }
+            }
+
             // 初始化：仅在SLG模式渲染加载图层兜底；普通模式移除SLG全局隐藏
             try {
                 if (GameMode === 1) {
@@ -3594,9 +4082,42 @@ const outPut = `
             } else {
                 switchScene(userLocation);
             }
+            // 刷新 NPC 显示（地图人数标签 + 当前场景 NPC）
+            if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
+            var _initActiveScene = document.querySelector('.scene.active');
+            if (_initActiveScene && _initActiveScene.id !== 'map-scene') {
+                if (typeof displayNpcs === 'function') displayNpcs(_initActiveScene.id.replace('-scene', ''));
+            }
             
             // parseLLMResponse(llmResponse, mainText);
-            parseOutput(outPut);
+            // 独立模式：使用统一解析器 responseParser + applyParsedInit
+            // ST 模式：保留旧 parseOutput 逻辑
+            if (isStandalone) {
+                // 读档意图：跳过开场白解析（避免 SIDE_NOTE 覆盖存档状态），直接恢复正文
+                if (launchIntent === 'loadSave' && loadSaveId) {
+                    try {
+                        var _uiConvRaw = localStorage.getItem('jxz_uiConversation');
+                        var _uiConvArr = _uiConvRaw ? JSON.parse(_uiConvRaw) : [];
+                        for (var _i = _uiConvArr.length - 1; _i >= 0; _i--) {
+                            if (_uiConvArr[_i].role === 'assistant') {
+                                if (typeof renderMainText === 'function') renderMainText(_uiConvArr[_i].content);
+                                break;
+                            }
+                        }
+                    } catch(_e) { console.warn('读档恢复正文失败', _e); }
+                } else {
+                    // 非读档：正常解析开场白（含 SIDE_NOTE 应用）
+                    try {
+                        applyParsedInit(responseParser.run(outPut));
+                    } catch (e) { console.error('初始化解析失败', e); }
+                }
+                if (launchIntent === 'loadSave' && !loadSaveId) {
+                    setTimeout(function(){ if (typeof showSaveListModal === 'function') showSaveListModal(); }, 300);
+                }
+            } else {
+                // ST 模式：保留旧 parseOutput 逻辑
+                parseOutput(outPut);
+            }
             // 新增：初始化时更新SLG返回按钮显示
             updateSLGReturnButton();
             updateCgToggleLabel();
@@ -3610,6 +4131,12 @@ const outPut = `
             try { applyFontLevel((typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2); } catch(_){}
             // 初始化时更新自由行动输入框状态
             updateFreeActionInputState();
+
+            // 独立模式：显示"返回主菜单"按钮
+            if (isStandalone) {
+                var btnReturnMenu = document.getElementById('btn-return-menu');
+                if (btnReturnMenu) btnReturnMenu.style.display = '';
+            }
         };
         
         // 自由行动输入框事件

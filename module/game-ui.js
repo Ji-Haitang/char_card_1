@@ -404,6 +404,12 @@ function hideTooltip() {
     tooltip.classList.remove('show');
 }
 
+// 渲染主要故事文本（供 pipeline / 开场白调用）
+function renderMainText(text) {
+    if (!text) return;
+    updateStoryText(text);
+}
+
 // 更新故事文本（支持分页）
 function updateStoryText(text) {
     const storyElement = document.getElementById('story-text');

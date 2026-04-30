@@ -45,11 +45,12 @@ function getRenderFunction() {
 }
 
 function getCurrentRenderer() {
-    if (window._originalRenderer.hasSTscript && !window._originalRenderer.hasTriggerSlash) {
+    if (window.apiService) return 'standalone';
+    if (window._originalRenderer && window._originalRenderer.hasSTscript && !window._originalRenderer.hasTriggerSlash) {
         return 'xiaobaiX';
-    } else if (!window._originalRenderer.hasSTscript && window._originalRenderer.hasTriggerSlash) {
+    } else if (window._originalRenderer && !window._originalRenderer.hasSTscript && window._originalRenderer.hasTriggerSlash) {
         return 'otherRenderer';
-    } else if (window._originalRenderer.hasSTscript && window._originalRenderer.hasTriggerSlash) {
+    } else if (window._originalRenderer && window._originalRenderer.hasSTscript && window._originalRenderer.hasTriggerSlash) {
         return 'xiaobaiX';
     }
     return 'none';

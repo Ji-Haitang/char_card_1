@@ -353,6 +353,11 @@ function migrateLegacyEquipStats(gameData, hadEquipStats) {
 async function loadOrInitGameData() {
     const renderFunc = getRenderFunction();
     if (!renderFunc) {
+        // 独立模式：从 localStorage 加载
+        const loaded = storageService.loadAppState();
+        gameData = loaded ? mergeWithDefaults(loaded.gameData, defaultGameData) : structuredClone(defaultGameData);
+        hydrateVariableSystemFromGameData(gameData);
+        summaryHistory = summaryHistoryService.getAll();
         syncVariablesFromGameData();
         return;
     }
@@ -392,6 +397,12 @@ async function loadOrInitGameData() {
 async function saveGameData() {
     const renderFunc = getRenderFunction();
     if (!renderFunc) return;
+    if (!renderFunc) {
+        // 独立模式：保存到 localStorage
+        syncGameDataFromVariableSystem();
+        storageService.saveAppState({ gameData: gameData });
+        return;
+    }
     syncGameDataFromVariables();
     await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
 }
@@ -399,14 +410,24 @@ async function saveGameData() {
 
 async function saveLastUserMessage() {
     const renderFunc = getRenderFunction();
-    if (!renderFunc) return;
+    if (!renderFunc) {
+        // 独立模式
+        syncGameDatalastUserMessage();
+        storageService.saveAppState({ gameData: gameData });
+        return;
+    }
     syncGameDatalastUserMessage();
     await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
 }
 
 async function saveNewWeek() {
     const renderFunc = getRenderFunction();
-    if (!renderFunc) return;
+    if (!renderFunc) {
+        // 独立模式
+        syncGameDatanewWeek();
+        storageService.saveAppState({ gameData: gameData });
+        return;
+    }
     syncGameDatanewWeek();
     await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
 }
