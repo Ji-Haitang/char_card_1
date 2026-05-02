@@ -350,8 +350,36 @@ function migrateLegacyEquipStats(gameData, hadEquipStats) {
     return gameData;
 }
 // 修改后的 loadOrInitGameData 函数
-async function loadOrInitGameData() {
+async function loadOrInitGameData(options = {}) {
+    const { source = 'unknown', allowInit = false } = options || {};
+    const canInitInRender = !!allowInit && source === 'start-screen';
     const renderFunc = getRenderFunction();
+
+    async function echoRenderLog(message) {
+        try {
+            await renderFunc('  /echo [JXZ][gameData] ' + message);
+        } catch (_) {}
+    }
+
+    function waitMs(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    function isPlainObject(value) {
+        return typeof value === 'object' && value !== null && !Array.isArray(value);
+    }
+
+    function isLegalGameDataObject(value) {
+        if (!isPlainObject(value)) return false;
+        if (typeof value.userLocation !== 'string') return false;
+        if (typeof value.currentWeek !== 'number') return false;
+        if (!isPlainObject(value.playerTalents)) return false;
+        if (!isPlainObject(value.playerStats)) return false;
+        if (!isPlainObject(value.npcLocations)) return false;
+        if (!isPlainObject(value.inventory)) return false;
+        return true;
+    }
+
     if (!renderFunc) {
         // 独立模式：从 localStorage 加载
         const loaded = storageService.loadAppState();
@@ -361,35 +389,94 @@ async function loadOrInitGameData() {
         syncVariablesFromGameData();
         return;
     }
-    const probe = await renderFunc('/getvar gameData');
-    if (!probe) {
+    const renderer = getCurrentRenderer();
+    const maxAttempts = 3;
+    const retryDelays = [100, 140];
+    const requiredValidStreak = 2;
+
+    let validStreak = 0;
+    let sawMissing = false;
+    let sawInvalid = false;
+    let sawValid = false;
+    let stableLoadedData = null;
+
+    await echoRenderLog(`load start source=${source} allowInit=${allowInit} renderer=${renderer}`);
+
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        const probe = await renderFunc('/getvar gameData');
+        let state = 'invalid';
+        let parsed = null;
+
+        if (probe === null || probe === undefined || probe === '') {
+            state = 'missing';
+            sawMissing = true;
+            validStreak = 0;
+        } else if (renderer === 'xiaobaiX') {
+            // xiaobaiX 理想情况下应直接返回对象，这里不做 JSON.parse
+            if (isLegalGameDataObject(probe)) {
+                state = 'valid';
+                parsed = probe;
+            } else {
+                state = 'invalid';
+            }
+        } else {
+            try {
+                parsed = typeof probe === 'string' ? JSON.parse(probe) : probe;
+            } catch (e) {
+                parsed = null;
+            }
+            if (isLegalGameDataObject(parsed)) {
+                state = 'valid';
+            } else if (parsed === null || parsed === undefined || parsed === '') {
+                state = 'missing';
+            } else {
+                state = 'invalid';
+            }
+        }
+
+        if (state === 'valid') {
+            sawValid = true;
+            validStreak += 1;
+            stableLoadedData = parsed;
+        } else {
+            if (state === 'invalid') sawInvalid = true;
+            validStreak = 0;
+        }
+
+        await echoRenderLog(`probe attempt=${attempt}/${maxAttempts} state=${state} validStreak=${validStreak}`);
+
+        if (validStreak >= requiredValidStreak) {
+            break;
+        }
+
+        if (attempt < maxAttempts) {
+            await waitMs(retryDelays[attempt - 1]);
+        }
+    }
+
+    if (validStreak >= requiredValidStreak && stableLoadedData) {
+        const hadEquipStats = !!(stableLoadedData && typeof stableLoadedData.equipStats === 'object');
+        gameData = mergeWithDefaults(stableLoadedData, defaultGameData);
+        gameData = migrateLegacyEquipStats(gameData, hadEquipStats);
+        if (JSON.stringify(stableLoadedData) !== JSON.stringify(gameData)) {
+            console.log('检测到版本更新，正在保存补充后的游戏数据...');
+            await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
+            await echoRenderLog('merge patch applied and writeback done');
+        } else {
+            await echoRenderLog('merge done without writeback');
+        }
+    } else if (canInitInRender && sawMissing && !sawInvalid && !sawValid) {
         await renderFunc('/setvar key=gameData ' + JSON.stringify(defaultGameData) +
                     ' | /echo ✅ 游戏数据初始化完成！');
         gameData = structuredClone(defaultGameData);
+        await echoRenderLog('init by missing confirmed after retries');
     } else {
-        const renderer = getCurrentRenderer();
-        let loadedData;
-        let hadEquipStats = false;
-        if (renderer === 'xiaobaiX') {
-            loadedData = probe;
-        } else {
-            try {
-                loadedData = typeof probe === 'string' ? JSON.parse(probe) : probe;
-            } catch (e) {
-                console.error('JSON解析失败:', e);
-                loadedData = null;
-            }
-        }
-        hadEquipStats = !!(loadedData && typeof loadedData.equipStats === 'object');
-        // 使用mergeWithDefaults确保所有必要的字段都存在
-        gameData = mergeWithDefaults(loadedData, defaultGameData);
-        gameData = migrateLegacyEquipStats(gameData, hadEquipStats);
-        // 如果有字段被添加，保存更新后的数据
-        if (JSON.stringify(loadedData) !== JSON.stringify(gameData)) {
-            console.log('检测到版本更新，正在保存补充后的游戏数据...');
-            await renderFunc('/setvar key=gameData ' + JSON.stringify(gameData));
-        }
+        const reason = sawInvalid ? 'invalid_probe' : (sawValid ? 'unstable_valid_probe' : 'missing_but_not_allowed');
+        console.warn(`[gameData] skip load/merge/init reason=${reason} (source=${source}, allowInit=${allowInit})`);
+        await echoRenderLog(`skip load reason=${reason}`);
+        return;
     }
+
     syncVariablesFromGameData();
     enamor = 0; // 每次初始化或加载完成后重置
 }
