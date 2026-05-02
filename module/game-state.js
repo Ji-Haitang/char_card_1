@@ -357,7 +357,12 @@ async function loadOrInitGameData(options = {}) {
 
     async function echoRenderLog(message) {
         try {
-            await renderFunc('  /echo [JXZ][gameData] ' + message);
+            const safeMessage = String(message ?? '')
+                .replace(/[\r\n]+/g, ' ')
+                .replace(/^\s+/, '')
+                .replace(/\s+/g, ' ')
+                .trim();
+            await renderFunc('/echo [JXZ][gameData] ' + safeMessage);
         } catch (_) {}
     }
 
