@@ -362,7 +362,7 @@ async function loadOrInitGameData(options = {}) {
                 .replace(/^\s+/, '')
                 .replace(/\s+/g, ' ')
                 .trim();
-            await renderFunc('/echo [JXZ][gameData] ' + safeMessage);
+            console.log('[JXZ][gameData] ' + safeMessage);
         } catch (_) {}
     }
 
