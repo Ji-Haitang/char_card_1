@@ -857,7 +857,7 @@
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/item-list.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/skill-list.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@3bf4964/module/game-state.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-ui.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-helpers.js"></script>
     <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-events.js"></script>
@@ -3461,7 +3461,7 @@
         }
 
         async function initializeOrSync() {
-            await loadOrInitGameData();
+            await loadOrInitGameData({ source: 'index-sr', allowInit: false });
             console.log('初始化完成');
             // 初始化：仅在SLG模式渲染加载图层兜底；普通模式移除SLG全局隐藏
             try {

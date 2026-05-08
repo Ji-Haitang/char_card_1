@@ -155,9 +155,11 @@ async function handleMessageOutput(message) {
             lastUserMessage = message;
 
             // 发送时第一阶段：全量同步 + 快照 + 持久化
+            storageService.setLastTurnCommitted(false);
             syncGameDataFromVariables();
             storageService.saveSnapshot(structuredClone(gameData));
             storageService.saveAppState({ gameData: gameData });
+            console.log('[Standalone] 已在发起 API 请求前更新快照');
 
             setTimeout(async function() {
                 try {

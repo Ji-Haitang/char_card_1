@@ -335,10 +335,10 @@
         }
     })();
     </script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@94bfea2/module/game-utils.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@94bfea2/module/game-config.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@94bfea2/module/item-list.js"></script>
-    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@94bfea2/module/game-state.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-utils.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/game-config.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@7c9aa16/module/item-list.js"></script>
+    <script src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@3bf4964/module/game-state.js"></script>
     <script>
     (function() {
         const $ = (sel) => document.querySelector(sel);
@@ -453,7 +453,7 @@
                     hasRenderFunc: (typeof getRenderFunction === 'function') ? !!getRenderFunction() : null
                 });
                 if (typeof loadOrInitGameData === 'function') {
-                    await loadOrInitGameData();
+                    await loadOrInitGameData({ source: 'start-screen', allowInit: true });
                     console.log('[StartScreen] after loadOrInit', { gameData: window.gameData, playerTalents: window.playerTalents, difficulty: window.difficulty });
                 }
             } catch (e) { console.warn('初始化 GameData 失败，使用默认值', e); }

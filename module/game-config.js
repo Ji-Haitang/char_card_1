@@ -825,6 +825,7 @@ const dangerEventChance = {
 
 // 默认游戏数据
 const defaultGameData = {
+    playerName: "主角",    // 角色名称
     userLocation: "tianshanpai",
     userBackground: "A", // 新增：角色出身编码（A 农家子弟，B 府兵军户，C 经史传家，D 天潢贵胄）
     textFontLevel: 2, // 新增：正文字体档位（1~5），默认第二档

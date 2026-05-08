@@ -526,6 +526,17 @@
             <div class="modal-content cheat-content">
                 <h3>金手指 - 数值修改</h3>
                 <div class="cheat-sections">
+                    <!-- 角色名称 -->
+                    <div class="cheat-section">
+                        <h4>角色名称</h4>
+                        <div class="cheat-grid">
+                            <div class="cheat-item" style="grid-column: span 2;">
+                                <label>主角名</label>
+                                <input type="text" id="cheat-playername" maxlength="8" placeholder="请输入角色名">
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- 天赋属性 -->
                     <div class="cheat-section">
                         <h4>天赋属性</h4>
@@ -915,10 +926,16 @@
     <script src="module/variable-system.js"></script>
     <script src="module/template-engine.js"></script>
     <script src="module/prompt-data-core.js"></script>
+    <script src="module/prompt-data-npc.js"></script>
+    <script src="module/prompt-data-actions.js"></script>
+    <script src="module/prompt-data-extra.js"></script>
+    <script src="module/token-utils.js"></script>
     <script src="module/api-service.js"></script>
+    <script src="module/worldbook-engine.js"></script>
     <script src="module/prompt-builder.js"></script>
     <script src="module/response-parser.js"></script>
     <script src="module/summary-history-service.js"></script>
+    <script src="module/idb-storage.js"></script>
     <script src="module/storage-service.js"></script>
     <script src="module/sync-utils.js"></script>
     <script src="module/pipeline.js"></script>
@@ -1998,7 +2015,7 @@ const outPut = `
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 locationInfo +  // 使用新的地点信息
-                `{{user}}行动选择：${action}<br>` +
+                `${gameData.playerName || '主角'}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
                 `选择结果：${successLevel} - ${successText}<br><br>` +
                 `计算过程：${calcText}<br>` +
@@ -2189,7 +2206,7 @@ const outPut = `
             const location = activeScene.id.replace('-scene', '');
             
             const npc = npcs[currentInteractionNpc];
-            const npcsPresent = getNpcsAtLocation(location).map(npc => npc.name).join('、') || '无';
+            const npcsPresent = npc.name;
             
             let locationInfo = '';
             if (userLocation === userLocation_old) {
@@ -2203,7 +2220,7 @@ const outPut = `
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 locationInfo +  // 使用新的地点信息
-                `{{user}}行动选择：NPC互动<br>` +
+                `${gameData.playerName || '主角'}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
                 `在场NPC：${npcsPresent}`;
@@ -2516,7 +2533,7 @@ const outPut = `
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     `地点：${mapLocation}<br>` +
-                    `{{user}}自由行动："${actionContent}"<br>` +
+                    `${gameData.playerName || '主角'}自由行动："${actionContent}"<br>` +
                     `随行NPC：${companionNames}` +
                     eventInfo;
             } else {
@@ -2550,7 +2567,7 @@ const outPut = `
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     locationInfo +
-                    `{{user}}自由行动："${actionContent}"<br>` +
+                    `${gameData.playerName || '主角'}自由行动："${actionContent}"<br>` +
                     `在场NPC：${npcsPresent}`;
             }
             inputElement.value = '';
@@ -2728,7 +2745,10 @@ const outPut = `
             // 独立模式：使用 localStorage 存档
             if (!isInRenderEnvironment()) {
                 syncGameDataFromVariables();
+                // 独立前端专用：将当前活跃事件存入存档
+                gameData._activeEvent = currentRandomEvent || null;
                 storageService.createSave(saveName);
+                delete gameData._activeEvent;
                 showModal('存档成功！<br>存档名称：' + saveName);
                 toggleDropdown('system-dropdown');
                 return;
@@ -2818,7 +2838,7 @@ function loadSaveSlot(saveId) {
         summaryHistoryService.save([]);
     }
     var uiConv = payload.uiConversation || [];
-    localStorage.setItem('jxz_uiConversation', JSON.stringify(uiConv));
+    storageService.replaceUIConversation(uiConv);
     // 恢复快照（用于重生成回退）
     if (payload.snapshot) {
         storageService.saveSnapshot(payload.snapshot);
@@ -2849,6 +2869,25 @@ function loadSaveSlot(saveId) {
             }
         }
     }
+    // 恢复事件状态：根据存档中的 _activeEvent 和 inputEnable 还原
+    hideRandomEvent();
+    hideBattleEvent();
+    var savedEvent = gameData._activeEvent || null;
+    delete gameData._activeEvent;
+    if (inputEnable === 0 && savedEvent) {
+        // 存档时有活跃事件，恢复运行时变量并重新显示事件框
+        currentRandomEvent = savedEvent;
+        if (savedEvent.事件类型 === '战斗事件') {
+            displayBattleEvent(savedEvent);
+        } else {
+            displayRandomEvent(savedEvent);
+        }
+    } else {
+        // 存档时无事件，确保按钮可用
+        currentRandomEvent = null;
+        inputEnable = 1;
+    }
+    updateFreeActionInputState();
     closeSaveListModal();
     showModal('存档加载成功！');
     // 持久化存档恢复后的状态到 localStorage
@@ -2899,7 +2938,7 @@ function importSave() {
                 summaryHistoryService.save([]);
             }
             var uiConv = payload.uiConversation || [];
-            localStorage.setItem('jxz_uiConversation', JSON.stringify(uiConv));
+            storageService.replaceUIConversation(uiConv);
             // 恢复快照（用于重生成回退）
             if (payload.snapshot) {
                 storageService.saveSnapshot(payload.snapshot);
@@ -3000,6 +3039,8 @@ function buildSaveName() {
         // 显示金手指
         function showCheatMode() {
             closeAllSpecialModals();
+            // 填充角色名称
+            document.getElementById('cheat-playername').value = gameData.playerName || '主角';
             // 填充当前数值
             document.getElementById('cheat-gengu').value = playerTalents.根骨;
             document.getElementById('cheat-wuxing').value = playerTalents.悟性;
@@ -3050,6 +3091,9 @@ function buildSaveName() {
 
         // 保存金手指数值
         async function saveCheatValues() {
+            // 更新角色名称
+            var newName = document.getElementById('cheat-playername').value.trim();
+            gameData.playerName = newName || '主角';
             // 更新天赋属性
             playerTalents.根骨 = parseInt(document.getElementById('cheat-gengu').value);
             playerTalents.悟性 = parseInt(document.getElementById('cheat-wuxing').value);
@@ -3837,9 +3881,13 @@ function buildSaveName() {
                     }
                     gameData = mergeWithDefaults(snapshot, defaultGameData);
                     syncVariablesFromGameData();
-                    // 回滚摘要历史和 UI 对话
-                    summaryHistoryService.popLast();
-                    storageService.popLastAssistantUI();
+                    // 只有上一轮真正提交成功，才回滚上一条摘要和 AI 正文。
+                    if (storageService.didLastTurnCommit()) {
+                        summaryHistoryService.popLast();
+                        storageService.popLastAssistantUI();
+                    } else {
+                        console.log('[Regenerate] 上一次请求未提交成功，保留现有摘要历史与 UI 正文');
+                    }
                     // 恢复后刷新 UI（不调用 refreshNpcLocations 避免随机重分配）
                     if (typeof updateAllDisplays === 'function') updateAllDisplays();
                     if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
@@ -3854,6 +3902,7 @@ function buildSaveName() {
 
                     var lastMsg = lastUserMessage || '';
                     if (lastMsg) {
+                        storageService.setLastTurnCommitted(false);
                         console.log('[Regenerate] 从快照恢复，使用 lastUserMessage 重新发起请求:', lastMsg.substring(0, 50));
                         pipeline.runTurn(lastMsg, { isRegenerate: true }).catch(function(e) {
                             console.error('[Regenerate] 重新生成失败:', e);
@@ -3881,7 +3930,7 @@ function buildSaveName() {
             const slgReturnBtn = document.getElementById('slg-return-btn');
             
             if (inputEnable === 0) {
-                // 禁用输入框和按钮
+                // 禁用输入框和按钮（事件期间）
                 if (inputElement) {
                     inputElement.disabled = true;
                     inputElement.placeholder = '当前无法输入';
@@ -3893,10 +3942,11 @@ function buildSaveName() {
                     sendButton.style.opacity = '0.5';
                     sendButton.style.cursor = 'not-allowed';
                 }
+                // 事件期间允许重发送
                 if (regenerateBtn) {
-                    regenerateBtn.disabled = true;
-                    regenerateBtn.style.opacity = '0.5';
-                    regenerateBtn.style.cursor = 'not-allowed';
+                    regenerateBtn.disabled = false;
+                    regenerateBtn.style.opacity = '1';
+                    regenerateBtn.style.cursor = '';
                 }
                 // 禁用跳过一周按钮
                 if (skipWeekBtn) {
@@ -3958,6 +4008,11 @@ function buildSaveName() {
 
             var isStandalone = !isInRenderEnvironment();
 
+            // Phase 2.2：初始化存储服务（IDB + 缓存）
+            if (isStandalone) {
+                await storageService.init();
+            }
+
             if (isStandalone && !launchIntent) {
                 // 独立模式 + 无意图：检查是否有已有数据
                 var existing = storageService.loadAppState();
@@ -3969,11 +4024,10 @@ function buildSaveName() {
                 // 有数据：视为刷新恢复，正常继续
             }
 
-            await loadOrInitGameData();
+            await loadOrInitGameData({ source: 'index', allowInit: false });
             // 独立模式：初始化新增服务模块
             if (!isInRenderEnvironment()) {
                 apiService.loadConfig();
-                promptBuilder.init();
 
                 // newGame 意图：从 URL 参数应用创建数据（file:// 下 localStorage 跨页不可用）
                 if (launchIntent === 'newGame') {
@@ -3984,6 +4038,7 @@ function buildSaveName() {
                     if (_creationRaw) {
                         try {
                             var _cd = JSON.parse(decodeURIComponent(_creationRaw));
+                            if (_cd.n) { gameData.playerName = _cd.n; }
                             if (_cd.d) { difficulty = _cd.d; gameData.difficulty = _cd.d; }
                             if (_cd.t) { playerTalents = _cd.t; gameData.playerTalents = { ..._cd.t }; }
                             if (_cd.s) { playerStats = _cd.s; gameData.playerStats = { ..._cd.s }; }
@@ -4017,7 +4072,7 @@ function buildSaveName() {
                             summaryHistoryService.save([]);
                         }
                         if (savePayload.uiConversation) {
-                            try { localStorage.setItem('jxz_uiConversation', JSON.stringify(savePayload.uiConversation)); } catch(e){}
+                            storageService.replaceUIConversation(savePayload.uiConversation);
                         }
                         // 恢复快照（用于重生成回退）
                         if (savePayload.snapshot) {
@@ -4096,8 +4151,7 @@ function buildSaveName() {
                 // 读档意图：跳过开场白解析（避免 SIDE_NOTE 覆盖存档状态），直接恢复正文
                 if (launchIntent === 'loadSave' && loadSaveId) {
                     try {
-                        var _uiConvRaw = localStorage.getItem('jxz_uiConversation');
-                        var _uiConvArr = _uiConvRaw ? JSON.parse(_uiConvRaw) : [];
+                        var _uiConvArr = storageService.loadUIConversation();
                         for (var _i = _uiConvArr.length - 1; _i >= 0; _i--) {
                             if (_uiConvArr[_i].role === 'assistant') {
                                 if (typeof renderMainText === 'function') renderMainText(_uiConvArr[_i].content);
@@ -4108,7 +4162,9 @@ function buildSaveName() {
                 } else {
                     // 非读档：正常解析开场白（含 SIDE_NOTE 应用）
                     try {
-                        applyParsedInit(responseParser.run(outPut));
+                        var _pn = gameData.playerName || '主角';
+                        var _outPut = outPut.replace(/\{\{user\}\}/g, _pn);
+                        applyParsedInit(responseParser.run(_outPut));
                     } catch (e) { console.error('初始化解析失败', e); }
                 }
                 if (launchIntent === 'loadSave' && !loadSaveId) {

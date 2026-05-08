@@ -510,6 +510,12 @@ function updateStoryText(text) {
             isStoryExpanded = true;
             currentPage = 0;
             ls.defaultExpandApplied = true;
+        } else if (typeof newWeek === 'number' && newWeek !== 1 && ls && ls.defaultExpandApplied
+                   && typeof isInRenderEnvironment === 'function' && !isInRenderEnvironment()) {
+            // 独立模式 + 非新周：重置展开标记，恢复为翻页模式
+            ls.defaultExpandApplied = false;
+            isStoryExpanded = false;
+            currentPage = 0;
         }
     } catch (e) {}
 

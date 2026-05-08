@@ -163,6 +163,14 @@
         .btn.primary { border-color: rgba(255,255,255,0.28); background: rgba(255,255,255,0.18); }
         .btn.primary:hover { background: rgba(255,255,255,0.24); }
 
+        /* 角色命名 */
+        .name-wrap { width: min(70%, 600px); display: flex; flex-direction: column; align-items: center; gap: clamp(14px, 2.4vw, 28px); }
+        .name-label { font-family: 'Ma Shan Zheng', cursive; font-size: clamp(16px, 2.2vw, 28px); opacity: 0.9; }
+        .name-input { width: 100%; padding: clamp(10px, 1.8vw, 18px); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 10px; color: #fff; font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif; font-size: clamp(16px, 2vw, 24px); text-align: center; outline: none; transition: border-color 200ms ease; }
+        .name-input:focus { border-color: rgba(255,255,255,0.45); }
+        .name-input::placeholder { color: rgba(255,255,255,0.35); }
+        .name-hint { font-size: clamp(12px, 1.4vw, 16px); opacity: 0.6; }
+
         /* 属性分配 */
         .alloc-wrap { width: min(90%, 880px); display: grid; gap: 12px; }
         .alloc-row { display: grid; grid-template-columns: 1fr auto auto; align-items: center; gap: 8px; padding: 8px 10px; background: rgba(255,255,255,0.06); border-radius: 8px; }
@@ -342,6 +350,7 @@
     <script src="module/sync-utils.js"></script>
     <script src="module/game-state.js"></script>
     <!-- 独立前端所需模块 -->
+    <script src="module/idb-storage.js"></script>
     <script src="module/storage-service.js"></script>
     <script src="module/response-parser.js"></script>
     <script src="module/summary-history-service.js"></script>
@@ -384,7 +393,7 @@
             '经史传家': '原为沙洲书香门第，因不愿为吕氏伪政效力，举家避祸。父亲在外堡设私塾教书，你从小耳濡目染，聪慧过人。',
             '天潢贵胄': '本是皇室远支后裔，几代前便已家业凋零。你几番曲折，孤身一人流落到天山派外堡，虽出身不凡却从不张扬，只想凭本事光耀门楣。'
         };
-        const STEP_TITLES = { difficulty: '难度选择', origin: '出身选择', allocate: '属性分配' };
+        const STEP_TITLES = { name: '角色命名', difficulty: '难度选择', origin: '出身选择', allocate: '属性分配' };
 
         const outPut = `
 <SLG_MODE>
@@ -435,7 +444,8 @@
 </SLG_MODE>`;
 
         const state = {
-            step: 'difficulty',
+            step: 'name',
+            playerName: '',
             difficulty: null,
             origin: null,
             talents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
@@ -443,8 +453,10 @@
         };
 
         async function initGame() {
-            try {
-                // 兜底：部分环境未预置 _originalRenderer，避免 getCurrentRenderer 读取报错
+            try {                // Phase 2.2：初始化存储服务（IDB + 缓存）
+                if (typeof storageService !== 'undefined' && storageService.init) {
+                    await storageService.init();
+                }                // 兜底：部分环境未预置 _originalRenderer，避免 getCurrentRenderer 读取报错
                 if (!window._originalRenderer) {
                     window._originalRenderer = {
                         hasSTscript: typeof window.STscript === 'function',
@@ -470,7 +482,7 @@
             modal.classList.add('show');
             modal.setAttribute('aria-hidden', 'false');
             if (btnBack) btnBack.classList.remove('hidden');
-            state.step = 'difficulty';
+            state.step = 'name';
             renderStep();
         }
 
@@ -483,13 +495,37 @@
         function renderStep() {
             btnConfirm.classList.add('hidden');
             btnNext.classList.remove('hidden');
-            btnBack.disabled = (state.step === 'difficulty');
+            btnBack.disabled = (state.step === 'name');
             if (modalHeader && STEP_TITLES[state.step]) {
                 modalHeader.textContent = STEP_TITLES[state.step];
             }
+            if (state.step === 'name') return renderName();
             if (state.step === 'difficulty') return renderDifficulty();
             if (state.step === 'origin') return renderOrigin();
             if (state.step === 'allocate') return renderAllocate();
+        }
+
+        function renderName() {
+            btnNext.textContent = '下一步';
+            btnNext.disabled = !state.playerName.trim();
+            modalBody.innerHTML = `
+                <div class="name-wrap">
+                    <div class="name-label">为你的角色取一个名字</div>
+                    <input class="name-input" type="text" maxlength="8" placeholder="请输入角色名" value="${state.playerName}" autofocus />
+                    <div class="name-hint">1~8个字符</div>
+                </div>
+            `;
+            var nameInput = modalBody.querySelector('.name-input');
+            nameInput.addEventListener('input', function() {
+                state.playerName = this.value;
+                btnNext.disabled = !this.value.trim();
+            });
+            nameInput.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && this.value.trim()) {
+                    btnNext.click();
+                }
+            });
+            setTimeout(function() { nameInput.focus(); }, 50);
         }
 
         function renderDifficulty() {
@@ -671,18 +707,22 @@
 
         btnCancel.addEventListener('click', closeModal);
         btnBack.addEventListener('click', () => {
-            if (state.step === 'origin') state.step = 'difficulty';
+            if (state.step === 'difficulty') state.step = 'name';
+            else if (state.step === 'origin') state.step = 'difficulty';
             else if (state.step === 'allocate') state.step = 'origin';
             renderStep();
         });
         btnNext.addEventListener('click', () => {
-            if (state.step === 'difficulty') {
-                if (!state.difficulty) return; // 必须选择
+            if (state.step === 'name') {
+                if (!state.playerName.trim()) return;
+                state.step = 'difficulty';
+            } else if (state.step === 'difficulty') {
+                if (!state.difficulty) return;
                 state.remaining = DIFF_POINTS[state.difficulty] || 40;
                 state.step = 'origin';
             } else if (state.step === 'origin') {
                 if (!state.origin) return;
-                state._initAlloc = undefined; // 进入分配时重置初始标志以按难度赋值
+                state._initAlloc = undefined;
                 state.step = 'allocate';
             }
             renderStep();
@@ -702,6 +742,7 @@
                 if (typeof inventory !== 'undefined') inventory = { ...(state.inventory || {}) };
                 // 同步到 gameData
                 if (window.gameData) {
+                    window.gameData.playerName = state.playerName.trim() || '主角';
                     window.gameData.difficulty = code;
                     window.gameData.playerTalents = { ...state.talents };
                     window.gameData.playerStats = { ...state.stats };
@@ -732,7 +773,9 @@
                         }
                         storageService.saveAppState({ gameData: window.gameData });
                         if (typeof responseParser !== 'undefined') {
-                            var parsed = responseParser.run(outPut);
+                            var finalName = state.playerName.trim() || '主角';
+                            var finalOutPut = outPut.replace(/\{\{user\}\}/g, finalName);
+                            var parsed = responseParser.run(finalOutPut);
                             storageService.appendUIConversation({
                                 id: 'opening_' + Date.now(),
                                 role: 'assistant',
@@ -747,6 +790,7 @@
                     }
                     // 通过 URL 参数传递意图和创建数据（file:// 下 localStorage 跨页不可用）
                     var creationPayload = {
+                        n: state.playerName.trim() || '主角',
                         d: DIFF_CODE[state.difficulty] || 'normal',
                         t: state.talents,
                         s: state.stats,
@@ -762,7 +806,9 @@
                 if (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
                     const renderFunc = (typeof getRenderFunction === 'function') ? getRenderFunction() : null;
                     if (renderFunc) {
-                        const safeOut = outPut.replace(/`/g, '\\`');
+                        var stName = state.playerName.trim() || '主角';
+                        var stOutPut = outPut.replace(/\{\{user\}\}/g, stName);
+                        const safeOut = stOutPut.replace(/`/g, '\\`');
                         await renderFunc(`/sendas name={{char}} at={{lastMessageId}}+1 ${safeOut}`);
                     }
                 }
@@ -823,19 +869,8 @@
                         if (!input.files || !input.files[0]) return;
                         if (typeof storageService === 'undefined') { alert('存储服务不可用'); return; }
                         storageService.importSaveFromJson(input.files[0]).then(function(payload) {
-                            // 写入存档列表
-                            var id = storageService.createSave(payload.saveName || '导入存档');
-                            // 使用导入的数据覆盖刚创建的存档
-                            var saves = storageService.listSaves();
-                            for (var i = 0; i < saves.length; i++) {
-                                if (saves[i].id === id) {
-                                    saves[i].gameData = payload.gameData;
-                                    if (payload.summaryHistory) saves[i].summaryHistory = payload.summaryHistory;
-                                    if (payload.uiConversation) saves[i].uiConversation = payload.uiConversation;
-                                    break;
-                                }
-                            }
-                            localStorage.setItem('jxz_saves', JSON.stringify(saves));
+                            // 直接导入完整存档 payload
+                            var id = storageService.importSavePayload(payload);
                             try { var bgm = document.getElementById('bgm'); if (bgm) { bgm.pause(); bgm.currentTime = 0; } } catch(_){}
                             try { localStorage.setItem('jxz_launchIntent', 'loadSave'); localStorage.setItem('jxz_loadSaveId', id); } catch(_){}
                             location.href = 'index.html?intent=loadSave&saveId=' + encodeURIComponent(id);

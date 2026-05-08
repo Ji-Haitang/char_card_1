@@ -18,10 +18,15 @@ var pipeline = (function() {
 
         // === 请求阶段（无副作用，失败可安全重试）===
         var preprocessed = _preprocessMessage(message);
+
+        // 获取上一次 AI 回复（用于 LatestReply 块和 NPC 匹配）
+        var lastAssistantReply = _getLastAssistantContent(storageService.loadUIConversation());
+
         var messages = promptBuilder.buildMessages({
             userMessage: preprocessed,
             gameData: gameData,
-            summaryHistory: summaryHistoryService.getAll()
+            summaryHistory: summaryHistoryService.getAll(),
+            lastAssistantReply: lastAssistantReply
         });
 
         var rawText;
@@ -31,6 +36,7 @@ var pipeline = (function() {
             rawText = result.content;
             console.log('[Pipeline] API 请求成功');
         } catch (err) {
+            storageService.setLastTurnCommitted(false);
             console.error('[Pipeline] API 请求失败:', err.message);
             var errorMsg = 'AI 请求失败：' + err.message + '\n\n可点击重试';
             if (typeof showModal === 'function') {
@@ -40,6 +46,8 @@ var pipeline = (function() {
         }
 
         // === 提交阶段（有副作用，按顺序可控）===
+        var uiConversationBeforeCommit = storageService.loadUIConversation().slice();
+        var summaryHistoryBeforeCommit = summaryHistoryService.getAll().slice();
         try {
             // 1. 写入用户消息到 UI 历史
             storageService.appendUIConversation({
@@ -118,8 +126,11 @@ var pipeline = (function() {
             // 10. 处理随机/战斗事件
             _handleEvents(parsed);
 
+            storageService.setLastTurnCommitted(true);
+
             console.log('[Pipeline] 提交完成');
         } catch (err) {
+            storageService.setLastTurnCommitted(false);
             console.error('[Pipeline] 提交阶段错误:', err.message);
             // 提交阶段失败：从快照恢复到发送时状态
             var snapshot = storageService.loadSnapshot();
@@ -127,6 +138,11 @@ var pipeline = (function() {
                 gameData = (typeof mergeWithDefaults === 'function') ? mergeWithDefaults(snapshot, defaultGameData) : snapshot;
                 if (typeof syncVariablesFromGameData === 'function') syncVariablesFromGameData();
                 storageService.saveAppState({ gameData: gameData });
+            }
+            storageService.replaceUIConversation(uiConversationBeforeCommit);
+            summaryHistoryService.importAll(summaryHistoryBeforeCommit);
+            if (typeof renderMainText === 'function') {
+                renderMainText(_getLastAssistantContent(uiConversationBeforeCommit));
             }
             if (typeof showModal === 'function') {
                 showModal('状态保存异常，已恢复到发送前状态。建议手动存档。');
@@ -206,6 +222,16 @@ var pipeline = (function() {
                 }
             }
         }
+    }
+
+    function _getLastAssistantContent(history) {
+        if (!history || history.length === 0) return '';
+        for (var i = history.length - 1; i >= 0; i--) {
+            if (history[i] && history[i].role === 'assistant') {
+                return history[i].content || '';
+            }
+        }
+        return '';
     }
 
     return { runTurn: runTurn };
