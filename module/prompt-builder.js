@@ -70,6 +70,9 @@ var promptBuilder = (function() {
                 var timestamp = _weekToTimestamp(entry.week || 1);
                 lines.push('');
                 lines.push(timestamp);
+                if (entry.gameTime) {
+                    lines.push('[当天时间 ' + entry.gameTime + ']');
+                }
                 lines.push(entry.summaryText);
             }
         }
@@ -102,7 +105,9 @@ var promptBuilder = (function() {
         parts.push('');
         parts.push('</info>');
         parts.push('');
-        parts.push('# 不论剧情如何发展，均以<character></character>中规定的角色形象为准。<character>');
+        parts.push('# 不论剧情如何发展，均以<character></character>中规定的角色形象为准。');
+        parts.push('');
+        parts.push('<character>');
         parts.push('');
         // 010 天山派背景
         parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_010, variables));
@@ -142,10 +147,6 @@ var promptBuilder = (function() {
         parts.push('<background>');
         parts.push('');
         parts.push('');
-        // <fresh>
-        parts.push(PROMPT_FRESH);
-        parts.push('');
-
         // <writing_style>
         parts.push(PROMPT_WRITING_STYLE);
         parts.push('');
@@ -178,6 +179,7 @@ var promptBuilder = (function() {
         parts.push(lastAssistantReply || '');
         parts.push('');
         parts.push('</LatestReply>');
+        parts.push('</history>');
         return parts.join('\n');
     }
 
@@ -189,8 +191,16 @@ var promptBuilder = (function() {
     function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek) {
         var parts = [];
 
+        // <fresh>
+        parts.push(PROMPT_FRESH);
+        parts.push('');
+
         // 用户输入
+        parts.push('# `<user_input>`作为本次交互的用户输入，以`<user_input>`为大纲指导，丰富细节，进行扩写后输出，不得省略或跳过用户输入中的情节，并合理流畅地继续向下推进');
+        parts.push('');
+        parts.push('<user_input>');
         parts.push(userMessage);
+        parts.push('</user_input>');
         parts.push('');
 
         // <MainTextGuidance>
@@ -210,9 +220,7 @@ var promptBuilder = (function() {
         parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_110, variables));
         parts.push('');
 
-        // 闭合 history 和 background
-        parts.push('</history>');
-        parts.push('');
+        // 闭合 background
         parts.push('</background>');
         parts.push('');
 
@@ -258,7 +266,9 @@ var promptBuilder = (function() {
         var msg4Content = _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek);
         var msg5Content = templateEngine.renderPromptTemplate(
             isDeepSeek ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : PROMPT_JAILBREAK_PREFILL, variables);
-        var msg6Content = PROMPT_FINAL_INSTRUCTION;
+        var msg6Content = isDeepSeek
+            ? PROMPT_FINAL_INSTRUCTION
+            : PROMPT_FINAL_INSTRUCTION.replace(/\}$/, '\nthinking omitted}');
 
         // --- Token 预算管理 ---
         var budget = _getBudgetConfig();

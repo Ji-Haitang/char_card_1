@@ -332,7 +332,10 @@ function parseLLMResponse(response, mainTextContent) {
         if (timeMatch) {
             const hour = parseInt(timeMatch[1]);
             const minute = parseInt(timeMatch[2]);
-            
+
+            // 保存当前剧情时间
+            currentGameTime = timeStr;
+
             // 判断昼夜
             if (hour >= 6 && hour < 18) {
                 dayNightStatus = 'daytime';

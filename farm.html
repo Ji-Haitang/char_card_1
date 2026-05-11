@@ -7,9 +7,10 @@
   <link rel="icon" type="image/png" href="assets/image/icon/favicon.png" />
   <style>
     :root {
-        /* 响应式tile-size：基于视口宽度计算 */
-        --tile-size: calc(100vw / 12); /* 12列占满整个视口宽度 */
-        --gap: 6px;
+        /* --tile-size 由 JS 动态注入，确保网格在任意尺寸下完整显示 */
+        --tile-size: 40px;
+        --header-h: 48px;
+        --gap: 0px;
         --radius: 8px;
         --bg: #000000;
         --panel-bg: #0b0b0bcc;
@@ -18,17 +19,17 @@
         --danger: #d9534f;
     }
     
-    /* 限制最大tile尺寸，避免在超大屏幕上过大 */
+    /* 限制最大tile尺寸，避免在超大屏幕上过大 - 现由JS控制，媒体查询仅作兜底 */
     @media (min-width: 1200px) {
         :root {
             --tile-size: 100px; /* 最大100px */
         }
     }
     
-    /* 在较小屏幕上调整 */
+    /* 在较小屏幕上调整 - 现由JS控制 */
     @media (max-width: 600px) {
         :root {
-            --tile-size: calc(100vw / 12); /* 保持12列 */
+            /* JS会动态设置 */
         }
     }
     
@@ -43,16 +44,18 @@
     header {
       position: fixed; top: 0; left: 0; right: 0;
       display: flex; align-items: center; justify-content: space-between;
-      padding: calc(10px + env(safe-area-inset-top, 0px)) 14px 10px 14px; gap: 10px;
+      padding: 0 14px;
+      height: var(--header-h);
       background: linear-gradient(180deg, rgba(0,0,0,0.7), rgba(0,0,0,0.45) 60%, rgba(0,0,0,0));
       backdrop-filter: blur(4px);
       z-index: 10;
     }
-    .money { font-weight: 700; color: #ffffff; }
-    .money img { width: 18px; vertical-align: -3px; margin-right: 6px; }
-    .header-actions { display: flex; gap: 8px; align-items: center; }
+    .money { font-weight: 700; color: #ffffff; font-size: calc(var(--tile-size) * 0.35); }
+    .money img { width: calc(var(--tile-size) * 0.42); vertical-align: -3px; margin-right: 4px; }
+    .header-actions { display: flex; gap: calc(var(--tile-size) * 0.18); align-items: center; }
     button {
-      padding: 8px 12px; 
+      padding: calc(var(--tile-size) * 0.15) calc(var(--tile-size) * 0.28);
+      font-size: calc(var(--tile-size) * 0.3);
       border-radius: 6px; 
       border: 1px solid #ffffff;
       background: #000000;
@@ -83,11 +86,14 @@
       opacity: 0.6;
     }
     main { 
-      padding-top: calc(68px + env(safe-area-inset-top, 0px)); 
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 100vh;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+      position: fixed;
+      inset: 0;
     }
     
     #grid {
@@ -98,17 +104,10 @@
       padding: 0;
       background: rgba(0,0,0,0.25);
       border-radius: var(--radius);
-      width: calc(12 * var(--tile-size)); /* 明确设置宽度 */
       position: relative;
-      margin: 0 auto; /* 居中 */
     }
     
-    /* 在大屏幕上限制最大宽度 */
-    @media (min-width: 1200px) {
-        #grid {
-            width: 1200px; /* 12 * 100px */
-        }
-    }
+    /* 大屏幕限制已由JS控制 */
     
     #decorLayer {
       position: absolute;
@@ -168,17 +167,25 @@
       top: 0; 
       background: rgba(0,0,0); 
       color: #ffffff;
-      padding: 14px; 
+      padding: 10px 14px;
       box-shadow: 0 1px 0 #0000000f;
       display: flex;
       align-items: center;
       justify-content: space-between;
       flex-shrink: 0;
+      flex-wrap: nowrap;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .shop-header strong {
+      flex-shrink: 0;
     }
     .shop-header-right {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
+      flex-shrink: 0;
+      flex-wrap: nowrap;
     }
     .shop .content {
       padding: clamp(6px, 1.5vw, 16px);
@@ -236,19 +243,30 @@
       min-width: calc(30% - 4px);
     }
 
-    /* Context popover */
-    #popup { position: fixed; z-index: 1000; display: none; }
-    .popover { min-width: 220px; max-width: min(86vw, 360px); background: #fff; border-radius: 10px; box-shadow: 0 10px 30px #00000033; border: 1px solid #00000012; overflow: hidden; }
-    .popover header { padding: 10px 12px; font-weight: 700; background: #f7fafad9; border-bottom: 1px solid #0000000e; }
-    .popover .body { padding: 10px; display: grid; gap: 10px; }
-    .popover .choices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
-    .popover .choices button { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 8px; flex-direction: column; }
-    .popover .choices img { height: 28px; }
-    .popover .actions { display: grid; grid-template-columns: 1fr; gap: 8px; }
-    .popover .hint { font-size: 12px; color: #0f0f0f; text-align: center; margin-top: 4px; }
-    .bar { background: #edf2f7; border-radius: 6px; height: 10px; overflow: hidden; }
+    /* Context popover - 居中固定，基于tile-size等比缩放 */
+    #popup {
+      position: fixed;
+      z-index: 1000;
+      display: none;
+      left: 50% !important;
+      top: 50% !important;
+      transform: translate(-50%, -50%) !important;
+      width: min(calc(var(--tile-size) * 7), 90vw);
+      max-height: 80vh;
+      overflow-y: auto;
+    }
+    .popover { background: #fff; border-radius: 10px; box-shadow: 0 10px 30px #00000033; border: 1px solid #00000012; overflow: hidden; font-size: calc(var(--tile-size) * 0.3); }
+    .popover header { padding: calc(var(--tile-size) * 0.2) calc(var(--tile-size) * 0.25); font-weight: 700; background: #f7fafad9; border-bottom: 1px solid #0000000e; }
+    .popover .body { padding: calc(var(--tile-size) * 0.2); display: grid; gap: calc(var(--tile-size) * 0.2); }
+    .popover .choices { display: grid; grid-template-columns: repeat(4, 1fr); gap: calc(var(--tile-size) * 0.15); }
+    .popover .choices button { display: flex; align-items: center; justify-content: center; gap: calc(var(--tile-size) * 0.08); padding: calc(var(--tile-size) * 0.15); flex-direction: column; font-size: calc(var(--tile-size) * 0.27); }
+    .popover .choices img { height: calc(var(--tile-size) * 0.6); }
+    .popover .actions { display: grid; grid-template-columns: 1fr; gap: calc(var(--tile-size) * 0.15); }
+    .popover .actions button { padding: calc(var(--tile-size) * 0.15) calc(var(--tile-size) * 0.12); font-size: calc(var(--tile-size) * 0.28); line-height: 1.3; }
+    .popover .hint { font-size: calc(var(--tile-size) * 0.25); color: #0f0f0f; text-align: center; margin-top: calc(var(--tile-size) * 0.08); }
+    .bar { background: #edf2f7; border-radius: 6px; height: calc(var(--tile-size) * 0.2); overflow: hidden; }
     .bar > span { display:block; height: 100%; background: linear-gradient(90deg, #48bb78, #38b2ac); width: 0%; }
-    .bar-row { display: grid; grid-template-columns: 72px 1fr auto; align-items: center; gap: 8px; }
+    .bar-row { display: grid; grid-template-columns: calc(var(--tile-size) * 1.5) 1fr auto; align-items: center; gap: calc(var(--tile-size) * 0.15); font-size: calc(var(--tile-size) * 0.27); }
     .bar-row small { 
       opacity: 1;
       color: #000000;
@@ -285,138 +303,29 @@
       animation: glowPulseFilterGray 1.2s infinite;
     }
 
-    /* 移动端优化 */
-    @media (max-width: 640px) {
-        header {
-            padding: calc(8px + env(safe-area-inset-top, 0px)) 10px 8px 10px;
-        }
-        
-        .header-actions {
-            gap: 4px;
-        }
-        
-        .header-actions button {
-            padding: 8px 10px;
-            font-size: 13px;
-        }
-        
-        main {
-            padding-top: calc(60px + env(safe-area-inset-top, 0px));
-        }
-        
-        /* 移动端保持网格完整显示 */
-        #grid {
-            transform: none; /* 移除缩放 */
-        }
-        
-        .dropdown-wrapper {
-            flex: 1;
-            min-width: 0;
-        }
-        
-        #btnBatchProcess {
-            width: 100%;
-            padding: 8px 10px;
-            font-size: 13px;
-        }
-        
-        .batch-dropdown {
-            min-width: 100%;
-            max-width: 200px;
-        }
-        
-        .dropdown-item {
-            padding: 8px 12px;
-            font-size: 13px;
-        }
-        
-        /* 商店移动端适配 - 仅调整外框，保留vw响应式内容布局 */
-        #shopOverlay { padding: 0; }
-        .shop {
-            width: 100%;
-            height: 100vh;
-            max-height: 100vh;
-            border-radius: 0;
-        }
-        .shop-header {
-            flex-wrap: wrap;
-            gap: 8px;
-            padding: 10px;
-        }
-        .shop-header strong {
-            width: 100%;
-            font-size: 16px;
-        }
-        .shop-header-right {
-            width: 100%;
-            justify-content: space-between;
-        }
-        .shop-header-right .money {
-            width: auto;
-            font-size: 14px;
-        }
-        /* 内容区域保留vw响应式设计，不覆盖 */
-        
+    /* 商店始终全屏覆盖，header强制单行 */
+    #shopOverlay { padding: 0; }
+    .shop {
+        width: 100%;
+        height: 100vh;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    .shop-header .money {
+        font-size: clamp(11px, 3vw, 16px);
+    }
+    .shop-header .money img {
+        width: clamp(14px, 4vw, 20px);
+    }
+    .shop-header button {
+        font-size: clamp(11px, 3vw, 15px);
+        padding: clamp(5px, 1.5vw, 10px) clamp(8px, 2vw, 16px);
+        white-space: nowrap;
+    }
+
+    /* 小屏弹窗：choices 改为 2x2 */
+    @media (max-width: 480px) {
         .popover .choices { grid-template-columns: repeat(2, 1fr); }
-    }
-
-    /* 特别小的手机 */
-    @media (max-width: 380px) {
-        .header-actions button {
-            padding: 6px 8px;
-            font-size: 12px;
-        }
-        
-        .dropdown-item {
-            padding: 6px 10px;
-            font-size: 12px;
-        }
-        
-        .money {
-            font-size: 14px;
-        }
-        
-        .money img {
-            width: 16px;
-        }
-        
-        /* 极小屏幕商城适配 - 仅调整header，保留vw响应式内容布局 */
-        .shop-header {
-            padding: 8px;
-            gap: 6px;
-        }
-        .shop-header strong {
-            font-size: 14px;
-        }
-        .shop-header-right .money {
-            font-size: 12px;
-        }
-        .shop-header-right button {
-            padding: 6px 10px;
-            font-size: 12px;
-        }
-        /* 内容区域保留vw响应式设计，不覆盖 */
-    }
-
-    /* 横屏优化 */
-    @media (orientation: landscape) and (max-height: 500px) {
-        header {
-            padding: 5px 10px;
-        }
-        
-        main {
-            padding-top: 50px;
-        }
-        
-        .header-actions button {
-            padding: 5px 10px;
-            font-size: 12px;
-        }
-        
-        .dropdown-item {
-            padding: 5px 8px;
-            font-size: 11px;
-        }
     }
     
     .event-overlay {
@@ -439,9 +348,9 @@
       background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
       border: 2px solid #444;
       border-radius: 20px;
-      padding: 40px;
-      max-width: 480px;
-      width: 90%;
+      padding: clamp(20px, 5vw, 40px);
+      max-width: min(480px, 88vw);
+      width: 88vw;
       text-align: center;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 
                   0 0 100px rgba(255, 255, 255, 0.1) inset;
@@ -455,8 +364,8 @@
     }
 
     .event-icon {
-      font-size: 80px;
-      margin-bottom: 20px;
+      font-size: clamp(40px, 10vw, 80px);
+      margin-bottom: clamp(10px, 3vw, 20px);
       filter: drop-shadow(0 0 20px currentColor);
       animation: iconPulse 2s ease infinite;
     }
@@ -468,25 +377,25 @@
 
     .event-title {
       color: #fff;
-      font-size: 28px;
-      margin: 0 0 15px;
+      font-size: clamp(18px, 5vw, 28px);
+      margin: 0 0 clamp(8px, 2vw, 15px);
       font-weight: bold;
       text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .event-desc {
       color: #ddd;
-      font-size: 18px;
+      font-size: clamp(13px, 3.5vw, 18px);
       line-height: 1.6;
-      margin: 0 0 30px;
+      margin: 0 0 clamp(15px, 4vw, 30px);
     }
 
     .event-confirm {
       background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
       color: white;
       border: none;
-      padding: 12px 40px;
-      font-size: 18px;
+      padding: clamp(8px, 2vw, 12px) clamp(20px, 6vw, 40px);
+      font-size: clamp(14px, 3.5vw, 18px);
       border-radius: 30px;
       cursor: pointer;
       font-weight: bold;
@@ -537,22 +446,6 @@
       background: linear-gradient(135deg, #F44336 0%, #D32F2F 100%);
     }
 
-    /* 移动端事件弹窗适配 */
-    @media (max-width: 640px) {
-      .event-popup {
-        padding: 30px 20px;
-      }
-      .event-icon {
-        font-size: 60px;
-      }
-      .event-title {
-        font-size: 24px;
-      }
-      .event-desc {
-        font-size: 16px;
-      }
-    }
-
     /* 下拉菜单样式 */
     .dropdown-wrapper {
         position: relative;
@@ -564,7 +457,7 @@
         top: 100%;
         left: 0;
         margin-top: 4px;
-        min-width: 120px;
+        min-width: 100%;
         background: #000000;
         border: 1px solid #ffffff;
         border-radius: 6px;
@@ -578,14 +471,15 @@
 
     .dropdown-item {
         width: 100%;
-        padding: 10px 16px;
+        padding: calc(var(--tile-size) * 0.15) calc(var(--tile-size) * 0.28);
         text-align: left;
         background: #000000;
         color: #ffffff;
         border: none;
         border-bottom: 1px solid rgba(255, 255, 255, 0.2);
         cursor: pointer;
-        font-size: 14px;
+        font-size: calc(var(--tile-size) * 0.3);
+        font-weight: 600;
     }
 
     .dropdown-item:last-child {
@@ -690,6 +584,30 @@
   <div id="popup"></div>
 
   <script>
+    // --- 动态计算 tile-size，让网格填满整个视口（header 浮在上面）---
+    function calcTileSize() {
+      const COLS = 12, ROWS = 9;
+      const MAX_TILE = 100;
+
+      const vw = document.documentElement.clientWidth;
+      const vh = document.documentElement.clientHeight;
+
+      // header 高度：视口高度的 7.5%，最小 40px，最大 60px
+      const headerH = Math.max(40, Math.min(60, Math.round(vh * 0.075)));
+
+      // tile 尺寸：宽高各自除以列/行数，取最小值，让网格铺满视口
+      const tileByW = Math.floor(vw / COLS);
+      const tileByH = Math.floor(vh / ROWS);
+      const tile = Math.min(tileByW, tileByH, MAX_TILE);
+
+      const root = document.documentElement;
+      root.style.setProperty('--tile-size', tile + 'px');
+      root.style.setProperty('--header-h', headerH + 'px');
+    }
+
+    calcTileSize();
+    window.addEventListener('resize', () => { calcTileSize(); recalcTreePositions(); });
+
     // --- Assets and crop config ---
     const CROPS = {
       wheat: {
@@ -912,8 +830,9 @@
       window.addEventListener('orientationchange', handleResize);
     }
 
-    // 合并处理resize和树木位置计算
+    // 合并处理resize和树木位置计算（initGrid 内的 resize 监听）
     function handleResize() {
+      calcTileSize();
       recalcTreePositions();
     }
 
@@ -1634,18 +1553,7 @@
     }
 
     function clampPopupToViewport(x, y) {
-      const pad = 8;
-      const w = popupRoot.offsetWidth;
-      const h = popupRoot.offsetHeight;
-      let left = (x ?? parseFloat(popupRoot.style.left)) - w/2;
-      let top = (y ?? parseFloat(popupRoot.style.top));
-      if (top + h + pad > window.innerHeight) {
-        top = top - h - 16;
-      }
-      left = Math.max(pad, Math.min(window.innerWidth - w - pad, left));
-      top = Math.max(pad, Math.min(window.innerHeight - h - pad, top));
-      popupRoot.style.left = `${Math.round(left)}px`;
-      popupRoot.style.top = `${Math.round(top)}px`;
+      // popup 已通过 CSS 固定居中，无需 JS 重新定位
       recalcTreePositions();
     }
   </script>

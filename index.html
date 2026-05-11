@@ -433,6 +433,8 @@
                     <button class="dropdown-item" onclick="showRelationships()">人际关系</button>
                     <button class="dropdown-item" onclick="showInventory()">查看背包</button>
                     <button class="dropdown-item" onclick="showEquipment()">查看装备</button>
+                    <button id="show-skill-equipment-btn" class="dropdown-item" onclick="showSkillEquipment()">查看技能</button>
+                    <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
                 </div>
             </div>
             
@@ -446,7 +448,7 @@
                     <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容(关)</button>
                     <button class="dropdown-item" id="toggle-event-btn" onclick="toggleHaveEvent()">随机事件(开)</button>
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
-                    <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
+                    <!-- <button class="dropdown-item" onclick="showCheatMode()">金手指</button> -->
                     <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
                     <button class="dropdown-item" onclick="showConfigModal()">⚙ API 配置</button>
                 </div>
@@ -455,18 +457,19 @@
             <!-- 新增：历史信息下拉菜单 -->
             <div class="dropdown-wrapper">
                 <button class="control-btn dropdown-toggle" onclick="toggleDropdown('history-dropdown')">
-                    信息设置 ▲
+                    历史管理 ▲
                 </button>
                 <div id="history-dropdown" class="dropdown-menu">
-                    <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结(关)</button>
-                    <button class="dropdown-item" onclick="saveGame()">存档</button>
-                    <button class="dropdown-item" onclick="loadGame()">读档</button>
-                    <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
+                    <!-- <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结(关)</button> -->
+                    <!-- <button class="dropdown-item" onclick="saveGame()">存档</button> -->
+                    <!-- <button class="dropdown-item" onclick="loadGame()">读档</button> -->
                     <button class="dropdown-item" onclick="exportSave()">导出存档</button>
-                    <button class="dropdown-item" onclick="importSave()">导入存档</button>
-                    <button class="dropdown-item" id="btn-return-menu" onclick="returnToStartScreen()" style="display:none">返回主菜单</button>
+                    <button class="dropdown-item" onclick="importSave()">加载存档</button>
+                    <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
+                    <button class="dropdown-item" onclick="showPipelineLog()">DEBUG日志</button>
                     <button class="dropdown-item" onclick="showFontSettings()">正文字体</button>
+                    <button class="dropdown-item" id="btn-return-menu" onclick="returnToStartScreen()" style="display:none">返回主菜单</button>                   
                 </div>
             </div>
             
@@ -698,6 +701,32 @@
             </div>
         </div>
 
+        <!-- Pipeline日志弹窗 -->
+        <div id="pipeline-log-modal" class="modal viewport-overlay" style="overflow: auto;">
+            <div class="modal-content" style="max-width: 90%; width: 90%; margin: auto; height: 100%; max-height: none; display: flex; flex-direction: column; padding: 24px; text-align: left;">
+                <h3>Pipeline 日志</h3>
+                <div style="display:flex; gap:8px; margin-bottom:12px; flex-shrink:0;">
+                    <button id="pipeline-tab-send" class="modal-btn" onclick="switchPipelineTab('send')" style="flex:1;">发送消息</button>
+                    <button id="pipeline-tab-reply" class="modal-btn cancel" onclick="switchPipelineTab('reply')" style="flex:1;">LLM 完整回复</button>
+                </div>
+                <div id="pipeline-log-content" style="
+                    flex: 1;
+                    overflow-y: auto;
+                    padding: 20px;
+                    background: #f5f5f5;
+                    border-radius: 8px;
+                    margin-bottom: 20px;
+                    white-space: pre-wrap;
+                    line-height: 1.8;
+                    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+                    min-height: 0;
+                ">暂无日志</div>
+                <div class="modal-buttons" style="flex-shrink:0;">
+                    <button class="modal-btn cancel" onclick="closePipelineLogModal()">关闭</button>
+                </div>
+            </div>
+        </div>
+
         <!-- 汗青集弹窗（替换此块） -->
         <div id="history-summary-modal" class="modal viewport-overlay">
             <div class="modal-content" style="max-width: 90%; display: flex; flex-direction: column;">
@@ -850,6 +879,16 @@
                 
                 <!-- 展开/收起按钮 -->
                 <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
+
+                <!-- 流式生成控件 -->
+                <div id="stream-controls" style="display:none; justify-content:center; align-items:center; padding:6px 0;">
+                    <button id="stream-stop-btn" onclick="pipeline.abortCurrentTurn()" style="
+                        background: linear-gradient(135deg, #c0392b, #e74c3c);
+                        color: #fff; border: none; border-radius: 6px;
+                        padding: 6px 18px; cursor: pointer; font-size: 14px;
+                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                    ">⏹ 停止生成</button>
+                </div>
             </div>
             
             <!-- 随机事件容器 -->
@@ -2746,7 +2785,7 @@ const outPut = `
             if (!isInRenderEnvironment()) {
                 syncGameDataFromVariables();
                 // 独立前端专用：将当前活跃事件存入存档
-                gameData._activeEvent = currentRandomEvent || null;
+                gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
                 storageService.createSave(saveName);
                 delete gameData._activeEvent;
                 showModal('存档成功！<br>存档名称：' + saveName);
@@ -2876,15 +2915,19 @@ function loadSaveSlot(saveId) {
     delete gameData._activeEvent;
     if (inputEnable === 0 && savedEvent) {
         // 存档时有活跃事件，恢复运行时变量并重新显示事件框
-        currentRandomEvent = savedEvent;
         if (savedEvent.事件类型 === '战斗事件') {
+            currentBattleEvent = savedEvent;
+            battleEvent = 1;
             displayBattleEvent(savedEvent);
         } else {
+            currentRandomEvent = savedEvent;
+            randomEvent = 1;
             displayRandomEvent(savedEvent);
         }
     } else {
         // 存档时无事件，确保按钮可用
         currentRandomEvent = null;
+        currentBattleEvent = null;
         inputEnable = 1;
     }
     updateFreeActionInputState();
@@ -3651,6 +3694,44 @@ function buildSaveName() {
             const modal = document.getElementById('history-summary-modal');
             modal.style.display = 'none';
             modal._unbindFit && modal._unbindFit();
+        }
+
+        // Pipeline 日志弹窗
+        let _pipelineCurrentTab = 'send';
+        function showPipelineLog() {
+            toggleDropdown('history-dropdown');
+            const modal = document.getElementById('pipeline-log-modal');
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+            modal.style.display = 'block';
+            switchPipelineTab(_pipelineCurrentTab);
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+        }
+        function closePipelineLogModal() {
+            const modal = document.getElementById('pipeline-log-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+        function switchPipelineTab(tab) {
+            _pipelineCurrentTab = tab;
+            const sendBtn = document.getElementById('pipeline-tab-send');
+            const replyBtn = document.getElementById('pipeline-tab-reply');
+            const content = document.getElementById('pipeline-log-content');
+            if (tab === 'send') {
+                sendBtn.className = 'modal-btn';
+                replyBtn.className = 'modal-btn cancel';
+                const msgs = window._lastPipelineMessages;
+                if (!msgs || !msgs.length) { content.textContent = '暂无数据'; return; }
+                content.textContent = msgs.map((m, i) => '[' + i + '] ' + m.role + ':\n' + (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n\n---\n\n');
+            } else {
+                replyBtn.className = 'modal-btn';
+                sendBtn.className = 'modal-btn cancel';
+                content.textContent = window._lastPipelineLLMReply || '暂无数据';
+            }
         }
 
         // 切换编辑模式

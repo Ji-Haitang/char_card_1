@@ -3312,3 +3312,216 @@ body.ui-style-flat #map-hit-areas polygon.active {
     cursor: pointer;
 }
 
+/* ========== 流式生成遮罩（stream-mask） ========== */
+#stream-mask {
+    display: none;
+    position: absolute;
+    inset: 0;
+    z-index: 900;
+    background: rgba(0, 0, 0, 0.25);
+    align-items: center;
+    justify-content: center;
+    border-radius: inherit;
+    pointer-events: all;
+}
+#stream-mask.active {
+    display: flex;
+}
+.stream-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255,255,255,0.25);
+    border-top-color: rgba(255,255,255,0.85);
+    border-radius: 50%;
+    animation: stream-spin 0.8s linear infinite;
+}
+@keyframes stream-spin {
+    to { transform: rotate(360deg); }
+}
+
+/* ========== API 配置弹窗（cfg-*） ========== */
+.cfg-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 5000;
+    background: rgba(0,0,0,0.65);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    box-sizing: border-box;
+}
+.cfg-panel {
+    background: rgba(20,20,20,0.92);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 10px;
+    color: #fff;
+    width: min(520px, 100%);
+    max-height: 94%;
+    overflow-y: auto;
+    flex-shrink: 0;
+    padding: clamp(16px, 3vw, 28px);
+    font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    box-sizing: border-box;
+}
+.cfg-panel::-webkit-scrollbar { width: 10px; }
+.cfg-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); border-radius: 8px; }
+.cfg-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); border-radius: 8px; }
+.cfg-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
+.cfg-panel { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.22) rgba(255,255,255,0.06); }
+.cfg-title {
+    font-family: 'Ma Shan Zheng', cursive;
+    font-size: clamp(20px, 3vw, 32px);
+    text-align: center;
+    margin: 0 0 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.12);
+    padding-bottom: clamp(8px, 1.5vw, 14px);
+}
+.cfg-hint {
+    font-size: clamp(12px, 1.4vw, 14px);
+    opacity: 0.6;
+    margin-bottom: 16px;
+    text-align: center;
+}
+.cfg-field { margin-bottom: 14px; }
+.cfg-label {
+    display: block;
+    margin-bottom: 5px;
+    font-size: clamp(13px, 1.5vw, 15px);
+    opacity: 0.9;
+}
+.cfg-input {
+    width: 100%;
+    padding: 9px 12px;
+    background: rgba(255,255,255,0.08);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 8px;
+    color: #fff;
+    font-family: inherit;
+    font-size: clamp(13px, 1.5vw, 15px);
+    outline: none;
+    transition: border-color 200ms ease;
+}
+.cfg-input:focus { border-color: rgba(255,255,255,0.45); }
+.cfg-input::placeholder { color: rgba(255,255,255,0.35); }
+.cfg-input option { background: #1a1a1a; color: #fff; }
+.cfg-row { display: flex; align-items: center; gap: 8px; }
+.cfg-btn {
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    cursor: pointer;
+    font-family: inherit;
+    font-size: clamp(13px, 1.4vw, 15px);
+    white-space: nowrap;
+    transition: all 180ms ease;
+}
+.cfg-btn:hover { background: rgba(255,255,255,0.14); }
+.cfg-btn:disabled { opacity: 0.5; cursor: default; }
+.cfg-btn-blue { border-color: rgba(100,180,255,0.4); background: rgba(100,180,255,0.18); }
+.cfg-btn-blue:hover { background: rgba(100,180,255,0.28); }
+.cfg-btn-green { border-color: rgba(100,200,120,0.4); background: rgba(100,200,120,0.18); }
+.cfg-btn-green:hover { background: rgba(100,200,120,0.28); }
+.cfg-btn-subtle { background: rgba(255,255,255,0.06); font-size: 12px; }
+.cfg-btn-subtle:hover { background: rgba(255,255,255,0.12); }
+.cfg-status { font-size: 13px; opacity: 0.7; }
+.cfg-test-result {
+    display: none;
+    margin-top: 8px;
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    word-break: break-word;
+    line-height: 1.5;
+}
+.cfg-test-loading { display: block; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); }
+.cfg-test-ok { display: block; background: rgba(100,200,120,0.15); color: #8eda8e; }
+.cfg-test-fail { display: block; background: rgba(255,100,100,0.15); color: #ff9090; }
+.cfg-notice {
+    background: rgba(255,200,60,0.1);
+    border: 1px solid rgba(255,200,60,0.2);
+    padding: 8px 12px;
+    border-radius: 8px;
+    margin-bottom: 16px;
+    font-size: 12px;
+    color: rgba(255,220,120,0.85);
+    line-height: 1.5;
+}
+.cfg-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding-top: 12px;
+    border-top: 1px solid rgba(255,255,255,0.12);
+}
+
+/* ========== API 配置弹窗 — 扁平UI覆盖 ========== */
+body.ui-style-flat .cfg-overlay {
+    background: rgba(0,0,0,0.45);
+}
+body.ui-style-flat .cfg-panel {
+    background: #fff;
+    color: #2c2c2c;
+    border: 3px solid #2c2c2c;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    font-family: 'Microsoft YaHei', 'SimHei', sans-serif;
+}
+body.ui-style-flat .cfg-panel::-webkit-scrollbar-track { background: #f0f0f0; }
+body.ui-style-flat .cfg-panel::-webkit-scrollbar-thumb { background: #bbb; }
+body.ui-style-flat .cfg-panel::-webkit-scrollbar-thumb:hover { background: #999; }
+body.ui-style-flat .cfg-panel { scrollbar-color: #bbb #f0f0f0; }
+body.ui-style-flat .cfg-title {
+    color: #2c2c2c;
+    border-bottom-color: #e0e0e0;
+}
+body.ui-style-flat .cfg-hint { color: #888; opacity: 1; }
+body.ui-style-flat .cfg-label { color: #444; opacity: 1; }
+body.ui-style-flat .cfg-input {
+    background: #f8f8f8;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    color: #333;
+}
+body.ui-style-flat .cfg-input:focus { border-color: #2196F3; }
+body.ui-style-flat .cfg-input::placeholder { color: #aaa; }
+body.ui-style-flat .cfg-input option { background: #fff; color: #333; }
+body.ui-style-flat .cfg-btn {
+    background: #f5f5f5;
+    color: #333;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: none;
+}
+body.ui-style-flat .cfg-btn:hover { background: #eee; }
+body.ui-style-flat .cfg-btn-blue {
+    background: #2196F3;
+    color: #fff;
+    border-color: #2196F3;
+}
+body.ui-style-flat .cfg-btn-blue:hover { background: #1976D2; }
+body.ui-style-flat .cfg-btn-green {
+    background: #4CAF50;
+    color: #fff;
+    border-color: #4CAF50;
+}
+body.ui-style-flat .cfg-btn-green:hover { background: #388E3C; }
+body.ui-style-flat .cfg-btn-subtle {
+    background: #f5f5f5;
+    color: #666;
+    border-color: #ddd;
+}
+body.ui-style-flat .cfg-btn-subtle:hover { background: #eee; }
+body.ui-style-flat .cfg-status { color: #888; opacity: 1; }
+body.ui-style-flat .cfg-test-loading { background: #f5f5f5; color: #666; }
+body.ui-style-flat .cfg-test-ok { background: #e8f5e9; color: #2e7d32; }
+body.ui-style-flat .cfg-test-fail { background: #ffebee; color: #c62828; }
+body.ui-style-flat .cfg-notice {
+    background: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }

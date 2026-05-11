@@ -299,6 +299,127 @@
         .alloc-ops button { width: clamp(36px, 3vw, 56px); height: clamp(36px, 3vw, 56px); }
 
         .btn { padding: clamp(10px, 2vw, 20px) clamp(16px, 3vw, 28px); font-size: clamp(14px, 1.8vw, 22px); }
+
+        /* API 配置弹窗 — 与新旅程弹窗同风格 */
+        .cfg-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 5000;
+            background: rgba(0,0,0,0.72);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px;
+            box-sizing: border-box;
+        }
+        .cfg-overlay[style*="display: flex"],
+        .cfg-overlay[style*="display:flex"] { display: flex !important; }
+        .cfg-panel {
+            background: rgba(0,0,0,0.72);
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 10px;
+            color: #fff;
+            width: min(520px, 100%);
+            max-height: calc(100vh - 40px);
+            overflow-y: auto;
+            flex-shrink: 0;
+            padding: clamp(16px, 3vw, 28px);
+            font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        .cfg-panel::-webkit-scrollbar { width: 10px; }
+        .cfg-panel::-webkit-scrollbar-track { background: rgba(255,255,255,0.06); border-radius: 8px; }
+        .cfg-panel::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.22); border-radius: 8px; }
+        .cfg-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
+        .cfg-panel { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.22) rgba(255,255,255,0.06); }
+        .cfg-title {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: clamp(20px, 3vw, 32px);
+            text-align: center;
+            margin: 0 0 4px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            padding-bottom: clamp(8px, 1.5vw, 14px);
+        }
+        .cfg-hint {
+            font-size: clamp(12px, 1.4vw, 14px);
+            opacity: 0.6;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        .cfg-field { margin-bottom: 14px; }
+        .cfg-label {
+            display: block;
+            margin-bottom: 5px;
+            font-size: clamp(13px, 1.5vw, 15px);
+            opacity: 0.9;
+        }
+        .cfg-input {
+            width: 100%;
+            padding: 9px 12px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.18);
+            border-radius: 8px;
+            color: #fff;
+            font-family: inherit;
+            font-size: clamp(13px, 1.5vw, 15px);
+            outline: none;
+            transition: border-color 200ms ease;
+        }
+        .cfg-input:focus { border-color: rgba(255,255,255,0.45); }
+        .cfg-input::placeholder { color: rgba(255,255,255,0.35); }
+        .cfg-input option { background: #1a1a1a; color: #fff; }
+        .cfg-row { display: flex; align-items: center; gap: 8px; }
+        .cfg-btn {
+            padding: 8px 16px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(255,255,255,0.08);
+            color: #fff;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: clamp(13px, 1.4vw, 15px);
+            white-space: nowrap;
+            transition: all 180ms ease;
+        }
+        .cfg-btn:hover { background: rgba(255,255,255,0.14); }
+        .cfg-btn:disabled { opacity: 0.5; cursor: default; }
+        .cfg-btn-blue { border-color: rgba(100,180,255,0.4); background: rgba(100,180,255,0.18); }
+        .cfg-btn-blue:hover { background: rgba(100,180,255,0.28); }
+        .cfg-btn-green { border-color: rgba(100,200,120,0.4); background: rgba(100,200,120,0.18); }
+        .cfg-btn-green:hover { background: rgba(100,200,120,0.28); }
+        .cfg-btn-subtle { background: rgba(255,255,255,0.06); font-size: 12px; }
+        .cfg-btn-subtle:hover { background: rgba(255,255,255,0.12); }
+        .cfg-status { font-size: 13px; opacity: 0.7; }
+        .cfg-test-result {
+            display: none;
+            margin-top: 8px;
+            padding: 9px 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            word-break: break-word;
+            line-height: 1.5;
+        }
+        .cfg-test-loading { display: block; background: rgba(255,255,255,0.06); color: rgba(255,255,255,0.7); }
+        .cfg-test-ok { display: block; background: rgba(100,200,120,0.15); color: #8eda8e; }
+        .cfg-test-fail { display: block; background: rgba(255,100,100,0.15); color: #ff9090; }
+        .cfg-notice {
+            background: rgba(255,200,60,0.1);
+            border: 1px solid rgba(255,200,60,0.2);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            font-size: 12px;
+            color: rgba(255,220,120,0.85);
+            line-height: 1.5;
+        }
+        .cfg-footer {
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(255,255,255,0.12);
+        }
     </style>
     <!-- 后续交互逻辑可在此处添加脚本 -->
 </head>
@@ -311,6 +432,7 @@
             <button class="menu-btn" type="button" data-action="new" aria-selected="true">江湖新篇</button>
             <button class="menu-btn" type="button" data-action="load">重续前缘</button>
             <button class="menu-btn" type="button" data-action="difficulty">武林快报</button>
+            <button class="menu-btn" type="button" data-action="apiconfig">模型设置</button>
         </nav>
 
         <!-- 新旅程弹窗 -->
@@ -354,6 +476,8 @@
     <script src="module/storage-service.js"></script>
     <script src="module/response-parser.js"></script>
     <script src="module/summary-history-service.js"></script>
+    <script src="module/api-service.js"></script>
+    <script src="ui/config-modal.js"></script>
     <script>
     (function() {
         const $ = (sel) => document.querySelector(sel);
@@ -672,6 +796,13 @@
         document.querySelector('[data-action="difficulty"]').addEventListener('click', () => {
             // 打开武林快报弹窗
             showBulletinModal();
+        });
+        document.querySelector('[data-action="apiconfig"]').addEventListener('click', () => {
+            if (typeof showConfigModal === 'function') {
+                showConfigModal();
+            } else {
+                alert('API 配置模块未加载');
+            }
         });
         // BGM播放：仅在初始未进入创建/快报弹窗时自动播放
         const bgmEl = document.getElementById('bgm');

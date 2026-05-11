@@ -326,8 +326,8 @@ function showFarmGame() {
         ...seedCounts
     });
     
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/farm.html?${params.toString()}`;
-    // const gameUrl = `farm.html?${params.toString()}`;
+    // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/farm.html?${params.toString()}`;
+    const gameUrl = `farm.html?${params.toString()}`;
     iframe.src = gameUrl;
     
     modal.style.display = 'block';

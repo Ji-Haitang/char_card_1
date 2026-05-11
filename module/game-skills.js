@@ -24,16 +24,6 @@ function initSkillUi() {
 }
 
 function injectSkillEntryButtons() {
-    const attributeDropdown = document.getElementById('attribute-dropdown');
-    if (attributeDropdown && !document.getElementById('show-skill-equipment-btn')) {
-        const btn = document.createElement('button');
-        btn.id = 'show-skill-equipment-btn';
-        btn.className = 'dropdown-item';
-        btn.textContent = '查看技能';
-        btn.onclick = () => showSkillEquipment();
-        attributeDropdown.appendChild(btn);
-    }
-
     const cangjinggeScene = document.getElementById('cangjingge-scene');
     const actions = cangjinggeScene ? cangjinggeScene.querySelector('.scene-actions') : null;
     if (actions && !document.getElementById('show-skill-library-btn')) {

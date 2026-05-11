@@ -69,6 +69,7 @@ let userBackground = "A"; // 新增：出身编码
 let textFontLevel = 2; // 新增：正文字体档位 1~5
 let uiStyle = 0; // 新增：UI风格（0=古风UI，1=扁平化UI）
 let dayNightStatus = 'daytime';  // 新增：昼夜状况
+let currentGameTime = '';        // 新增：当前剧情内时间，如 "19:15"
 let seasonStatus = 'winter';      // 新增：四季状况
 let playerMood = 100;
 let martialArts = {
@@ -392,6 +393,7 @@ async function loadOrInitGameData(options = {}) {
         hydrateVariableSystemFromGameData(gameData);
         summaryHistory = summaryHistoryService.getAll();
         syncVariablesFromGameData();
+        enamor = 0; // 对齐 SR：每次页面加载重置（SR 每轮重建 iframe 等效于此）
         return;
     }
     const renderer = getCurrentRenderer();

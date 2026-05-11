@@ -108,10 +108,9 @@ var responseParser = (function() {
         if (jsonStartIndex === -1) return null;
         var jsonEndIndex = searchText.indexOf('<', jsonStartIndex);
         var jsonText = jsonEndIndex > -1 ? searchText.substring(jsonStartIndex, jsonEndIndex) : searchText.substring(jsonStartIndex);
-        // 修复 LLM 输出中文弯引号的问题：替换为 ASCII 直引号
-        jsonText = jsonText.replace(/[\u201c\u201d\u2018\u2019]/g, function(ch) {
-            return (ch === '\u201c' || ch === '\u201d') ? '"' : "'";
-        });
+        // 修复 LLM 输出中文弯引号的问题：将中文对话引号替换为单引号，避免破坏 JSON 字符串结构
+        // 注意：不能替换为 ASCII 双引号，否则会截断 JSON 字符串中的对话内容
+        jsonText = jsonText.replace(/[\u201c\u201d\u2018\u2019]/g, "'");
         try {
             return JSON.parse(jsonText.trim());
         } catch (e) {

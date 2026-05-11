@@ -51,6 +51,7 @@ var summaryHistoryService = (function() {
             history.push({
                 id: _uuid(),
                 week: typeof currentWeek !== 'undefined' ? currentWeek : 1,
+                gameTime: typeof currentGameTime !== 'undefined' ? currentGameTime : '',
                 summaryText: summaries[i],
                 createdAt: Date.now()
             });

@@ -279,7 +279,8 @@ body {
 }
 
 /* 汗青集正文内容：同样改回无衬线字体 */
-#history-summary-content {
+#history-summary-content,
+#pipeline-log-content {
     font-family: var(--font-sans) !important;
     color: var(--ink-black) !important;
 }
@@ -1298,6 +1299,88 @@ body {
     font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
     font-weight: bold !important;
 }
+
+/* ========== API 配置弹窗 — 古风主题覆盖 ========== */
+.cfg-overlay {
+    background: rgba(30,28,22,0.7);
+}
+.cfg-panel {
+    background-color: var(--paper-base) !important;
+    background-image: url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.1'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7z'/%3E%3C/g%3E%3C/svg%3E") !important;
+    color: var(--ink-black) !important;
+    border: var(--border-double) !important;
+    border-radius: 2px !important;
+    box-shadow: var(--shadow-hard), 0 8px 24px rgba(0,0,0,0.3) !important;
+    font-family: var(--font-serif) !important;
+}
+.cfg-panel::-webkit-scrollbar-track { background: var(--paper-dark); }
+.cfg-panel::-webkit-scrollbar-thumb { background: var(--ink-light); border-radius: 2px; }
+.cfg-panel::-webkit-scrollbar-thumb:hover { background: var(--ink-medium); }
+.cfg-panel { scrollbar-color: var(--ink-light) var(--paper-dark); }
+.cfg-title {
+    font-family: var(--font-serif) !important;
+    color: var(--ink-black) !important;
+    border-bottom: 1px solid var(--accent-gold) !important;
+}
+.cfg-hint {
+    color: var(--ink-light) !important;
+    opacity: 1 !important;
+}
+.cfg-label {
+    color: var(--ink-dark) !important;
+    font-family: var(--font-serif) !important;
+    opacity: 1 !important;
+}
+.cfg-input {
+    background: var(--paper-light) !important;
+    border: 2px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    color: var(--ink-black) !important;
+    font-family: var(--font-serif) !important;
+}
+.cfg-input:focus { border-color: var(--accent-cyan) !important; }
+.cfg-input::placeholder { color: var(--ink-light) !important; }
+.cfg-input option { background: var(--paper-base); color: var(--ink-black); }
+.cfg-btn {
+    background: var(--paper-base) !important;
+    color: var(--ink-dark) !important;
+    border: 2px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+    letter-spacing: 1px;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+}
+.cfg-btn:hover { background: var(--paper-dark) !important; }
+.cfg-btn:disabled { opacity: 0.4; }
+.cfg-btn-blue {
+    border-color: var(--accent-cyan) !important;
+    color: var(--accent-cyan) !important;
+}
+.cfg-btn-blue:hover { background: rgba(36,113,163,0.08) !important; }
+.cfg-btn-green {
+    border-color: var(--accent-green) !important;
+    color: var(--accent-green) !important;
+}
+.cfg-btn-green:hover { background: rgba(30,132,73,0.08) !important; }
+.cfg-btn-subtle {
+    border-color: var(--ink-light) !important;
+    color: var(--ink-medium) !important;
+    background: transparent !important;
+}
+.cfg-btn-subtle:hover { background: var(--paper-dark) !important; }
+.cfg-status { color: var(--ink-light) !important; opacity: 1 !important; }
+.cfg-test-loading { background: var(--paper-dark) !important; color: var(--ink-medium) !important; }
+.cfg-test-ok { background: rgba(30,132,73,0.1) !important; color: var(--accent-green) !important; }
+.cfg-test-fail { background: rgba(169,50,38,0.1) !important; color: var(--accent-red) !important; }
+.cfg-notice {
+    background: rgba(183,149,11,0.08) !important;
+    border: 1px solid rgba(183,149,11,0.25) !important;
+    color: var(--accent-gold) !important;
+}
+.cfg-footer {
+    border-top: 1px solid var(--accent-gold) !important;
+}
+
 
 .trading-item-price {
     font-size: clamp(0.9rem, 2.2vw, 1.1rem) !important;
