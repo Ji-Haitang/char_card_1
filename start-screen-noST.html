@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>姬侠传 · 开局</title>
+    <title>瀚海归义录</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
@@ -27,6 +27,8 @@
             align-items: center;
             justify-content: center;
             overflow: hidden;
+            width: 100vw;
+            height: 100vh;
         }
 
         /* 背景墨色遮罩，提升对比度 */
@@ -37,33 +39,45 @@
             pointer-events: none;
         }
 
-        /* 外层占位容器：宽度100vw，高度为0.69倍vw，黑色背景 */
+        /* 外层占位容器：全屏，黑色背景充当超宽时的黑边 */
         .viewport-box {
             width: 100vw;
-            height: calc(100vw * 0.69);
+            height: 100vh;
             background: #000;
             position: relative;
             overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
-        /* 中央框体：填满占位容器 */
+        /* 中央框体：宽高比超过1.46:1时加黑边，不再继续裁剪图片 */
         .frame {
             position: relative;
             width: 100%;
+            max-width: calc(1.46 * 100vh);
             height: 100%;
             aspect-ratio: auto;
             display: flex;
             align-items: center;
             justify-content: center;
-            /* 去除描边与暗角，直显原图 */
             border: none;
             box-shadow: none;
             backdrop-filter: none;
-            background: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/姬侠传开局界面.jpg') center / cover no-repeat;
+            /* 横屏：以距top约30%为中线裁剪 */
+            background: url('assets/image/static/开局界面.jpg') center 30% / cover no-repeat;
         }
 
-        /* 强制覆盖任何媒体查询内对 .frame 尺寸的修改，确保填满占位容器 */
-        .viewport-box .frame { width: 100% !important; height: 100% !important; aspect-ratio: auto !important; }
+        /* 竖屏（手机端）：居中裁剪，正常显示纵图 */
+        @media (orientation: portrait) {
+            .frame {
+                background-position: center center;
+                max-width: 100vw;
+            }
+        }
+
+        /* 确保 .frame 高度始终填满，aspect-ratio 不干扰 */
+        .viewport-box .frame { height: 100% !important; aspect-ratio: auto !important; }
 
         .hidden { display: none !important; }
 
@@ -200,15 +214,14 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            gap: clamp(6px, 1.8vw, 16px); /* 更靠拢 */
-            padding: clamp(10px, 3vw, 32px) clamp(8px, 2.4vw, 28px);
-            border-radius: 10px;
-            background: transparent; /* 全透明 */
-            box-shadow: none; /* 不可见 */
-            position: fixed; /* 固定定位，按页面定位 */
-            left: 50%;
-            bottom: 10vw; /* 距离页面底部约 10vw */
-            transform: translateX(-50%); /* 水平居中 */
+            gap: clamp(4px, 1vw, 10px);
+            padding: 0;
+            background: transparent;
+            box-shadow: none;
+            position: fixed;
+            left: 70%;
+            bottom: 10%;
+            transform: translateX(-50%);
             z-index: 2;
         }
 
@@ -218,39 +231,62 @@
             appearance: none;
             border: none;
             background: transparent;
-            color: #000; /* 黑色文字 */
+            color: #fff;
             cursor: pointer;
-            padding: clamp(8px, 1.6vw, 14px) clamp(16px, 3.2vw, 28px);
+            padding: 0 clamp(16px, 2.4vw, 28px);
             font-family: 'Ma Shan Zheng', cursive;
-            font-size: 3vw; /* 固定为 3% 的视口宽度 */
+            font-size: clamp(13px, 2.2vh, 24px);
             letter-spacing: 0.06em;
-            line-height: 1.2;
-            transition: transform 180ms ease, filter 200ms ease, color 200ms ease;
-            text-shadow: none;
+            line-height: 1;
+            border-radius: 6px;
+            min-width: clamp(100px, 12vw, 180px);
+            height: 5vh;
+            text-align: center;
+            text-shadow:
+                0.05em 0 0 #000, -0.05em 0 0 #000,
+                0 0.05em 0 #000, 0 -0.05em 0 #000,
+                0.05em 0.05em 0 #000, -0.05em -0.05em 0 #000,
+                0.05em -0.05em 0 #000, -0.05em 0.05em 0 #000;
+            transition: transform 180ms ease, filter 200ms ease;
+            overflow: hidden;
         }
 
-        /* 墨迹下划线 */
+        /* 背景图层：拉伸填充 + 左右渐变淡出，整体透明度更高 */
+        .menu-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            z-index: -1;
+            background: url('assets/image/static/背景.png') center / 100% 100% no-repeat;
+            border-radius: inherit;
+            opacity: 1.0;
+            -webkit-mask-image: linear-gradient(to right, transparent 0%, black 50%);
+            mask-image: linear-gradient(to right, transparent 0%, black 50%);
+        }
+
+        /* 墨迹下划线（在背景图层之上） */
         .menu-btn::after {
             content: "";
             position: absolute;
             left: 8%;
             right: 8%;
-            bottom: clamp(2px, 0.6vw, 6px);
-            height: clamp(6px, 0.9vw, 10px);
+            bottom: clamp(2px, 0.4vh, 5px);
+            height: clamp(4px, 0.7vh, 8px);
             background: radial-gradient(60% 100% at 50% 50%, rgba(255,255,255,0.35) 0%, rgba(255,255,255,0.15) 50%, rgba(255,255,255,0.0) 100%);
             opacity: 0.0;
             transform: scaleX(0.8);
             transition: opacity 200ms ease, transform 200ms ease;
             filter: blur(0.6px);
+            z-index: 1;
         }
 
         /* 选中/悬停效果 */
         .menu-btn:hover,
         .menu-btn:focus-visible,
         .menu-btn[aria-selected="true"] {
-            color: #000; /* 悬停与选中仍为黑色 */
+            color: #fff;
             transform: translateY(-2px) scale(1.035);
-            filter: none;
+            filter: brightness(1.15);
         }
 
         .menu-btn:hover::after,
@@ -260,23 +296,24 @@
             transform: scaleX(1);
         }
 
-        /* 纵横比分支：
-           - 窄屏/竖屏（小于内容比例）：宽度100vw，高度按比例
-           - 宽屏/带鱼屏（大于等于内容比例）：高度100vh，宽度按比例 */
-        @media (max-aspect-ratio: 1213/836) {
-            .frame { width: 100vw; height: calc(100vw * 836 / 1213); }
-            .menu { padding: clamp(8px, 2.8vw, 24px); gap: clamp(8px, 2vw, 18px); }
+        /* 竖屏（手机端）：按钮保持与横屏相同的靠右位置，字体稍大 */
+        @media (orientation: portrait) {
+            .menu-btn {
+                font-size: clamp(14px, 2.2vh, 24px);
+                min-width: clamp(100px, 35vw, 220px);
+            }
         }
 
-        @media (min-aspect-ratio: 1213/836) {
-            .frame { height: 100vh; width: calc(100vh * 1213 / 836); max-width: 100vw; }
-            /* 带鱼/超宽屏：用 vh 控制菜单字体和位置，保持视觉一致 */
-            .menu { bottom: 14.52vh; }
-            .menu-btn { font-size: 4.36vh; }
-        }
-
-        @media (max-width: 480px) {
-            .menu-btn { font-size: clamp(16px, 6.2vw, 22px); }
+        /* 横屏大屏：选项加大到1.3倍，间距1.5倍 */
+        @media (orientation: landscape) and (min-width: 768px) {
+            .menu {
+                gap: clamp(6px, 1.5vw, 15px);
+            }
+            .menu-btn {
+                font-size: clamp(17px, 2.86vh, 31px);
+                height: 6.5vh;
+                min-width: clamp(130px, 15.6vw, 234px);
+            }
         }
 
         /* Responsive scale overrides for enlarged creation UI */
@@ -799,6 +836,13 @@
         });
         document.querySelector('[data-action="apiconfig"]').addEventListener('click', () => {
             if (typeof showConfigModal === 'function') {
+                menu.classList.add('hidden');
+                const _origClose = window.closeConfigModal;
+                window.closeConfigModal = function() {
+                    menu.classList.remove('hidden');
+                    window.closeConfigModal = _origClose;
+                    if (_origClose) _origClose();
+                };
                 showConfigModal();
             } else {
                 alert('API 配置模块未加载');
@@ -948,6 +992,7 @@
 
         // 独立模式：存档列表弹窗
         function showLoadSaveModal() {
+            menu.classList.add('hidden');
             modal.classList.add('show');
             modal.setAttribute('aria-hidden', 'false');
             if (modalHeader) modalHeader.textContent = '重续前缘 · 选择存档';
@@ -1016,6 +1061,7 @@
 
         // 武林快报弹窗（更新/反馈）
         function showBulletinModal() {
+            menu.classList.add('hidden');
             modal.classList.add('show');
             modal.setAttribute('aria-hidden', 'false');
             if (modalHeader) modalHeader.textContent = '武林快报';

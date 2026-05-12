@@ -59,6 +59,7 @@ var pipeline = (function() {
         try {
             console.log('[Pipeline] 发送 API 请求（流式）...');
             _showStreamControls();
+            _setStreamLog('发送 API 请求（流式）');
             var streamResult = await _requestWithStream(messages);
             rawText = streamResult.text;
             wasAborted = streamResult.aborted;
@@ -82,6 +83,7 @@ var pipeline = (function() {
         } catch (err) {
             _hideStreamControls();
             storageService.setLastTurnCommitted(false);
+            _setStreamLog('API 请求失败');
             console.error('[Pipeline] API 请求失败:', err.message);
             if (typeof showModal === 'function') {
                 showModal('AI 请求失败：' + err.message + '\n\n可点击重试');
@@ -137,6 +139,7 @@ var pipeline = (function() {
 
             var handle = apiService.sendMessagesStream(messages, {
                 onToken: function(delta) {
+                    if (accumulatedText === '') _setStreamLog('模型输出中');
                     accumulatedText += delta;
                     if (!throttleTimer) {
                         throttleTimer = setTimeout(function() {
@@ -147,9 +150,11 @@ var pipeline = (function() {
                 },
                 onThinking: function(delta) {
                     // 累积思维链内容（DeepSeek/Qwen 的 reasoning_content 字段）
+                    if (accumulatedThinking === '') _setStreamLog('模型思考中');
                     accumulatedThinking += delta;
                 },
                 onComplete: function(fullText, usage) {
+                    _setStreamLog('输出完成');
                     _isStreaming = false;
                     aborted = _abortRequested;
                     _currentAbort = null;
@@ -172,6 +177,7 @@ var pipeline = (function() {
                     throttleTimer = null;
                     // 降级：尝试非流式
                     console.warn('[Pipeline] 流式失败，尝试非流式降级:', err.message);
+                    _setStreamLog('转为非流式降级请求');
                     _fallbackNonStream(messages).then(function(text) {
                         resolve({ text: text, aborted: _abortRequested });
                     }).catch(reject);
@@ -187,6 +193,7 @@ var pipeline = (function() {
      */
     async function _fallbackNonStream(messages) {
         console.log('[Pipeline] 非流式降级请求...');
+        _setStreamLog('转为非流式降级请求');
         var controller = new AbortController();
         // 挂载中断句柄，使停止按钮在降级期间仍可用
         _isStreaming = true;
@@ -377,14 +384,32 @@ var pipeline = (function() {
             var spinner = document.createElement('div');
             spinner.className = 'stream-spinner';
             mask.appendChild(spinner);
+            var logEl = document.createElement('div');
+            logEl.id = 'stream-log';
+            mask.appendChild(logEl);
             viewport.appendChild(mask);
         }
         mask.classList.add('active');
+        _setStreamLog('');
     }
 
     function _hideStreamMask() {
         var mask = document.getElementById('stream-mask');
         if (mask) mask.classList.remove('active');
+        _setStreamLog('');
+    }
+
+    function _setStreamLog(text) {
+        var el = document.getElementById('stream-log');
+        if (!el) return;
+        el.innerHTML = '';
+        if (!text) return;
+        for (var i = 0; i < text.length; i++) {
+            var span = document.createElement('span');
+            span.textContent = text[i];
+            span.style.animationDelay = (i * 0.07) + 's';
+            el.appendChild(span);
+        }
     }
 
     function _setInteractionEnabled(enabled) {

@@ -3319,8 +3319,10 @@ body.ui-style-flat #map-hit-areas polygon.active {
     inset: 0;
     z-index: 900;
     background: rgba(0, 0, 0, 0.25);
+    flex-direction: column;
     align-items: center;
     justify-content: center;
+    gap: 14px;
     border-radius: inherit;
     pointer-events: all;
 }
@@ -3337,6 +3339,23 @@ body.ui-style-flat #map-hit-areas polygon.active {
 }
 @keyframes stream-spin {
     to { transform: rotate(360deg); }
+}
+#stream-log {
+    display: flex;
+    font-size: clamp(0.9rem, 2.2vw, 1.125rem);
+    font-family: "Microsoft YaHei", "SimSun", serif;
+    color: rgba(255,255,255,0.88);
+    letter-spacing: 0.05em;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    min-height: 1.5em;
+}
+#stream-log span {
+    display: inline-block;
+    animation: stream-log-bounce 0.6s ease-in-out infinite alternate;
+}
+@keyframes stream-log-bounce {
+    from { transform: translateY(0); }
+    to   { transform: translateY(-4px); }
 }
 
 /* ========== API 配置弹窗（cfg-*） ========== */
