@@ -65,7 +65,8 @@ function displayRandomEvent(event) {
         }
     });
     
-    container.classList.add('show');
+    // 不直接显示，由 updateStoryDisplay 统一控制（翻到最后一页才显示）
+    // container.classList.add('show');
 }
 
 function hideRandomEvent() {
@@ -98,15 +99,29 @@ async function handleEventOption(optionIndex, option) {
         
         if (specialEvent) {
             console.log(`[handleEventOption] 触发特殊事件: ${specialEvent.name}`);
-            // 先inject随机事件的选择信息（去掉"特殊剧情:"前缀）
+            
+            // 构造用户消息
             const actionDesc = option.描述.replace(/^特殊剧情:\s*/, '');
             const injectMessage = `{{user}}行动选择: ${actionDesc}`;
-            const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
-            if (renderFunc) {
-                await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${injectMessage}`);
+            
+            // SR 环境：先 inject 用户输入
+            if (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
+                const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+                if (renderFunc) {
+                    await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${injectMessage}`);
+                }
             }
-            // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
-            await triggerSpecialEvent(specialEvent);
+            
+            // 触发特殊事件
+            const result = await triggerSpecialEvent(specialEvent);
+            
+            // 独立前端：委托给 pipeline 处理文本渲染
+            if (result && result.standalone && typeof pipeline !== 'undefined' && pipeline.handleSpecialEvent) {
+                await pipeline.handleSpecialEvent(result.event, injectMessage);
+                return;
+            }
+            
+            // SR 链路已在 triggerSpecialEvent 内部处理完毕
             return;
         }
     }
@@ -169,7 +184,8 @@ function displayBattleEvent(event) {
         }
     }
     
-    container.classList.add('show');
+    // 不直接显示，由 updateStoryDisplay 统一控制（翻到最后一页才显示）
+    // container.classList.add('show');
 }
 
 function hideBattleEvent() {

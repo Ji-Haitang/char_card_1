@@ -1818,9 +1818,19 @@ const outPut = `
                     
                     if (specialEvent) {
                         console.log(`[skipWeek] 触发特殊事件: ${specialEvent.name}`);
-                        // 触发特殊事件（会应用效果、标记已触发、发送预设文本）
+                        
                         // 传递 fromSkipWeek: true 标识是由跳过一周按钮触发的
-                        await triggerSpecialEvent(specialEvent, { fromSkipWeek: true });
+                        const result = await triggerSpecialEvent(specialEvent, { fromSkipWeek: true });
+                        
+                        // 独立前端：委托给 pipeline 处理文本渲染
+                        if (result && result.standalone && typeof pipeline !== 'undefined' && pipeline.handleSpecialEvent) {
+                            const userMsg = `时间过了一周，在${year}年${month}月${week}周，${gameData.playerName || '主角'}在${mapLocation}触发特殊剧情——${specialEvent.name}`;
+                            await pipeline.handleSpecialEvent(result.event, userMsg);
+                            return;
+                        }
+                        
+                        // SR 链路已在 triggerSpecialEvent 内部处理完毕
+                        return;
                     } else {
                         // 无特殊事件，发送普通的新周消息
                         await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
@@ -2886,6 +2896,7 @@ function loadSaveSlot(saveId) {
     }
     syncVariablesFromGameData();
     updateAllDisplays();
+    if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
     // 根据存档中的 userLocation 恢复主角所在场景
     if (userLocation === 'tianshanpai' || !userLocation) {
         switchScene('map');
@@ -2990,6 +3001,7 @@ function importSave() {
             }
             syncVariablesFromGameData();
             updateAllDisplays();
+            if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
             // 根据存档中的 userLocation 恢复主角所在场景
             if (userLocation === 'tianshanpai' || !userLocation) {
                 switchScene('map');

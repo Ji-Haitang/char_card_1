@@ -3239,7 +3239,12 @@ async function triggerSpecialEvent(event, options = {}) {
         // 7. 保存游戏数据
         if (typeof saveGameData === 'function') {
             await saveGameData();
-            console.log('[SpecialEvent] 游戏数据已保存');
+            console.log('[SpecialEvent] 游戏数据已保存（SR环境）');
+        } else if (typeof syncGameDataFromVariables === 'function' && typeof storageService !== 'undefined') {
+            // 独立前端环境：手动同步并保存
+            syncGameDataFromVariables();
+            storageService.saveAppState({ gameData: gameData });
+            console.log('[SpecialEvent] 游戏数据已保存（独立前端）');
         }
         
         // 8. 发送预设文本（先注入用户输入，再发送AI回复）
@@ -3269,9 +3274,11 @@ async function triggerSpecialEvent(event, options = {}) {
             }
         }
         
-        // 非渲染环境，用弹窗显示
+        // 非渲染环境（独立前端），返回事件对象供 pipeline 处理
         if (typeof showModal === 'function' && !(typeof isInRenderEnvironment === 'function' && isInRenderEnvironment())) {
-            showModal(`【特殊事件】${event.name}<br><br>（非酒馆环境，事件文本无法发送）`);
+            console.log('[SpecialEvent] 独立前端环境，返回事件对象供 pipeline 处理');
+            // 返回特殊标识，供调用方处理文本渲染
+            return { standalone: true, event: event };
         }
         
         return true;

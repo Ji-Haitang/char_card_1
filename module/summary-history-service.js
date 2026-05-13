@@ -75,29 +75,13 @@ var summaryHistoryService = (function() {
         return load();
     }
 
-    /** 窗口裁剪（丢弃旧摘要） */
+    /** 窗口裁剪（保留完整历史，不做裁剪；prompt 层按 token 预算自行选取） */
     function trim(history) {
-        if (!history || history.length === 0) return history;
-        // 按条目数裁剪
-        if (history.length > MAX_ITEMS) {
-            history = history.slice(history.length - MAX_ITEMS);
-        }
-        // 按 token 数裁剪
-        var selected = [];
-        var used = 0;
-        for (var i = history.length - 1; i >= 0; i--) {
-            var tokens = _fastEstimateTokens(history[i].summaryText);
-            if (used + tokens > MAX_TOKENS) break;
-            selected.unshift(history[i]);
-            used += tokens;
-        }
-        return selected;
+        return history;
     }
 
     function trimWindow() {
-        var history = load();
-        var trimmed = trim(history);
-        save(trimmed);
+        // 不再裁剪，完整保留所有摘要历史
     }
 
     function _fastEstimateTokens(text) {

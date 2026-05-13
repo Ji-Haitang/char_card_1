@@ -59,7 +59,7 @@ var pipeline = (function() {
         try {
             console.log('[Pipeline] 发送 API 请求（流式）...');
             _showStreamControls();
-            _setStreamLog('发送 API 请求（流式）');
+            _setStreamLog('施延年铺纸研墨');
             var streamResult = await _requestWithStream(messages);
             rawText = streamResult.text;
             wasAborted = streamResult.aborted;
@@ -83,7 +83,7 @@ var pipeline = (function() {
         } catch (err) {
             _hideStreamControls();
             storageService.setLastTurnCommitted(false);
-            _setStreamLog('API 请求失败');
+            _setStreamLog('施延年墨尽笔折');
             console.error('[Pipeline] API 请求失败:', err.message);
             if (typeof showModal === 'function') {
                 showModal('AI 请求失败：' + err.message + '\n\n可点击重试');
@@ -139,7 +139,7 @@ var pipeline = (function() {
 
             var handle = apiService.sendMessagesStream(messages, {
                 onToken: function(delta) {
-                    if (accumulatedText === '') _setStreamLog('模型输出中');
+                    if (accumulatedText === '') _setStreamLog('施延年伏案疾书');
                     accumulatedText += delta;
                     if (!throttleTimer) {
                         throttleTimer = setTimeout(function() {
@@ -150,11 +150,11 @@ var pipeline = (function() {
                 },
                 onThinking: function(delta) {
                     // 累积思维链内容（DeepSeek/Qwen 的 reasoning_content 字段）
-                    if (accumulatedThinking === '') _setStreamLog('模型思考中');
+                    if (accumulatedThinking === '') _setStreamLog('施延年蹙眉沉吟');
                     accumulatedThinking += delta;
                 },
                 onComplete: function(fullText, usage) {
-                    _setStreamLog('输出完成');
+                    _setStreamLog('施延年题尾落款');
                     _isStreaming = false;
                     aborted = _abortRequested;
                     _currentAbort = null;
@@ -177,7 +177,7 @@ var pipeline = (function() {
                     throttleTimer = null;
                     // 降级：尝试非流式
                     console.warn('[Pipeline] 流式失败，尝试非流式降级:', err.message);
-                    _setStreamLog('转为非流式降级请求');
+                    _setStreamLog('施延年另起新卷');
                     _fallbackNonStream(messages).then(function(text) {
                         resolve({ text: text, aborted: _abortRequested });
                     }).catch(reject);
@@ -193,7 +193,7 @@ var pipeline = (function() {
      */
     async function _fallbackNonStream(messages) {
         console.log('[Pipeline] 非流式降级请求...');
-        _setStreamLog('转为非流式降级请求');
+        _setStreamLog('施延年另起新卷');
         var controller = new AbortController();
         // 挂载中断句柄，使停止按钮在降级期间仍可用
         _isStreaming = true;
@@ -370,7 +370,13 @@ var pipeline = (function() {
         if (el) el.style.display = 'none';
         var expandBtn = document.getElementById('story-expand-btn');
         if (expandBtn) expandBtn.style.display = '';
-        _setInteractionEnabled(true);
+        // 用 updateFreeActionInputState 恢复按钮状态，以尊重 inputEnable 变量
+        // （若 inputEnable===0，如特殊事件触发后，按钮应保持禁用）
+        if (typeof updateFreeActionInputState === 'function') {
+            updateFreeActionInputState();
+        } else {
+            _setInteractionEnabled(true);
+        }
         _hideStreamMask();
     }
 
@@ -383,6 +389,11 @@ var pipeline = (function() {
             mask.id = 'stream-mask';
             var spinner = document.createElement('div');
             spinner.className = 'stream-spinner';
+            var gifImg = document.createElement('img');
+            gifImg.className = 'stream-spinner-gif';
+            gifImg.src = 'assets/image/static/等待.gif';
+            gifImg.alt = '';
+            spinner.appendChild(gifImg);
             mask.appendChild(spinner);
             var logEl = document.createElement('div');
             logEl.id = 'stream-log';
@@ -508,5 +519,56 @@ var pipeline = (function() {
         return '';
     }
 
-    return { runTurn: runTurn, abortCurrentTurn: abortCurrentTurn, isStreaming: isStreaming };
+    /**
+     * 处理特殊事件（独立前端专用）
+     * @param {object} event - 特殊事件对象（包含 text、name、id 等）
+     * @param {string} userMessage - 用户消息（用于UI历史记录）
+     */
+    async function handleSpecialEvent(event, userMessage) {
+        if (!event || !event.text) {
+            console.error('[Pipeline] 特殊事件对象无效');
+            return;
+        }
+        
+        console.log('[Pipeline] 处理特殊事件:', event.name);
+        
+        try {
+            _showStreamControls();
+            _setStreamLog('施延年灵光乍现');
+            
+            // 模拟思考延迟
+            await new Promise(function(resolve) { setTimeout(resolve, 600); });
+            _setStreamLog('施延年题尾落款');
+            
+            // 替换 {{user}} 为主角名字
+            var playerName = (typeof gameData !== 'undefined' && gameData.playerName) ? gameData.playerName : '主角';
+            var eventText = event.text.replace(/\{\{user\}\}/g, playerName);
+            var resolvedUserMessage = userMessage.replace(/\{\{user\}\}/g, playerName);
+            
+            // 走完整的提交流程（解析SUMMARY、SIDE_NOTE、渲染、保存）
+            _commitResponse(resolvedUserMessage, eventText);
+            
+            // 确保 inputEnable 状态同步到 UI
+            if (typeof updateFreeActionInputState === 'function') {
+                updateFreeActionInputState();
+            }
+            
+            _hideStreamControls();
+            
+            console.log('[Pipeline] 特殊事件处理完成');
+        } catch (error) {
+            _hideStreamControls();
+            console.error('[Pipeline] 特殊事件处理失败:', error);
+            if (typeof showModal === 'function') {
+                showModal('特殊事件处理失败：' + error.message);
+            }
+        }
+    }
+
+    return { 
+        runTurn: runTurn, 
+        abortCurrentTurn: abortCurrentTurn, 
+        isStreaming: isStreaming,
+        handleSpecialEvent: handleSpecialEvent
+    };
 })();

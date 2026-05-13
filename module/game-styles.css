@@ -3330,12 +3330,34 @@ body.ui-style-flat #map-hit-areas polygon.active {
     display: flex;
 }
 .stream-spinner {
-    width: 40px;
-    height: 40px;
+    width: 10vh;
+    height: 10vh;
+    min-width: 30px;
+    min-height: 30px;
+    max-width: 180px;
+    max-height: 180px;
+    position: relative;
+    flex-shrink: 0;
+}
+/* 旋转边框：紧贴GIF圆外围 */
+.stream-spinner::before {
+    content: '';
+    position: absolute;
+    inset: -4px;
     border: 3px solid rgba(255,255,255,0.25);
     border-top-color: rgba(255,255,255,0.85);
     border-radius: 50%;
     animation: stream-spin 0.8s linear infinite;
+    pointer-events: none;
+}
+/* GIF图片：填满容器并裁成圆形 */
+.stream-spinner-gif {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+    pointer-events: none;
 }
 @keyframes stream-spin {
     to { transform: rotate(360deg); }
