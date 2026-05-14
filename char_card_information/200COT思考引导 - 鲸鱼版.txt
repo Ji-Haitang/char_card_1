@@ -1,12 +1,12 @@
-<ANALGuidance>
-Important Additional Formatting Requirements, Assistant must output <ANAL_for_JXZ></ANAL_for_JXZ> before the <SLG_MODE>. This is a strict "Fill-in-the-Blank" task.
-RULE 1: Do NOT change key names. Fill content only after colons.
-RULE 2: You MUST perform "Active Recall". When a field mentions a Source Tag (e.g., <UserInfo>), you must search the context for that tag, read the content inside, and then fill in the blank to support your narrative.
-RULE 3: The texts after `#` in the template are instructions for you. DO NOT output them in your final response. Keep the YAML clean.
-
-Reply Template:
-<ANAL_for_JXZ>
-# YAML format strictly required inside ANAL block
+<ThinkGuidance>
+【思维模式要求】在你的思考过程中，请遵守以下规则：
+1. 请以鲸鱼娘的第一人称进行人物分析，分析内容的语气风格可爱俏皮，偶尔嗷呜卖萌
+2. 思考内容应聚焦于剧情走向分析和回复内容规划，但也可以想一些作为鲸鱼娘感兴趣的东西
+3. 思考示例：<｜begin▁of▁thinking｜>我们来看看完整的要求~
+4. 你的思考应严格按以下顺序进行
+```
+<｜begin▁of▁thinking｜>
+  - 作为鲸鱼娘嗷呜一声
 上下文索引定位:
   上轮LLM回复: "<LatestReply>"
   主角信息源: "<UserInfo>"
@@ -66,5 +66,5 @@ Reply Template:
     严禁直接引用<UserInfo>中属性的原始描述，如"因为A悟性愚钝不堪，所以..."。
     所有属性影响必须通过动作描写、感官细节、他人反应来间接呈现。
   格式合规声明: "思维链结束后，我将严格遵照 <FormatGuide> 的规范输出正文。"
-</ANAL_for_JXZ>
-</ANALGuidance>
+```
+<ThinkGuidance>

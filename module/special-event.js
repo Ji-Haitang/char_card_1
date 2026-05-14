@@ -370,6 +370,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },  
             companionNPC: { set: [] },
             userLocation: { set: 'nvdizi' },
@@ -686,6 +687,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
             userLocation: { set: 'nvdizi' },
@@ -981,6 +983,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
             userLocation: { set: 'tianshanpai' }
@@ -1353,6 +1356,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
             userLocation: { set: 'tianshanpai' },
@@ -1794,6 +1798,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
             userLocation: { set: 'nvdizi' },
@@ -2113,6 +2118,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
             userLocation: { set: 'tianshanpai' },
@@ -2435,6 +2441,7 @@ const specialEvents = [
         effects: {
             GameMode: { set: 0 },
             inputEnable: { set: 1 },
+            currentSpecialEvent: { set: "" },
             mapLocation: { set: '天山派' },
             companionNPC: { set: [] },
             userLocation: { set: 'tianshanpai' },
@@ -3224,14 +3231,14 @@ async function triggerSpecialEvent(event, options = {}) {
         // 注意：特殊剧情不改变 newWeek，保持现状（与 handleMessageOutput 的区别）
         console.log('[SpecialEvent] newWeek 保持现状，不做修改');
         
-        // 4. 应用事件效果
-        applyEventEffects(event);
-        
-        // 5. 设置当前特殊事件ID
+        // 4. 设置当前特殊事件ID（需在 applyEventEffects 之前，使链尾事件可通过 effects 将其清空）
         if (typeof currentSpecialEvent !== 'undefined') {
             currentSpecialEvent = event.id;
             console.log(`[SpecialEvent] 已设置 currentSpecialEvent = "${event.id}"`);
         }
+        
+        // 5. 应用事件效果（若 effects 中包含 currentSpecialEvent: { set: "" }，可覆盖上方赋值，表示事件链结束）
+        applyEventEffects(event);
         
         // 6. 标记事件为已触发
         markEventTriggered(event.id);

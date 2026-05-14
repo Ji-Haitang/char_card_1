@@ -48,6 +48,28 @@ var responseParser = (function() {
 
     function extractMainText(text) {
         if (!text) return '';
+
+        // 优先策略：匹配 <MAIN_TEXT> 标签（容忍大小写、标签内外空格/下划线）
+        var openTagRe = /<[\s]*[Mm][Aa][Ii][Nn][\s_]*[Tt][Ee][Xx][Tt][\s]*>/;
+        var openMatch = openTagRe.exec(text);
+        if (openMatch) {
+            var contentStart = openMatch.index + openMatch[0].length;
+            // 尝试找闭合标签
+            var closeTagRe = /<[\s]*\/[\s]*[Mm][Aa][Ii][Nn][\s_]*[Tt][Ee][Xx][Tt][\s]*>/;
+            var closeMatch = closeTagRe.exec(text.substring(contentStart));
+            if (closeMatch) {
+                return text.substring(contentStart, contentStart + closeMatch.index).trim();
+            }
+            // 闭合标签缺失：截到下一个结构性标签或字符串末尾
+            var structuralRe = /<[\s]*\/?[\s]*(?:[Ss][Uu][Mm][Mm][Aa][Rr][Yy]|[Ss][Ii][Dd][Ee][\s_]*[Nn][Oo][Tt][Ee]|[Ss][Ll][Gg][\s_]*[Mm][Oo][Dd][Ee])[\s]*>/;
+            var structMatch = structuralRe.exec(text.substring(contentStart));
+            if (structMatch) {
+                return text.substring(contentStart, contentStart + structMatch.index).trim();
+            }
+            return text.substring(contentStart).trim();
+        }
+
+        // 回退策略：原有逻辑（兼容无 <MAIN_TEXT> 标签的旧格式）
         var match = text.match(/[#*\u4e00-\u9fff\u3400-\u4dbf][^<]*/);
         if (!match) return '';
         var startIndex = text.indexOf(match[0]);

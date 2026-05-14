@@ -464,7 +464,7 @@
                     <!-- <button class="dropdown-item" onclick="saveGame()">存档</button> -->
                     <!-- <button class="dropdown-item" onclick="loadGame()">读档</button> -->
                     <button class="dropdown-item" onclick="exportSave()">导出存档</button>
-                    <button class="dropdown-item" onclick="importSave()">加载存档</button>
+                    <button class="dropdown-item" onclick="showLoadModal()">加载存档</button>
                     <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button>
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
                     <button class="dropdown-item" onclick="showPipelineLog()">DEBUG日志</button>
@@ -2872,6 +2872,95 @@ function closeSaveListModal() {
     if (modal) modal.remove();
 }
 
+// ==================== 自动存档 ====================
+var AUTO_SAVE_PREFIX = '[自动]';
+var AUTO_SAVE_MAX = 3;
+
+function autoSave() {
+    if (isInRenderEnvironment()) return; // 仅独立前端
+    try {
+        syncGameDataFromVariables();
+        gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
+        var saveName = AUTO_SAVE_PREFIX + buildSaveName();
+        storageService.createSave(saveName);
+        delete gameData._activeEvent;
+
+        // FIFO：超出上限时删除最老的自动存档
+        var all = storageService.listSaves();
+        var autoSlots = all.filter(function(s) {
+            return s.saveName && s.saveName.indexOf(AUTO_SAVE_PREFIX) === 0;
+        }).sort(function(a, b) { return a.createdAt - b.createdAt; });
+
+        while (autoSlots.length > AUTO_SAVE_MAX) {
+            storageService.deleteSave(autoSlots[0].id);
+            autoSlots.shift();
+        }
+        console.log('[AutoSave] 自动存档完成: ' + saveName + '，当前自动存档数: ' + Math.min(autoSlots.length, AUTO_SAVE_MAX));
+    } catch(e) {
+        console.error('[AutoSave] 自动存档失败:', e);
+    }
+}
+
+// ==================== 加载存档弹窗 ====================
+function showLoadModal() {
+    var all = storageService.listSaves();
+    var autoSlots = all.filter(function(s) {
+        return s.saveName && s.saveName.indexOf(AUTO_SAVE_PREFIX) === 0;
+    }).sort(function(a, b) { return b.createdAt - a.createdAt; }); // 最新在前
+
+    var html = '<div id="load-modal" class="modal viewport-overlay" style="display:block;">'
+        + '<div class="modal-content" style="max-width:480px;">'
+        + '<h3>自动存档</h3>';
+
+    if (autoSlots.length === 0) {
+        html += '<p style="text-align:center;color:#888;margin:20px 0;">暂无自动存档</p>';
+    } else {
+        html += '<div style="max-height:340px;overflow-y:auto;margin:12px 0;">';
+        for (var i = 0; i < autoSlots.length; i++) {
+            var s = autoSlots[i];
+            var displayName = s.saveName.replace(AUTO_SAVE_PREFIX, '').trim();
+            var timeStr = new Date(s.createdAt).toLocaleString('zh-CN', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+            html += '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 4px;border-bottom:1px solid rgba(255,255,255,0.1);">'
+                + '<div><strong>' + _escapeHtml(displayName) + '</strong><br>'
+                + '<small style="color:#aaa;">' + timeStr + '</small></div>'
+                + '<button class="modal-btn" style="padding:5px 14px;font-size:13px;" onclick="loadSaveSlotFromLoadModal(\'' + s.id + '\')">加载</button>'
+                + '</div>';
+        }
+        html += '</div>';
+    }
+
+    html += '<div class="modal-buttons" style="flex-direction:column;gap:8px;">'
+        + '<button class="modal-btn" style="width:100%;" onclick="importSaveFromLoadModal()">导入存档文件（JSON）</button>'
+        + '<button class="modal-btn cancel" style="width:100%;" onclick="closeLoadModal()">取消</button>'
+        + '</div>'
+        + '</div></div>';
+
+    document.body.insertAdjacentHTML('beforeend', html);
+    try {
+        requestAnimationFrame(function() {
+            var modal = document.getElementById('load-modal');
+            if (typeof fitModalToViewport === 'function') fitModalToViewport(modal);
+            if (typeof bindModalAutoFit === 'function') bindModalAutoFit(modal);
+        });
+    } catch(e) {}
+    toggleDropdown('history-dropdown');
+}
+
+function closeLoadModal() {
+    var modal = document.getElementById('load-modal');
+    if (modal) modal.remove();
+}
+
+function loadSaveSlotFromLoadModal(saveId) {
+    closeLoadModal();
+    loadSaveSlot(saveId);
+}
+
+function importSaveFromLoadModal() {
+    closeLoadModal();
+    importSave();
+}
+
 function loadSaveSlot(saveId) {
     var payload = storageService.loadSave(saveId);
     if (!payload) { showModal('存档加载失败'); return; }
@@ -2926,7 +3015,9 @@ function loadSaveSlot(saveId) {
     delete gameData._activeEvent;
     if (inputEnable === 0 && savedEvent) {
         // 存档时有活跃事件，恢复运行时变量并重新显示事件框
+        // 注：战斗事件和选项事件都通过 currentRandomEvent 承载，currentBattleEvent 用于战斗结算
         if (savedEvent.事件类型 === '战斗事件') {
+            currentRandomEvent = savedEvent;
             currentBattleEvent = savedEvent;
             battleEvent = 1;
             displayBattleEvent(savedEvent);
@@ -2935,11 +3026,19 @@ function loadSaveSlot(saveId) {
             randomEvent = 1;
             displayRandomEvent(savedEvent);
         }
+    } else if (inputEnable === 0 && currentSpecialEvent) {
+        // 特殊事件链进行中且本环节无选项框，保持按钮禁用
+        currentRandomEvent = null;
+        currentBattleEvent = null;
     } else {
         // 存档时无事件，确保按钮可用
         currentRandomEvent = null;
         currentBattleEvent = null;
         inputEnable = 1;
+    }
+    // 事件变量已恢复，重新渲染正文以追加事件描述页
+    if (typeof renderMainText === 'function' && currentStoryText) {
+        renderMainText(currentStoryText);
     }
     updateFreeActionInputState();
     closeSaveListModal();
@@ -2963,8 +3062,11 @@ function returnToStartScreen() {
 
 function exportSave() {
     syncGameDataFromVariables();
+    // 导出时保存当前活跃事件，供 importSave 恢复选项框
+    gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
     var saveName = buildSaveName();
     var json = storageService.exportSaveToJson(saveName);
+    delete gameData._activeEvent;
     var filename = 'jxz_save_' + saveName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') + '.json';
     storageService.downloadJson(filename, json);
     toggleDropdown('history-dropdown');
@@ -3024,6 +3126,36 @@ function importSave() {
                     }
                 }
             }
+            // 恢复事件状态：根据存档中的 _activeEvent 和 inputEnable 还原
+            hideRandomEvent();
+            hideBattleEvent();
+            var importedActiveEvent = gameData._activeEvent || null;
+            delete gameData._activeEvent;
+            if (inputEnable === 0 && importedActiveEvent) {
+                if (importedActiveEvent.事件类型 === '战斗事件') {
+                    currentRandomEvent = importedActiveEvent;
+                    currentBattleEvent = importedActiveEvent;
+                    battleEvent = 1;
+                    displayBattleEvent(importedActiveEvent);
+                } else {
+                    currentRandomEvent = importedActiveEvent;
+                    randomEvent = 1;
+                    displayRandomEvent(importedActiveEvent);
+                }
+            } else if (inputEnable === 0 && currentSpecialEvent) {
+                // 特殊事件链进行中且本环节无选项框，保持按钮禁用
+                currentRandomEvent = null;
+                currentBattleEvent = null;
+            } else {
+                currentRandomEvent = null;
+                currentBattleEvent = null;
+                inputEnable = 1;
+            }
+            // 事件变量已恢复，重新渲染正文以追加事件描述页
+            if (typeof renderMainText === 'function' && currentStoryText) {
+                renderMainText(currentStoryText);
+            }
+            updateFreeActionInputState();
             showModal('存档导入成功！');
             // 持久化存档恢复后的状态到 localStorage
             storageService.saveAppState({ gameData: gameData });
@@ -4035,11 +4167,12 @@ function buildSaveName() {
                     sendButton.style.opacity = '0.5';
                     sendButton.style.cursor = 'not-allowed';
                 }
-                // 事件期间允许重发送
+                // 特殊固定事件期间禁用重生成（文本预写，重生成无意义）；普通随机事件仍允许重生成
                 if (regenerateBtn) {
-                    regenerateBtn.disabled = false;
-                    regenerateBtn.style.opacity = '1';
-                    regenerateBtn.style.cursor = '';
+                    const isSpecialEvent = typeof currentSpecialEvent !== 'undefined' && currentSpecialEvent !== '';
+                    regenerateBtn.disabled = isSpecialEvent;
+                    regenerateBtn.style.opacity = isSpecialEvent ? '0.5' : '1';
+                    regenerateBtn.style.cursor = isSpecialEvent ? 'not-allowed' : '';
                 }
                 // 禁用跳过一周按钮
                 if (skipWeekBtn) {

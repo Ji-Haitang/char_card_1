@@ -318,6 +318,13 @@ var pipeline = (function() {
 
             storageService.setLastTurnCommitted(true);
             console.log('[Pipeline] 提交完成');
+            // 触发自动存档（仅独立前端，函数由 index.html 定义）
+            // 仅在 SIDE_NOTE 成功解析时才存档，截断响应跳过
+            if (typeof autoSave === 'function' && parsed.sideNote !== null) {
+                autoSave();
+            } else if (typeof autoSave === 'function') {
+                console.log('[Pipeline] 跳过自动存档：SIDE_NOTE 解析失败，响应可能被截断');
+            }
         } catch (err) {
             storageService.setLastTurnCommitted(false);
             console.error('[Pipeline] 提交阶段错误:', err.message);
