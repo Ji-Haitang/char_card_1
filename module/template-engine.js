@@ -65,25 +65,32 @@ var templateEngine = (function() {
             var line = lines[i];
             var parts = []; // 收集本行的代码片段
             var idx = 0;
+            var hasTextOutput = false; // 该行是否产生了实际文本输出（非空白）
 
             while (idx < line.length) {
                 var tagStart = line.indexOf('<%', idx);
                 if (tagStart === -1) {
                     // 剩余全是文本
-                    parts.push('__out += "' + escapeStr(line.substring(idx)) + '";');
+                    var _rest = line.substring(idx);
+                    parts.push('__out += "' + escapeStr(_rest) + '";');
+                    if (_rest.trim().length > 0) hasTextOutput = true;
                     break;
                 }
 
                 // 标签前的文本
                 if (tagStart > idx) {
-                    parts.push('__out += "' + escapeStr(line.substring(idx, tagStart)) + '";');
+                    var _textBefore = line.substring(idx, tagStart);
+                    parts.push('__out += "' + escapeStr(_textBefore) + '";');
+                    if (_textBefore.trim().length > 0) hasTextOutput = true;
                 }
 
                 // 找标签结尾
                 var tagEnd = line.indexOf('%>', tagStart + 2);
                 if (tagEnd === -1) {
                     // 没有闭合，当文本处理
-                    parts.push('__out += "' + escapeStr(line.substring(tagStart)) + '";');
+                    var _unclosed = line.substring(tagStart);
+                    parts.push('__out += "' + escapeStr(_unclosed) + '";');
+                    if (_unclosed.trim().length > 0) hasTextOutput = true;
                     idx = line.length;
                     break;
                 }
@@ -108,8 +115,9 @@ var templateEngine = (function() {
                 var trimmed = inner.trim();
 
                 if (isOutput) {
-                    // 输出表达式
+                    // 输出表达式（<%=、<%-）
                     parts.push('__out += ' + (isUnescaped ? 'String(' : 'String(') + trimmed + ');');
+                    hasTextOutput = true;
                 } else {
                     // 控制语句（if / else / const 等），直接作为 JS 代码
                     parts.push(trimmed);
@@ -118,8 +126,10 @@ var templateEngine = (function() {
                 idx = tagEnd + 2;
             }
 
-            // 每行末尾加换行（除非该行全是控制语句）
-            parts.push('__out += "\\n";');
+            // 仅在该行有实际文本输出时才追加换行，纯控制语句行不留空行
+            if (hasTextOutput) {
+                parts.push('__out += "\\n";');
+            }
             output.push(parts.join('\n'));
         }
 

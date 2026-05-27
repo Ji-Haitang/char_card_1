@@ -1001,8 +1001,10 @@
                             if (newWeek === 1) {
                                 if (summary_Week) {
                                     summary_Week += `\n\n${summaryContent}`;
+                                    markWeek = currentWeek;
                                 } else {
                                     summary_Week = `${summaryContent}`;
+                                    markWeek = currentWeek;
                                 }
                                 if (summary_Small) {
                                     summary_Backup = summary_Backup
@@ -1064,8 +1066,10 @@
                                                 if (newWeek === 1) {
                                                     if (summary_Week) {
                                                         summary_Week += `\n\n${timestamp}\n${potentialSummary}`;
+                                                        markWeek = currentWeek;
                                                     } else {
                                                         summary_Week = `${timestamp}\n${potentialSummary}`;
+                                                        markWeek = currentWeek;
                                                     }
                                                     if (summary_Small) {
                                                         summary_Backup = summary_Backup
@@ -3128,7 +3132,8 @@
 
                 if (match) {
                     newWeek = 1;
-                    console.log('检测到新的一周开始，newWeek设置为1');
+                    // markWeek = currentWeek;
+                    // console.log('检测到新的一周开始，newWeek设置为1，markWeek=' + markWeek);
                 } else {
                     newWeek = 0;
                     console.log('非新周消息，newWeek设置为0');

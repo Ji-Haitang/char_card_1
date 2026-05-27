@@ -12,6 +12,62 @@ var pipeline = (function() {
     var _currentAbort = null;    // 当前流式的中断控制器
     var _isStreaming = false;    // 是否正在流式生成
     var _abortRequested = false; // 用户是否请求中断
+    var _currentSummarySource = null; // 当前提交的摘要来源（null 时默认 'llm'）
+
+    /**
+     * 在发起请求前，核对 summaryHistory 与 emb_ 记录的一致性：
+     * - summaryHistory 有但 emb_ 缺失 → 补生成 embedding
+     * - emb_ 有但 summaryHistory 无对应 id → 删除 emb_
+     */
+    async function _syncEmbeddingsWithSummaryHistory() {
+        if (typeof embeddingService === 'undefined' || !embeddingService.isEnabled()) return;
+        if (typeof summaryHistoryService === 'undefined' || typeof storageService === 'undefined') return;
+
+        var allSummaries = summaryHistoryService.getAll();
+        var summaryIds = new Set(allSummaries.map(function(s) { return s.id; }));
+
+        var embRecords = storageService.loadAllEmbeddings();
+        var embIds = new Set(embRecords.map(function(r) { return r.id; }));
+
+        // 1. emb_ 有但 summaryHistory 无 → 删除
+        var toDelete = embRecords.filter(function(r) { return !summaryIds.has(r.id); });
+        if (toDelete.length > 0) {
+            toDelete.forEach(function(r) {
+                storageService.deleteEmbedding(r.id);
+                if (typeof memoryRecall !== 'undefined') memoryRecall.removeFromCache(r.id);
+            });
+            console.log('[EmbSync] 删除孤立 emb_ ' + toDelete.length + ' 条: ' + toDelete.map(function(r){ return r.id; }).join(', '));
+        }
+
+        // 2. summaryHistory 有但 emb_ 缺失 → 补生成
+        var missing = allSummaries.filter(function(s) { return s.id && !embIds.has(s.id); });
+        if (missing.length === 0) {
+            if (toDelete.length === 0) {
+                console.log('[EmbSync] emb_ 与 summaryHistory 完全一致，共 ' + embRecords.length + ' 条');
+            }
+            return;
+        }
+
+        console.log('[EmbSync] 发现 ' + missing.length + ' 条摘要缺少 emb_，开始补生成: ' + missing.map(function(s){ return s.id; }).join(', '));
+        var fp = embeddingService.getFingerprint();
+        for (var i = 0; i < missing.length; i++) {
+            var s = missing[i];
+            if (!s.summaryText) continue;
+            try {
+                var vecs = await embeddingService.embed([s.summaryText]);
+                if (vecs && vecs.length > 0) {
+                    var f32 = new Float32Array(vecs[0]);
+                    var meta = { text: s.summaryText, week: s.week || 0, fingerprint: fp, createdAt: Date.now() };
+                    storageService.saveEmbedding(s.id, f32, meta);
+                    if (typeof memoryRecall !== 'undefined') memoryRecall.addToCache({ id: s.id, vector: f32, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+                    console.log('[EmbSync] 已补生成 emb_' + s.id + ' (' + (i + 1) + '/' + missing.length + ')');
+                }
+            } catch (e) {
+                console.warn('[EmbSync] 补生成 emb_' + s.id + ' 失败:', e && e.message || e);
+            }
+        }
+        console.log('[EmbSync] 补生成完毕，共处理 ' + missing.length + ' 条');
+    }
 
     /**
      * 执行单轮消息处理（自动选择流式/非流式）
@@ -22,16 +78,133 @@ var pipeline = (function() {
         options = options || {};
         var isRegenerate = options.isRegenerate || false;
 
+        // 每次进入新一轮时，先将提交标记置为 false
+        storageService.setLastTurnCommitted(false);
+
         // === 请求阶段（无副作用，失败可安全重试）===
         var preprocessed = _preprocessMessage(message);
 
         var lastAssistantReply = _getLastAssistantContent(storageService.loadUIConversation());
 
+        // Phase 3：发起请求前，同步 emb_ 与 summaryHistory 一致性
+        try {
+            await _syncEmbeddingsWithSummaryHistory();
+        } catch (syncErr) {
+            console.warn('[EmbSync] 同步异常，跳过:', syncErr && syncErr.message || syncErr);
+        }
+
+        // Phase 3：向量召回（在 buildMessages 前，不阻塞流程）
+        var recalledMemories = [];
+        if (typeof memoryRecall !== 'undefined' && typeof embeddingService !== 'undefined' && embeddingService.isEnabled()) {
+            try {
+                var allSummaries = summaryHistoryService.getAll();
+
+                // ① 排除 RecentMemories 候选池：与 _selectRecentSummaries 保持相同阈值
+                var _wh = (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [];
+                var _lastWHEntry = _wh.length > 0 ? _wh[_wh.length - 1] : null;
+                var _recentThreshold = _lastWHEntry ? ((_lastWHEntry.markWeek || _lastWHEntry.week || 1) - 1) : 1;
+                var excludeIds = allSummaries
+                    .filter(function(s) { return (s.week || 1) >= _recentThreshold; })
+                    .map(function(s) { return s.id; });
+
+                // ② LWB 多段加权 query：focus(当前输入) + near(最近AI回复原文) + far(该回复前的用户消息)
+                var _focusText = preprocessed;
+                // near = uiConversation 最后一条 role=assistant（上一轮 AI 完整回复原文）
+                var _nearText = lastAssistantReply || '';
+                // far = near 之前最近一条 role=user（上一轮用户输入）
+                var _farText = '';
+                var _uiForFar = storageService.loadUIConversation();
+                var _passedAssist = false;
+                for (var _fuci = _uiForFar.length - 1; _fuci >= 0; _fuci--) {
+                    if (!_passedAssist && _uiForFar[_fuci].role === 'assistant') { _passedAssist = true; }
+                    else if (_passedAssist && _uiForFar[_fuci].role === 'user') { _farText = _uiForFar[_fuci].content || ''; break; }
+                }
+
+                // 仅 embed 非空段
+                var _segTexts = [_focusText];
+                var _segBases = [0.55];
+                if (_nearText) { _segTexts.push(_nearText); _segBases.push(0.30); }
+                if (_farText)  { _segTexts.push(_farText);  _segBases.push(0.15); }
+
+                var _embedVecs = await embeddingService.embed(_segTexts);
+
+                // 长度惩罚：< 50 字时按比例衰减至 35% 基础权重
+                var _segWeights = _segTexts.map(function(t, idx) {
+                    var len = (t || '').length;
+                    var base = _segBases[idx];
+                    return len >= 50 ? base : base * (0.35 + (len / 50) * 0.65);
+                });
+
+                // 归一化
+                var _wTot = _segWeights.reduce(function(a, b) { return a + b; }, 0);
+                _segWeights = _segWeights.map(function(w) { return w / _wTot; });
+
+                // 焦点保底 35%
+                if (_segWeights[0] < 0.35) {
+                    var _shortage = 0.35 - _segWeights[0];
+                    var _ctxTot = _segWeights.slice(1).reduce(function(a, b) { return a + b; }, 0);
+                    if (_ctxTot > 0) {
+                        for (var _si2 = 1; _si2 < _segWeights.length; _si2++) {
+                            _segWeights[_si2] -= _shortage * (_segWeights[_si2] / _ctxTot);
+                        }
+                    }
+                    _segWeights[0] = 0.35;
+                }
+
+                // 加权平均向量 + L2 归一化
+                var _dim = _embedVecs[0].length;
+                var _queryVec = new Float32Array(_dim);
+                for (var _si = 0; _si < _segTexts.length; _si++) {
+                    var _sv = _embedVecs[_si];
+                    var _sw = _segWeights[_si];
+                    for (var _di = 0; _di < _dim; _di++) {
+                        _queryVec[_di] += _sw * _sv[_di];
+                    }
+                }
+                var _qnorm = 0;
+                for (var _di2 = 0; _di2 < _dim; _di2++) _qnorm += _queryVec[_di2] * _queryVec[_di2];
+                _qnorm = Math.sqrt(_qnorm);
+                if (_qnorm > 0) { for (var _di3 = 0; _di3 < _dim; _di3++) _queryVec[_di3] /= _qnorm; }
+
+                // ③ focusCharacters：扫描 focus+near+far 合并文本，提取 npcNameToId 里的 NPC 名字
+                var _combinedForNpc = _focusText + ' ' + _nearText + ' ' + _farText;
+                var _focusCharacters = [];
+                if (typeof npcNameToId !== 'undefined') {
+                    var _npcNameKeys = Object.keys(npcNameToId);
+                    for (var _nki = 0; _nki < _npcNameKeys.length; _nki++) {
+                        if (_combinedForNpc.indexOf(_npcNameKeys[_nki]) !== -1) {
+                            _focusCharacters.push(_npcNameKeys[_nki]);
+                        }
+                    }
+                }
+
+                // 保存分段信息供 memory-recall.js 的 log 读取
+                window._lastQuerySegments = {
+                    focus: { text: _focusText, weight: _segWeights[0] },
+                    near:  { text: _nearText,  weight: _nearText ? _segWeights[1] : 0 },
+                    far:   { text: _farText,   weight: _farText  ? _segWeights[_nearText ? 2 : 1] : 0 }
+                };
+                console.groupCollapsed('[Pipeline] Query向量构成（展开查看）');
+                console.log('focus(' + (_segWeights[0] * 100).toFixed(0) + '%): ' + _focusText);
+                if (_nearText) console.log('near(' + (_segWeights[1] * 100).toFixed(0) + '%): ' + (_nearText.length > 300 ? _nearText.slice(0, 300) + '...' : _nearText));
+                if (_farText)  console.log('far('  + (_segWeights[_nearText ? 2 : 1] * 100).toFixed(0) + '%): ' + (_farText.length > 150 ? _farText.slice(0, 150) + '...' : _farText));
+                console.log('排除RecentMemories: ' + excludeIds.length + '条 | focusNPC=[' + _focusCharacters.join(',') + ']');
+                console.groupEnd();
+
+                recalledMemories = await memoryRecall.recallRelevantMemories(_queryVec, 15, excludeIds, 3000, _focusCharacters);
+            } catch (recallErr) {
+                console.warn('[Pipeline] 向量召回失败，降级为空:', recallErr && recallErr.message || recallErr);
+                recalledMemories = [];
+            }
+        }
+
         var messages = promptBuilder.buildMessages({
             userMessage: preprocessed,
             gameData: gameData,
             summaryHistory: summaryHistoryService.getAll(),
-            lastAssistantReply: lastAssistantReply
+            weekHistory: (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [],
+            lastAssistantReply: lastAssistantReply,
+            recalledMemories: recalledMemories
         });
 
         // === [DEBUG] 发起请求前：打印事件相关变量当前值 ===
@@ -82,7 +255,6 @@ var pipeline = (function() {
             }
         } catch (err) {
             _hideStreamControls();
-            storageService.setLastTurnCommitted(false);
             _setStreamLog('施延年墨尽笔折');
             console.error('[Pipeline] API 请求失败:', err.message);
             if (typeof showModal === 'function') {
@@ -104,12 +276,14 @@ var pipeline = (function() {
             gameData.randomEvent = 0;
             gameData.battleEvent = 0;
             console.log('[Pipeline][DEBUG] 中断路径：事件变量已归零');
-            storageService.setLastTurnCommitted(false);
+            if (typeof showModal === 'function' && typeof isInRenderEnvironment === 'function' && !isInRenderEnvironment()) {
+                showModal('本轮输出已中断，未自动存档，建议手动存档。');
+            }
             return;
         }
 
         // === 提交阶段（有副作用，按顺序可控）===
-        _commitResponse(preprocessed, rawText);
+        _commitResponse(preprocessed, rawText, isRegenerate);
     }
 
     /**
@@ -227,17 +401,37 @@ var pipeline = (function() {
     /**
      * 提交阶段（阶段 B）
      */
-    function _commitResponse(preprocessed, rawText) {
+    function _commitResponse(preprocessed, rawText, isRegenerate) {
         var uiConversationBeforeCommit = storageService.loadUIConversation().slice();
         var summaryHistoryBeforeCommit = summaryHistoryService.getAll().slice();
         try {
             // 1. 写入用户消息到 UI 历史
-            storageService.appendUIConversation({
-                id: 'u' + Date.now(),
-                role: 'user',
-                content: preprocessed,
-                createdAt: Date.now()
-            });
+            if (isRegenerate) {
+                // 重生成时替换最后一条 user 条目，避免重复累积导致 markWeekUiIndex 偏移
+                var _uiHist = storageService.loadUIConversation();
+                var _replaced = false;
+                for (var _i = _uiHist.length - 1; _i >= 0; _i--) {
+                    if (_uiHist[_i].role === 'user') {
+                        _uiHist[_i].content = preprocessed;
+                        _uiHist[_i].createdAt = Date.now();
+                        _replaced = true;
+                        break;
+                    }
+                }
+                if (_replaced) {
+                    storageService.replaceUIConversation(_uiHist);
+                } else {
+                    // 兜底：找不到上一条 user 则正常 append
+                    storageService.appendUIConversation({ id: 'u' + Date.now(), role: 'user', content: preprocessed, createdAt: Date.now() });
+                }
+            } else {
+                storageService.appendUIConversation({
+                    id: 'u' + Date.now(),
+                    role: 'user',
+                    content: preprocessed,
+                    createdAt: Date.now()
+                });
+            }
 
             // 2. 解析 AI 回复
             var parsed = responseParser.run(rawText);
@@ -296,18 +490,76 @@ var pipeline = (function() {
                 updateAllDisplays();
             }
 
-            // 6. 保存 AI 回复到 UI 历史
-            storageService.appendUIConversation({
-                id: 'a' + Date.now(),
-                role: 'assistant',
-                content: parsed.mainText,
-                createdAt: Date.now()
-            });
-
-            // 7. 保存摘要历史
+            // 6+7. 仅在摘要成功解析时，才保存 AI 回复到 UI 历史并标记本轮已提交
+            // 若在 <SUMMARY> 之前截断，parsed.summaries 为空，跳过此块，
+            // UIConversation 保留上一轮的正确内容，重生成时 LatestReply 不会被污染。
             if (parsed.summaries && parsed.summaries.length > 0) {
-                summaryHistoryService.append(parsed.summaries);
-                summaryHistoryService.trimWindow();
+                // 特殊事件由 handleSpecialEvent 调用 _commitResponse，通过 rawText 来源区分
+                var _summarySource = (typeof _currentSummarySource !== 'undefined' && _currentSummarySource)
+                    ? _currentSummarySource : 'llm';
+                // newWeek===1 时，本轮摘要进入 weekHistory（周摘要），不进入 summaryHistory，不量化不召回
+                if (newWeek === 1 && typeof weekHistoryService !== 'undefined') {
+                    var _targetMarkWeek = typeof markWeek !== 'undefined' ? markWeek : currentWeek;
+                    // ⑧ 检查是否已有 runSummary 最终版本（重生成场景B保护）
+                    var _hasRunSummary = weekHistoryService.hasRunSummaryEntry &&
+                        weekHistoryService.hasRunSummaryEntry(_targetMarkWeek);
+
+                    if (_hasRunSummary) {
+                        console.log('[Pipeline] markWeek=' + _targetMarkWeek + ' 已存在 runSummary 最终版本，跳过 buff 收集和初版写入');
+                    } else {
+                        // ⑨ 读旧 markWeekUiIndex
+                        var _oldIdx = storageService.getMarkWeekUiIndex ? storageService.getMarkWeekUiIndex() : 0;
+
+                        // ⑩ 收集 summaryBuff：uiConversation.slice(oldIdx) 中 assistant 条目
+                        //    注意：此时 appendUIConversation(assistant) 尚未调用，本轮 assistant 不在 buff 中
+                        var _uiConvNow = storageService.loadUIConversation();
+                        var _buffSlice = _uiConvNow.slice(_oldIdx).filter(function(m) { return m.role === 'assistant'; });
+                        var _turnCount = _buffSlice.length;
+                        var _buffText = _buffSlice.map(function(m, i) {
+                            return '[第' + (i + 1) + '轮]\n' + m.content;
+                        }).join('\n\n');
+
+                        // ⑪ 持久化 summaryBuff
+                        if (storageService.setSummaryBuff) {
+                            storageService.setSummaryBuff({
+                                targetMarkWeek: _targetMarkWeek,
+                                prevMarkWeekUiIndex: _oldIdx,
+                                turnCount: _turnCount,
+                                text: _buffText
+                            });
+                            console.log('[Pipeline] summaryBuff 已收集: targetMarkWeek=' + _targetMarkWeek + ', turnCount=' + _turnCount + ', chars=' + _buffText.length + ', oldIdx=' + _oldIdx);
+                        }
+
+                        // ⑫ 写初版总结（source='runTurn'）
+                        weekHistoryService.append(parsed.summaries, 'runTurn');
+
+                        // ⑬ 更新 markWeekUiIndex（在 appendUIConversation(assistant) 之前，故不含本轮 assistant）
+                        if (storageService.setMarkWeekUiIndex) {
+                            var _newIdx = storageService.loadUIConversation().length;
+                            storageService.setMarkWeekUiIndex(_newIdx);
+                            console.log('[Pipeline] markWeekUiIndex 已更新: ' + _oldIdx + ' → ' + _newIdx);
+                        }
+                    }
+                } else {
+                    summaryHistoryService.append(parsed.summaries, _summarySource);
+                    summaryHistoryService.trimWindow();
+                }
+
+                // 6. 保存 AI 回复到 UI 历史（摘要存在才写入，避免截断内容污染 LatestReply）
+                storageService.appendUIConversation({
+                    id: 'a' + Date.now(),
+                    role: 'assistant',
+                    content: parsed.mainText,
+                    createdAt: Date.now()
+                });
+
+                // 摘要 + 正文均已写入，标记本轮已提交
+                storageService.setLastTurnCommitted(true);
+
+                // ⑰ newWeek=1 时，异步触发周总结优化（在本轮 commit 完成后）
+                if (newWeek === 1 && typeof summaryRunner !== 'undefined') {
+                    setTimeout(function() { summaryRunner.scheduleSummary(); }, 0);
+                }
             }
 
             // 8. 持久化
@@ -316,17 +568,57 @@ var pipeline = (function() {
             // 10. 处理随机/战斗事件
             _handleEvents(parsed);
 
-            storageService.setLastTurnCommitted(true);
             console.log('[Pipeline] 提交完成');
+
+            // Phase 3：fire-and-forget 异步存储新增 summary 的 embedding
+            if (typeof memoryRecall !== 'undefined' && typeof embeddingService !== 'undefined' && embeddingService.isEnabled()) {
+                (async function() {
+                    try {
+                        var allAfter = summaryHistoryService.getAll();
+                        // 找出还没有 embedding 的条目
+                        var stats = memoryRecall.getStats();
+                        var cachedIds = {};
+                        var cached = stats && stats.entries ? stats.entries : [];
+                        for (var ci = 0; ci < cached.length; ci++) {
+                            cachedIds[cached[ci].id] = true;
+                        }
+                        var newSummaries = allAfter.filter(function(s) { return !cachedIds[s.id]; });
+                        if (newSummaries.length === 0) return;
+                        var texts = newSummaries.map(function(s) { return s.summaryText; });
+                        var vectors = await embeddingService.embed(texts);
+                        var fp = embeddingService.getFingerprint();
+                        for (var vi = 0; vi < newSummaries.length; vi++) {
+                            if (!vectors[vi]) continue;
+                            var vec = new Float32Array(vectors[vi]);
+                            var meta = {
+                                text: newSummaries[vi].summaryText,
+                                week: newSummaries[vi].week || 0,
+                                fingerprint: fp,
+                                createdAt: Date.now()
+                            };
+                            storageService.saveEmbedding(newSummaries[vi].id, vec, meta);
+                            memoryRecall.addToCache({ id: newSummaries[vi].id, vector: vec, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+                        }
+                        console.log('[Pipeline] 已保存 ' + newSummaries.length + ' 条新 embedding');
+                    } catch (embErr) {
+                        console.warn('[Pipeline] embedding 存储失败:', embErr && embErr.message || embErr);
+                        if (typeof embeddingService !== 'undefined' && embeddingService.canNotifyStoreFail()) {
+                            alert('【记忆向量化】本轮摘要 embedding 存储失败，请检查 embedding 配置。\n错误：' + (embErr && embErr.message || embErr));
+                        }
+                    }
+                })();
+            }
             // 触发自动存档（仅独立前端，函数由 index.html 定义）
             // 仅在 SIDE_NOTE 成功解析时才存档，截断响应跳过
             if (typeof autoSave === 'function' && parsed.sideNote !== null) {
                 autoSave();
             } else if (typeof autoSave === 'function') {
                 console.log('[Pipeline] 跳过自动存档：SIDE_NOTE 解析失败，响应可能被截断');
+                if (typeof showModal === 'function') {
+                    showModal('本次回复内容格式不完整，自动存档已跳过，建议重新生成或手动存档。');
+                }
             }
         } catch (err) {
-            storageService.setLastTurnCommitted(false);
             console.error('[Pipeline] 提交阶段错误:', err.message);
             var snapshot = storageService.loadSnapshot();
             if (snapshot) {
@@ -484,6 +776,7 @@ var pipeline = (function() {
         if (!alreadyExists) {
             if (newWeek === 1) {
                 summary_Week = summary_Week ? summary_Week + '\n\n' + summaryContent : summaryContent;
+                markWeek = currentWeek;
                 if (summary_Small) {
                     summary_Backup = summary_Backup ? summary_Backup + '\n\n' + summary_Small : summary_Small;
                 }
@@ -553,7 +846,10 @@ var pipeline = (function() {
             var resolvedUserMessage = userMessage.replace(/\{\{user\}\}/g, playerName);
             
             // 走完整的提交流程（解析SUMMARY、SIDE_NOTE、渲染、保存）
+            // 标记本次摘要来源为特殊剧情事件
+            _currentSummarySource = 'special_event';
             _commitResponse(resolvedUserMessage, eventText);
+            _currentSummarySource = null;
             
             // 确保 inputEnable 状态同步到 UI
             if (typeof updateFreeActionInputState === 'function') {

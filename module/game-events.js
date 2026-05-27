@@ -73,6 +73,7 @@ function hideRandomEvent() {
     const container = document.getElementById('random-event-container');
     container.classList.remove('show');
     currentRandomEvent = null;
+    randomEvent = 0;
 }
 
 // 处理事件选项
@@ -86,8 +87,9 @@ async function handleEventOption(optionIndex, option) {
         applyEventReward(option.奖励);
     }
     
+    const _actorName1 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
     const resultMessage = `事件描述: ${currentRandomEvent.事件描述}<br>` +
-        `{{user}}行动选择: ${option.描述}<br>` +
+        `${_actorName1}行动选择: ${option.描述}<br>` +
         `选择结果: ${isSuccess ? '成功' : '失败'}`;
     
     hideRandomEvent();
@@ -192,6 +194,7 @@ function hideBattleEvent() {
     const container = document.getElementById('battle-event-container');
     container.classList.remove('show');
     currentBattleEvent = null;
+    battleEvent = 0;
 }
 
 // 应用战斗奖励
@@ -740,10 +743,11 @@ function setupMessageListeners() {
                 }
                 
                 // 基础信息
+                const _actorName2 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
                 let resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                                 locationInfo +  // 使用新的地点信息
-                                `{{user}}行动选择：武艺切磋<br>` +
+                                `${_actorName2}行动选择：武艺切磋<br>` +
                                 `切磋对手：${currentBattleNpcName}<br>`;
                 
                 if (result === 'victory') {
@@ -975,10 +979,11 @@ function setupMessageListeners() {
                 eventInfo += '<br>特殊事件：遭遇战斗';
             }
             
+            const _actorName3 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
             const resultMessage = 
                 `时间：第${year}年第${month}月第${week}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
-                `{{user}}行动选择：下山游历<br>` +
+                `${_actorName3}行动选择：下山游历<br>` +
                 `抵达目的地：${mapLocation}<br>` +
                 `随行NPC：${companionNames}` +
                 eventInfo;

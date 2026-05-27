@@ -43,9 +43,11 @@ var summaryHistoryService = (function() {
     }
 
     /** 添加新的摘要记录 */
-    function append(summaries) {
+    // @param {string} [source] - 来源标记：'llm'（默认，LLM正常生成）| 'special_event'（预设特殊剧情）
+    function append(summaries, source) {
         var history = load();
         if (!summaries || summaries.length === 0) return history;
+        var recordSource = source || 'llm';
 
         for (var i = 0; i < summaries.length; i++) {
             history.push({
@@ -53,6 +55,7 @@ var summaryHistoryService = (function() {
                 week: typeof currentWeek !== 'undefined' ? currentWeek : 1,
                 gameTime: typeof currentGameTime !== 'undefined' ? currentGameTime : '',
                 summaryText: summaries[i],
+                source: recordSource,
                 createdAt: Date.now()
             });
         }

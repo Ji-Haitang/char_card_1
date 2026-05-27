@@ -84,7 +84,8 @@ async function handleMessageOutput(message) {
 
         if (match) {
             newWeek = 1;
-            console.log('检测到新的一周开始，newWeek设置为1');
+            // markWeek = currentWeek;
+            // console.log('检测到新的一周开始，newWeek设置为1，markWeek=' + markWeek);
         } else {
             newWeek = 0;
             console.log('非新周消息，newWeek设置为0');
@@ -142,6 +143,7 @@ async function handleMessageOutput(message) {
             var match = message.match(newWeekPattern);
             if (match) {
                 newWeek = 1;
+                // markWeek = currentWeek;
             } else {
                 newWeek = 0;
             }
@@ -189,9 +191,9 @@ function showBattleGame(battleData) {
     const modal = document.getElementById('battle-modal');
     const iframe = document.getElementById('battle-iframe');
     
-    // 优先使用 SLG 模式下最后验证有效的场景图作为背景
+    // 优先使用 SLG 模式下最后验证有效的场景图作为背景（仅 SLG 模式生效，避免跨存档污染）
     let backgroundUrl = '';
-    if (typeof window !== 'undefined' && window.__lastValidSceneUrl) {
+    if (typeof window !== 'undefined' && window.__lastValidSceneUrl && GameMode === 1) {
         backgroundUrl = window.__lastValidSceneUrl;
     } else {
         const activeScene = document.querySelector('.scene.active');

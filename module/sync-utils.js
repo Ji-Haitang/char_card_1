@@ -51,6 +51,8 @@ function syncGameDataFromVariableSystem() {
     if ('currentSpecialEvent' in snapshot) gameData.currentSpecialEvent = snapshot.currentSpecialEvent;
     if ('inputEnable' in snapshot) gameData.inputEnable = snapshot.inputEnable;
     if ('enamor' in snapshot) gameData.enamor = snapshot.enamor;
+    if ('playerName' in snapshot) gameData.playerName = snapshot.playerName;
+    if ('markWeek' in snapshot) gameData.markWeek = snapshot.markWeek;
 
     syncVariablesFromGameData();
 }
@@ -107,6 +109,8 @@ function syncGlobalsToTurnVars() {
     variableSystem.set('currentSpecialEvent', currentSpecialEvent, 'turn');
     variableSystem.set('inputEnable', inputEnable, 'turn');
     variableSystem.set('enamor', enamor, 'turn');
+    variableSystem.set('playerName', playerName, 'turn');
+    variableSystem.set('markWeek', markWeek, 'turn');
 }
 
 function hydrateVariableSystemFromGameData(data) {

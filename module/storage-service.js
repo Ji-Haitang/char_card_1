@@ -14,16 +14,22 @@ var storageService = (function() {
     var KEY_UI_CONV = 'uiConversation';
     var KEY_SNAPSHOT = 'snapshot';
     var KEY_SUMMARY_HISTORY = 'summaryHistory';
+    var KEY_WEEK_HISTORY = 'weekHistory';
     var KEY_LAST_TURN_COMMITTED = 'lastTurnCommitted';
     var KEY_SAVE_INDEX = 'saveIndex';
+    var KEY_MARK_WEEK_UI_INDEX = 'markWeekUiIndex';
+    var KEY_SUMMARY_BUFF = 'summaryBuff';
 
     // localStorage key（兼容旧格式）
     var LS_APP_STATE = 'jxz_appState';
     var LS_UI_CONV = 'jxz_uiConversation';
     var LS_SNAPSHOT = 'jxz_snapshot';
     var LS_SUMMARY_HISTORY = 'jxz_summaryHistory';
+    var LS_WEEK_HISTORY = 'jxz_weekHistory';
     var LS_LAST_TURN_COMMITTED = 'jxz_lastTurnCommitted';
     var LS_SAVES = 'jxz_saves';
+    var LS_MARK_WEEK_UI_INDEX = 'jxz_markWeekUiIndex';
+    var LS_SUMMARY_BUFF = 'jxz_summaryBuff';
 
     // --- 内部状态 ---
     var _cache = {};
@@ -184,6 +190,12 @@ var storageService = (function() {
         var lastTurnCommitted = _lsGet(LS_LAST_TURN_COMMITTED);
         if (typeof lastTurnCommitted === 'boolean') _cache[KEY_LAST_TURN_COMMITTED] = lastTurnCommitted;
 
+        var markWeekUiIndex = _lsGet(LS_MARK_WEEK_UI_INDEX);
+        if (typeof markWeekUiIndex === 'number') _cache[KEY_MARK_WEEK_UI_INDEX] = markWeekUiIndex;
+
+        var summaryBuff = _lsGet(LS_SUMMARY_BUFF);
+        _cache[KEY_SUMMARY_BUFF] = (summaryBuff && typeof summaryBuff === 'object') ? summaryBuff : null;
+
         // 旧格式存档 → 转为索引 + 独立 key（仅缓存中）
         var saves = _lsGet(LS_SAVES);
         if (saves && Array.isArray(saves)) {
@@ -249,6 +261,66 @@ var storageService = (function() {
         _lsRemove(LS_SUMMARY_HISTORY);
     }
 
+    // --- Embeddings（Phase 3 向量存储）---
+    // key 格式：emb_<summaryId>，复用同一 IDB keyval store
+
+    /**
+     * 保存一条 embedding 记录
+     * @param {string} id - summaryHistory 条目的 id
+     * @param {Float32Array} vector - 1024 维向量
+     * @param {object} metadata - { text, week, fingerprint, createdAt }
+     */
+    function saveEmbedding(id, vector, metadata) {
+        if (!id) return;
+        var key = 'emb_' + id;
+        var record = Object.assign({ id: id, vector: vector }, metadata || {});
+        _cache[key] = record;
+        if (_idbAvailable) {
+            idbStorage.put(key, record).catch(function(e) {
+                console.warn('[Storage][Embedding] IDB 写入失败:', e && e.message || e);
+            });
+        }
+    }
+
+    /**
+     * 加载全部 embedding 记录（启动时预热内存缓存用）
+     * @returns {Array}
+     */
+    function loadAllEmbeddings() {
+        var result = [];
+        var keys = Object.keys(_cache);
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf('emb_') === 0) {
+                result.push(_cache[keys[i]]);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 删除指定 embedding 记录
+     * @param {string} id - summaryHistory 条目的 id
+     */
+    function deleteEmbedding(id) {
+        var key = 'emb_' + id;
+        delete _cache[key];
+        _idbRemove(key);
+    }
+
+    /**
+     * 清空全部 embedding 记录（新游戏时调用）
+     */
+    function clearEmbeddings() {
+        var keys = Object.keys(_cache);
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf('emb_') === 0) {
+                _idbRemove(keys[i]);
+                delete _cache[keys[i]];
+            }
+        }
+        console.log('[Storage] 已清空所有 embedding 记录');
+    }
+
     function popLastAssistantUI() {
         var history = loadUIConversation();
         for (var i = history.length - 1; i >= 0; i--) {
@@ -295,6 +367,38 @@ var storageService = (function() {
         return _cache[KEY_LAST_TURN_COMMITTED] === true;
     }
 
+    // --- markWeekUiIndex（周总结优化：记录上次写入初版总结时 uiConversation 的长度）---
+
+    function getMarkWeekUiIndex() {
+        var v = _cache[KEY_MARK_WEEK_UI_INDEX];
+        return typeof v === 'number' ? v : 0;
+    }
+
+    function setMarkWeekUiIndex(index) {
+        var value = typeof index === 'number' ? index : 0;
+        _cache[KEY_MARK_WEEK_UI_INDEX] = value;
+        _idbPut(KEY_MARK_WEEK_UI_INDEX, value);
+        _lsSet(LS_MARK_WEEK_UI_INDEX, value);
+    }
+
+    // --- summaryBuff（周总结优化：待总结的正文缓冲）---
+
+    function getSummaryBuff() {
+        return _cache[KEY_SUMMARY_BUFF] || null;
+    }
+
+    function setSummaryBuff(buff) {
+        _cache[KEY_SUMMARY_BUFF] = buff;
+        _idbPut(KEY_SUMMARY_BUFF, buff);
+        _lsSet(LS_SUMMARY_BUFF, buff);
+    }
+
+    function clearSummaryBuff() {
+        _cache[KEY_SUMMARY_BUFF] = null;
+        _idbPut(KEY_SUMMARY_BUFF, null);
+        _lsSet(LS_SUMMARY_BUFF, null);
+    }
+
     // --- Summary History (供 summaryHistoryService 使用) ---
 
     function loadSummaryHistory() {
@@ -305,6 +409,18 @@ var storageService = (function() {
         _cache[KEY_SUMMARY_HISTORY] = history;
         _idbPut(KEY_SUMMARY_HISTORY, history);
         _lsSet(LS_SUMMARY_HISTORY, history);
+    }
+
+    // --- Week History (供 weekHistoryService 使用，仅 index 独立前端链路) ---
+
+    function loadWeekHistory() {
+        return _cache[KEY_WEEK_HISTORY] || [];
+    }
+
+    function saveWeekHistory(history) {
+        _cache[KEY_WEEK_HISTORY] = history;
+        _idbPut(KEY_WEEK_HISTORY, history);
+        _lsSet(LS_WEEK_HISTORY, history);
     }
 
     // --- 存档系统 ---
@@ -326,13 +442,25 @@ var storageService = (function() {
 
     function createSave(saveName) {
         var id = 'save_' + Date.now();
+        // Phase 3：序列化 embeddings（Float32Array → number[]）
+        var embRecords = loadAllEmbeddings();
+        var embExport = embRecords.map(function(r) {
+            var vec = r.vector;
+            var arr = (vec instanceof Float32Array) ? Array.from(vec) : (Array.isArray(vec) ? vec : []);
+            return { id: r.id, vector: arr, text: r.text || '', week: r.week || 0, fingerprint: r.fingerprint || '', createdAt: r.createdAt || 0 };
+        });
         var payload = {
             id: id,
             saveName: saveName,
             gameData: (typeof gameData !== 'undefined') ? structuredClone(gameData) : null,
             summaryHistory: (typeof summaryHistoryService !== 'undefined') ? structuredClone(summaryHistoryService.getAll()) : [],
+            weekHistory: (typeof weekHistoryService !== 'undefined') ? structuredClone(weekHistoryService.getAll()) : [],
+            markWeekUiIndex: getMarkWeekUiIndex(),
+            summaryBuff: getSummaryBuff() ? structuredClone(getSummaryBuff()) : null,
             uiConversation: structuredClone(loadUIConversation()),
             snapshot: structuredClone(loadSnapshot()),
+            embeddings: embExport,
+            lastTurnCommitted: didLastTurnCommit(),
             previewWeek: (typeof gameData !== 'undefined' && gameData) ? gameData.currentWeek : null,
             previewLocation: (typeof gameData !== 'undefined' && gameData) ? gameData.mapLocation : null,
             createdAt: Date.now()
@@ -406,6 +534,45 @@ var storageService = (function() {
         _setSaveIndex(index);
         _syncSavesToLocalStorage();
 
+        // Phase 3：恢复 embeddings（number[] → Float32Array → saveEmbedding）
+        if (Array.isArray(payload.embeddings) && payload.embeddings.length > 0) {
+            for (var ei = 0; ei < payload.embeddings.length; ei++) {
+                var er = payload.embeddings[ei];
+                if (!er || !er.id) continue;
+                var vecArr = Array.isArray(er.vector) ? er.vector : [];
+                var f32 = new Float32Array(vecArr);
+                saveEmbedding(er.id, f32, {
+                    text: er.text || '',
+                    week: er.week || 0,
+                    fingerprint: er.fingerprint || '',
+                    createdAt: er.createdAt || 0
+                });
+            }
+            // 刷新内存召回缓存
+            if (typeof memoryRecall !== 'undefined') {
+                memoryRecall.clearCache();
+                memoryRecall.init();
+            }
+            console.log('[Storage] 已恢复 ' + payload.embeddings.length + ' 条 embedding 记录');
+        }
+
+        // 恢复 weekHistory
+        if (Array.isArray(payload.weekHistory)) {
+            saveWeekHistory(payload.weekHistory);
+            console.log('[Storage] 已恢复 ' + payload.weekHistory.length + ' 条 weekHistory 记录');
+        }
+
+        // 恢复 markWeekUiIndex 和 summaryBuff（周总结优化；老存档无此字段时默认为存档 uiConversation 长度）
+        var _mwIdx = typeof payload.markWeekUiIndex === 'number' ? payload.markWeekUiIndex : (Array.isArray(payload.uiConversation) ? payload.uiConversation.length : 0);
+        setMarkWeekUiIndex(_mwIdx);
+        console.log('[Storage] 已恢复 markWeekUiIndex=' + _mwIdx);
+        if (payload.summaryBuff && typeof payload.summaryBuff === 'object') {
+            setSummaryBuff(payload.summaryBuff);
+            console.log('[Storage] 已恢复 summaryBuff, targetMarkWeek=' + payload.summaryBuff.targetMarkWeek);
+        } else {
+            clearSummaryBuff();
+        }
+
         console.log('[Storage] 存档导入: ' + id + ' (' + (payload.saveName || '导入存档') + ')');
         return id;
     }
@@ -424,12 +591,37 @@ var storageService = (function() {
     // --- 导入导出 ---
 
     function buildSavePayload(saveName) {
+        // Phase 3：序列化 embeddings（Float32Array → number[] 保证 JSON 兼容）
+        var embRecords = loadAllEmbeddings();
+        var embExport = embRecords.map(function(r) {
+            var vec = r.vector;
+            var arr;
+            if (vec instanceof Float32Array) {
+                arr = Array.from(vec);
+            } else if (Array.isArray(vec)) {
+                arr = vec;
+            } else {
+                arr = [];
+            }
+            return {
+                id: r.id,
+                vector: arr,
+                text: r.text || '',
+                week: r.week || 0,
+                fingerprint: r.fingerprint || '',
+                createdAt: r.createdAt || 0
+            };
+        });
         return {
             saveName: saveName,
             gameData: (typeof gameData !== 'undefined') ? gameData : null,
             summaryHistory: (typeof summaryHistoryService !== 'undefined') ? summaryHistoryService.getAll() : [],
+            weekHistory: (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [],
+            markWeekUiIndex: getMarkWeekUiIndex(),
+            summaryBuff: getSummaryBuff(),
             uiConversation: loadUIConversation(),
             snapshot: loadSnapshot(),
+            embeddings: embExport,
             createdAt: Date.now()
         };
     }
@@ -487,8 +679,19 @@ var storageService = (function() {
         clearSnapshot: clearSnapshot,
         setLastTurnCommitted: setLastTurnCommitted,
         didLastTurnCommit: didLastTurnCommit,
+        getMarkWeekUiIndex: getMarkWeekUiIndex,
+        setMarkWeekUiIndex: setMarkWeekUiIndex,
+        getSummaryBuff: getSummaryBuff,
+        setSummaryBuff: setSummaryBuff,
+        clearSummaryBuff: clearSummaryBuff,
         loadSummaryHistory: loadSummaryHistory,
         saveSummaryHistory: saveSummaryHistory,
+        loadWeekHistory: loadWeekHistory,
+        saveWeekHistory: saveWeekHistory,
+        saveEmbedding: saveEmbedding,
+        loadAllEmbeddings: loadAllEmbeddings,
+        deleteEmbedding: deleteEmbedding,
+        clearEmbeddings: clearEmbeddings,
         buildSavePayload: buildSavePayload,
         exportSaveToJson: exportSaveToJson,
         importSaveFromJson: importSaveFromJson,

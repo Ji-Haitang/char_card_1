@@ -961,7 +961,8 @@
                                 createdAt: Date.now()
                             });
                             if (parsed.summaries && Array.isArray(parsed.summaries) && parsed.summaries.length > 0 && typeof summaryHistoryService !== 'undefined') {
-                                summaryHistoryService.append(parsed.summaries);
+                                // 开场白摘要标记为 special_event，保护其不被重生成回滚
+                                summaryHistoryService.append(parsed.summaries, 'special_event');
                             }
                         }
                     }

@@ -26,27 +26,7 @@ var promptBuilder = (function() {
     }
 
     /**
-     * 在 token 预算内从最新向最旧选取 summary 条目
-     */
-    function _selectSummariesWithinBudget(summaryHistory, budgetTokens) {
-        if (!summaryHistory || summaryHistory.length === 0) return [];
-        var selected = [];
-        var used = 0;
-        for (var i = summaryHistory.length - 1; i >= 0; i--) {
-            var text = summaryHistory[i].summaryText || '';
-            var tokens = tokenUtils.estimate(text);
-            if (used + tokens > budgetTokens) break;
-            selected.unshift(summaryHistory[i]);
-            used += tokens;
-        }
-        return selected;
-    }
-
-    /**
-     * 构建 HistorySummary 块
-     */
-    /**
-     * 将 summaryHistory 条目的 week 字段转换为 [第X年第X月第X周] 格式
+     * 将 week 数字转换为 [第X年第X月第X周] 格式
      */
     function _weekToTimestamp(week) {
         var year = Math.floor((week - 1) / 48) + 1;
@@ -57,25 +37,102 @@ var promptBuilder = (function() {
     }
 
     /**
-     * 构建 HistorySummary 块
-     * @param {Array} selectedSummaries - 经 token 预算裁剪后的 summaryHistory 条目
+     * 选取 RecentMemories：summaryHistory 中 week >= (最后一条 weekHistory.markWeek - 1) 的条目
+     * weekHistory 为空时取全部 summaryHistory
      */
-    function _buildHistorySummaryBlock(selectedSummaries) {
+    function _selectRecentSummaries(summaryHistory, weekHistory) {
+        if (!summaryHistory || summaryHistory.length === 0) return [];
+        var threshold = 1;
+        if (weekHistory && weekHistory.length > 0) {
+            var lastEntry = weekHistory[weekHistory.length - 1];
+            var lastMarkWeek = lastEntry.markWeek || lastEntry.week || 1;
+            threshold = lastMarkWeek - 1;
+        }
+        return summaryHistory.filter(function(entry) {
+            return (entry.week || 1) >= threshold;
+        });
+    }
+
+    /**
+     * PreviousMemories：在 token 预算内从最新到最旧保留 weekHistory 条目
+     */
+    function _selectPreviousWithinBudget(weekHistory, budgetTokens) {
+        if (!weekHistory || weekHistory.length === 0) return [];
+        var selected = [];
+        var used = 0;
+        for (var i = weekHistory.length - 1; i >= 0; i--) {
+            var text = weekHistory[i].summaryText || '';
+            var tokens = tokenUtils.estimate(text);
+            if (used + tokens > budgetTokens) break;
+            selected.unshift(weekHistory[i]);
+            used += tokens;
+        }
+        return selected;
+    }
+
+    /**
+     * 构建 HistorySummary 块（三段式结构）
+     * @param {Array} previousMemories  - 经预算截断的 weekHistory 条目
+     * @param {Array} recentSummaries   - 近期 summaryHistory 条目（RecentMemories）
+     * @param {Array} recalledMemories  - 向量召回条目，按相似度排序（RecalledMemories）
+     */
+    function _buildHistorySummaryBlock(previousMemories, recentSummaries, recalledMemories) {
         var lines = ['<!-- <HistorySummary> is a brief summary of what has happened so far. Please read it to continue the story. -->'];
         lines.push('');
         lines.push('<HistorySummary>');
-        if (selectedSummaries && selectedSummaries.length > 0) {
-            for (var i = 0; i < selectedSummaries.length; i++) {
-                var entry = selectedSummaries[i];
-                var timestamp = _weekToTimestamp(entry.week || 1);
+
+        // --- PreviousMemories：周总结历史 ---
+        lines.push('');
+        lines.push('<!-- <PreviousMemories> contains week-level summaries of past events. Use them as background context. -->');
+        lines.push('');
+        lines.push('<PreviousMemories>');
+        if (previousMemories && previousMemories.length > 0) {
+            for (var i = 0; i < previousMemories.length; i++) {
+                var pe = previousMemories[i];
+                // 去掉尾部内嵌的 [至X周的历史记录] 标记，以及头部时间戳（由渲染层统一控制格式）
+                var peText = (pe.summaryText || '').replace(/\n?\[至\d+周的历史记录\]\s*$/, '').trim();
                 lines.push('');
-                lines.push(timestamp);
-                if (entry.gameTime) {
-                    lines.push('[当天时间 ' + entry.gameTime + ']');
-                }
-                lines.push(entry.summaryText);
+                lines.push(peText);
             }
         }
+        lines.push('');
+        lines.push('</PreviousMemories>');
+
+        // --- RecalledMemories：向量语义召回 ---
+        if (recalledMemories && recalledMemories.length > 0) {
+            lines.push('');
+            lines.push('<!-- <RecalledMemories> contains older memories semantically relevant to the current action. Please read them for continuity. -->');
+            lines.push('');
+            lines.push('<RecalledMemories>');
+            for (var j = 0; j < recalledMemories.length; j++) {
+                var rm = recalledMemories[j];
+                lines.push('');
+                lines.push(_weekToTimestamp(rm.week || 1));
+                lines.push(rm.text);
+            }
+            lines.push('');
+            lines.push('</RecalledMemories>');
+        }
+
+        // --- RecentMemories：最近几周的 summaryHistory ---
+        lines.push('');
+        lines.push('<!-- <RecentMemories> contains recent turn-by-turn summaries. Use them to understand the current situation. -->');
+        lines.push('');
+        lines.push('<RecentMemories>');
+        if (recentSummaries && recentSummaries.length > 0) {
+            for (var k = 0; k < recentSummaries.length; k++) {
+                var rs = recentSummaries[k];
+                lines.push('');
+                lines.push(_weekToTimestamp(rs.week || 1));
+                if (rs.gameTime) {
+                    lines.push('[当天时间 ' + rs.gameTime + ']');
+                }
+                lines.push(rs.summaryText);
+            }
+        }
+        lines.push('');
+        lines.push('</RecentMemories>');
+
         lines.push('');
         lines.push('</HistorySummary>');
         return lines.join('\n');
@@ -157,7 +214,7 @@ var promptBuilder = (function() {
         parts.push('[Start a new Chat]');
         parts.push('');
 
-        // HistorySummary
+        // HistorySummary（含 PreviousMemories / RecalledMemories / RecentMemories 三段）
         parts.push(historySummaryBlock);
 
         return parts.join('\n');
@@ -238,13 +295,14 @@ var promptBuilder = (function() {
 
     /**
      * 构建 messages 数组（6 条消息结构），带 token 预算管理
-     * @param {object} params - { userMessage, gameData, summaryHistory, lastAssistantReply }
+     * @param {object} params - { userMessage, gameData, summaryHistory, weekHistory, lastAssistantReply, recalledMemories }
      * @returns {Array} messages 数组
      */
     function buildMessages(params) {
         var userMessage = params.userMessage;
         var gd = params.gameData || {};
         var summaryHistory = params.summaryHistory || [];
+        var weekHistory = params.weekHistory || [];
         var lastAssistantReply = params.lastAssistantReply || '';
 
         var playerName = gd.playerName || '主角';
@@ -258,8 +316,26 @@ var promptBuilder = (function() {
         var modelName = (apiService.getConfig().model || '').toLowerCase();
         var isDeepSeek = modelName.indexOf('deepseek') !== -1;
 
-        // --- 构建各条消息（先不含 HistorySummary，后续注入）---
-        var historySummaryPlaceholder = _buildHistorySummaryBlock([]);
+        // --- RecentMemories：summaryHistory 中 week >= (lastWeekHistory.markWeek - 1) ---
+        var recentSummaries = _selectRecentSummaries(summaryHistory, weekHistory);
+
+        // --- RecalledMemories：去重排除已在 RecentMemories 中的条目 ---
+        var rawRecalledMemories = params.recalledMemories || [];
+        var recentSummaryIds = {};
+        for (var ri = 0; ri < recentSummaries.length; ri++) {
+            recentSummaryIds[recentSummaries[ri].id] = true;
+        }
+        var recalledMemories = rawRecalledMemories.filter(function(item) {
+            return item && !recentSummaryIds[item.id];
+        });
+        if (rawRecalledMemories.length > 0 && recalledMemories.length === 0) {
+            console.log('[PromptBuilder] 召回结果与 RecentMemories 完全重叠，未注入 <RecalledMemories>');
+        } else if (rawRecalledMemories.length !== recalledMemories.length) {
+            console.log('[PromptBuilder] RecalledMemories 去重: ' + rawRecalledMemories.length + ' -> ' + recalledMemories.length);
+        }
+
+        // --- 构建各条消息（先用空 HistorySummary 占位，后续注入）---
+        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], []);
         var msg1Content = _buildMsg1System(variables, npcBlocks, historySummaryPlaceholder);
         var msg2Content = '[Start a new chat]';
         var msg3Content = _buildMsg3LatestReply(lastAssistantReply);
@@ -282,14 +358,21 @@ var promptBuilder = (function() {
                         + tokenUtils.estimate(msg6Content)
                         + 24; // 6 messages × ~4 tokens structure overhead
 
-        var summaryBudget = Math.max(0, totalAvailable - fixedTokens);
+        // 先扣除 RecentMemories + RecalledMemories 占用，剩余预算给 PreviousMemories
+        var recentAndRecalledBlock = _buildHistorySummaryBlock([], recentSummaries, recalledMemories);
+        var recentAndRecalledTokens = tokenUtils.estimate(recentAndRecalledBlock);
+        var previousBudget = Math.max(0, totalAvailable - fixedTokens - recentAndRecalledTokens);
 
-        // 在预算内从最新到最旧选取 summaryHistory 条目
-        var selectedSummaries = _selectSummariesWithinBudget(summaryHistory, summaryBudget);
+        // PreviousMemories：在预算内从最新到最旧截取 weekHistory
+        var selectedPrevious = _selectPreviousWithinBudget(weekHistory, previousBudget);
+        var droppedCount = weekHistory.length - selectedPrevious.length;
+        if (droppedCount > 0) {
+            console.log('[PromptBuilder] PreviousMemories: 预算不足，丢弃最旧 ' + droppedCount + ' 条 weekHistory');
+        }
 
-        // 用选中的条目构建 HistorySummary 块，替换 msg1 中的占位
-        var finalHistorySummary = _buildHistorySummaryBlock(selectedSummaries);
-        msg1Content = msg1Content.replace(historySummaryPlaceholder, finalHistorySummary);
+        // --- 构建最终 HistorySummary（含全三段）---
+        var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories);
+        msg1Content = _buildMsg1System(variables, npcBlocks, finalHistorySummary);
 
         // --- 组装 messages ---
         var messages = [
@@ -305,6 +388,9 @@ var promptBuilder = (function() {
         var actualTokens = tokenUtils.estimateMessages(messages);
         console.log('[PromptBuilder] 6-msg 结构 | NPC注入: ' + npcBlocks.length +
                     ' | 行动指导: ' + (actionGuide ? '是' : '否') +
+                    ' | RecentSummaries: ' + recentSummaries.length +
+                    ' | PreviousWeekHistory: ' + selectedPrevious.length + '/' + weekHistory.length +
+                    ' | RecalledMemories: ' + recalledMemories.length +
                     ' | Token估算: ' + actualTokens + '/' + totalAvailable);
 
         return messages;

@@ -867,6 +867,7 @@ const defaultGameData = {
     summary_Week: "",
     summary_Backup: "",
     newWeek: 0,
+    markWeek: 1,           // 新增：最近一次新周开始时的周数
     randomEvent: 0,       // 随机事件标记
     battleEvent: 0,       // 战斗事件标记
     companionNPC: [],     // 随行NPC数组

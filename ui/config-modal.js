@@ -67,6 +67,29 @@ function showConfigModal() {
         '<button id="api-test-btn" onclick="_doSendTest()" class="cfg-btn cfg-btn-green">📨 发送测试消息</button>' +
         '<div id="api-test-result" class="cfg-test-result"></div></div>' +
 
+        // ===== Embedding 配置（Phase 3）=====
+        '<hr style="margin:12px 0;border-color:rgba(255,255,255,0.15)">' +
+        '<div class="cfg-section-title" style="font-size:13px;font-weight:600;margin-bottom:8px">🔍 向量化记忆（可选）</div>' +
+        '<div class="cfg-field"><label class="cfg-label">启用向量召回</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer">' +
+        '<input type="checkbox" id="emb-enabled-input"' + (embeddingService && embeddingService.isEnabled() ? ' checked' : '') + '>' +
+        '<span style="font-size:12px;color:rgba(55,55,55,0.6)">启用后可召回语义相关的历史摘要</span></label></div>' +
+        '<div class="cfg-field"><label class="cfg-label">Embedding 地址</label>' +
+        '<input id="emb-endpoint-input" type="text" class="cfg-input" placeholder="https://api.siliconflow.cn/v1/embeddings" value="' +
+        _escapeHtml((embeddingService && embeddingService.getConfig().endpoint) || '') + '"></div>' +
+        '<div class="cfg-field"><label class="cfg-label">Embedding Key</label>' +
+        '<input id="emb-key-input" type="password" class="cfg-input" placeholder="独立 Key，不复用主 API Key" value="' +
+        _escapeHtml((embeddingService && embeddingService.getConfig().apiKey) || '') + '"></div>' +
+        '<div class="cfg-field"><label class="cfg-label">模型名称</label>' +
+        '<input id="emb-model-input" type="text" class="cfg-input" placeholder="BAAI/bge-m3" value="' +
+        _escapeHtml((embeddingService && embeddingService.getConfig().model) || 'BAAI/bge-m3') + '"></div>' +
+        '<div class="cfg-field">' +
+        '<button class="cfg-btn" onclick="_doEmbeddingTest()">🔌 测试连接</button>&nbsp;' +
+        '<button class="cfg-btn" onclick="_doRebuildEmbeddingIndex()">🔄 重建索引</button>' +
+        '<div id="emb-status" style="font-size:12px;margin-top:6px;color:rgba(255,255,255,0.6)"></div>' +
+        '<div id="emb-progress" style="font-size:12px;margin-top:4px;color:rgba(255,255,255,0.5)"></div>' +
+        '</div>' +
+
         // 安全提示
         '<div class="cfg-notice">⚠️ API Key 仅保存在浏览器本地，不会上传到任何服务器。请使用支持 CORS 的中转站或部署代理服务。</div>' +
 
@@ -129,6 +152,19 @@ function saveConfigAndClose() {
         return;
     }
     apiService.updateConfig(newConfig);
+    // Phase 3：保存 embedding 配置
+    if (typeof embeddingService !== 'undefined') {
+        var embEnabled = !!(document.getElementById('emb-enabled-input') && document.getElementById('emb-enabled-input').checked);
+        var embEndpoint = (document.getElementById('emb-endpoint-input') || {}).value || '';
+        var embKey = (document.getElementById('emb-key-input') || {}).value || '';
+        var embModel = (document.getElementById('emb-model-input') || {}).value || '';
+        embeddingService.updateConfig({
+            enabled: embEnabled,
+            endpoint: embEndpoint.trim(),
+            apiKey: embKey.trim(),
+            model: embModel.trim()
+        });
+    }
     closeConfigModal();
     if (typeof showModal === 'function') showModal('API 配置已保存！');
 }
@@ -237,4 +273,100 @@ async function _doSendTest() {
 function _escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ========== Phase 3: Embedding 辅助函数 ==========
+
+async function _doEmbeddingTest() {
+    var status = document.getElementById('emb-status');
+    if (!status) return;
+    status.textContent = '⏳ 测试中...';
+    status.style.color = 'rgba(255,255,255,0.6)';
+    try {
+        if (typeof embeddingService === 'undefined') {
+            status.textContent = '🔴 embeddingService 未加载';
+            status.style.color = '#f44336';
+            return;
+        }
+        // 临时用表单当前值测试
+        var tempCfg = {
+            enabled: true,
+            endpoint: (document.getElementById('emb-endpoint-input') || {}).value || '',
+            apiKey: (document.getElementById('emb-key-input') || {}).value || '',
+            model: (document.getElementById('emb-model-input') || {}).value || ''
+        };
+        var result = await embeddingService.testConnection(tempCfg);
+        if (result.ok) {
+            status.textContent = '🟢 连接成功！维度：' + (result.dims || '?');
+            status.style.color = '#4caf50';
+        } else {
+            status.textContent = '🔴 连接失败：' + (result.error || '未知错误');
+            status.style.color = '#f44336';
+        }
+    } catch (e) {
+        status.textContent = '🔴 测试异常：' + (e.message || e);
+        status.style.color = '#f44336';
+    }
+}
+
+async function _doRebuildEmbeddingIndex() {
+    var status = document.getElementById('emb-status');
+    var progress = document.getElementById('emb-progress');
+    if (!status || !progress) return;
+    if (typeof embeddingService === 'undefined' || typeof memoryRecall === 'undefined' || typeof summaryHistoryService === 'undefined') {
+        status.textContent = '🔴 相关服务未加载，无法重建';
+        status.style.color = '#f44336';
+        return;
+    }
+    status.textContent = '⏳ 重建中...';
+    status.style.color = 'rgba(255,255,255,0.6)';
+    progress.textContent = '';
+
+    var all = summaryHistoryService.getAll();
+    if (!all || all.length === 0) {
+        status.textContent = '📭 没有摘要记录，无需重建';
+        return;
+    }
+
+    // 找出还没有向量的条目
+    var stats = memoryRecall.getStats();
+    var cachedIds = {};
+    var cached = stats && stats.entries ? stats.entries : [];
+    for (var ci = 0; ci < cached.length; ci++) {
+        cachedIds[cached[ci].id] = true;
+    }
+    var todo = all.filter(function(s) { return !cachedIds[s.id]; });
+
+    if (todo.length === 0) {
+        status.textContent = '✅ 所有摘要已有向量，无需重建';
+        return;
+    }
+
+    var batchSize = 10;
+    var done = 0;
+    var fp = embeddingService.getFingerprint();
+
+    try {
+        for (var i = 0; i < todo.length; i += batchSize) {
+            var batch = todo.slice(i, i + batchSize);
+            var texts = batch.map(function(s) { return s.summaryText; });
+            progress.textContent = '进度：' + done + '/' + todo.length;
+            var vectors = await embeddingService.embed(texts);
+            for (var vi = 0; vi < batch.length; vi++) {
+                if (!vectors[vi]) continue;
+                var vec = new Float32Array(vectors[vi]);
+                var meta = { text: batch[vi].summaryText, week: batch[vi].week || 0, fingerprint: fp, createdAt: Date.now() };
+                storageService.saveEmbedding(batch[vi].id, vec, meta);
+                memoryRecall.addToCache({ id: batch[vi].id, vector: vec, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+            }
+            done += batch.length;
+        }
+        progress.textContent = '进度：' + done + '/' + todo.length;
+        status.textContent = '✅ 重建完成，共处理 ' + done + ' 条';
+        status.style.color = '#4caf50';
+    } catch (e) {
+        status.textContent = '🔴 重建失败：' + (e.message || e);
+        status.style.color = '#f44336';
+        progress.textContent = '已完成：' + done + '/' + todo.length;
+    }
 }
