@@ -294,6 +294,7 @@ function syncGameDataFromVariables() {
     gameData.triggeredEvents = triggeredEvents;    // 新增：已触发的特殊事件ID列表
     gameData.currentSpecialEvent = currentSpecialEvent;  // 新增：当前触发的特殊事件ID
     gameData.inputEnable = inputEnable;            // 新增：自由行动输入框可用状态
+    randIdx = Math.floor(Math.random() * 4) + 1;
 }
 
 function syncGameDatalastUserMessage() {

@@ -11,6 +11,7 @@ function showConfigModal() {
 
     var config = apiService.getConfig();
     // 内容区 HTML（与外层结构无关）
+    var _emb = (typeof embeddingService !== 'undefined') ? embeddingService : null;
     var innerHtml =
         '<h3 class="cfg-title">API 配置</h3>' +
         '<p class="cfg-hint">请输入您的 API 信息。支持 OpenAI 兼容格式与 Gemini API。密钥仅保存在浏览器本地。</p>' +
@@ -72,17 +73,17 @@ function showConfigModal() {
         '<div class="cfg-section-title" style="font-size:13px;font-weight:600;margin-bottom:8px">🔍 向量化记忆（可选）</div>' +
         '<div class="cfg-field"><label class="cfg-label">启用向量召回</label>' +
         '<label style="display:flex;align-items:center;gap:6px;cursor:pointer">' +
-        '<input type="checkbox" id="emb-enabled-input"' + (embeddingService && embeddingService.isEnabled() ? ' checked' : '') + '>' +
+        '<input type="checkbox" id="emb-enabled-input"' + (_emb && _emb.isEnabled() ? ' checked' : '') + '>' +
         '<span style="font-size:12px;color:rgba(55,55,55,0.6)">启用后可召回语义相关的历史摘要</span></label></div>' +
         '<div class="cfg-field"><label class="cfg-label">Embedding 地址</label>' +
         '<input id="emb-endpoint-input" type="text" class="cfg-input" placeholder="https://api.siliconflow.cn/v1/embeddings" value="' +
-        _escapeHtml((embeddingService && embeddingService.getConfig().endpoint) || '') + '"></div>' +
+        _escapeHtml((_emb && _emb.getConfig().endpoint) || '') + '"></div>' +
         '<div class="cfg-field"><label class="cfg-label">Embedding Key</label>' +
         '<input id="emb-key-input" type="password" class="cfg-input" placeholder="独立 Key，不复用主 API Key" value="' +
-        _escapeHtml((embeddingService && embeddingService.getConfig().apiKey) || '') + '"></div>' +
+        _escapeHtml((_emb && _emb.getConfig().apiKey) || '') + '"></div>' +
         '<div class="cfg-field"><label class="cfg-label">模型名称</label>' +
         '<input id="emb-model-input" type="text" class="cfg-input" placeholder="BAAI/bge-m3" value="' +
-        _escapeHtml((embeddingService && embeddingService.getConfig().model) || 'BAAI/bge-m3') + '"></div>' +
+        _escapeHtml((_emb && _emb.getConfig().model) || 'BAAI/bge-m3') + '"></div>' +
         '<div class="cfg-field">' +
         '<button class="cfg-btn" onclick="_doEmbeddingTest()">🔌 测试连接</button>&nbsp;' +
         '<button class="cfg-btn" onclick="_doRebuildEmbeddingIndex()">🔄 重建索引</button>' +
