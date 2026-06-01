@@ -398,6 +398,9 @@
                     </div>
                 </div>
 
+                <!-- BGM 播放器 -->
+                <audio id="bgm-player" loop preload="auto" style="display:none;"></audio>
+
                 <!-- 农场游戏iframe弹窗 -->
                 <div id="farm-modal" class="farm-modal">
                     <div class="farm-container">
@@ -448,6 +451,7 @@
                     <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容(关)</button>
                     <button class="dropdown-item" id="toggle-event-btn" onclick="toggleHaveEvent()">随机事件(开)</button>
                     <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
+                    <button class="dropdown-item" onclick="showMusicSettings()">音乐设置</button>
                     <!-- <button class="dropdown-item" onclick="showCheatMode()">金手指</button> -->
                     <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
                     <button class="dropdown-item" onclick="showConfigModal()">⚙ API 配置</button>
@@ -986,7 +990,8 @@
     
     <!-- UI 模块 -->
     <script src="ui/config-modal.js"></script>
-    
+    <script src="module/bgm-manager.js"></script>
+
     <script>
         // 记录原始渲染环境状态
         window._originalRenderer = {
@@ -3091,6 +3096,12 @@ function loadSaveSlot(saveId) {
     // 读档完成后恢复存档时的 lastTurnCommitted（老存档无此字段则默认 false）
     storageService.setLastTurnCommitted(typeof payload.lastTurnCommitted === 'boolean' ? payload.lastTurnCommitted : false);
     closeSaveListModal();
+    // 读档后恢复 BGM（bgmEnabled/bgmVolume 已从 gameData 恢复，重新 init 同步状态）
+    if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
+        bgmManager.init(document.getElementById('bgm-player'));
+        if (gameData.bgmName) bgmManager.resume(gameData.bgmName);
+        else bgmManager.stop();
+    }
     showModal('存档加载成功！');
     // 持久化存档恢复后的状态到 localStorage
     storageService.saveAppState({ gameData: gameData });
@@ -3252,6 +3263,12 @@ function importSave() {
             }
             // 导入完成后恢复存档时的 lastTurnCommitted（老存档无此字段则默认 false）
             storageService.setLastTurnCommitted(typeof payload.lastTurnCommitted === 'boolean' ? payload.lastTurnCommitted : false);
+            // 导入存档后恢复 BGM
+            if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
+                bgmManager.init(document.getElementById('bgm-player'));
+                if (gameData.bgmName) bgmManager.resume(gameData.bgmName);
+                else bgmManager.stop();
+            }
             showModal('存档导入成功！');
             // 持久化存档恢复后的状态到 localStorage
             storageService.saveAppState({ gameData: gameData });
@@ -4704,6 +4721,14 @@ function buildSaveName() {
             // 初始化时更新自由行动输入框状态
             updateFreeActionInputState();
 
+            // 初始化 BGM 管理器（从 gameData 读取 bgmEnabled/bgmVolume）
+            if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
+                bgmManager.init(document.getElementById('bgm-player'));
+                if (gameData.bgmName) {
+                    bgmManager.resume(gameData.bgmName);
+                }
+            }
+
             // 独立模式：显示"返回主菜单"按钮
             if (isStandalone) {
                 var btnReturnMenu = document.getElementById('btn-return-menu');
@@ -4742,6 +4767,9 @@ function buildSaveName() {
             if (e.target === this) {
                 if (confirm('确定要退出战斗吗？')) {
                     this.style.display = 'none';
+                    if (typeof bgmManager !== 'undefined' && typeof bgmManager.onBattleEnd === 'function') {
+                        bgmManager.onBattleEnd();
+                    }
                     document.getElementById('battle-iframe').src = '';
                     
                     if (currentBattleType === 'event') {
@@ -5036,6 +5064,90 @@ function buildSaveName() {
                 return ret;
             };
         })();
+
+        // ── 音乐设置弹窗 ────────────────────────────────────────
+        function showMusicSettings() {
+            toggleDropdown('system-dropdown');
+            var modal = document.getElementById('music-modal');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'music-modal';
+                modal.className = 'modal viewport-overlay';
+                modal.style.display = 'none';
+                modal.innerHTML = '<div class="modal-content" style="max-width:400px;">'
+                    + '<h3>音乐设置</h3>'
+                    + '<div style="display:flex;align-items:center;gap:12px;margin:16px 0 8px;">'
+                    +   '<label for="bgm-enable-toggle" style="min-width:60px;">背景音乐</label>'
+                    +   '<input type="checkbox" id="bgm-enable-toggle" style="width:18px;height:18px;cursor:pointer;">'
+                    +   '<span id="bgm-enable-label">开启</span>'
+                    + '</div>'
+                    + '<div style="margin:16px 0 8px;">'
+                    +   '<div style="display:flex;justify-content:space-between;margin-bottom:6px;">'
+                    +     '<label>音量</label>'
+                    +     '<span id="bgm-volume-display">50%</span>'
+                    +   '</div>'
+                    +   '<input type="range" id="bgm-volume-range" min="0" max="100" step="1" value="50" style="width:100%;">'
+                    + '</div>'
+                    + '<div class="modal-buttons">'
+                    +   '<button class="modal-btn cancel" onclick="closeMusicModal()">关闭</button>'
+                    + '</div>'
+                    + '</div>';
+                document.body.appendChild(modal);
+                if (!document.getElementById('bgm-range-style')) {
+                    var _bs = document.createElement('style');
+                    _bs.id = 'bgm-range-style';
+                    _bs.textContent = '\n#music-modal input[type="range"]{ -webkit-appearance: none; width:100%; background: transparent; }\n#music-modal input[type="range"]:focus{ outline: none; }\n#music-modal input[type="range"]::-webkit-slider-runnable-track{ height: 6px; background: #6b6b6b; border-radius: 4px; }\n#music-modal input[type="range"]::-webkit-slider-thumb{ -webkit-appearance: none; width: 16px; height:16px; border-radius:50%; background:#bfbfbf; border:1px solid #eaeaea; margin-top: -5px; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }\n#music-modal input[type="range"]::-moz-range-track{ height:6px; background:#6b6b6b; border-radius:4px; }\n#music-modal input[type="range"]::-moz-range-thumb{ width:16px; height:16px; border-radius:50%; background:#bfbfbf; border:1px solid #eaeaea; box-shadow: 0 1px 2px rgba(0,0,0,0.3); }\n';
+                    document.head.appendChild(_bs);
+                }
+            }
+            var enabled = (typeof bgmManager !== 'undefined') ? bgmManager.getEnabled() : true;
+            var vol     = (typeof bgmManager !== 'undefined') ? bgmManager.getVolume()  : 0.5;
+            document.getElementById('bgm-enable-toggle').checked = enabled;
+            document.getElementById('bgm-volume-range').value    = Math.round(vol * 100);
+            _syncMusicModalLabels();
+            modal.style.display = 'block';
+            try {
+                requestAnimationFrame(function () {
+                    if (typeof fitModalToViewport === 'function') fitModalToViewport(modal);
+                    if (typeof bindModalAutoFit   === 'function') bindModalAutoFit(modal);
+                });
+            } catch (e) {}
+            var toggle = document.getElementById('bgm-enable-toggle');
+            var slider = document.getElementById('bgm-volume-range');
+            if (!toggle._bound) {
+                toggle.addEventListener('change', _onBgmEnableChange);
+                slider.addEventListener('input',  _onBgmVolumeChange);
+                toggle._bound = true;
+            }
+        }
+
+        function closeMusicModal() {
+            var modal = document.getElementById('music-modal');
+            if (modal) { modal.style.display = 'none'; if (modal._unbindFit) modal._unbindFit(); }
+        }
+
+        function _syncMusicModalLabels() {
+            var toggle  = document.getElementById('bgm-enable-toggle');
+            var slider  = document.getElementById('bgm-volume-range');
+            var label   = document.getElementById('bgm-enable-label');
+            var display = document.getElementById('bgm-volume-display');
+            if (!toggle || !slider) return;
+            var enabled = toggle.checked;
+            if (label)   label.textContent   = enabled ? '开启' : '关闭';
+            if (display) display.textContent = slider.value + '%';
+            slider.disabled = !enabled;
+        }
+
+        function _onBgmEnableChange(e) {
+            if (typeof bgmManager !== 'undefined') bgmManager.setEnabled(e.target.checked);
+            _syncMusicModalLabels();
+        }
+
+        function _onBgmVolumeChange(e) {
+            var val = parseInt(e.target.value, 10) / 100;
+            if (typeof bgmManager !== 'undefined') bgmManager.setVolume(val);
+            _syncMusicModalLabels();
+        }
 
         // 字体设置弹窗
         function showFontSettings(){

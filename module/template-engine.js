@@ -28,7 +28,6 @@ var templateEngine = (function() {
                 if (typeof value === 'object') return JSON.stringify(value);
                 return String(value);
             }
-            if (defaultValue !== undefined) return defaultValue.trim();
             return undefinedBehavior === 'empty' ? '' : match;
         });
     }
@@ -77,11 +76,13 @@ var templateEngine = (function() {
                     break;
                 }
 
-                // 标签前的文本
+                // 标签前的文本（纯空白不输出，避免控制行的缩进污染输出）
                 if (tagStart > idx) {
                     var _textBefore = line.substring(idx, tagStart);
-                    parts.push('__out += "' + escapeStr(_textBefore) + '";');
-                    if (_textBefore.trim().length > 0) hasTextOutput = true;
+                    if (_textBefore.trim().length > 0) {
+                        parts.push('__out += "' + escapeStr(_textBefore) + '";');
+                        hasTextOutput = true;
+                    }
                 }
 
                 // 找标签结尾
@@ -158,10 +159,10 @@ var templateEngine = (function() {
         try {
             var compiledFn = compileEJSLite(template);
             var ejsOutput = compiledFn(context);
-            return renderTemplate(ejsOutput, context, 'empty');
+            return renderTemplate(ejsOutput, context, 'keep');
         } catch (e) {
             console.error('renderPromptTemplate error:', e.message);
-            return renderTemplate(template, context, 'empty');
+            return renderTemplate(template, context, 'keep');
         }
     }
 

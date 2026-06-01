@@ -304,6 +304,10 @@ function showBattleGame(battleData) {
     iframe.src = gameUrl;
     
     modal.style.display = 'block';
+    // 战斗开始：切换战斗BGM（SR 链路因 bgmManager 未定义而自动跳过）
+    if (typeof bgmManager !== 'undefined' && typeof bgmManager.onBattleStart === 'function') {
+        bgmManager.onBattleStart();
+    }
 }
 
 // 显示农场游戏

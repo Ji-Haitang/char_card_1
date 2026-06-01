@@ -584,22 +584,63 @@ var pipeline = (function() {
                         }
                         var newSummaries = allAfter.filter(function(s) { return !cachedIds[s.id]; });
                         if (newSummaries.length === 0) return;
-                        var texts = newSummaries.map(function(s) { return s.summaryText; });
-                        var vectors = await embeddingService.embed(texts);
+
+                        // ── Batch 1：摘要向量（60%）──
+                        var summaryTexts = newSummaries.map(function(s) { return s.summaryText; });
+                        var summaryVectors = await embeddingService.embed(summaryTexts);
+
+                        // ── Batch 2：对应 AI 回复原文向量（40%）──
+                        // 取 uiConversation 中倒数 newSummaries.length 条 assistant 消息与之对齐
+                        var _uiHist = storageService.loadUIConversation();
+                        var _assistMsgs = _uiHist.filter(function(m) { return m.role === 'assistant'; });
+                        var _aStart = Math.max(0, _assistMsgs.length - newSummaries.length);
+                        var replyTexts = [];
+                        for (var _ri = 0; _ri < newSummaries.length; _ri++) {
+                            var _ai = _aStart + _ri;
+                            replyTexts.push(_ai < _assistMsgs.length ? (_assistMsgs[_ai].content || '') : '');
+                        }
+                        var replyVectors = await embeddingService.embed(replyTexts.map(function(t) { return t || ' '; }));
+
                         var fp = embeddingService.getFingerprint();
+                        var _lastNewEmb = null;
                         for (var vi = 0; vi < newSummaries.length; vi++) {
-                            if (!vectors[vi]) continue;
-                            var vec = new Float32Array(vectors[vi]);
+                            if (!summaryVectors[vi]) continue;
+                            var _sv = summaryVectors[vi];
+                            var _rv = (replyVectors && replyVectors[vi] && replyVectors[vi].length === _sv.length) ? replyVectors[vi] : null;
+
+                            // 加权合并 60% 摘要 + 40% 原文，再 L2 归一化
+                            var combined = new Float32Array(_sv.length);
+                            if (_rv) {
+                                for (var _di = 0; _di < _sv.length; _di++) {
+                                    combined[_di] = 0.6 * _sv[_di] + 0.4 * _rv[_di];
+                                }
+                                var _norm = 0;
+                                for (var _di2 = 0; _di2 < combined.length; _di2++) { _norm += combined[_di2] * combined[_di2]; }
+                                _norm = Math.sqrt(_norm);
+                                if (_norm > 0) { for (var _di3 = 0; _di3 < combined.length; _di3++) { combined[_di3] /= _norm; } }
+                            } else {
+                                // 回退：仅用摘要向量
+                                combined = new Float32Array(_sv);
+                            }
+
                             var meta = {
                                 text: newSummaries[vi].summaryText,
                                 week: newSummaries[vi].week || 0,
                                 fingerprint: fp,
                                 createdAt: Date.now()
                             };
-                            storageService.saveEmbedding(newSummaries[vi].id, vec, meta);
-                            memoryRecall.addToCache({ id: newSummaries[vi].id, vector: vec, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+                            storageService.saveEmbedding(newSummaries[vi].id, combined, meta);
+                            memoryRecall.addToCache({ id: newSummaries[vi].id, vector: combined, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+                            _lastNewEmb = { id: newSummaries[vi].id, summaryText: newSummaries[vi].summaryText, replyText: replyTexts[vi] || '' };
                         }
                         console.log('[Pipeline] 已保存 ' + newSummaries.length + ' 条新 embedding');
+                        if (_lastNewEmb) {
+                            console.groupCollapsed('[Pipeline] 最新 embedding 详情（展开查看）');
+                            console.log('id: ' + _lastNewEmb.id);
+                            console.log('摘要文本（60%）: ' + _lastNewEmb.summaryText);
+                            console.log('AI回复原文（40%）: ' + (_lastNewEmb.replyText.length > 500 ? _lastNewEmb.replyText.slice(0, 500) + '...' : _lastNewEmb.replyText));
+                            console.groupEnd();
+                        }
                     } catch (embErr) {
                         console.warn('[Pipeline] embedding 存储失败:', embErr && embErr.message || embErr);
                         if (typeof embeddingService !== 'undefined' && embeddingService.canNotifyStoreFail()) {

@@ -672,6 +672,13 @@ function parseLLMResponse(response, mainTextContent) {
     
     checkAllValueRanges();
     updateAllDisplays();
+
+    // === BGM 更新（仅独立前端有效，SR 链路因 bgmManager 未定义而自动跳过）===
+    if (typeof bgmManager !== 'undefined' && typeof bgmManager.updateByTone === 'function') {
+        var _toneData = (response && response['剧情基调']) ? response['剧情基调'] : null;
+        var _mapLoc = (typeof mapLocation !== 'undefined') ? mapLocation : (gameData ? gameData.mapLocation : '天山派');
+        bgmManager.updateByTone(_toneData, _mapLoc);
+    }
 }
 
 // 监听iframe消息
@@ -695,6 +702,10 @@ function setupMessageListeners() {
             showModal(message);
         }
         else if (event.data.type === 'battle-exit') {
+            // 战斗结束：恢复战斗前的BGM（SR 链路因 bgmManager 未定义而自动跳过）
+            if (typeof bgmManager !== 'undefined' && typeof bgmManager.onBattleEnd === 'function') {
+                bgmManager.onBattleEnd();
+            }
             document.getElementById('battle-modal').style.display = 'none';
             document.getElementById('battle-iframe').src = '';
             
