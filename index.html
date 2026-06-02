@@ -983,6 +983,7 @@
     <script src="module/summary-runner.js"></script>
     <script src="module/embedding-service.js"></script>
     <script src="module/idb-storage.js"></script>
+    <script src="module/idb-snapshot.js"></script>
     <script src="module/storage-service.js"></script>
     <script src="module/sync-utils.js"></script>
     <script src="module/memory-recall.js"></script>
@@ -1471,9 +1472,8 @@ const outPut = `
                 if (typeof hydrateVariableSystemFromGameData === 'function') hydrateVariableSystemFromGameData(gameData);
                 if (typeof storageService !== 'undefined') {
                     try { storageService.saveAppState({ gameData: gameData }); } catch(_){}
-                    // 开场白摘要已作为 special_event 写入 summaryHistory，标记为已提交
-                    // 使 updateFreeActionInputState 能正确检测并禁用重生成按钮
-                    storageService.setLastTurnCommitted(true);
+                    // 开场白摘要已作为 special_event 写入 summaryHistory
+                    // 开场白后无快照，重生成按钮应被禁用（updateFreeActionInputState 控制）
                 }
                 console.log('[applyParsedInit] 同步完成, gameData.summary_Small:', (gameData.summary_Small || '').substring(0, 80));
             }
@@ -3002,12 +3002,8 @@ function loadSaveSlot(saveId) {
     }
     var uiConv = payload.uiConversation || [];
     storageService.replaceUIConversation(uiConv);
-    // 恢复快照（用于重生成回退）
-    if (payload.snapshot) {
-        storageService.saveSnapshot(payload.snapshot);
-    } else {
-        storageService.clearSnapshot();
-    }
+    // 加载存档时清空快照（存档间快照不共享，重生成需重新发送一次消息）
+    storageService.clearSnapshot();
     // Phase 3：切换 embedding 数据，避免不同存档的向量污染
     if (typeof storageService.clearEmbeddings === 'function') {
         storageService.clearEmbeddings();
@@ -3093,8 +3089,6 @@ function loadSaveSlot(saveId) {
         renderMainText(currentStoryText);
     }
     updateFreeActionInputState();
-    // 读档完成后恢复存档时的 lastTurnCommitted（老存档无此字段则默认 false）
-    storageService.setLastTurnCommitted(typeof payload.lastTurnCommitted === 'boolean' ? payload.lastTurnCommitted : false);
     closeSaveListModal();
     // 读档后恢复 BGM（bgmEnabled/bgmVolume 已从 gameData 恢复，重新 init 同步状态）
     if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
@@ -3161,11 +3155,8 @@ function importSave() {
             var uiConv = payload.uiConversation || [];
             storageService.replaceUIConversation(uiConv);
             // 恢复快照（用于重生成回退）
-            if (payload.snapshot) {
-                storageService.saveSnapshot(payload.snapshot);
-            } else {
-                storageService.clearSnapshot();
-            }
+            // 导入存档时清空快照（存档间快照不共享）
+            storageService.clearSnapshot();
             // Phase 3：切换 embedding 数据，避免不同存档的向量污染
             if (typeof storageService.clearEmbeddings === 'function') {
                 storageService.clearEmbeddings();
@@ -3261,8 +3252,7 @@ function importSave() {
             } else if (typeof storageService.clearSummaryBuff === 'function') {
                 storageService.clearSummaryBuff();
             }
-            // 导入完成后恢复存档时的 lastTurnCommitted（老存档无此字段则默认 false）
-            storageService.setLastTurnCommitted(typeof payload.lastTurnCommitted === 'boolean' ? payload.lastTurnCommitted : false);
+            // 导入完成，快照已在前面清空
             // 导入存档后恢复 BGM
             if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
                 bgmManager.init(document.getElementById('bgm-player'));
@@ -4247,12 +4237,7 @@ function buildSaveName() {
                 showModal('没有可重新生成的操作');
                 return;
             }
-            var snapshot = storageService.loadSnapshot();
-            if (!snapshot) {
-                showModal('快照数据损坏，无法重新生成');
-                return;
-            }
-            var currentMsg = snapshot.lastUserMessage || lastUserMessage || '';
+            var currentMsg = storageService.getSnapshotLastUserMessage() || lastUserMessage || '';
             _showRegenerateEditModal(currentMsg);
         }
 
@@ -4288,74 +4273,26 @@ function buildSaveName() {
                 return;
             }
 
-            var snapshot = storageService.loadSnapshot();
-            if (!snapshot) {
+            if (!storageService.hasSnapshot()) {
                 showModal('快照数据损坏，无法重新生成');
                 return;
             }
 
             // 用编辑后的消息覆盖快照和内存变量
-            snapshot.lastUserMessage = editedMsg;
-            storageService.saveSnapshot(snapshot);
+            storageService.updateSnapshotLastUserMessage(editedMsg);
             lastUserMessage = editedMsg;
 
-            // 从快照恢复游戏状态
-            gameData = mergeWithDefaults(snapshot, defaultGameData);
-            syncVariablesFromGameData();
+            // 取消正在飞行的周总结请求（防止旧结果覆盖还原后的 weekHistory）
+            var _runningSummary = typeof summaryRunner !== 'undefined' && summaryRunner.isRunning();
+            console.log('[Regenerate] 点击重生成 | summaryRunner.isRunning=' + _runningSummary + ' | msg=' + editedMsg.substring(0, 40));
+            if (_runningSummary) summaryRunner.cancel();
 
-            // 只有上一轮真正提交成功，才回滚上一条摘要和 AI 正文
-            if (storageService.didLastTurnCommit()) {
-                // 判断上一轮摘要写入了 summaryHistory 还是 weekHistory：
-                // 比较两者最后一条记录的 createdAt，哪个更新就回退哪个
-                var _allSummary = summaryHistoryService.getAll();
-                var _allWeek = (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [];
-                var _lastSummaryEntry = _allSummary.length > 0 ? _allSummary[_allSummary.length - 1] : null;
-                var _lastWeekEntry = _allWeek.length > 0 ? _allWeek[_allWeek.length - 1] : null;
-
-                var _popFromWeek = _lastWeekEntry && (
-                    !_lastSummaryEntry || _lastWeekEntry.createdAt > _lastSummaryEntry.createdAt
-                );
-
-                if (_popFromWeek) {
-                    // 上一轮是新周（newWeek=1），摘要在 weekHistory
-                    var _weekSource = _lastWeekEntry ? _lastWeekEntry.source : 'runTurn';
-                    if (_weekSource === 'runSummary') {
-                        // 场景B：runSummary 已完成，保留最终版本，仅回退 UI 正文
-                        console.log('[Regenerate] 上一轮为新周摘要（runSummary 最终版），保留 weekHistory，仅回退 UI');
-                        storageService.popLastAssistantUI();
-                    } else {
-                        // 场景C：runTurn 初版，完整回退
-                        console.log('[Regenerate] 上一轮为新周摘要（runTurn 初版），回退 weekHistory + UI + markWeekUiIndex');
-                        weekHistoryService.popLast();
-                        storageService.popLastAssistantUI();
-                        // 从 summaryBuff.prevMarkWeekUiIndex 恢复 markWeekUiIndex
-                        var _buff = storageService.getSummaryBuff ? storageService.getSummaryBuff() : null;
-                        if (_buff && typeof _buff.prevMarkWeekUiIndex === 'number' && storageService.setMarkWeekUiIndex) {
-                            storageService.setMarkWeekUiIndex(_buff.prevMarkWeekUiIndex);
-                            console.log('[Regenerate] markWeekUiIndex 已恢复为', _buff.prevMarkWeekUiIndex);
-                        }
-                    }
-                    // 无论哪种场景，清空 summaryBuff
-                    if (storageService.clearSummaryBuff) {
-                        storageService.clearSummaryBuff();
-                        console.log('[Regenerate] summaryBuff 已清空');
-                    }
-                } else {
-                    // 上一轮是普通轮，摘要在 summaryHistory
-                    var _poppedSummaryId = _lastSummaryEntry ? _lastSummaryEntry.id : null;
-                    summaryHistoryService.popLast();
-                    storageService.popLastAssistantUI();
-                    if (_poppedSummaryId) {
-                        if (typeof storageService.deleteEmbedding === 'function') {
-                            storageService.deleteEmbedding(_poppedSummaryId);
-                        }
-                        if (typeof memoryRecall !== 'undefined' && typeof memoryRecall.removeFromCache === 'function') {
-                            memoryRecall.removeFromCache(_poppedSummaryId);
-                        }
-                    }
-                }
-            } else {
-                console.log('[Regenerate] 上一次请求未提交成功，保留现有摘要历史与 UI 正文');
+            // 从全量快照还原所有字段
+            var ok = storageService.restoreFromSnapshot();
+            console.log('[Regenerate] restoreFromSnapshot 结果=' + ok);
+            if (!ok) {
+                showModal('快照数据损坏，无法重新生成');
+                return;
             }
 
             if (typeof updateAllDisplays === 'function') updateAllDisplays();
@@ -4367,14 +4304,11 @@ function buildSaveName() {
             }
             if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
             storageService.saveAppState({ gameData: gameData });
-
-            storageService.setLastTurnCommitted(false);
             console.log('[Regenerate] 使用编辑后消息重新发起请求:', editedMsg.substring(0, 50));
             pipeline.runTurn(editedMsg, { isRegenerate: true }).catch(function(e) {
                 console.error('[Regenerate] 重新生成失败:', e);
             });
         }
-
         // 根据inputEnable控制自由行动输入框、发送按钮、跳过一周按钮和返回天山派按钮
         function updateFreeActionInputState() {
             const inputElement = document.getElementById('free-action-input');
@@ -4429,14 +4363,14 @@ function buildSaveName() {
                     sendButton.style.cursor = '';
                 }
                 if (regenerateBtn) {
-                    // 即使 inputEnable=1，若最新summaryHistory为special_event且已提交，也禁用重生成
-                    // （避免回滚掉固定预写的特殊剧情摘要）
+                    // 即使 inputEnable=1，若最新summaryHistory为special_event，或无快照，也禁用重生成
+                    // （避免回滚掉固定预写的特殊剧情摘要；无快照时重生成无意义）
                     var _latestSummary = (typeof summaryHistoryService !== 'undefined')
                         ? summaryHistoryService.getAll() : [];
                     var _latestIsSpecial = _latestSummary.length > 0
                         && _latestSummary[_latestSummary.length - 1].source === 'special_event';
-                    var _committed = (typeof storageService !== 'undefined') && storageService.didLastTurnCommit();
-                    var _blockRegen = _latestIsSpecial && _committed;
+                    var _hasSnap = (typeof storageService !== 'undefined') && storageService.hasSnapshot();
+                    var _blockRegen = _latestIsSpecial || !_hasSnap;
                     regenerateBtn.disabled = _blockRegen;
                     regenerateBtn.style.opacity = _blockRegen ? '0.5' : '1';
                     regenerateBtn.style.cursor = _blockRegen ? 'not-allowed' : '';
@@ -4505,6 +4439,10 @@ function buildSaveName() {
                     // ★ 先重置为干净默认值，避免上一局数据残留
                     gameData = structuredClone(defaultGameData);
                     syncVariablesFromGameData();
+                    // 新游戏时清空快照
+                    if (typeof storageService !== 'undefined' && typeof storageService.clearSnapshot === 'function') {
+                        storageService.clearSnapshot();
+                    }
                     // Phase 3：新游戏时清空 embedding 数据
                     if (typeof storageService !== 'undefined' && typeof storageService.clearEmbeddings === 'function') {
                         storageService.clearEmbeddings();
@@ -4563,12 +4501,8 @@ function buildSaveName() {
                         if (savePayload.uiConversation) {
                             storageService.replaceUIConversation(savePayload.uiConversation);
                         }
-                        // 恢复快照（用于重生成回退）
-                        if (savePayload.snapshot) {
-                            storageService.saveSnapshot(savePayload.snapshot);
-                        } else {
-                            storageService.clearSnapshot();
-                        }
+                        // 恢复快照（用于重生成回退）——加载存档时快照应被清空
+                        storageService.clearSnapshot();
                         // Phase 3：切换 embedding 数据，避免不同存档的向量污染
                         if (typeof storageService.clearEmbeddings === 'function') {
                             storageService.clearEmbeddings();

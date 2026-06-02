@@ -156,18 +156,15 @@ async function handleMessageOutput(message) {
             // 保存用户消息，供重新生成时复用
             lastUserMessage = message;
 
-            // 发送时第一阶段：全量同步 + 快照 + 持久化
-            storageService.setLastTurnCommitted(false);
+            // 发送时第一阶段：全量同步 + 全量快照（await确保落盘后再发请求）+ 持久化
             syncGameDataFromVariables();
-            storageService.saveSnapshot(structuredClone(gameData));
+            await storageService.saveFullSnapshot();
             storageService.saveAppState({ gameData: gameData });
-            console.log('[Standalone] 已在发起 API 请求前更新快照');
+            console.log('[Standalone] 全量快照已落盘，发起 API 请求');
 
-            setTimeout(async function() {
-                try {
-                    await pipeline.runTurn(message);
-                } catch (e) {}
-            }, 500);
+            try {
+                await pipeline.runTurn(message);
+            } catch (e) {}
             return;
         }
         const message_notST = `非酒馆环境以弹窗显示<br>` + unprocessed_message;

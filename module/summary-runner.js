@@ -12,6 +12,7 @@ var summaryRunner = (function() {
 
     var _running = false;
     var _retryDelay = 5000;
+    var _abortController = null; // 当前飞行中的 LLM 请求取消句柄
 
     // =========================================================================
     // System Prompt
@@ -56,6 +57,8 @@ var summaryRunner = (function() {
 
     async function runSummary(buff) {
         _running = true;
+        _abortController = new AbortController();
+        var _signal = _abortController.signal;
         console.log('[SummaryRunner] ▶ runSummary 开始, targetMarkWeek=' + buff.targetMarkWeek + ', turnCount=' + (buff.turnCount || '?') + ', chars=' + (buff.text ? buff.text.length : 0));
 
         try {
@@ -66,6 +69,7 @@ var summaryRunner = (function() {
                 storageService.clearSummaryBuff();
                 console.log('[SummaryRunner] 已存在 runSummary 条目, markWeek=' + buff.targetMarkWeek + ', 清空 buff 并退出');
                 _running = false;
+                _abortController = null;
                 return;
             }
 
@@ -94,8 +98,17 @@ var summaryRunner = (function() {
             console.log('[SummaryRunner] User Prompt (' + userPrompt.length + ' chars):\n' + userPrompt);
             console.groupEnd();
 
-            // 调用 API
-            var apiResult = await apiService.sendMessages(messages);
+            // 调用 API（传入中断信号，点击重生成时可即时取消）
+            var apiResult = await apiService.sendMessages(messages, { signal: _signal });
+
+            // LLM 返回后再次确认未被取消（防止在返回前极短时间内点击重生成）
+            if (_signal.aborted) {
+                console.log('[SummaryRunner] runSummary 已被取消（LLM 返回后检测），放弃写入 markWeek=' + buff.targetMarkWeek);
+                _running = false;
+                _abortController = null;
+                return;
+            }
+
             var result = apiResult && apiResult.content ? apiResult.content : '';
 
             // ── 完整打印回复 ──
@@ -131,6 +144,13 @@ var summaryRunner = (function() {
             }
 
         } catch (e) {
+            _abortController = null;
+            // 若是被主动取消（点击重生成），不重试，直接退出
+            if (e.name === 'AbortError' || (_signal && _signal.aborted)) {
+                console.log('[SummaryRunner] runSummary 已被主动取消，不重试 markWeek=' + buff.targetMarkWeek);
+                _running = false;
+                return;
+            }
             console.warn('[SummaryRunner] ✗ 总结失败，' + _retryDelay + 'ms 后重试:', e.message);
             setTimeout(function() {
                 _running = false;
@@ -140,13 +160,30 @@ var summaryRunner = (function() {
         }
 
         _running = false;
+        _abortController = null;
         // 检查在本次运行期间是否有新 buff 写入（如连续多周）
         scheduleSummary();
+    }
+
+    /**
+     * 取消正在进行的 runSummary 请求（重生成时调用）
+     * 中止飞行中的 LLM 请求，防止旧结果写入已还原的 weekHistory
+     */
+    function cancel() {
+        if (_abortController) {
+            _abortController.abort();
+            _abortController = null;
+            console.log('[SummaryRunner] cancel() 已中止飞行中的 LLM 请求，_running → false');
+        } else {
+            console.log('[SummaryRunner] cancel() 调用时无飞行中的请求（_abortController=null），仅重置 _running');
+        }
+        _running = false;
     }
 
     return {
         scheduleSummary: scheduleSummary,
         resumeOnLoad: resumeOnLoad,
-        isRunning: isRunning
+        isRunning: isRunning,
+        cancel: cancel
     };
 })();

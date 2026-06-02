@@ -78,9 +78,6 @@ var pipeline = (function() {
         options = options || {};
         var isRegenerate = options.isRegenerate || false;
 
-        // 每次进入新一轮时，先将提交标记置为 false
-        storageService.setLastTurnCommitted(false);
-
         // === 请求阶段（无副作用，失败可安全重试）===
         var preprocessed = _preprocessMessage(message);
 
@@ -283,7 +280,7 @@ var pipeline = (function() {
         }
 
         // === 提交阶段（有副作用，按顺序可控）===
-        _commitResponse(preprocessed, rawText, isRegenerate);
+        await _commitResponse(preprocessed, rawText, isRegenerate);
     }
 
     /**
@@ -401,9 +398,7 @@ var pipeline = (function() {
     /**
      * 提交阶段（阶段 B）
      */
-    function _commitResponse(preprocessed, rawText, isRegenerate) {
-        var uiConversationBeforeCommit = storageService.loadUIConversation().slice();
-        var summaryHistoryBeforeCommit = summaryHistoryService.getAll().slice();
+    async function _commitResponse(preprocessed, rawText, isRegenerate) {
         try {
             // 1. 写入用户消息到 UI 历史
             if (isRegenerate) {
@@ -422,13 +417,14 @@ var pipeline = (function() {
                     storageService.replaceUIConversation(_uiHist);
                 } else {
                     // 兜底：找不到上一条 user 则正常 append
-                    storageService.appendUIConversation({ id: 'u' + Date.now(), role: 'user', content: preprocessed, createdAt: Date.now() });
+                    storageService.appendUIConversation({ id: 'u' + Date.now(), role: 'user', content: preprocessed, week: currentWeek, createdAt: Date.now() });
                 }
             } else {
                 storageService.appendUIConversation({
                     id: 'u' + Date.now(),
                     role: 'user',
                     content: preprocessed,
+                    week: currentWeek,
                     createdAt: Date.now()
                 });
             }
@@ -516,7 +512,16 @@ var pipeline = (function() {
                         var _buffSlice = _uiConvNow.slice(_oldIdx).filter(function(m) { return m.role === 'assistant'; });
                         var _turnCount = _buffSlice.length;
                         var _buffText = _buffSlice.map(function(m, i) {
-                            return '[第' + (i + 1) + '轮]\n' + m.content;
+                            var _weekLine = '';
+                            if (m.week) {
+                                var _w = m.week;
+                                var _wy = Math.floor((_w - 1) / 48) + 1;
+                                var _wr = (_w - 1) % 48;
+                                var _wm = Math.floor(_wr / 4) + 1;
+                                var _wk = _wr % 4 + 1;
+                                _weekLine = '\n[第' + _wy + '年第' + _wm + '月第' + _wk + '周]';
+                            }
+                            return '[第' + (i + 1) + '轮]' + _weekLine + '\n' + m.content;
                         }).join('\n\n');
 
                         // ⑪ 持久化 summaryBuff
@@ -550,11 +555,11 @@ var pipeline = (function() {
                     id: 'a' + Date.now(),
                     role: 'assistant',
                     content: parsed.mainText,
+                    week: currentWeek,
                     createdAt: Date.now()
                 });
 
-                // 摘要 + 正文均已写入，标记本轮已提交
-                storageService.setLastTurnCommitted(true);
+                // 摘要 + 正文均已写入，本轮提交完成
 
                 // ⑰ newWeek=1 时，异步触发周总结优化（在本轮 commit 完成后）
                 if (newWeek === 1 && typeof summaryRunner !== 'undefined') {
@@ -661,19 +666,16 @@ var pipeline = (function() {
             }
         } catch (err) {
             console.error('[Pipeline] 提交阶段错误:', err.message);
-            var snapshot = storageService.loadSnapshot();
-            if (snapshot) {
-                gameData = (typeof mergeWithDefaults === 'function') ? mergeWithDefaults(snapshot, defaultGameData) : snapshot;
-                if (typeof syncVariablesFromGameData === 'function') syncVariablesFromGameData();
-                storageService.saveAppState({ gameData: gameData });
-            }
-            storageService.replaceUIConversation(uiConversationBeforeCommit);
-            summaryHistoryService.importAll(summaryHistoryBeforeCommit);
+            // 取消正在飞行的周总结请求（防止旧结果覆盖还原后的状态）
+            var _pipelineSummaryRunning = typeof summaryRunner !== 'undefined' && summaryRunner.isRunning();
+            console.log('[Pipeline] catch 触发还原 | summaryRunner.isRunning=' + _pipelineSummaryRunning);
+            if (_pipelineSummaryRunning) summaryRunner.cancel();
+            storageService.restoreFromSnapshot();
             if (typeof renderMainText === 'function') {
-                renderMainText(_getLastAssistantContent(uiConversationBeforeCommit));
+                renderMainText(_getLastAssistantContent(storageService.loadUIConversation()));
             }
             if (typeof showModal === 'function') {
-                showModal('状态保存异常，已恢复到发送前状态。建议手动存档。');
+                showModal('状态保存异常，已恢复到发送前状态。建议重新生成或手动存档。');
             }
         }
     }
@@ -889,7 +891,7 @@ var pipeline = (function() {
             // 走完整的提交流程（解析SUMMARY、SIDE_NOTE、渲染、保存）
             // 标记本次摘要来源为特殊剧情事件
             _currentSummarySource = 'special_event';
-            _commitResponse(resolvedUserMessage, eventText);
+            await _commitResponse(resolvedUserMessage, eventText);
             _currentSummarySource = null;
             
             // 确保 inputEnable 状态同步到 UI

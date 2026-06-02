@@ -928,7 +928,7 @@ const bgmPingdanManifest = {
     '千佛洞':     ['bgm/平淡/千佛洞/彿門清淨.mp3'],
     '博斯坦村':   ['bgm/平淡/博斯坦村/山中好歲月 (活俠傳遊戲配樂).mp3'],
     '博格达峰':   ['bgm/平淡/博格达峰/山野煮雨 - 小野.mp3'],
-    '哈密绿洲':   ['bgm/平淡/哈密绿洲/西域橙光音乐  米豆音乐 橙光音乐集异族风情 Western Regions music of China.mp3'],
+    '哈密绿洲':   ['bgm/平淡/哈密绿洲/柔兹兰站在河岸上 (feat. 鲍捷).mp3'],
     '大沙海':     ['bgm/平淡/大沙海/Dannagh Desert - Xenoblade Chronicles 3 OST.mp3'],
     '天山派外堡': ['bgm/平淡/天山派外堡/猜猜無猜心 (活俠傳遊戲配樂).mp3'],
     '崆峒派':     ['bgm/平淡/崆峒派/錦繡織歲玄燭照心 (活俠傳遊戲配樂).mp3'],
@@ -939,6 +939,6 @@ const bgmPingdanManifest = {
     '瓜州':       ['bgm/平淡/瓜州/仙劍奇俠傳三樂曲玄色風重樓主題.mp3'],
     '白驼山':     ['bgm/平淡/白驼山/燕雲十六聲 4K MV26 玉門關 (河西) [WhereWinds...].mp3'],
     '迪坎儿村':   ["bgm/平淡/迪坎儿村/OPUS龍脈常歌原聲帶5. Veteran's Abode Guifan...mp3"],
-    '高昌':       ['bgm/平淡/高昌/柔兹兰站在河岸上 (feat. 鲍捷).mp3'],
+    '高昌':       ['bgm/平淡/高昌/敕勒歌.mp3'],
     '龟兹':       ['bgm/平淡/龟兹/玉珠盘.mp3']
 };
