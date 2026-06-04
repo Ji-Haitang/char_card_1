@@ -401,33 +401,14 @@ var pipeline = (function() {
     async function _commitResponse(preprocessed, rawText, isRegenerate) {
         try {
             // 1. 写入用户消息到 UI 历史
-            if (isRegenerate) {
-                // 重生成时替换最后一条 user 条目，避免重复累积导致 markWeekUiIndex 偏移
-                var _uiHist = storageService.loadUIConversation();
-                var _replaced = false;
-                for (var _i = _uiHist.length - 1; _i >= 0; _i--) {
-                    if (_uiHist[_i].role === 'user') {
-                        _uiHist[_i].content = preprocessed;
-                        _uiHist[_i].createdAt = Date.now();
-                        _replaced = true;
-                        break;
-                    }
-                }
-                if (_replaced) {
-                    storageService.replaceUIConversation(_uiHist);
-                } else {
-                    // 兜底：找不到上一条 user 则正常 append
-                    storageService.appendUIConversation({ id: 'u' + Date.now(), role: 'user', content: preprocessed, week: currentWeek, createdAt: Date.now() });
-                }
-            } else {
-                storageService.appendUIConversation({
-                    id: 'u' + Date.now(),
-                    role: 'user',
-                    content: preprocessed,
-                    week: currentWeek,
-                    createdAt: Date.now()
-                });
-            }
+            // 重生成时快照已还原（本轮 user 消息尚未追加），直接 append 即可，无需替换
+            storageService.appendUIConversation({
+                id: 'u' + Date.now(),
+                role: 'user',
+                content: preprocessed,
+                week: currentWeek,
+                createdAt: Date.now()
+            });
 
             // 2. 解析 AI 回复
             var parsed = responseParser.run(rawText);
@@ -664,6 +645,10 @@ var pipeline = (function() {
                     showModal('本次回复内容格式不完整，自动存档已跳过，建议重新生成或手动存档。');
                 }
             }
+            // 每轮完成后刷新按钮状态（重生成按钮依赖 hasSnapshot，初始化时快照为空会被禁用）
+            if (typeof updateFreeActionInputState === 'function') {
+                updateFreeActionInputState();
+            }
         } catch (err) {
             console.error('[Pipeline] 提交阶段错误:', err.message);
             // 取消正在飞行的周总结请求（防止旧结果覆盖还原后的状态）
@@ -893,7 +878,7 @@ var pipeline = (function() {
             _currentSummarySource = 'special_event';
             await _commitResponse(resolvedUserMessage, eventText);
             _currentSummarySource = null;
-            
+
             // 确保 inputEnable 状态同步到 UI
             if (typeof updateFreeActionInputState === 'function') {
                 updateFreeActionInputState();

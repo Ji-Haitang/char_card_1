@@ -106,6 +106,12 @@ var storageService = (function() {
             // 降级：从 localStorage 填充缓存
             _loadCacheFromLocalStorage();
         }
+        // 清理旧架构遗留的 stale key（snapshot, lastTurnCommitted）
+        if (_idbAvailable) {
+            idbStorage.remove('snapshot').catch(function() {});
+            idbStorage.remove('lastTurnCommitted').catch(function() {});
+        }
+
         // 初始化快照数据库（jxz_snapshot_db，独立于主库）
         try {
             if (typeof idbSnapshot !== 'undefined') {
@@ -265,9 +271,11 @@ var storageService = (function() {
 
     /** 替换整个 UI 对话历史 */
     function replaceUIConversation(history) {
-        _cache[KEY_UI_CONV] = history;
-        _idbPut(KEY_UI_CONV, history);
-        _lsSet(LS_UI_CONV, history);
+        // 必须深拷贝，防止与 _snapshotCache 共享引用（appendUIConversation 原地 push 会污染快照）
+        var cloned = history ? history.slice() : [];
+        _cache[KEY_UI_CONV] = cloned;
+        _idbPut(KEY_UI_CONV, cloned);
+        _lsSet(LS_UI_CONV, cloned);
     }
 
     function clearUIConversation() {

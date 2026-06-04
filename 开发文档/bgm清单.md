@@ -37,6 +37,7 @@ Our Name Was Known Across the Stars,龙脉常歌
 暧昧
 帐中梦守人,活侠传
 餘生可慶,活侠传
+爱意 (金风玉露变奏),天涯明月刀
 
 
 

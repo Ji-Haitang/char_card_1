@@ -4330,12 +4330,14 @@ function buildSaveName() {
                     sendButton.style.opacity = '0.5';
                     sendButton.style.cursor = 'not-allowed';
                 }
-                // 特殊固定事件期间禁用重生成（文本预写，重生成无意义）；普通随机事件仍允许重生成
+                // 特殊固定事件期间禁用重生成（文本预写，重生成无意义）；无快照时也禁用（读档后无法回退）
                 if (regenerateBtn) {
                     const isSpecialEvent = typeof currentSpecialEvent !== 'undefined' && currentSpecialEvent !== '';
-                    regenerateBtn.disabled = isSpecialEvent;
-                    regenerateBtn.style.opacity = isSpecialEvent ? '0.5' : '1';
-                    regenerateBtn.style.cursor = isSpecialEvent ? 'not-allowed' : '';
+                    var _hasSnapInEvent = (typeof storageService !== 'undefined') && storageService.hasSnapshot();
+                    var _blockRegenInEvent = isSpecialEvent || !_hasSnapInEvent;
+                    regenerateBtn.disabled = _blockRegenInEvent;
+                    regenerateBtn.style.opacity = _blockRegenInEvent ? '0.5' : '1';
+                    regenerateBtn.style.cursor = _blockRegenInEvent ? 'not-allowed' : '';
                 }
                 // 禁用跳过一周按钮
                 if (skipWeekBtn) {

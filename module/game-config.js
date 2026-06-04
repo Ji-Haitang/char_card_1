@@ -887,15 +887,18 @@ const defaultGameData = {
 
 // === BGM 配置 ===
 // 支持情绪BGM的基调名称（不含"平淡"，平淡走地点逻辑）
-const bgmMoodOptions = ['紧张', '激昂', '欢快', '悲伤', '暧昧'];
+const bgmMoodOptions = ['紧张', '激昂', '欢快', '悲伤', '暧昧', '钱塘君剧情1'];
 
 // 情绪BGM及战斗BGM文件清单（路径必须与磁盘文件名完全一致）
 const bgmFileManifest = {
+    钱塘君剧情1: [
+        'bgm/钱塘君剧情1/林蝉 - 龙脉长歌.mp3'
+    ],
     紧张: [
         'bgm/紧张/晚鐘聲 千燈行 (活俠傳遊戲配樂).mp3'
     ],
     激昂: [
-        'bgm/激昂/OPUS龍脈常歌原聲帶15. Our Name Was Known Across the ....mp3',
+        'bgm/激昂/OPUS龍脈常歌原聲帶15. Our Name Was Known Across the Stars OPUS_ Echo of Starsong OST.mp3',
         'bgm/激昂/唐門薪火 自古如今 (活俠傳遊戲配樂).mp3',
         'bgm/激昂/歷劫知俠氣 (活俠傳遊戲配樂).mp3'
     ],
@@ -904,7 +907,7 @@ const bgmFileManifest = {
         'bgm/欢快/每天都歡似過年 (活俠傳遊戲配樂).mp3'
     ],
     悲伤: [
-        'bgm/悲伤/OPUS龍脈常歌原聲帶14. If Its With You, Then I Would ....mp3',
+        'bgm/悲伤/OPUS龍脈常歌原聲帶14. If Its With You, Then I Would Love To See It OPUS_ Echo of Starsong OST.mp3',
         'bgm/悲伤/子夜寄君書 (Zi Ye Ji Jun Shu).mp3',
         'bgm/悲伤/謝幕時分 雨花零落 (活俠傳遊戲配樂).mp3'
     ],
@@ -935,10 +938,10 @@ const bgmPingdanManifest = {
     '拜火教总坛': ['bgm/平淡/拜火教总坛/鬼門開 (活俠傳遊戲配樂).mp3'],
     '昆仑派':     ['bgm/平淡/昆仑派/雨後松林香 (活俠傳遊戲配樂).mp3'],
     '月牙泉':     ['bgm/平淡/月牙泉/Lcz-Sv《镜湖》【Hi-Res】.mp3'],
-    '沙州':       ['bgm/平淡/沙州/仙境傳說RO音樂BGM 79 龍之城 洛陽 雄偉 The Great...mp3'],
+    '沙州':       ['bgm/平淡/沙州/仙境傳說RO音樂BGM 79 龍之城 洛陽 雄偉 The Great 라그나로크 온라인 ラグナロクオンライン大傑音樂.mp3'],
     '瓜州':       ['bgm/平淡/瓜州/仙劍奇俠傳三樂曲玄色風重樓主題.mp3'],
-    '白驼山':     ['bgm/平淡/白驼山/燕雲十六聲 4K MV26 玉門關 (河西) [WhereWinds...].mp3'],
-    '迪坎儿村':   ["bgm/平淡/迪坎儿村/OPUS龍脈常歌原聲帶5. Veteran's Abode Guifan...mp3"],
+    '白驼山':     ['bgm/平淡/白驼山/燕雲十六聲 4K MV26  玉門關 (河西) [WhereWindsMeet] Yumen Pass BGM (Hexi).mp3'],
+    '迪坎儿村':   ["bgm/平淡/迪坎儿村/OPUS龍脈常歌原聲帶5. Veteran's Abode Guifang OPUS_ Echo of Starsong  OST.mp3"],
     '高昌':       ['bgm/平淡/高昌/敕勒歌.mp3'],
     '龟兹':       ['bgm/平淡/龟兹/玉珠盘.mp3']
 };
