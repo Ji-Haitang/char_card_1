@@ -274,7 +274,7 @@ var pipeline = (function() {
             gameData.battleEvent = 0;
             console.log('[Pipeline][DEBUG] 中断路径：事件变量已归零');
             if (typeof showModal === 'function' && typeof isInRenderEnvironment === 'function' && !isInRenderEnvironment()) {
-                showModal('本轮输出已中断，未自动存档，建议手动存档。');
+                showModal('本轮输出已中断，未自动存档，建议重新生成。');
             }
             return;
         }
@@ -642,7 +642,7 @@ var pipeline = (function() {
             } else if (typeof autoSave === 'function') {
                 console.log('[Pipeline] 跳过自动存档：SIDE_NOTE 解析失败，响应可能被截断');
                 if (typeof showModal === 'function') {
-                    showModal('本次回复内容格式不完整，自动存档已跳过，建议重新生成或手动存档。');
+                    showModal('本次回复内容格式不完整，自动存档已跳过，建议重新生成。');
                 }
             }
             // 每轮完成后刷新按钮状态（重生成按钮依赖 hasSnapshot，初始化时快照为空会被禁用）
@@ -660,7 +660,7 @@ var pipeline = (function() {
                 renderMainText(_getLastAssistantContent(storageService.loadUIConversation()));
             }
             if (typeof showModal === 'function') {
-                showModal('状态保存异常，已恢复到发送前状态。建议重新生成或手动存档。');
+                showModal('状态保存异常，已恢复到发送前状态。建议重新生成。');
             }
         }
     }
