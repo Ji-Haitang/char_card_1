@@ -1,4 +1,4 @@
-/**
+﻿/**
  * game-ui.js - UI更新和显示函数
  * 
  * 文件概述：
@@ -864,7 +864,7 @@ function fitModalToViewport(modal) {
     let allowScroll = false;
 
     // 长内容弹窗：高度改为“container底边 - viewport顶边”，并允许在遮罩内滚动
-    const tallModalIds = ['history-summary-modal', 'skill-library-modal', 'skill-equipment-modal', 'pipeline-log-modal'];
+    const tallModalIds = ['history-summary-modal', 'skill-library-modal', 'skill-equipment-modal', 'pipeline-log-modal', 'game-settings-modal', 'cheat-modal', 'load-modal', 'api-config-modal'];
     if (tallModalIds.includes(modal.id)) {
         const container = document.querySelector('.container') || document.body;
         const containerRect = container.getBoundingClientRect();

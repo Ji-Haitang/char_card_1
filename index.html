@@ -437,7 +437,7 @@
                     <button class="dropdown-item" onclick="showInventory()">查看背包</button>
                     <button class="dropdown-item" onclick="showEquipment()">查看装备</button>
                     <button id="show-skill-equipment-btn" class="dropdown-item" onclick="showSkillEquipment()">查看技能</button>
-                    <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
+                    <!-- <button class="dropdown-item" onclick="showCheatMode()">金手指</button> -->
                 </div>
             </div>
             
@@ -447,14 +447,10 @@
                     系统设置 ▲
                 </button>
                 <div id="system-dropdown" class="dropdown-menu">
-                    <button class="dropdown-item" id="toggle-ui-btn" onclick="toggleUIStyle()">风格(古风)</button>
-                    <button class="dropdown-item" id="toggle-cg-btn" onclick="toggleCgContent()">CG内容(关)</button>
-                    <button class="dropdown-item" id="toggle-event-btn" onclick="toggleHaveEvent()">随机事件(开)</button>
-                    <button class="dropdown-item" onclick="showDifficultySettings()">难度设置</button>
-                    <button class="dropdown-item" onclick="showMusicSettings()">音乐设置</button>
-                    <!-- <button class="dropdown-item" onclick="showCheatMode()">金手指</button> -->
+                    <button class="dropdown-item" onclick="showGameSettings()">游戏设置</button>
+                    <button class="dropdown-item" onclick="showConfigModal()">⚙AI配置</button>
+                    <button class="dropdown-item" onclick="showCheatMode()">金手指</button>
                     <button class="dropdown-item" onclick="openPlayGuide()">玩法说明</button>
-                    <button class="dropdown-item" onclick="showConfigModal()">⚙ API 配置</button>
                 </div>
             </div>
             
@@ -467,13 +463,11 @@
                     <!-- <button class="dropdown-item" id="toggle-compress-summary-btn" onclick="toggleCompressSummary()">强力总结(关)</button> -->
                     <!-- <button class="dropdown-item" onclick="saveGame()">存档</button> -->
                     <!-- <button class="dropdown-item" onclick="loadGame()">读档</button> -->
-                    <button class="dropdown-item" onclick="exportSave()">导出存档</button>
-                    <button class="dropdown-item" onclick="showLoadModal()">加载存档</button>
+                    <button class="dropdown-item" onclick="showLoadModal()">存档管理</button>
                     <!-- <button class="dropdown-item" onclick="showLastUserInput()">上轮输入</button> -->
                     <button class="dropdown-item" onclick="showHistorySummary()">历史记录</button>
-                    <button class="dropdown-item" onclick="showPipelineLog()">DEBUG日志</button>
-                    <button class="dropdown-item" onclick="showFontSettings()">正文字体</button>
-                    <button class="dropdown-item" id="btn-return-menu" onclick="returnToStartScreen()" style="display:none">返回主菜单</button>                   
+                    <button class="dropdown-item" onclick="showPipelineLog()">日志查看</button>
+                    <button class="dropdown-item" id="btn-return-menu" onclick="returnToStartScreen()" style="display:none">初始界面</button>                   
                 </div>
             </div>
             
@@ -524,6 +518,115 @@
                 <div class="modal-buttons">
                     <button class="modal-btn" onclick="saveDifficulty()">确认</button>
                     <button class="modal-btn cancel" onclick="closeDifficultyModal()">取消</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 游戏设置弹窗 -->
+        <div id="game-settings-modal" class="modal viewport-overlay">
+            <div class="modal-content gs-modal-content">
+                <div class="gs-layout">
+                    <!-- 左侧选项卡列 -->
+                    <div class="gs-tabs" id="gs-tabs">
+                        <button class="gs-tab active" data-tab="switches" onclick="gsSelectTab('switches')">开关设置</button>
+                        <button class="gs-tab" data-tab="difficulty" onclick="gsSelectTab('difficulty')">难度设置</button>
+                        <button class="gs-tab" data-tab="music" onclick="gsSelectTab('music')">音乐设置</button>
+                        <button class="gs-tab" data-tab="font" onclick="gsSelectTab('font')">正文字体</button>
+                    </div>
+                    <!-- 右侧内容区 -->
+                    <div class="gs-panel-wrap">
+                        <!-- 开关设置 -->
+                        <div class="gs-panel active" id="gs-panel-switches">
+                            <h3>开关设置</h3>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">界面风格</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-ui-toggle" onchange="gsOnUIStyle(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-ui-hint">古风</span>
+                                </label>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">CG内容</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-cg-toggle" onchange="gsOnCgContent(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-cg-hint">关</span>
+                                </label>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">随机事件</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-event-toggle" onchange="gsOnHaveEvent(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-event-hint">开</span>
+                                </label>
+                            </div>
+                        </div>
+                        <!-- 难度设置 -->
+                        <div class="gs-panel" id="gs-panel-difficulty">
+                            <h3>难度设置</h3>
+                            <p>选择游戏难度，将影响行动成功率的计算：</p>
+                            <div class="difficulty-options">
+                                <label class="difficulty-option">
+                                    <input type="radio" name="gs-difficulty" value="easy" id="gs-diff-easy">
+                                    <span class="option-content">
+                                        <strong>简单模式</strong>
+                                        <small>体力加成 +20，更容易获得成功<br>好感度变化：上升+2/+4，下降-1/-2</small>
+                                    </span>
+                                </label>
+                                <label class="difficulty-option">
+                                    <input type="radio" name="gs-difficulty" value="normal" id="gs-diff-normal" checked>
+                                    <span class="option-content">
+                                        <strong>普通模式</strong>
+                                        <small>体力加成 +10，平衡的游戏体验<br>好感度变化：大幅±2，普通±1</small>
+                                    </span>
+                                </label>
+                                <label class="difficulty-option">
+                                    <input type="radio" name="gs-difficulty" value="hard" id="gs-diff-hard">
+                                    <span class="option-content">
+                                        <strong>困难模式</strong>
+                                        <small>无体力加成，更具挑战性<br>好感度变化：上升+1/+2，下降-2/-4</small>
+                                    </span>
+                                </label>
+                            </div>
+                            <div class="modal-buttons" style="margin-top:16px;">
+                                <button class="modal-btn" onclick="gsOnSaveDifficulty()">确认</button>
+                            </div>
+                        </div>
+                        <!-- 音乐设置 -->
+                        <div class="gs-panel" id="gs-panel-music">
+                            <h3>音乐设置</h3>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">背景音乐</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-bgm-toggle" onchange="gsOnBgmEnable(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-bgm-hint">开启</span>
+                                </label>
+                            </div>
+                            <div style="margin:20px 0 8px;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:8px;">
+                                    <label>音量</label>
+                                    <span id="gs-bgm-volume-display">50%</span>
+                                </div>
+                                <input type="range" id="gs-bgm-volume" class="gs-range" min="0" max="100" step="1" value="50" oninput="gsOnBgmVolume(this)">
+                            </div>
+                        </div>
+                        <!-- 正文字体 -->
+                        <div class="gs-panel" id="gs-panel-font">
+                            <h3>正文字体大小</h3>
+                            <p>拖动滑动条设置正文字体大小（1~5档）。</p>
+                            <div style="display:flex;align-items:center;gap:12px;margin:16px 0;">
+                                <span>小</span>
+                                <input type="range" id="gs-font-range" class="gs-range" min="1" max="5" step="1" value="2" oninput="gsOnFontLevel(this)">
+                                <span>大</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-buttons gs-footer">
+                    <button class="modal-btn cancel" onclick="closeGameSettings()">关闭</button>
                 </div>
             </div>
         </div>
@@ -2950,8 +3053,9 @@ function showLoadModal() {
     }
 
     html += '<div class="modal-buttons" style="flex-direction:column;gap:8px;">'
-        + '<button class="modal-btn" style="width:100%;" onclick="importSaveFromLoadModal()">导入存档文件（JSON）</button>'
-        + '<button class="modal-btn cancel" style="width:100%;" onclick="closeLoadModal()">取消</button>'
+        + '<button class="modal-btn" style="width:100%;" onclick="exportSave();closeLoadModal();">导出存档文件 (JSON)</button>'
+        + '<button class="modal-btn" style="width:100%;" onclick="importSaveFromLoadModal()">导入存档文件 (JSON)</button>'
+        + '<button class="modal-btn cancel" style="width:100%;" onclick="closeLoadModal()">关闭</button>'
         + '</div>'
         + '</div></div>';
 
@@ -4130,6 +4234,133 @@ function buildSaveName() {
         // 根据当前开关刷新按钮文案
         // function updateCgToggleLabel() {
         //     const btn = document.getElementById('toggle-cg-btn');
+        // ========== 游戏设置弹窗 ==========
+        function showGameSettings() {
+            toggleDropdown('system-dropdown');
+            const modal = document.getElementById('game-settings-modal');
+            if (modal.parentElement !== document.body) document.body.appendChild(modal);
+            // 打开时同步所有控件状态
+            _syncGameSettingsModal();
+            modal.style.display = 'block';
+            requestAnimationFrame(() => {
+                fitModalToViewport(modal);
+                bindModalAutoFit(modal);
+            });
+        }
+
+        function closeGameSettings() {
+            const modal = document.getElementById('game-settings-modal');
+            modal.style.display = 'none';
+            modal._unbindFit && modal._unbindFit();
+        }
+
+        function gsSelectTab(tabId) {
+            document.querySelectorAll('#game-settings-modal .gs-tab').forEach(t => {
+                t.classList.toggle('active', t.dataset.tab === tabId);
+            });
+            document.querySelectorAll('#game-settings-modal .gs-panel').forEach(p => {
+                p.classList.toggle('active', p.id === 'gs-panel-' + tabId);
+            });
+        }
+
+        // 同步后台变量 → 弹窗控件
+        function _syncGameSettingsModal() {
+            // UI 风格
+            const style = (typeof uiStyle !== 'undefined') ? uiStyle : 0;
+            const uiToggle = document.getElementById('gs-ui-toggle');
+            const uiHint   = document.getElementById('gs-ui-hint');
+            if (uiToggle) uiToggle.checked = (style === 1);
+            if (uiHint)   uiHint.textContent = (style === 1) ? '扁平' : '古风';
+
+            // CG 内容
+            const cg = (typeof cgContentEnabled !== 'undefined') ? cgContentEnabled : false;
+            const cgToggle = document.getElementById('gs-cg-toggle');
+            const cgHint   = document.getElementById('gs-cg-hint');
+            if (cgToggle) cgToggle.checked = !!cg;
+            if (cgHint)   cgHint.textContent = cg ? '开' : '关';
+
+            // 随机事件
+            const ev = (typeof haveEvent !== 'undefined') ? haveEvent : 1;
+            const evToggle = document.getElementById('gs-event-toggle');
+            const evHint   = document.getElementById('gs-event-hint');
+            if (evToggle) evToggle.checked = !!ev;
+            if (evHint)   evHint.textContent = ev ? '开' : '关';
+
+            // 难度
+            const diff = (typeof difficulty !== 'undefined' && difficulty) ? difficulty : 'normal';
+            const diffRadio = document.getElementById('gs-diff-' + diff);
+            if (diffRadio) diffRadio.checked = true;
+
+            // 音乐
+            const bgmEnabled = (typeof bgmManager !== 'undefined') ? bgmManager.getEnabled() : true;
+            const bgmVol     = (typeof bgmManager !== 'undefined') ? bgmManager.getVolume()  : 0.5;
+            const bgmToggle  = document.getElementById('gs-bgm-toggle');
+            const bgmSlider  = document.getElementById('gs-bgm-volume');
+            const bgmDisplay = document.getElementById('gs-bgm-volume-display');
+            const bgmHint    = document.getElementById('gs-bgm-hint');
+            if (bgmToggle)  bgmToggle.checked = bgmEnabled;
+            if (bgmSlider)  { bgmSlider.value = Math.round(bgmVol * 100); bgmSlider.disabled = !bgmEnabled; }
+            if (bgmDisplay) bgmDisplay.textContent = Math.round(bgmVol * 100) + '%';
+            if (bgmHint)    bgmHint.textContent = bgmEnabled ? '开启' : '关闭';
+
+            // 字体
+            const lvl = (typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2;
+            const fontRange = document.getElementById('gs-font-range');
+            if (fontRange) fontRange.value = lvl;
+        }
+
+        // 游戏设置弹窗内各控件的事件处理
+        function gsOnUIStyle(el) {
+            uiStyle = el.checked ? 1 : 0;
+            applyUIStyle(uiStyle);
+            updateUIStyleLabel();
+            document.getElementById('gs-ui-hint').textContent = uiStyle === 1 ? '扁平' : '古风';
+        }
+
+        async function gsOnCgContent(el) {
+            cgContentEnabled = el.checked;
+            document.getElementById('gs-cg-hint').textContent = cgContentEnabled ? '开' : '关';
+            if (GameMode === 1) updateStoryDisplay();
+            updateCgToggleLabel();
+        }
+
+        function gsOnHaveEvent(el) {
+            haveEvent = el.checked ? 1 : 0;
+            document.getElementById('gs-event-hint').textContent = haveEvent ? '开' : '关';
+            updateHaveEventLabel();
+        }
+
+        function gsOnSaveDifficulty() {
+            const sel = document.querySelector('input[name="gs-difficulty"]:checked');
+            if (!sel) return;
+            difficulty = sel.value;
+            // 同步旧弹窗的radio（保持一致）
+            const old = document.getElementById('diff-' + difficulty);
+            if (old) old.checked = true;
+            const names = { easy: '简单', normal: '普通', hard: '困难' };
+            showModal('难度已设置为：' + names[difficulty]);
+        }
+
+        function gsOnBgmEnable(el) {
+            const enabled = el.checked;
+            document.getElementById('gs-bgm-hint').textContent = enabled ? '开启' : '关闭';
+            document.getElementById('gs-bgm-volume').disabled = !enabled;
+            if (typeof bgmManager !== 'undefined') bgmManager.setEnabled(enabled);
+        }
+
+        function gsOnBgmVolume(el) {
+            const val = parseInt(el.value, 10) / 100;
+            document.getElementById('gs-bgm-volume-display').textContent = el.value + '%';
+            if (typeof bgmManager !== 'undefined') bgmManager.setVolume(val);
+        }
+
+        function gsOnFontLevel(el) {
+            const lvl = parseInt(el.value, 10) || 2;
+            textFontLevel = lvl;
+            applyFontLevel(lvl);
+        }
+        // ========== 游戏设置弹窗结束 ==========
+
         //     if (btn) btn.textContent = `CG内容（${cgContentEnabled ? '开' : '关'}）`;
         // }
         function updateCgToggleLabel() {
@@ -5160,5 +5391,6 @@ function buildSaveName() {
             if (story) story.style.fontSize = size + 'px';
         }
     </script>
+    <script src="module/button-sfx.js"></script>
 </body>
 </html>

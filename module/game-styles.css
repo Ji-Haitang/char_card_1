@@ -3566,3 +3566,188 @@ body.ui-style-flat .cfg-notice {
     color: #856404;
 }
 body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
+
+
+/* ========== 游戏设置弹窗（game-settings-modal） ========== */
+.gs-modal-content {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    overflow: hidden;
+    width: 90%;
+    max-width: 90%;
+    height: 90%;
+    max-height: 90%;
+    margin: auto;
+}
+
+.gs-layout {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+/* 左侧选项卡列 */
+.gs-tabs {
+    display: flex;
+    flex-direction: column;
+    width: 110px;
+    flex-shrink: 0;
+    border-right: 2px solid #e0e0e0;
+    background: #f9f9f9;
+    padding: 16px 0;
+    gap: 4px;
+}
+
+.gs-tab {
+    background: none;
+    border: none;
+    border-left: 3px solid transparent;
+    padding: 12px 16px;
+    text-align: left;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+
+.gs-tab:hover {
+    background: #f0f0f0;
+    color: #2c2c2c;
+}
+
+.gs-tab.active {
+    background: #fff;
+    border-left-color: #4ecdc4;
+    color: #2c2c2c;
+    font-weight: bold;
+}
+
+/* 右侧内容区 */
+.gs-panel-wrap {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    min-height: 0;
+}
+
+.gs-panel {
+    display: none;
+}
+
+.gs-panel.active {
+    display: block;
+}
+
+/* 开关行 */
+.gs-switch-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 0;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.gs-switch-label {
+    font-size: 15px;
+    color: #2c2c2c;
+}
+
+/* Toggle 开关 */
+.gs-toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.gs-toggle-wrap input[type="checkbox"] {
+    display: none;
+}
+
+.gs-toggle-track {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    background: #ccc;
+    border-radius: 12px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+}
+
+.gs-toggle-wrap input:checked + .gs-toggle-track {
+    background: #4ecdc4;
+}
+
+.gs-toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+    transition: left 0.2s;
+}
+
+.gs-toggle-wrap input:checked + .gs-toggle-track .gs-toggle-thumb {
+    left: 23px;
+}
+
+.gs-toggle-hint {
+    font-size: 13px;
+    color: #888;
+    min-width: 24px;
+}
+
+/* Range 滑块 */
+.gs-range {
+    -webkit-appearance: none;
+    width: 100%;
+    background: transparent;
+}
+
+.gs-range:focus { outline: none; }
+
+.gs-range::-webkit-slider-runnable-track {
+    height: 6px;
+    background: #6b6b6b;
+    border-radius: 4px;
+}
+
+.gs-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #bfbfbf;
+    border: 1px solid #eaeaea;
+    margin-top: -6px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.gs-range::-moz-range-track {
+    height: 6px;
+    background: #6b6b6b;
+    border-radius: 4px;
+}
+
+.gs-range::-moz-range-thumb {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: #bfbfbf;
+    border: 1px solid #eaeaea;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* 底部按钮区 */
+.gs-footer {
+    flex-shrink: 0;
+    padding: 12px 20px;
+    border-top: 1px solid #e0e0e0;
+    margin: 0;
+}

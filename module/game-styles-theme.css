@@ -557,11 +557,9 @@ body {
 
 /* --- 属性面板与关系界面特定覆盖 --- */
 
-/* 场景背景：透明，显示body背景 */
-/* 关键：确保这些场景没有背景色，能透出 viewport 的纸纹 */
+/* 场景背景：明确设为宣纸色，避免因透明导致的白色问题 */
 #player-stats-scene, #relationships-scene {
-    background: transparent !important;
-    background-color: transparent !important;
+    background-color: var(--paper-base) !important;
     background-image: none !important;
 }
 
@@ -1549,3 +1547,52 @@ body {
 [style*="overflow-x"]::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(180deg, var(--ink-dark) 0%, var(--ink-black) 100%);
 }
+
+/* ========== 游戏设置弹窗 - 古风主题覆盖 ========== */
+.gs-tabs {
+    background: var(--paper-dark);
+    border-right-color: var(--ink-light);
+}
+.gs-tab {
+    font-family: var(--font-serif);
+    color: var(--ink-medium);
+}
+.gs-tab:hover {
+    background: var(--paper-base);
+    color: var(--ink-dark);
+}
+.gs-tab.active {
+    background: var(--paper-light);
+    border-left-color: var(--accent-red);
+    color: var(--ink-black);
+}
+.gs-panel-wrap {
+    background: var(--paper-light);
+}
+.gs-switch-label {
+    font-family: var(--font-serif);
+    color: var(--ink-dark);
+}
+/* h3标题、段落文字、toggle提示、难度选项文字 统一楷体 */
+#game-settings-modal h3,
+#game-settings-modal p,
+#game-settings-modal small,
+#game-settings-modal .gs-toggle-hint,
+#game-settings-modal .difficulty-option strong,
+#game-settings-modal label {
+    font-family: var(--font-serif) !important;
+}
+.gs-toggle-wrap input:checked + .gs-toggle-track {
+    background: var(--accent-red);
+}
+.gs-switch-row {
+    border-bottom-color: var(--paper-dark);
+}
+.gs-footer {
+    background: var(--paper-base);
+    border-top-color: var(--ink-light);
+}
+.gs-range::-webkit-slider-runnable-track { background: var(--ink-medium); }
+.gs-range::-webkit-slider-thumb { background: var(--paper-light); border-color: var(--ink-light); }
+.gs-range::-moz-range-track { background: var(--ink-medium); }
+.gs-range::-moz-range-thumb { background: var(--paper-light); border-color: var(--ink-light); }

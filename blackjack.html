@@ -376,7 +376,7 @@
                 </div>
                 <div class="bet-section">
                     <div class="bet-input-wrapper">
-                        <input type="number" id="bet-amount" class="bet-input" placeholder="请输入押注金额" min="1">
+                        <input type="number" id="bet-amount" class="bet-input" placeholder="请输入押注金额(1~1000)" min="1" max="1000">
                         <div id="bet-error" class="bet-error">押注金额不能大于总金额</div>
                     </div>
                     <button id="deal">开始游戏</button>
@@ -487,7 +487,13 @@
         // 验证押注金额
         function validateBet(amount) {
             const betError = document.getElementById('bet-error');
+            if (amount < 1 || amount > 1000) {
+                betError.textContent = '押注金额必须在 1 ~ 1000 之间';
+                betError.style.display = 'block';
+                return false;
+            }
             if (amount > totalMoney) {
+                betError.textContent = '押注金额不能大于总金额';
                 betError.style.display = 'block';
                 return false;
             }
@@ -616,5 +622,6 @@
             }
         });
     </script>
+    <script src="module/button-sfx.js"></script>
 </body>
 </html>
