@@ -35,5 +35,10 @@
         if (t.closest('polygon[data-location]')) { playClick(); return; }
         // NPC 立绘
         if (t.closest('.npc-portrait')) { playClick(); return; }
+        // 战斗指令按钮（div.command-btn）
+        const cmdBtn = t.closest('.command-btn');
+        if (cmdBtn && !cmdBtn.classList.contains('disabled') && !cmdBtn.hasAttribute('disabled')) { playClick(); return; }
+        // 农场格子（div.tile.farm）
+        if (t.closest('.tile.farm')) { playClick(); return; }
     }, true); // 捕获阶段，确保在任何 stopPropagation 之前触发
 })();
