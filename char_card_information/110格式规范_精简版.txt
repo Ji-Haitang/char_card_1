@@ -197,7 +197,13 @@
   {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；本段落中描写的NPC和{{user}}之间的NSFW成人级色情行为，若无则填"none"}}
   {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
   ...
+  <%_ if (randomEventforFormat == 1) { _%>
+  {{string: 最后一段叙述文本，合理引出后续的选项事件}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  <%_ } else if (battleEventforFormat == 1) { _%>
+  {{string: 最后一段叙述文本，合理引出后续的战斗事件}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  <%_ } else { _%>
   {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  <%_ } _%>
   </MAIN_TEXT>
 
   <SUMMARY>
@@ -283,10 +289,12 @@
   旁注规则:
     <%_ if (randomEventforFormat == 1) { _%>
     - 事件类型固定为"选项事件"
+    - 事件描述延续<MAIN_TEXT>情节，而非重复总结
     - 随机事件固定输出三个选项
     <%_ } _%>
     <%_ if (battleEventforFormat == 1) { _%>
     - 事件类型固定为"战斗事件"
+    - 事件描述延续<MAIN_TEXT>情节，而非重复总结    
     <%_ } _%>
     - 使用全角符号或转义符号避免解析错误
     - 当前NPC为正文中出场互动的NPC，可存在多个NPC条目，为空时输出空对象: {}

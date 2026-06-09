@@ -88,7 +88,15 @@ async function handleEventOption(optionIndex, option) {
     }
     
     const _actorName1 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
-    const resultMessage = `事件描述: ${currentRandomEvent.事件描述}<br>` +
+    const _evYear = Math.floor((currentWeek - 1) / 48) + 1;
+    const _evRemaining = (currentWeek - 1) % 48;
+    const _evMonth = Math.floor(_evRemaining / 4) + 1;
+    const _evWeek = _evRemaining % 4 + 1;
+    const resultMessage =
+        `时间：第${_evYear}年第${_evMonth}月第${_evWeek}周<br>` +
+        `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+        `地点：${mapLocation || '天山派'}<br>` +
+        `事件描述: ${currentRandomEvent.事件描述}<br>` +
         `${_actorName1}行动选择: ${option.描述}<br>` +
         `选择结果: ${isSuccess ? '成功' : '失败'}`;
     
@@ -824,15 +832,33 @@ function setupMessageListeners() {
                     if (dropResult && dropResult.itemName) {
                         dropText = `获得掉落：${dropResult.itemName}`;
                     }
-                    await handleMessageOutput(currentBattleEvent.事件描述 + 
-                        `<br><br>你迎战${currentBattleEvent.敌方信息.名称}并获得了胜利！`);
+                    const _bvYear = Math.floor((currentWeek - 1) / 48) + 1;
+                    const _bvRemaining = (currentWeek - 1) % 48;
+                    const _bvMonth = Math.floor(_bvRemaining / 4) + 1;
+                    const _bvWeek = _bvRemaining % 4 + 1;
+                    const _bvSeason = seasonNameMap[seasonStatus] || '冬天';
+                    const _bvLoc = mapLocation || '天山派';
+                    await handleMessageOutput(
+                        `时间：第${_bvYear}年第${_bvMonth}月第${_bvWeek}周<br>` +
+                        `季节：${_bvSeason}<br>` +
+                        `地点：${_bvLoc}<br>` +
+                        `事件描述: ${currentBattleEvent.事件描述}<br>` +
+                        `战斗结果: 胜利，击败了${currentBattleEvent.敌方信息.名称}`);
                     if (rewardText || dropText) {
                         const modalLines = [rewardText, dropText].filter(Boolean).join('<br>');
                         showModal(modalLines);
                     }
                 } else if (result === 'defeat' || result === 'quit') {
-                    await handleMessageOutput(currentBattleEvent.事件描述 + 
-                        `<br><br>你迎战${currentBattleEvent.敌方信息.名称}但是不幸败北。`);
+                    const _bdYear = Math.floor((currentWeek - 1) / 48) + 1;
+                    const _bdRemaining = (currentWeek - 1) % 48;
+                    const _bdMonth = Math.floor(_bdRemaining / 4) + 1;
+                    const _bdWeek = _bdRemaining % 4 + 1;
+                    await handleMessageOutput(
+                        `时间：第${_bdYear}年第${_bdMonth}月第${_bdWeek}周<br>` +
+                        `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                        `地点：${mapLocation || '天山派'}<br>` +
+                        `事件描述: ${currentBattleEvent.事件描述}<br>` +
+                        `战斗结果: ${result === 'quit' ? '放弃战斗' : `落败，败给了${currentBattleEvent.敌方信息.名称}`}`);
                 }
                 
                 hideBattleEvent();

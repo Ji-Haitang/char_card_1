@@ -78,8 +78,8 @@ async function handleMessageOutput(message) {
         console.log('user消息存入变量lastMessage_jxz');
         await renderFunc(`/setvar key=lastMessage_jxz ${message}`);
 
-    // 新增：检查是否是新的一周的消息（新版：年/月/周）
-    const newWeekPattern = /^行动选择:新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
+    // 新增：检查是否是新的一周的消息（新版：时间/季节/地点/行动选择）
+    const newWeekPattern = /行动选择:新的一周开始了/;
         const match = message.match(newWeekPattern);
 
         if (match) {
@@ -139,7 +139,7 @@ async function handleMessageOutput(message) {
         // 独立模式：委托给 Pipeline
         if (!getRenderFunction()) {
             // 检测是否为新周消息
-            var newWeekPattern = /^行动选择:新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
+            var newWeekPattern = /行动选择:新的一周开始了/;
             var match = message.match(newWeekPattern);
             if (match) {
                 newWeek = 1;
