@@ -168,7 +168,7 @@ var memoryRecall = (function() {
      * @param {string[]} [focusCharacters=[]] - 焦点NPC名字列表（软过滤：低置信度候选必须含其中任一名字）
      * @returns {Promise<Array<{id, text, week, similarity}>>}
      */
-    async function recallRelevantMemories(queryTextOrVector, topK, excludeIds, maxTokens, focusCharacters) {
+    async function recallRelevantMemories(queryTextOrVector, topK, excludeIds, maxTokens, focusCharacters, contextVec) {
         topK = topK || 15;
         excludeIds = excludeIds || [];
         maxTokens = maxTokens || 3000;
@@ -176,6 +176,8 @@ var memoryRecall = (function() {
         var MIN_SIM = 0.60;
         // 实体过滤：sim >= ENTITY_BYPASS_SIM 时绕行，低于此值的候选须含焦点NPC名（OR逻辑）
         var ENTITY_BYPASS_SIM = 0.72;
+        // RRF 常数
+        var RRF_K = 60;
 
         // 前置检查
         if (!embeddingService.isEnabled()) return [];
@@ -207,6 +209,9 @@ var memoryRecall = (function() {
             return [];
         }
 
+        // contextVec：第二路查询向量（可选），用于 RRF 融合
+        var hasContextVec = contextVec && typeof contextVec.length === 'number' && contextVec.length > 0;
+
         try {
 
             // 2. 构建排除集合
@@ -221,23 +226,66 @@ var memoryRecall = (function() {
             // 3. 当前 fingerprint
             var currentFp = embeddingService.getFingerprint();
 
-            // 4. 遍历缓存，计算相似度
-            var scored = [];
+            // 4. 遍历缓存，对两路分别打分
+            var intentScored = [];   // Q_intent 路（主路）
+            var contextScored = [];  // Q_context 路（辅路，可选）
+
             for (var j = 0; j < _cache.length; j++) {
                 var r = _cache[j];
                 if (excludeSet[r.id]) continue;
-                // fingerprint 不匹配时跳过（旧模型的向量不能与新模型的 query 比较）
                 if (r.fingerprint && currentFp && r.fingerprint !== currentFp) continue;
                 if (!r.vector || r.vector.length === 0) continue;
 
-                var sim = _cosineSimilarity(queryVec, r.vector);
-                if (sim < MIN_SIM) continue;
+                var simIntent = _cosineSimilarity(queryVec, r.vector);
+                intentScored.push({ id: r.id, text: r.text, week: r.week, sim: simIntent });
 
-                // 实体软过滤：有 focusNPC 且未达高置信度绕行阈值时，文本必须含任一焦点NPC
-                if (focusArr.length > 0 && sim < ENTITY_BYPASS_SIM) {
+                if (hasContextVec) {
+                    var simCtx = _cosineSimilarity(contextVec, r.vector);
+                    contextScored.push({ id: r.id, sim: simCtx });
+                }
+            }
+
+            // 5. 两路分别按相似度降序排名
+            intentScored.sort(function(a, b) { return b.sim - a.sim; });
+            if (hasContextVec) {
+                contextScored.sort(function(a, b) { return b.sim - a.sim; });
+            }
+
+            // 6. RRF 融合：score(d) = 1/(k+rank_intent) + 1/(k+rank_context)
+            //    未出现在某路的条目该路贡献 0
+            var rrfMap = {};
+            for (var ri = 0; ri < intentScored.length; ri++) {
+                var _id = intentScored[ri].id;
+                rrfMap[_id] = { id: _id, text: intentScored[ri].text, week: intentScored[ri].week,
+                    simIntent: intentScored[ri].sim, simContext: null,
+                    rrfScore: 1 / (RRF_K + ri + 1) };
+            }
+            if (hasContextVec) {
+                for (var ci = 0; ci < contextScored.length; ci++) {
+                    var _cid = contextScored[ci].id;
+                    if (rrfMap[_cid]) {
+                        rrfMap[_cid].simContext = contextScored[ci].sim;
+                        rrfMap[_cid].rrfScore += 1 / (RRF_K + ci + 1);
+                    }
+                    // 仅出现在 context 路但不在 intent 路的条目（理论上不存在，两路扫相同缓存）
+                }
+            }
+
+            // 7. 将 RRF map 转成数组，按 rrfScore 降序，再做实体过滤和最低阈值过滤
+            //    阈值：intent 路的相似度必须 >= MIN_SIM（保证语义相关性的底线）
+            var scored = [];
+            var _rrfList = Object.keys(rrfMap).map(function(k) { return rrfMap[k]; });
+            _rrfList.sort(function(a, b) { return b.rrfScore - a.rrfScore; });
+
+            for (var si = 0; si < _rrfList.length; si++) {
+                var item = _rrfList[si];
+                if (item.simIntent < MIN_SIM) continue;
+
+                // 实体软过滤：intent sim 未达高置信度时，文本须含任一焦点NPC
+                if (focusArr.length > 0 && item.simIntent < ENTITY_BYPASS_SIM) {
                     var _entityMatch = false;
                     for (var _fi = 0; _fi < focusArr.length; _fi++) {
-                        if (r.text && r.text.indexOf(focusArr[_fi]) !== -1) {
+                        if (item.text && item.text.indexOf(focusArr[_fi]) !== -1) {
                             _entityMatch = true;
                             break;
                         }
@@ -245,33 +293,31 @@ var memoryRecall = (function() {
                     if (!_entityMatch) continue;
                 }
 
-                scored.push({ id: r.id, text: r.text, week: r.week, similarity: sim });
+                scored.push({ id: item.id, text: item.text, week: item.week,
+                    similarity: item.simIntent, simContext: item.simContext, rrfScore: item.rrfScore });
             }
 
-            // 5. 按相似度降序
-            scored.sort(function(a, b) { return b.similarity - a.similarity; });
-
-            // 6. 双重截断：topK 条数 + maxTokens token 上限
+            // 8. 双重截断：topK 条数 + maxTokens token 上限
             var result = [];
             var usedTokens = 0;
             for (var k = 0; k < scored.length && result.length < topK; k++) {
-                var item = scored[k];
-                var tokens = _estimateTokens(item.text);
+                var ritem = scored[k];
+                var tokens = _estimateTokens(ritem.text);
                 if (usedTokens + tokens > maxTokens) break;
-                result.push(item);
+                result.push(ritem);
                 usedTokens += tokens;
             }
 
             console.log('[MemoryRecall] 召回 ' + result.length + ' 条 | 候选 ' + scored.length + ' 条 | 排除 ' + excludeIds.length + ' 条 | 缓存 ' + _cache.length + ' 条'
+                + (hasContextVec ? ' | 双路RRF' : ' | 单路')
                 + (focusArr.length > 0 ? ' | focusNPC=[' + focusArr.join(',') + ']' : ' | focusNPC=无（跳过实体过滤）'));
 
             // 保存完整召回详情供页面 DEBUG 面板读取
             window._lastRecallDetails = {
                 queryText: typeof queryTextOrVector === 'string' ? queryTextOrVector
                     : (window._lastQuerySegments
-                        ? 'focus(' + (window._lastQuerySegments.focus.weight * 100).toFixed(0) + '%): ' + window._lastQuerySegments.focus.text
-                          + (window._lastQuerySegments.near.text ? '\nnear(' + (window._lastQuerySegments.near.weight * 100).toFixed(0) + '%): ' + window._lastQuerySegments.near.text : '')
-                          + (window._lastQuerySegments.far.text  ? '\nfar('  + (window._lastQuerySegments.far.weight  * 100).toFixed(0) + '%): ' + window._lastQuerySegments.far.text  : '')
+                        ? 'Q_intent: ' + (window._lastQuerySegments.intent ? window._lastQuerySegments.intent.text : '')
+                          + (window._lastQuerySegments.context && window._lastQuerySegments.context.text ? '\nQ_context: ' + window._lastQuerySegments.context.text : '')
                         : '[预计算向量]'),
                 focusCharacters: focusArr,
                 entityBypassSim: ENTITY_BYPASS_SIM,
@@ -285,6 +331,8 @@ var memoryRecall = (function() {
                         rank: idx + 1,
                         inResult: idx < result.length,
                         similarity: item.similarity,
+                        simContext: item.simContext,
+                        rrfScore: item.rrfScore,
                         week: item.week,
                         id: item.id,
                         text: item.text || ''
@@ -299,14 +347,13 @@ var memoryRecall = (function() {
                 console.log('查询输入（文本）: ' + queryTextOrVector);
             } else if (window._lastQuerySegments) {
                 var _qs = window._lastQuerySegments;
-                console.log('查询输入（加权向量）:');
-                console.log('  focus(' + (_qs.focus.weight * 100).toFixed(0) + '%): ' + _qs.focus.text);
-                if (_qs.near.text) console.log('  near(' + (_qs.near.weight * 100).toFixed(0) + '%): ' + (_qs.near.text.length > 300 ? _qs.near.text.slice(0, 300) + '...' : _qs.near.text));
-                if (_qs.far.text)  console.log('  far('  + (_qs.far.weight  * 100).toFixed(0) + '%): ' + (_qs.far.text.length  > 150 ? _qs.far.text.slice(0,  150) + '...' : _qs.far.text));
+                console.log('查询输入（双路向量）:');
+                if (_qs.intent) console.log('  Q_intent: ' + (_qs.intent.text || ''));
+                if (_qs.context && _qs.context.text) console.log('  Q_context: ' + (_qs.context.text.length > 300 ? _qs.context.text.slice(0, 300) + '...' : _qs.context.text));
             } else {
-                console.log('查询输入: 预计算向量（Float32Array/Array, dim=' + queryTextOrVector.length + '）');
+                console.log('查询输入: 预计算向量（dim=' + queryVec.length + '）' + (hasContextVec ? ' + contextVec(dim=' + contextVec.length + ')' : ''));
             }
-            console.log('相似度阈值: ' + MIN_SIM + ' | 实体绕行阈值: ' + ENTITY_BYPASS_SIM + ' | focusNPC: [' + focusArr.join(', ') + '] | topK: ' + topK + ' | maxTokens: ' + maxTokens);
+            console.log('相似度阈值: ' + MIN_SIM + ' | 实体绕行阈值: ' + ENTITY_BYPASS_SIM + ' | RRF_K: ' + RRF_K + ' | focusNPC: [' + focusArr.join(', ') + '] | topK: ' + topK + ' | maxTokens: ' + maxTokens);
             if (scored.length === 0) {
                 console.log('（无候选条目达到阈值）');
                 // 补充扫描：找出相似度最高的5条供诊断（不受阈值限制）
@@ -329,11 +376,12 @@ var memoryRecall = (function() {
                     }
                 }
             } else {
-                console.log('--- 全部候选（按相似度降序，含未入选）---');
+                console.log('--- 全部候选（按 RRF 分降序，含未入选）---');
                 scored.forEach(function(item, idx) {
                     var inResult = idx < result.length;
                     var tag = inResult ? '✅ 入选' : '❌ 截断';
-                    console.log(tag + ' [' + (idx + 1) + '] sim=' + item.similarity.toFixed(4) + ' week=' + item.week + ' id=' + item.id);
+                    var _ctx = item.simContext !== null ? ' ctx=' + item.simContext.toFixed(4) : '';
+                    console.log(tag + ' [' + (idx + 1) + '] rrf=' + item.rrfScore.toFixed(5) + ' intent=' + item.similarity.toFixed(4) + _ctx + ' week=' + item.week + ' id=' + item.id);
                     console.log('    ' + (item.text || ''));
                 });
             }

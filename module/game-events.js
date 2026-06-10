@@ -766,8 +766,8 @@ function setupMessageListeners() {
                 let resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                                 locationInfo +  // 使用新的地点信息
-                                `${_actorName2}行动选择：武艺切磋<br>` +
-                                `切磋对手：${currentBattleNpcName}<br>`;
+                                `切磋对手：${currentBattleNpcName}<br>` +
+                                `${_actorName2}行动选择：武艺切磋<br>`;
                 
                 if (result === 'victory') {
                     resultMessage += `比试结果：胜利<br><br>属性变化：`;
@@ -1020,9 +1020,9 @@ function setupMessageListeners() {
             const resultMessage = 
                 `时间：第${year}年第${month}月第${week}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
-                `${_actorName3}行动选择：下山游历<br>` +
                 `抵达目的地：${mapLocation}<br>` +
-                `随行NPC：${companionNames}` +
+                `随行NPC：${companionNames}<br>` +
+                `${_actorName3}行动选择：下山游历` +
                 eventInfo;
             
             // 保存游戏数据

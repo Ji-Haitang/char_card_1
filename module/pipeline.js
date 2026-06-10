@@ -14,6 +14,126 @@ var pipeline = (function() {
     var _abortRequested = false; // 用户是否请求中断
     var _currentSummarySource = null; // 当前提交的摘要来源（null 时默认 'llm'）
 
+    // 入库/查询侧共用的字段 key 列表
+    var _LOCATION_KEYS = ['抵达目的地', '地点'];
+    var _NPC_KEYS = ['在场NPC', '随行NPC', '切磋对手'];
+
+    /**
+     * 从消息文本（可能含 <br>）中提取地点和NPC，返回「地点：xxx\n在场NPC：xxx\n」格式的前缀字符串。
+     * 若无对应字段则返回空字符串。供入库（_buildEmbedText）和查询（Q_context）共用。
+     */
+    function _extractLocationNpcPrefix(text) {
+        if (!text) return '';
+        var content = text.replace(/<br\s*\/?>/gi, '\n');
+        var locationVal = null;
+        for (var lk = 0; lk < _LOCATION_KEYS.length; lk++) {
+            var lMatch = content.match(new RegExp(_LOCATION_KEYS[lk] + '[：:]([^\n]+)'));
+            if (lMatch) {
+                locationVal = lMatch[1].trim();
+                var arriveMatch = locationVal.match(/来到(.+)/);
+                if (arriveMatch) locationVal = arriveMatch[1].trim();
+                break;
+            }
+        }
+        var npcLine = null;
+        for (var nk = 0; nk < _NPC_KEYS.length; nk++) {
+            var nMatch = content.match(new RegExp(_NPC_KEYS[nk] + '[：:]([^\n]+)'));
+            if (nMatch) {
+                npcLine = _NPC_KEYS[nk] + '：' + nMatch[1].trim();
+                break;
+            }
+        }
+        var prefix = '';
+        if (locationVal) prefix += '地点：' + locationVal + '\n';
+        if (npcLine) prefix += npcLine + '\n';
+        return prefix;
+    }
+
+    /**
+     * 构造 Q_intent 文本：对用户输入做以下处理：
+     * 1. 去掉「时间：」和「季节：」开头的行
+     * 2. 地点字段（地点/抵达目的地）统一归一化为「地点：xxx」
+     * 3. NPC 字段（在场NPC/随行NPC/切磋对手）保留原 key 名，值不变
+     * 其余行（行动选择/互动内容等）原样保留。
+     */
+    function _buildQueryIntentText(userMessage) {
+        if (!userMessage) return '';
+        var lines = userMessage.replace(/<br\s*\/?>/gi, '\n').split('\n');
+        var result = [];
+        var locationWritten = false;
+        var npcWritten = false;
+        for (var i = 0; i < lines.length; i++) {
+            var line = lines[i].trim();
+            if (!line) continue;
+            // 丢弃时间/季节行
+            if (/^时间[：:]/.test(line) || /^季节[：:]/.test(line)) continue;
+            // 归一化地点行（只写第一个匹配）
+            var isLocationLine = false;
+            for (var lk = 0; lk < _LOCATION_KEYS.length; lk++) {
+                if (new RegExp('^' + _LOCATION_KEYS[lk] + '[：:]').test(line)) {
+                    isLocationLine = true;
+                    if (!locationWritten) {
+                        var lVal = line.replace(new RegExp('^' + _LOCATION_KEYS[lk] + '[：:]'), '').trim();
+                        var arrM = lVal.match(/来到(.+)/);
+                        if (arrM) lVal = arrM[1].trim();
+                        result.push('地点：' + lVal);
+                        locationWritten = true;
+                    }
+                    break;
+                }
+            }
+            if (isLocationLine) continue;
+            // NPC 行：保留 key 名和值（只写第一个匹配）
+            var isNpcLine = false;
+            for (var nk = 0; nk < _NPC_KEYS.length; nk++) {
+                if (new RegExp('^' + _NPC_KEYS[nk] + '[：:]').test(line)) {
+                    isNpcLine = true;
+                    if (!npcWritten) {
+                        var nVal = line.replace(new RegExp('^' + _NPC_KEYS[nk] + '[：:]'), '').trim();
+                        result.push(_NPC_KEYS[nk] + '：' + nVal);
+                        npcWritten = true;
+                    }
+                    break;
+                }
+            }
+            if (isNpcLine) continue;
+            // 其余行原样保留
+            result.push(line);
+        }
+        return result.join('\n');
+    }
+
+    /**
+     * 根据 summaryHistory 条目的 UIid，在 uiConversation 中向前查找对应 user 消息，
+     * 提取地点/NPC 元数据，拼接为向量化输入文本。
+     * 老存档无 UIid 或找不到对应记录时，直接返回纯 summaryText。
+     */
+    function _buildEmbedText(summary, uiConversation) {
+        var summaryText = summary.summaryText || '';
+        var UIid = summary.UIid;
+        if (!UIid || !Array.isArray(uiConversation)) return summaryText;
+
+        // 找到 assistant 消息
+        var assistIdx = -1;
+        for (var i = uiConversation.length - 1; i >= 0; i--) {
+            if (uiConversation[i].id === UIid) { assistIdx = i; break; }
+        }
+        if (assistIdx < 0) return summaryText;
+
+        // 往前找最近一条 user 消息
+        var userContent = '';
+        for (var j = assistIdx - 1; j >= 0; j--) {
+            if (uiConversation[j].role === 'user') {
+                userContent = uiConversation[j].content || '';
+                break;
+            }
+        }
+        if (!userContent) return summaryText;
+
+        var prefix = _extractLocationNpcPrefix(userContent);
+        return prefix ? (prefix + summaryText) : summaryText;
+    }
+
     /**
      * 在发起请求前，核对 summaryHistory 与 emb_ 记录的一致性：
      * - summaryHistory 有但 emb_ 缺失 → 补生成 embedding
@@ -50,11 +170,13 @@ var pipeline = (function() {
 
         console.log('[EmbSync] 发现 ' + missing.length + ' 条摘要缺少 emb_，开始补生成: ' + missing.map(function(s){ return s.id; }).join(', '));
         var fp = embeddingService.getFingerprint();
+        var _uiHistSync = storageService.loadUIConversation();
         for (var i = 0; i < missing.length; i++) {
             var s = missing[i];
             if (!s.summaryText) continue;
             try {
-                var vecs = await embeddingService.embed([s.summaryText]);
+                var embedText = _buildEmbedText(s, _uiHistSync);
+                var vecs = await embeddingService.embed([embedText]);
                 if (vecs && vecs.length > 0) {
                     var f32 = new Float32Array(vecs[0]);
                     var meta = { text: s.summaryText, week: s.week || 0, fingerprint: fp, createdAt: Date.now() };
@@ -104,67 +226,44 @@ var pipeline = (function() {
                     .filter(function(s) { return (s.week || 1) >= _recentThreshold; })
                     .map(function(s) { return s.id; });
 
-                // ② LWB 多段加权 query：focus(当前输入) + near(最近AI回复原文) + far(该回复前的用户消息)
-                var _focusText = preprocessed;
-                // near = uiConversation 最后一条 role=assistant（上一轮 AI 完整回复原文）
-                var _nearText = lastAssistantReply || '';
-                // far = near 之前最近一条 role=user（上一轮用户输入）
-                var _farText = '';
-                var _uiForFar = storageService.loadUIConversation();
-                var _passedAssist = false;
-                for (var _fuci = _uiForFar.length - 1; _fuci >= 0; _fuci--) {
-                    if (!_passedAssist && _uiForFar[_fuci].role === 'assistant') { _passedAssist = true; }
-                    else if (_passedAssist && _uiForFar[_fuci].role === 'user') { _farText = _uiForFar[_fuci].content || ''; break; }
+                // ② 双路查询文本构造
+                var _uiForQuery = storageService.loadUIConversation();
+
+                // --- Q_intent：当前用户输入，去掉时间/季节行，地点/NPC字段归一化为入库格式 ---
+                var _intentText = _buildQueryIntentText(preprocessed);
+
+                // --- Q_context：上一轮AI回复原文，前置从上轮用户消息提取的地点/NPC前缀 ---
+                var _lastAssistIdx = -1;
+                for (var _qi = _uiForQuery.length - 1; _qi >= 0; _qi--) {
+                    if (_uiForQuery[_qi].role === 'assistant') { _lastAssistIdx = _qi; break; }
                 }
-
-                // 仅 embed 非空段
-                var _segTexts = [_focusText];
-                var _segBases = [0.55];
-                if (_nearText) { _segTexts.push(_nearText); _segBases.push(0.30); }
-                if (_farText)  { _segTexts.push(_farText);  _segBases.push(0.15); }
-
-                var _embedVecs = await embeddingService.embed(_segTexts);
-
-                // 长度惩罚：< 50 字时按比例衰减至 35% 基础权重
-                var _segWeights = _segTexts.map(function(t, idx) {
-                    var len = (t || '').length;
-                    var base = _segBases[idx];
-                    return len >= 50 ? base : base * (0.35 + (len / 50) * 0.65);
-                });
-
-                // 归一化
-                var _wTot = _segWeights.reduce(function(a, b) { return a + b; }, 0);
-                _segWeights = _segWeights.map(function(w) { return w / _wTot; });
-
-                // 焦点保底 35%
-                if (_segWeights[0] < 0.35) {
-                    var _shortage = 0.35 - _segWeights[0];
-                    var _ctxTot = _segWeights.slice(1).reduce(function(a, b) { return a + b; }, 0);
-                    if (_ctxTot > 0) {
-                        for (var _si2 = 1; _si2 < _segWeights.length; _si2++) {
-                            _segWeights[_si2] -= _shortage * (_segWeights[_si2] / _ctxTot);
+                var _contextBase = lastAssistantReply || '';
+                var _contextText = '';
+                if (_contextBase && _lastAssistIdx > 0) {
+                    // 找上一轮 user 消息
+                    for (var _qi2 = _lastAssistIdx - 1; _qi2 >= 0; _qi2--) {
+                        if (_uiForQuery[_qi2].role === 'user') {
+                            var _ctxPrefix = _extractLocationNpcPrefix(_uiForQuery[_qi2].content || '');
+                            _contextText = _ctxPrefix ? (_ctxPrefix + _contextBase) : _contextBase;
+                            break;
                         }
                     }
-                    _segWeights[0] = 0.35;
                 }
+                if (!_contextText) _contextText = _contextBase;
 
-                // 加权平均向量 + L2 归一化
-                var _dim = _embedVecs[0].length;
-                var _queryVec = new Float32Array(_dim);
-                for (var _si = 0; _si < _segTexts.length; _si++) {
-                    var _sv = _embedVecs[_si];
-                    var _sw = _segWeights[_si];
-                    for (var _di = 0; _di < _dim; _di++) {
-                        _queryVec[_di] += _sw * _sv[_di];
-                    }
-                }
-                var _qnorm = 0;
-                for (var _di2 = 0; _di2 < _dim; _di2++) _qnorm += _queryVec[_di2] * _queryVec[_di2];
-                _qnorm = Math.sqrt(_qnorm);
-                if (_qnorm > 0) { for (var _di3 = 0; _di3 < _dim; _di3++) _queryVec[_di3] /= _qnorm; }
+                // ③ 一次批量 embed（两路）
+                var _embedInputs = [_intentText];
+                var _hasContext = !!_contextText;
+                if (_hasContext) _embedInputs.push(_contextText);
 
-                // ③ focusCharacters：扫描 focus+near+far 合并文本，提取 npcNameToId 里的 NPC 名字
-                var _combinedForNpc = _focusText + ' ' + _nearText + ' ' + _farText;
+                var _embedVecs = await embeddingService.embed(_embedInputs);
+                var _intentVec = _embedVecs[0] ? new Float32Array(_embedVecs[0]) : null;
+                var _contextVec = (_hasContext && _embedVecs[1]) ? new Float32Array(_embedVecs[1]) : null;
+
+                if (!_intentVec) throw new Error('Q_intent embed 返回空');
+
+                // ④ focusCharacters：扫描 intent + context 文本，提取已知 NPC 名字
+                var _combinedForNpc = _intentText + ' ' + _contextText;
                 var _focusCharacters = [];
                 if (typeof npcNameToId !== 'undefined') {
                     var _npcNameKeys = Object.keys(npcNameToId);
@@ -175,20 +274,18 @@ var pipeline = (function() {
                     }
                 }
 
-                // 保存分段信息供 memory-recall.js 的 log 读取
+                // 保存查询信息供 memory-recall.js 的 log 读取
                 window._lastQuerySegments = {
-                    focus: { text: _focusText, weight: _segWeights[0] },
-                    near:  { text: _nearText,  weight: _nearText ? _segWeights[1] : 0 },
-                    far:   { text: _farText,   weight: _farText  ? _segWeights[_nearText ? 2 : 1] : 0 }
+                    intent: { text: _intentText },
+                    context: { text: _contextText }
                 };
                 console.groupCollapsed('[Pipeline] Query向量构成（展开查看）');
-                console.log('focus(' + (_segWeights[0] * 100).toFixed(0) + '%): ' + _focusText);
-                if (_nearText) console.log('near(' + (_segWeights[1] * 100).toFixed(0) + '%): ' + (_nearText.length > 300 ? _nearText.slice(0, 300) + '...' : _nearText));
-                if (_farText)  console.log('far('  + (_segWeights[_nearText ? 2 : 1] * 100).toFixed(0) + '%): ' + (_farText.length > 150 ? _farText.slice(0, 150) + '...' : _farText));
+                console.log('Q_intent: ' + _intentText);
+                console.log('Q_context: ' + (_contextText.length > 300 ? _contextText.slice(0, 300) + '...' : _contextText));
                 console.log('排除RecentMemories: ' + excludeIds.length + '条 | focusNPC=[' + _focusCharacters.join(',') + ']');
                 console.groupEnd();
 
-                recalledMemories = await memoryRecall.recallRelevantMemories(_queryVec, 15, excludeIds, 3000, _focusCharacters);
+                recalledMemories = await memoryRecall.recallRelevantMemories(_intentVec, 15, excludeIds, 3000, _focusCharacters, _contextVec);
             } catch (recallErr) {
                 console.warn('[Pipeline] 向量召回失败，降级为空:', recallErr && recallErr.message || recallErr);
                 recalledMemories = [];
@@ -490,6 +587,12 @@ var pipeline = (function() {
                         // ⑩ 收集 summaryBuff：uiConversation.slice(oldIdx) 中 assistant 条目
                         //    注意：此时 appendUIConversation(assistant) 尚未调用，本轮 assistant 不在 buff 中
                         var _uiConvNow = storageService.loadUIConversation();
+
+                        // 安全检查：_oldIdx 超出当前 uiConversation 长度时（读档后可能出现），重置为 0
+                        if (_oldIdx >= _uiConvNow.length) {
+                            console.warn('[Pipeline] markWeekUiIndex (' + _oldIdx + ') 超出 uiConversation 长度 (' + _uiConvNow.length + ')，重置为 0 重新收集 buff');
+                            _oldIdx = 0;
+                        }
                         var _buffSlice = _uiConvNow.slice(_oldIdx).filter(function(m) { return m.role === 'assistant'; });
                         var _turnCount = _buffSlice.length;
                         var _buffText = _buffSlice.map(function(m, i) {
@@ -527,13 +630,15 @@ var pipeline = (function() {
                         }
                     }
                 } else {
-                    summaryHistoryService.append(parsed.summaries, _summarySource);
+                    // 预先生成本轮 assistant 消息 id，传给 summaryHistory 以便向量化时关联元数据
+                    var _assistantMsgId = 'a' + Date.now();
+                    summaryHistoryService.append(parsed.summaries, _summarySource, _assistantMsgId);
                     summaryHistoryService.trimWindow();
                 }
 
                 // 6. 保存 AI 回复到 UI 历史（摘要存在才写入，避免截断内容污染 LatestReply）
                 storageService.appendUIConversation({
-                    id: 'a' + Date.now(),
+                    id: typeof _assistantMsgId !== 'undefined' ? _assistantMsgId : ('a' + Date.now()),
                     role: 'assistant',
                     content: parsed.mainText,
                     week: currentWeek,
@@ -571,43 +676,21 @@ var pipeline = (function() {
                         var newSummaries = allAfter.filter(function(s) { return !cachedIds[s.id]; });
                         if (newSummaries.length === 0) return;
 
-                        // ── Batch 1：摘要向量（60%）──
-                        var summaryTexts = newSummaries.map(function(s) { return s.summaryText; });
-                        var summaryVectors = await embeddingService.embed(summaryTexts);
-
-                        // ── Batch 2：对应 AI 回复原文向量（40%）──
-                        // 取 uiConversation 中倒数 newSummaries.length 条 assistant 消息与之对齐
+                        // 加载 uiConversation 用于元数据提取
                         var _uiHist = storageService.loadUIConversation();
-                        var _assistMsgs = _uiHist.filter(function(m) { return m.role === 'assistant'; });
-                        var _aStart = Math.max(0, _assistMsgs.length - newSummaries.length);
-                        var replyTexts = [];
-                        for (var _ri = 0; _ri < newSummaries.length; _ri++) {
-                            var _ai = _aStart + _ri;
-                            replyTexts.push(_ai < _assistMsgs.length ? (_assistMsgs[_ai].content || '') : '');
-                        }
-                        var replyVectors = await embeddingService.embed(replyTexts.map(function(t) { return t || ' '; }));
+
+                        // 构建每条摘要的向量化文本（地点/NPC前缀 + summaryText）
+                        var embedTexts = newSummaries.map(function(s) {
+                            return _buildEmbedText(s, _uiHist);
+                        });
+
+                        var vectors = await embeddingService.embed(embedTexts);
 
                         var fp = embeddingService.getFingerprint();
                         var _lastNewEmb = null;
                         for (var vi = 0; vi < newSummaries.length; vi++) {
-                            if (!summaryVectors[vi]) continue;
-                            var _sv = summaryVectors[vi];
-                            var _rv = (replyVectors && replyVectors[vi] && replyVectors[vi].length === _sv.length) ? replyVectors[vi] : null;
-
-                            // 加权合并 60% 摘要 + 40% 原文，再 L2 归一化
-                            var combined = new Float32Array(_sv.length);
-                            if (_rv) {
-                                for (var _di = 0; _di < _sv.length; _di++) {
-                                    combined[_di] = 0.6 * _sv[_di] + 0.4 * _rv[_di];
-                                }
-                                var _norm = 0;
-                                for (var _di2 = 0; _di2 < combined.length; _di2++) { _norm += combined[_di2] * combined[_di2]; }
-                                _norm = Math.sqrt(_norm);
-                                if (_norm > 0) { for (var _di3 = 0; _di3 < combined.length; _di3++) { combined[_di3] /= _norm; } }
-                            } else {
-                                // 回退：仅用摘要向量
-                                combined = new Float32Array(_sv);
-                            }
+                            if (!vectors[vi]) continue;
+                            var combined = new Float32Array(vectors[vi]);
 
                             var meta = {
                                 text: newSummaries[vi].summaryText,
@@ -617,14 +700,14 @@ var pipeline = (function() {
                             };
                             storageService.saveEmbedding(newSummaries[vi].id, combined, meta);
                             memoryRecall.addToCache({ id: newSummaries[vi].id, vector: combined, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
-                            _lastNewEmb = { id: newSummaries[vi].id, summaryText: newSummaries[vi].summaryText, replyText: replyTexts[vi] || '' };
+                            _lastNewEmb = { id: newSummaries[vi].id, summaryText: newSummaries[vi].summaryText, embedText: embedTexts[vi] };
                         }
                         console.log('[Pipeline] 已保存 ' + newSummaries.length + ' 条新 embedding');
                         if (_lastNewEmb) {
                             console.groupCollapsed('[Pipeline] 最新 embedding 详情（展开查看）');
                             console.log('id: ' + _lastNewEmb.id);
-                            console.log('摘要文本（60%）: ' + _lastNewEmb.summaryText);
-                            console.log('AI回复原文（40%）: ' + (_lastNewEmb.replyText.length > 500 ? _lastNewEmb.replyText.slice(0, 500) + '...' : _lastNewEmb.replyText));
+                            console.log('摘要文本: ' + _lastNewEmb.summaryText);
+                            console.log('向量化文本: ' + (_lastNewEmb.embedText.length > 500 ? _lastNewEmb.embedText.slice(0, 500) + '...' : _lastNewEmb.embedText));
                             console.groupEnd();
                         }
                     } catch (embErr) {
@@ -872,6 +955,34 @@ var pipeline = (function() {
             var playerName = (typeof gameData !== 'undefined' && gameData.playerName) ? gameData.playerName : '主角';
             var eventText = event.text.replace(/\{\{user\}\}/g, playerName);
             var resolvedUserMessage = userMessage.replace(/\{\{user\}\}/g, playerName);
+
+            // 给特殊剧情的 user 消息统一加上结构化前缀（时间/季节/地点/在场NPC）
+            // 只在消息不已含「时间：」时追加，避免重复
+            if (resolvedUserMessage.indexOf('时间：') === -1) {
+                var _year = 1, _month = 1, _week = 1;
+                if (typeof currentWeek !== 'undefined') {
+                    _year  = Math.floor((currentWeek - 1) / 48) + 1;
+                    var _rem = (currentWeek - 1) % 48;
+                    _month = Math.floor(_rem / 4) + 1;
+                    _week  = _rem % 4 + 1;
+                }
+                var _seasonCN = (typeof seasonNameMap !== 'undefined' && typeof seasonStatus !== 'undefined')
+                    ? (seasonNameMap[seasonStatus] || '冬天') : '冬天';
+                var _loc = (typeof mapLocation !== 'undefined' && mapLocation) ? mapLocation : '天山派';
+                // 随行 NPC（companionNPC 数组）
+                var _npcNames = '';
+                if (typeof companionNPC !== 'undefined' && Array.isArray(companionNPC) && companionNPC.length > 0) {
+                    var _npcArr = companionNPC.map(function(id) {
+                        return (typeof npcs !== 'undefined' && npcs[id]) ? npcs[id].name : id;
+                    });
+                    _npcNames = _npcArr.join('、');
+                }
+                var _prefix = '时间：第' + _year + '年第' + _month + '月第' + _week + '周<br>' +
+                    '季节：' + _seasonCN + '<br>' +
+                    '地点：' + _loc + '<br>' +
+                    (_npcNames ? '随行NPC：' + _npcNames + '<br>' : '');
+                resolvedUserMessage = _prefix + resolvedUserMessage;
+            }
             
             // 走完整的提交流程（解析SUMMARY、SIDE_NOTE、渲染、保存）
             // 标记本次摘要来源为特殊剧情事件

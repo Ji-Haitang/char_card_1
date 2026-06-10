@@ -1366,7 +1366,11 @@
                         await triggerSpecialEvent(specialEvent, { fromSkipWeek: true });
                     } else {
                         // 无特殊事件，发送普通的新周消息
-                        await handleMessageOutput('行动选择:新的一周开始了<br>当前第' + year + '年第' + month + '月第' + week + '周');
+                        await handleMessageOutput(
+                            `时间：第${year}年第${month}月第${week}周<br>` +
+                            `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                            `地点：天山派<br>` +
+                            `行动选择:新的一周开始了`);
                     }
                 }
             );
@@ -1597,8 +1601,8 @@
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 locationInfo +  // 使用新的地点信息
-                `{{user}}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
+                `{{user}}行动选择：${action}<br>` +
                 `选择结果：${successLevel} - ${successText}<br><br>` +
                 `计算过程：${calcText}<br>` +
                 `属性变化：${changeText}`;
@@ -1799,9 +1803,10 @@
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 locationInfo +  // 使用新的地点信息
+                `在场NPC：${npcsPresent}<br>` +
                 `{{user}}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
-                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>`;
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span>`;
             
             closeModal();
             
@@ -2111,8 +2116,8 @@
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     `地点：${mapLocation}<br>` +
-                    `{{user}}自由行动："${actionContent}"<br>` +
-                    `随行NPC：${companionNames}` +
+                    `随行NPC：${companionNames}<br>` +
+                    `{{user}}自由行动："${actionContent}"` +
                     eventInfo;
             } else {
                 // 原有的GameMode为0的逻辑
@@ -2145,8 +2150,8 @@
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     locationInfo +
-                    `{{user}}自由行动："${actionContent}"<br>` +
-                    `在场NPC：${npcsPresent}`;
+                    `在场NPC：${npcsPresent}<br>` +
+                    `{{user}}自由行动："${actionContent}"`;
             }
             inputElement.value = '';
             inputElement.style.height = 'auto';
@@ -2182,7 +2187,16 @@
         async function fleeBattle() {
             if (!currentBattleEvent) return;
             
-            const resultMessage = currentBattleEvent.事件描述 + '<br><br>你选择避开了战斗';
+            const _fbYear = Math.floor((currentWeek - 1) / 48) + 1;
+            const _fbRemaining = (currentWeek - 1) % 48;
+            const _fbMonth = Math.floor(_fbRemaining / 4) + 1;
+            const _fbWeek = _fbRemaining % 4 + 1;
+            const resultMessage =
+                `时间：第${_fbYear}年第${_fbMonth}月第${_fbWeek}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                `地点：${mapLocation || '天山派'}<br>` +
+                `事件描述: ${currentBattleEvent.事件描述}<br>` +
+                `战斗结果: 放弃战斗，选择避开`;
             
             hideBattleEvent();
             
@@ -2301,7 +2315,19 @@
 
         // 从SLG模式返回
         async function returnFromSLG() {
-            const message = '你结束了山下的游历，回到了天山派';
+            // 在重置前保存当前地点和随行NPC，用于消息构建
+            const _slgLocation = mapLocation || '天山派';
+            const _slgCompanions = (companionNPC && companionNPC.length > 0) ? companionNPC.join('、') : '无';
+            const _slgYear = Math.floor((currentWeek - 1) / 48) + 1;
+            const _slgRemaining = (currentWeek - 1) % 48;
+            const _slgMonth = Math.floor(_slgRemaining / 4) + 1;
+            const _slgWeek = _slgRemaining % 4 + 1;
+            const message =
+                `时间：第${_slgYear}年第${_slgMonth}月第${_slgWeek}周<br>` +
+                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                `地点：${_slgLocation}<br>` +
+                `随行NPC：${_slgCompanions}<br>` +
+                `你结束了山下的游历，回到了天山派`;
             
             // 重置游戏模式
             GameMode = 0;
@@ -3126,8 +3152,8 @@
                 lastUserMessage = newMessage;
                 // gameData.lastUserMessage = newMessage;
 
-                // 新增：检查是否是新的一周的消息（新版：年/月/周）
-                const newWeekPattern = /^行动选择:新的一周开始了<br>当前第(\d+)年第(\d+)月第(\d+)周$/;
+                // 新增：检查是否是新的一周的消息（兼容新旧格式）
+                const newWeekPattern = /行动选择:新的一周开始了/;
                 const match = newMessage.match(newWeekPattern);
 
                 if (match) {

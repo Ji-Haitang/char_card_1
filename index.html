@@ -2189,8 +2189,8 @@ const outPut = `
             let resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 locationInfo +  // 使用新的地点信息
-                `${gameData.playerName || '主角'}行动选择：${action}<br>` +
                 `在场NPC：${npcsPresent}<br>` +
+                `${gameData.playerName || '主角'}行动选择：${action}<br>` +
                 `选择结果：${successLevel} - ${successText}<br><br>` +
                 `计算过程：${calcText}<br>` +
                 `属性变化：${changeText}`;
@@ -2394,10 +2394,10 @@ const outPut = `
             const resultMessage = `时间：第${Math.floor((currentWeek - 1) / 48) + 1}年第${Math.floor(((currentWeek - 1) % 48) / 4) + 1}月第${((currentWeek - 1) % 4) + 1}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 locationInfo +  // 使用新的地点信息
+                `在场NPC：${npcsPresent}<br>` +
                 `${gameData.playerName || '主角'}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
-                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span><br>` +
-                `在场NPC：${npcsPresent}`;
+                `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span>`;
             
             closeModal();
             
@@ -2708,8 +2708,8 @@ const outPut = `
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     `地点：${mapLocation}<br>` +
-                    `${gameData.playerName || '主角'}自由行动："${actionContent}"<br>` +
-                    `随行NPC：${companionNames}` +
+                    `随行NPC：${companionNames}<br>` +
+                    `${gameData.playerName || '主角'}自由行动："${actionContent}"` +
                     eventInfo;
             } else {
                 // 原有的GameMode为0的逻辑
@@ -2742,8 +2742,8 @@ const outPut = `
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     locationInfo +
-                    `${gameData.playerName || '主角'}自由行动："${actionContent}"<br>` +
-                    `在场NPC：${npcsPresent}`;
+                    `在场NPC：${npcsPresent}<br>` +
+                    `${gameData.playerName || '主角'}自由行动："${actionContent}"`;
             }
             inputElement.value = '';
             inputElement.style.height = 'auto';
@@ -2833,8 +2833,8 @@ const outPut = `
                 `时间：第${_slgYear}年第${_slgMonth}月第${_slgWeek}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 `地点：${_slgLocation}<br>` +
-                `你结束了山下的游历，回到了天山派<br>` +
-                `随行NPC：${_slgCompanions}`;
+                `随行NPC：${_slgCompanions}<br>` +
+                `你结束了山下的游历，回到了天山派`;
             
             // 重置游戏模式
             GameMode = 0;
@@ -3219,6 +3219,18 @@ function loadSaveSlot(saveId) {
     }
     updateFreeActionInputState();
     closeSaveListModal();
+    // 恢复 markWeekUiIndex 和 summaryBuff（老存档无此字段时默认为存档 uiConversation 的长度）
+    if (typeof storageService.setMarkWeekUiIndex === 'function') {
+        var _mwIdx = typeof payload.markWeekUiIndex === 'number' ? payload.markWeekUiIndex : storageService.loadUIConversation().length;
+        storageService.setMarkWeekUiIndex(_mwIdx);
+        console.log('[LoadSave] 已恢复 markWeekUiIndex=' + _mwIdx);
+    }
+    if (payload.summaryBuff && typeof storageService.setSummaryBuff === 'function') {
+        storageService.setSummaryBuff(payload.summaryBuff);
+        console.log('[LoadSave] 已恢复 summaryBuff, targetMarkWeek=' + payload.summaryBuff.targetMarkWeek);
+    } else if (typeof storageService.clearSummaryBuff === 'function') {
+        storageService.clearSummaryBuff();
+    }
     // 读档后恢复 BGM（bgmEnabled/bgmVolume 已从 gameData 恢复，重新 init 同步状态）
     if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
         bgmManager.init(document.getElementById('bgm-player'));

@@ -44,20 +44,23 @@ var summaryHistoryService = (function() {
 
     /** 添加新的摘要记录 */
     // @param {string} [source] - 来源标记：'llm'（默认，LLM正常生成）| 'special_event'（预设特殊剧情）
-    function append(summaries, source) {
+    // @param {string} [UIid] - 对应 uiConversation 中 assistant 消息的 id（用于向量化时关联地点/NPC元数据）
+    function append(summaries, source, UIid) {
         var history = load();
         if (!summaries || summaries.length === 0) return history;
         var recordSource = source || 'llm';
 
         for (var i = 0; i < summaries.length; i++) {
-            history.push({
+            var _record = {
                 id: _uuid(),
                 week: typeof currentWeek !== 'undefined' ? currentWeek : 1,
                 gameTime: typeof currentGameTime !== 'undefined' ? currentGameTime : '',
                 summaryText: summaries[i],
                 source: recordSource,
                 createdAt: Date.now()
-            });
+            };
+            if (UIid) _record.UIid = UIid;
+            history.push(_record);
         }
 
         trim(history);
