@@ -34,6 +34,19 @@
  * 无依赖，是最底层的配置文件
  */
 
+// 自适应资源路径：index 链路用相对路径，index-SR 链路用 CDN 绝对路径
+// file:// 协议下（直接双击打开）也走 CDN，避免 Chrome CORS 拦截
+const _CDN_BASE = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/';
+const _PAGES_BASE = 'https://Ji-Haitang.github.io/char_card_1/';
+function _assetUrl(path) {
+    const isFileProt = typeof location !== 'undefined' && location.protocol === 'file:';
+    return (typeof window !== 'undefined' && window.USE_CDN) || isFileProt ? _CDN_BASE + path : path;
+}
+// iframe 子页面路径：USE_CDN=true（ST角色卡）时指向 github.io，本地链路用相对路径
+function _iframeUrl(page) {
+    return (typeof window !== 'undefined' && window.USE_CDN) ? _PAGES_BASE + page : page;
+}
+
 // 数值范围定义
 const valueRanges = {
     playerTalents: {
@@ -195,36 +208,36 @@ const npcNameToId = {
 
 // NPC立绘URL映射
 const npcPortraits = {
-    A: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.webp',
-    B: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.webp',
-    C: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.webp',
-    D: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.webp',
-    E: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.webp',
-    F: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.webp',
-    G: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.webp',
-    H: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.webp',
-    I: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.webp',
-    J: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.webp',
-    K: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.webp',
-    L: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.webp',
-    // Z: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.webp',
-    M: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/玄天青.webp',
-    N: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/鹿椿若.webp',
-    O: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/苓雪妃.webp'
+    A: _assetUrl('img/NPC/破阵子.webp'),
+    B: _assetUrl('img/NPC/洞庭君.webp'),
+    C: _assetUrl('img/NPC/钱塘君.webp'),
+    D: _assetUrl('img/NPC/萧白瑚.webp'),
+    E: _assetUrl('img/NPC/姬姒.webp'),
+    F: _assetUrl('img/NPC/施延年.webp'),
+    G: _assetUrl('img/NPC/呼延显.webp'),
+    H: _assetUrl('img/NPC/雨烛.webp'),
+    I: _assetUrl('img/NPC/安慕.webp'),
+    J: _assetUrl('img/NPC/唐沐梨.webp'),
+    K: _assetUrl('img/NPC/洛潜幽.webp'),
+    L: _assetUrl('img/NPC/神秘杂役.webp'),
+    // Z: _assetUrl('img/NPC/杂鱼1.webp'),
+    M: _assetUrl('img/NPC/玄天青.webp'),
+    N: _assetUrl('img/NPC/鹿椿若.webp'),
+    O: _assetUrl('img/NPC/苓雪妃.webp')
 };
 
 // 地点背景图映射
 const locationBackgrounds = {
-    yanwuchang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/演武场.webp',
-    cangjingge: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/藏经阁.webp',
-    huofang: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/伙房.webp',
-    houshan: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山.webp',
-    yishiting: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/议事厅.webp',
-    tiejiangpu: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/铁匠铺.webp',
-    nandizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/男弟子房.webp',
-    nvdizi: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/女弟子房.webp',
-    shanmen: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/山门.webp',
-    tianshanpai: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派.webp'
+    yanwuchang: _assetUrl('img/location/演武场.webp'),
+    cangjingge: _assetUrl('img/location/藏经阁.webp'),
+    huofang: _assetUrl('img/location/伙房.webp'),
+    houshan: _assetUrl('img/location/后山.webp'),
+    yishiting: _assetUrl('img/location/议事厅.webp'),
+    tiejiangpu: _assetUrl('img/location/铁匠铺.webp'),
+    nandizi: _assetUrl('img/location/男弟子房.webp'),
+    nvdizi: _assetUrl('img/location/女弟子房.webp'),
+    shanmen: _assetUrl('img/location/山门.webp'),
+    tianshanpai: _assetUrl('img/location/天山派.webp')
 };
 
 // 互动配置

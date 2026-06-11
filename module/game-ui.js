@@ -622,7 +622,7 @@ function updateStoryDisplay() {
 
                 const sceneName = pageData.scene; // 例如 演武场 / 山门 / 公田…
                 // https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene_webp/{{当前mapLocation}}/{{昼or夜}}/{{pageData.scene}}.webp
-                const sceneUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`;
+                const sceneUrl = _assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
                 sceneImg.src = sceneUrl;
                 sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
                 try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {}
@@ -656,7 +656,7 @@ function updateStoryDisplay() {
                         enamor = 1;
                     }
                     // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/表情差分/{{pageData.emotion}}.png
-                    const emoUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/表情差分和CG/${pageData.npc}/表情差分/${emotion}.webp`;
+                    const emoUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/表情差分/${emotion}.webp`);
                     emotionImg.src = emoUrl;
                     emotionImg.alt = `${pageData.npc}-${emotion}`;
                     try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {}
@@ -680,7 +680,7 @@ function updateStoryDisplay() {
 
                 // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/色图/{{pageData.cg + 随机1~4的数字后缀}}.png
                 // const randIdx = Math.floor(Math.random() * 4) + 1; // 1~4
-                const cgUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/表情差分和CG/${pageData.npc}/色图/${pageData.cg}${randIdx}.webp`;
+                const cgUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/色图/${pageData.cg}${randIdx}.webp`);
                 cgImg.src = cgUrl;
                 cgImg.alt = `${pageData.npc}-${pageData.cg}${randIdx}`;
                 try { window.__lastValidCgUrl = cgUrl; } catch (e) {}

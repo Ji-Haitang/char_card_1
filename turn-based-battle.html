@@ -1,12 +1,12 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>对战系统</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.googleapis.cn">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.cn/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&display=swap" rel="stylesheet">
     <style>
 * {
     margin: 0;
@@ -1459,23 +1459,23 @@ body {
         <!-- 战斗特效图层 -->
         <!-- 玩家特效 -->
         <div class="battle-effect player-taunt-effect" id="player-taunt-effect">
-            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/嘴炮.png" alt="嘴炮">
+            <img src="assets/image/static/嘴炮.png" alt="嘴炮">
         </div>
         <div class="battle-effect player-gather-effect" id="player-gather-effect">
-            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/集气.gif" alt="集气">
+            <img src="assets/image/static/集气.gif" alt="集气">
         </div>
         <div class="battle-effect player-hit-effect" id="player-hit-effect">
-            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/攻击.gif" alt="攻击">
+            <img src="assets/image/static/攻击.gif" alt="攻击">
         </div>
         <!-- 敌人特效 -->
         <div class="battle-effect enemy-taunt-effect" id="enemy-taunt-effect">
-            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/嘴炮.png" alt="嘴炮">
+            <img src="assets/image/static/嘴炮.png" alt="嘴炮">
         </div>
         <div class="battle-effect enemy-gather-effect" id="enemy-gather-effect">
-            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/集气.gif" alt="集气">
+            <img src="assets/image/static/集气.gif" alt="集气">
         </div>
         <div class="battle-effect enemy-hit-effect" id="enemy-hit-effect">
-            <img src="https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/攻击.gif" alt="攻击">
+            <img src="assets/image/static/攻击.gif" alt="攻击">
         </div>
         
         <!-- 战斗场景 -->
@@ -1812,7 +1812,7 @@ function preloadImage(url) {
 async function preloadBattleResources(enemyName) {
     console.log('[预加载] 开始预加载战斗资源...');
     
-    const baseUrl = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main';
+    const baseUrl = '.';
     const states = ['待机', '攻击', '防御', '受击'];
     const urls = [];
     
@@ -1923,7 +1923,7 @@ name: ${urlParams.get('enemyName') || '呼延显'}
 `;
 
 // 游戏主背景和弹窗背景图片链接
-const GAME_BG_URL = urlParams.get('backgroundUrl') || 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/后山_昼.webp';
+const GAME_BG_URL = urlParams.get('backgroundUrl') || 'img/location/后山_昼.webp';
 const MODAL_BG_URL = 'https://files.catbox.moe/jabi3y.jpg';
 
 
@@ -2124,112 +2124,112 @@ const commonNPCs = {
         maxHealth: 200,
         basicDamage: 140,
         style: '火',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/破阵子.png'
+        portrait: 'img/NPC/破阵子.png'
     },
     '洞庭君': {
         name: '洞庭君',
         maxHealth: 275,
         basicDamage: 100,
         style: '林',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洞庭君.png'
+        portrait: 'img/NPC/洞庭君.png'
     },
     '苓雪妃': {
         name: '苓雪妃',
         maxHealth: 250,
         basicDamage: 160,
         style: '风',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/苓雪妃.png'
+        portrait: 'img/NPC/苓雪妃.png'
     },    
     '玄天青': {
         name: '玄天青',
         maxHealth: 300,
         basicDamage: 60,
         style: '山',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/玄天青.png'
+        portrait: 'img/NPC/玄天青.png'
     },
     '钱塘君': {
         name: '钱塘君',
         maxHealth: 150,
         basicDamage: 100,
         style: '火',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/钱塘君.png'
+        portrait: 'img/NPC/钱塘君.png'
     },
     '萧白瑚': {
         name: '萧白瑚',
         maxHealth: 125,
         basicDamage: 60,
         style: '风',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/萧白瑚.png'
+        portrait: 'img/NPC/萧白瑚.png'
     },
     '姬姒': {
         name: '姬姒',
         maxHealth: 350,
         basicDamage: 70,
         style: '山',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/姬姒.png'
+        portrait: 'img/NPC/姬姒.png'
     },
     '施延年': {
         name: '施延年',
         maxHealth: 200,
         basicDamage: 50,
         style: '山',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/施延年.png'
+        portrait: 'img/NPC/施延年.png'
     },
     '呼延显': {
         name: '呼延显',
         maxHealth: 200,
         basicDamage: 100,
         style: '林',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/呼延显.png'
+        portrait: 'img/NPC/呼延显.png'
     },
     '雨烛': {
         name: '雨烛',
         maxHealth: 100,
         basicDamage: 90,
         style: '风',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/雨烛.png'
+        portrait: 'img/NPC/雨烛.png'
     },
     '安慕': {
         name: '安慕',
         maxHealth: 75,
         basicDamage: 110,
         style: '火',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/安慕.png'
+        portrait: 'img/NPC/安慕.png'
     },
     '唐沐梨': {
         name: '唐沐梨',
         maxHealth: 175,
         basicDamage: 80,
         style: '风',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/唐沐梨.png'
+        portrait: 'img/NPC/唐沐梨.png'
     },
     '洛潜幽': {
         name: '洛潜幽',
         maxHealth: 50,
         basicDamage: 20,
         style: '山',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/洛潜幽.png'
+        portrait: 'img/NPC/洛潜幽.png'
     },
     '神秘杂役': {
         name: '神秘杂役',
         maxHealth: 75,
         basicDamage: 300,
         style: '风',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/神秘杂役.png'
+        portrait: 'img/NPC/神秘杂役.png'
     },
     '鹿椿若': {
         name: '鹿椿若',
         maxHealth: 150,
         basicDamage: 30,
         style: '林',
-        portrait: 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/鹿椿若.png'
+        portrait: 'img/NPC/鹿椿若.png'
     }
 };
 
 const genericNPCPortraits = [
-    'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼1.png',  // 占位链接1
-    'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼2.png',  // 占位链接2
-    'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/杂鱼3.png'   // 占位链接3
+    'img/NPC/杂鱼1.png',  // 占位链接1
+    'img/NPC/杂鱼2.png',  // 占位链接2
+    'img/NPC/杂鱼3.png'   // 占位链接3
 ];
 
 // 解析敌方信息的函数
@@ -2251,7 +2251,7 @@ function parseEnemyInfo(text) {
     if (npcName && commonNPCs[npcName]) {
         const npc = commonNPCs[npcName];
         // 更新敌人立绘 - 使用战斗差分目录
-        const npcBattlePortrait = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/${npc.name}-待机.webp`;
+        const npcBattlePortrait = `img/战斗差分_webp/${npc.name}-待机.webp`;
         updateEnemyPortrait(npcBattlePortrait);
         
         // 根据难度调整属性
@@ -2318,15 +2318,15 @@ function parseEnemyInfo(text) {
 function getCategoryPortrait(category) {
     // 类别立绘映射 - 使用战斗差分目录下的待机图
     const categoryPortraits = {
-        '正派弟子': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/正派弟子-待机.webp',
-        '反派弟子': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/反派弟子-待机.webp',
-        '游侠': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/游侠-待机.webp',
-        '军士': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/军士-待机.webp',
-        '匪徒': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/匪徒-待机.webp',
-        '平民': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/平民-待机.webp',
-        '蒙面人': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/蒙面人-待机.webp',
-        '野兽': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/野兽-待机.webp',
-        '未知': 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/未知-待机.webp'
+        '正派弟子': 'img/战斗差分_webp/正派弟子-待机.webp',
+        '反派弟子': 'img/战斗差分_webp/反派弟子-待机.webp',
+        '游侠': 'img/战斗差分_webp/游侠-待机.webp',
+        '军士': 'img/战斗差分_webp/军士-待机.webp',
+        '匪徒': 'img/战斗差分_webp/匪徒-待机.webp',
+        '平民': 'img/战斗差分_webp/平民-待机.webp',
+        '蒙面人': 'img/战斗差分_webp/蒙面人-待机.webp',
+        '野兽': 'img/战斗差分_webp/野兽-待机.webp',
+        '未知': 'img/战斗差分_webp/未知-待机.webp'
     };
     
     return categoryPortraits[category] || categoryPortraits['未知'];
@@ -2354,13 +2354,13 @@ function updatePlayerPortrait(portraitUrl) {
 
 // 初始化主角立绘
 function initPlayerPortrait() {
-    const defaultPlayerPortrait = 'https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/主角-待机.webp';
+    const defaultPlayerPortrait = 'img/战斗差分_webp/主角-待机.webp';
     updatePlayerPortrait(defaultPlayerPortrait);
 }
 
 // 获取主角立绘URL（根据状态）
 function getPlayerPortraitUrl(state) {
-    return `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/主角-${state}.webp`;
+    return `img/战斗差分_webp/主角-${state}.webp`;
 }
 
 // 获取敌人立绘URL（根据状态）
@@ -2370,12 +2370,12 @@ function getEnemyPortraitUrl(state) {
     
     // 优先检查是否是特殊NPC
     if (npcName && commonNPCs[npcName]) {
-        return `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/${npcName}-${state}.webp`;
+        return `img/战斗差分_webp/${npcName}-${state}.webp`;
     }
     
     // 否则使用类别
     const category = enemy.category || '未知';
-    return `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/战斗差分_webp/${category}-${state}.webp`;
+    return `img/战斗差分_webp/${category}-${state}.webp`;
 }
 
 // 设置立绘描边效果

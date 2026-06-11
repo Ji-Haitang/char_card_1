@@ -482,7 +482,7 @@ body {
     z-index: -1;
     
     /* 背景图片 */
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/背景.png');
+    background-image: url('../assets/image/static/背景.png');
     background-size: 100% 100%; /* 拉伸填充 */
     background-position: center;
     background-repeat: no-repeat;
@@ -740,7 +740,7 @@ body {
     z-index: 15;
     transform: translate(-50%, -50%);
     display: none;
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/框选.png');
+    background-image: url('../assets/image/static/框选.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -787,7 +787,7 @@ body {
     left: 0;
     width: 100%;
     height: 100%;
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/框选2.png');
+    background-image: url('../assets/image/static/框选2.png');
     background-size: contain;
     background-repeat: no-repeat;
     background-position: center;
@@ -842,7 +842,7 @@ body {
     line-height: 1.4;
     pointer-events: none;
     z-index: 52;
-    background-image: url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/assets/image/static/背景.png');
+    background-image: url('../assets/image/static/背景.png');
     background-size: 100% 100%;
     background-repeat: no-repeat;
     background-position: center;

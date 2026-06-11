@@ -177,7 +177,7 @@ function showBlackjackGame() {
     const modal = document.getElementById('blackjack-modal');
     const iframe = document.getElementById('blackjack-iframe');
     
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/blackjack.html?money=${playerStats.金钱}`;
+    const gameUrl = `${_iframeUrl('blackjack.html')}?money=${playerStats.金钱}`;
     iframe.src = gameUrl;
     
     modal.style.display = 'block';
@@ -201,18 +201,18 @@ function showBattleGame(battleData) {
             const dayNight = dayNightStatus === 'night' ? '夜' : '昼';
             
             if (locationName) {
-                backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${locationName}_${dayNight}.webp`;
+                backgroundUrl = _assetUrl(`img/location/${locationName}_${dayNight}.webp`);
             } else {
                 const seasonMap = { 'spring': '春', 'summer': '夏', 'autumn': '秋', 'winter': '冬' };
                 const season = seasonMap[seasonStatus] || '冬';
-                backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp`;
+                backgroundUrl = _assetUrl(`img/location/天山派_${season}_${dayNight}.webp`);
             }
         } else {
             const seasonMap = { 'spring': '春', 'summer': '夏', 'autumn': '秋', 'winter': '冬' };
             const dayNightMap = { 'daytime': '昼', 'night': '夜' };
             const season = seasonMap[seasonStatus] || '冬';
             const dayNight = dayNightMap[dayNightStatus] || '昼';
-            backgroundUrl = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp`;
+            backgroundUrl = _assetUrl(`img/location/天山派_${season}_${dayNight}.webp`);
         }
     }
     
@@ -295,8 +295,7 @@ function showBattleGame(battleData) {
         params.set('enemyWuxue', String(enemyWuxue));
     }
     
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/turn-based-battle-new.html?${params.toString()}`;
-    // const gameUrl = `turn-based-battle-new.html?${params.toString()}`;
+    const gameUrl = `${_iframeUrl('turn-based-battle-new.html')}?${params.toString()}`;
     console.log('[SkillTest] 战斗页面URL:', gameUrl);
     iframe.src = gameUrl;
     
@@ -329,8 +328,7 @@ function showFarmGame() {
         ...seedCounts
     });
     
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/farm.html?${params.toString()}`;
-    // const gameUrl = `farm.html?${params.toString()}`;
+    const gameUrl = `${_iframeUrl('farm.html')}?${params.toString()}`;
     iframe.src = gameUrl;
     
     modal.style.display = 'block';
@@ -390,9 +388,7 @@ function showAlchemyGame() {
         ...pillCounts
     });
     
-    // 使用本地URL进行调试
-    const gameUrl = `https://Ji-Haitang.github.io/char_card_1/alchemy.html?${params.toString()}`;
-    // const gameUrl = `alchemy.html?${params.toString()}`;
+    const gameUrl = `${_iframeUrl('alchemy.html')}?${params.toString()}`;
     
     console.log('[炼丹] 完整URL:', gameUrl);
     
@@ -1384,7 +1380,7 @@ function updateSceneBackgrounds() {
         const season = seasonMap[seasonStatus] || '冬';
         const dayNight = dayNightMap[dayNightStatus] || '昼';
         
-        mapScene.style.backgroundImage = `url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/天山派_${season}_${dayNight}.webp')`;
+        mapScene.style.backgroundImage = `url('${_assetUrl(`img/location/天山派_${season}_${dayNight}.webp`)}')`;
     }
     
     // 更新其他场景背景
@@ -1395,7 +1391,7 @@ function updateSceneBackgrounds() {
         const scene = document.getElementById(`${sceneName}-scene`);
         if (scene) {
             const locationName = locationNames[sceneName];
-            scene.style.backgroundImage = `url('https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${locationName}_${dayNight}.webp')`;
+            scene.style.backgroundImage = `url('${_assetUrl(`img/location/${locationName}_${dayNight}.webp`)}')`;
         }
     });
 }
