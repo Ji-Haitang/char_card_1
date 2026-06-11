@@ -1,21 +1,22 @@
 /**
  * storage-service.js - 存储服务（Write-Through Cache + IndexedDB 后端）
- * 
+ *
  * Phase 2.2：内存缓存 + IndexedDB 持久化，对外同步 API 不变。
  * 启动时需 await storageService.init() 加载缓存。
  * IDB 不可用时自动降级到纯 localStorage。
- * 
- * 依赖：idb-storage.js
+ *
+ * 快照（snapshot）独立存储于 jxz_snapshot_db，与主库 jxz_db 平级。
+ * 快照在用户每次发送消息前写入，覆盖所有需要回退的字段，用于重生成和错误恢复。
+ *
+ * 依赖：idb-storage.js, idb-snapshot.js
  */
 
 var storageService = (function() {
-    // --- Key 定义 ---
+    // --- Key 定义（主库 jxz_db）---
     var KEY_APP_STATE = 'appState';
     var KEY_UI_CONV = 'uiConversation';
-    var KEY_SNAPSHOT = 'snapshot';
     var KEY_SUMMARY_HISTORY = 'summaryHistory';
     var KEY_WEEK_HISTORY = 'weekHistory';
-    var KEY_LAST_TURN_COMMITTED = 'lastTurnCommitted';
     var KEY_SAVE_INDEX = 'saveIndex';
     var KEY_MARK_WEEK_UI_INDEX = 'markWeekUiIndex';
     var KEY_SUMMARY_BUFF = 'summaryBuff';
@@ -23,18 +24,24 @@ var storageService = (function() {
     // localStorage key（兼容旧格式）
     var LS_APP_STATE = 'jxz_appState';
     var LS_UI_CONV = 'jxz_uiConversation';
-    var LS_SNAPSHOT = 'jxz_snapshot';
     var LS_SUMMARY_HISTORY = 'jxz_summaryHistory';
     var LS_WEEK_HISTORY = 'jxz_weekHistory';
-    var LS_LAST_TURN_COMMITTED = 'jxz_lastTurnCommitted';
     var LS_SAVES = 'jxz_saves';
     var LS_MARK_WEEK_UI_INDEX = 'jxz_markWeekUiIndex';
     var LS_SUMMARY_BUFF = 'jxz_summaryBuff';
+
+    // localStorage key（快照降级，仅存体积可控的字段）
+    var LS_SNAPSHOT_APPSTATE = 'jxz_snapshot';
+    var LS_SNAPSHOT_LAST_MSG = 'jxz_snapshot_lastMsg';
 
     // --- 内部状态 ---
     var _cache = {};
     var _idbAvailable = false;
     var _initialized = false;
+
+    // --- 快照内存缓存（对应 jxz_snapshot_db）---
+    var _snapshotCache = null;
+    var _idbSnapshotAvailable = false;
 
     // --- 辅助函数 ---
     function _logErr(context, err) {
@@ -99,6 +106,41 @@ var storageService = (function() {
             // 降级：从 localStorage 填充缓存
             _loadCacheFromLocalStorage();
         }
+        // 清理旧架构遗留的 stale key（snapshot, lastTurnCommitted）
+        if (_idbAvailable) {
+            idbStorage.remove('snapshot').catch(function() {});
+            idbStorage.remove('lastTurnCommitted').catch(function() {});
+        }
+
+        // 初始化快照数据库（jxz_snapshot_db，独立于主库）
+        try {
+            if (typeof idbSnapshot !== 'undefined') {
+                await idbSnapshot.open();
+                _idbSnapshotAvailable = true;
+                var snapData = await idbSnapshot.getAll();
+                if (Object.keys(snapData).length > 0) {
+                    _snapshotCache = snapData;
+                    console.log('[Storage] snapshot_db 已加载，快照存在');
+                } else {
+                    // 尝试从旧 LS jxz_snapshot 迁移 appState 部分
+                    var oldLsSnap = _lsGet(LS_SNAPSHOT_APPSTATE);
+                    if (oldLsSnap) {
+                        _snapshotCache = { appState: oldLsSnap };
+                        idbSnapshot.put('appState', oldLsSnap).catch(function() {});
+                        console.log('[Storage] 已从 localStorage 迁移旧 snapshot 到 snapshot_db');
+                    }
+                }
+            }
+        } catch (snapErr) {
+            _idbSnapshotAvailable = false;
+            console.warn('[Storage] snapshot_db 不可用:', snapErr && snapErr.message || snapErr);
+            // 降级：从 localStorage 读取 appState 快照
+            var _lsSnapFallback = _lsGet(LS_SNAPSHOT_APPSTATE);
+            if (_lsSnapFallback) {
+                _snapshotCache = { appState: _lsSnapFallback };
+            }
+        }
+
         _initialized = true;
     }
 
@@ -122,26 +164,11 @@ var storageService = (function() {
             migrated++;
         }
 
-        // 迁移 snapshot
-        var snapshot = _lsGet(LS_SNAPSHOT);
-        if (snapshot) {
-            _cache[KEY_SNAPSHOT] = snapshot;
-            await idbStorage.put(KEY_SNAPSHOT, snapshot);
-            migrated++;
-        }
-
         // 迁移 summaryHistory
         var summaryHistory = _lsGet(LS_SUMMARY_HISTORY);
         if (summaryHistory) {
             _cache[KEY_SUMMARY_HISTORY] = summaryHistory;
             await idbStorage.put(KEY_SUMMARY_HISTORY, summaryHistory);
-            migrated++;
-        }
-
-        var lastTurnCommitted = _lsGet(LS_LAST_TURN_COMMITTED);
-        if (typeof lastTurnCommitted === 'boolean') {
-            _cache[KEY_LAST_TURN_COMMITTED] = lastTurnCommitted;
-            await idbStorage.put(KEY_LAST_TURN_COMMITTED, lastTurnCommitted);
             migrated++;
         }
 
@@ -181,14 +208,14 @@ var storageService = (function() {
         var uiConv = _lsGet(LS_UI_CONV);
         if (uiConv) _cache[KEY_UI_CONV] = uiConv;
 
-        var snapshot = _lsGet(LS_SNAPSHOT);
-        if (snapshot) _cache[KEY_SNAPSHOT] = snapshot;
-
         var summaryHistory = _lsGet(LS_SUMMARY_HISTORY);
         if (summaryHistory) _cache[KEY_SUMMARY_HISTORY] = summaryHistory;
 
-        var lastTurnCommitted = _lsGet(LS_LAST_TURN_COMMITTED);
-        if (typeof lastTurnCommitted === 'boolean') _cache[KEY_LAST_TURN_COMMITTED] = lastTurnCommitted;
+        // 降级：从 localStorage 读取快照 appState
+        var snapAppState = _lsGet(LS_SNAPSHOT_APPSTATE);
+        if (snapAppState) {
+            _snapshotCache = { appState: snapAppState };
+        }
 
         var markWeekUiIndex = _lsGet(LS_MARK_WEEK_UI_INDEX);
         if (typeof markWeekUiIndex === 'number') _cache[KEY_MARK_WEEK_UI_INDEX] = markWeekUiIndex;
@@ -247,6 +274,11 @@ var storageService = (function() {
         _cache[KEY_UI_CONV] = history;
         _idbPut(KEY_UI_CONV, history);
         _lsSet(LS_UI_CONV, history);
+        // 必须深拷贝，防止与 _snapshotCache 共享引用（appendUIConversation 原地 push 会污染快照）
+        var cloned = history ? history.slice() : [];
+        _cache[KEY_UI_CONV] = cloned;
+        _idbPut(KEY_UI_CONV, cloned);
+        _lsSet(LS_UI_CONV, cloned);
     }
 
     function clearUIConversation() {
@@ -321,52 +353,138 @@ var storageService = (function() {
         console.log('[Storage] 已清空所有 embedding 记录');
     }
 
-    function popLastAssistantUI() {
-        var history = loadUIConversation();
-        for (var i = history.length - 1; i >= 0; i--) {
-            if (history[i].role === 'assistant') {
-                history.splice(i, 1);
-                break;
-            }
+    // --- 全量快照（snapshot_db）---
+
+    function _idbSnapshotPut(key, value) {
+        if (!_idbSnapshotAvailable) return;
+        idbSnapshot.put(key, value).catch(function(e) {
+            console.warn('[Storage][IDB-Snapshot] put ' + key + ' 失败:', e && e.message || e);
+        });
+    }
+
+    var _SNAPSHOT_KEYS = ['appState', 'uiConversation', 'summaryHistory', 'weekHistory', 'markWeekUiIndex', 'summaryBuff', 'lastUserMessage'];
+
+    function _idbSnapshotRemoveAll() {
+        if (!_idbSnapshotAvailable) return;
+        _SNAPSHOT_KEYS.forEach(function(k) {
+            idbSnapshot.remove(k).catch(function() {});
+        });
+    }
+
+    /**
+     * 保存全量快照（异步）
+     * 保存 gameData, uiConversation, summaryHistory, weekHistory,
+     * markWeekUiIndex, summaryBuff, lastUserMessage
+     */
+    async function saveFullSnapshot() {
+        var snap = {
+            appState:        { gameData: (typeof gameData !== 'undefined') ? structuredClone(gameData) : null },
+            uiConversation:  structuredClone(loadUIConversation()),
+            summaryHistory:  (typeof summaryHistoryService !== 'undefined') ? structuredClone(summaryHistoryService.getAll()) : [],
+            weekHistory:     (typeof weekHistoryService !== 'undefined') ? structuredClone(weekHistoryService.getAll()) : [],
+            markWeekUiIndex: getMarkWeekUiIndex(),
+            summaryBuff:     getSummaryBuff() ? structuredClone(getSummaryBuff()) : null,
+            lastUserMessage: (typeof lastUserMessage !== 'undefined') ? lastUserMessage : ''
+        };
+        _snapshotCache = snap;
+        if (_idbSnapshotAvailable) {
+            await Promise.all([
+                idbSnapshot.put('appState',        snap.appState),
+                idbSnapshot.put('uiConversation',  snap.uiConversation),
+                idbSnapshot.put('summaryHistory',  snap.summaryHistory),
+                idbSnapshot.put('weekHistory',     snap.weekHistory),
+                idbSnapshot.put('markWeekUiIndex', snap.markWeekUiIndex),
+                idbSnapshot.put('summaryBuff',     snap.summaryBuff),
+                idbSnapshot.put('lastUserMessage', snap.lastUserMessage)
+            ]);
         }
-        _cache[KEY_UI_CONV] = history;
-        _idbPut(KEY_UI_CONV, history);
-        _lsSet(LS_UI_CONV, history);
+        // localStorage 降级：仅存体积可控的字段
+        _lsSet(LS_SNAPSHOT_APPSTATE, snap.appState);
+        _lsSet(LS_SNAPSHOT_LAST_MSG, snap.lastUserMessage);
+        console.log('[Storage] 全量快照已写入 snapshot_db');
     }
 
-    // --- Snapshot ---
+    /**
+     * 从快照应用所有字段（同步）
+     * @returns {boolean} 是否成功应用
+     */
+    function restoreFromSnapshot() {
+        var snap = _snapshotCache;
+        if (!snap || !snap.appState) return false;
 
-    function saveSnapshot(gd) {
-        _cache[KEY_SNAPSHOT] = gd;
-        _idbPut(KEY_SNAPSHOT, gd);
-        _lsSet(LS_SNAPSHOT, gd);
+        // 还原 gameData
+        if (snap.appState.gameData) {
+            if (typeof mergeWithDefaults === 'function' && typeof defaultGameData !== 'undefined') {
+                gameData = mergeWithDefaults(snap.appState.gameData, defaultGameData);
+            } else if (typeof gameData !== 'undefined') {
+                gameData = snap.appState.gameData;
+            }
+            if (typeof syncVariablesFromGameData === 'function') syncVariablesFromGameData();
+            saveAppState({ gameData: gameData });
+        }
+
+        // 还原 uiConversation
+        replaceUIConversation(snap.uiConversation || []);
+
+        // 还原 summaryHistory
+        if (typeof summaryHistoryService !== 'undefined') {
+            summaryHistoryService.importAll(snap.summaryHistory || []);
+        }
+
+        // 还原 weekHistory
+        if (typeof weekHistoryService !== 'undefined') {
+            weekHistoryService.importAll(snap.weekHistory || []);
+        }
+
+        // 还原 markWeekUiIndex
+        setMarkWeekUiIndex(typeof snap.markWeekUiIndex === 'number' ? snap.markWeekUiIndex : 0);
+
+        // 还原 summaryBuff
+        if (snap.summaryBuff) {
+            setSummaryBuff(snap.summaryBuff);
+        } else {
+            clearSummaryBuff();
+        }
+
+        console.log('[Storage] 已从快照还原状态');
+        return true;
     }
 
-    function loadSnapshot() {
-        return _cache[KEY_SNAPSHOT] || null;
-    }
-
+    /**
+     * 是否存在快照
+     */
     function hasSnapshot() {
-        return _cache[KEY_SNAPSHOT] != null;
+        return _snapshotCache != null && _snapshotCache.appState != null;
     }
 
+    /**
+     * 清空快照
+     */
     function clearSnapshot() {
-        delete _cache[KEY_SNAPSHOT];
-        _idbRemove(KEY_SNAPSHOT);
-        _lsRemove(LS_SNAPSHOT);
+        _snapshotCache = null;
+        _idbSnapshotRemoveAll();
+        _lsRemove(LS_SNAPSHOT_APPSTATE);
+        _lsRemove(LS_SNAPSHOT_LAST_MSG);
+        console.log('[Storage] 快照已清空');
     }
 
-    function setLastTurnCommitted(committed) {
-        var value = !!committed;
-        _cache[KEY_LAST_TURN_COMMITTED] = value;
-        _idbPut(KEY_LAST_TURN_COMMITTED, value);
-        _lsSet(LS_LAST_TURN_COMMITTED, value);
+    /**
+     * 获取快照中保存的最后一条用户消息
+     */
+    function getSnapshotLastUserMessage() {
+        if (!_snapshotCache) return '';
+        return _snapshotCache.lastUserMessage || '';
     }
 
-    function didLastTurnCommit() {
-        return _cache[KEY_LAST_TURN_COMMITTED] === true;
+    /**
+     * 更新快照中的最后一条用户消息（重生成编辑消息时使用）
+     */
+    function updateSnapshotLastUserMessage(msg) {
+        if (!_snapshotCache) return;
+        _snapshotCache.lastUserMessage = msg;
+        _idbSnapshotPut('lastUserMessage', msg);
+        _lsSet(LS_SNAPSHOT_LAST_MSG, msg);
     }
-
     // --- markWeekUiIndex（周总结优化：记录上次写入初版总结时 uiConversation 的长度）---
 
     function getMarkWeekUiIndex() {
@@ -458,9 +576,7 @@ var storageService = (function() {
             markWeekUiIndex: getMarkWeekUiIndex(),
             summaryBuff: getSummaryBuff() ? structuredClone(getSummaryBuff()) : null,
             uiConversation: structuredClone(loadUIConversation()),
-            snapshot: structuredClone(loadSnapshot()),
             embeddings: embExport,
-            lastTurnCommitted: didLastTurnCommit(),
             previewWeek: (typeof gameData !== 'undefined' && gameData) ? gameData.currentWeek : null,
             previewLocation: (typeof gameData !== 'undefined' && gameData) ? gameData.mapLocation : null,
             createdAt: Date.now()
@@ -620,7 +736,6 @@ var storageService = (function() {
             markWeekUiIndex: getMarkWeekUiIndex(),
             summaryBuff: getSummaryBuff(),
             uiConversation: loadUIConversation(),
-            snapshot: loadSnapshot(),
             embeddings: embExport,
             createdAt: Date.now()
         };
@@ -672,13 +787,12 @@ var storageService = (function() {
         replaceUIConversation: replaceUIConversation,
         clearUIConversation: clearUIConversation,
         clearSummaryHistory: clearSummaryHistory,
-        popLastAssistantUI: popLastAssistantUI,
-        saveSnapshot: saveSnapshot,
-        loadSnapshot: loadSnapshot,
+        saveFullSnapshot: saveFullSnapshot,
+        restoreFromSnapshot: restoreFromSnapshot,
         hasSnapshot: hasSnapshot,
         clearSnapshot: clearSnapshot,
-        setLastTurnCommitted: setLastTurnCommitted,
-        didLastTurnCommit: didLastTurnCommit,
+        getSnapshotLastUserMessage: getSnapshotLastUserMessage,
+        updateSnapshotLastUserMessage: updateSnapshotLastUserMessage,
         getMarkWeekUiIndex: getMarkWeekUiIndex,
         setMarkWeekUiIndex: setMarkWeekUiIndex,
         getSummaryBuff: getSummaryBuff,
