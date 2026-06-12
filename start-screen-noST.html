@@ -459,6 +459,14 @@
             padding-top: 12px;
             border-top: 1px solid rgba(255,255,255,0.12);
         }
+
+        /* 自定义出身详情 */
+        .custom-origin-wrap { width: min(88%, 920px); display: flex; flex-direction: column; gap: clamp(14px, 2.4vw, 26px); }
+        .origin-section-label { font-family: 'Ma Shan Zheng', cursive; font-size: clamp(15px, 1.9vw, 22px); opacity: 0.9; margin-bottom: 6px; }
+        .origin-desc-textarea { width: 100%; min-height: clamp(80px, 12vh, 130px); padding: clamp(10px, 1.6vw, 16px); background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.22); border-radius: 10px; color: #fff; font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif; font-size: clamp(14px, 1.7vw, 18px); resize: vertical; outline: none; transition: border-color 200ms ease; line-height: 1.6; }
+        .origin-desc-textarea:focus { border-color: rgba(255,255,255,0.45); }
+        .origin-desc-textarea::placeholder { color: rgba(255,255,255,0.35); }
+        .origin-desc-count { text-align: right; font-size: clamp(11px, 1.2vw, 14px); opacity: 0.5; margin-top: 3px; }
     </style>
     <!-- 后续交互逻辑可在此处添加脚本 -->
 </head>
@@ -557,7 +565,13 @@
             '经史传家': '原为沙洲书香门第，因不愿为吕氏伪政效力，举家避祸。父亲在外堡设私塾教书，你从小耳濡目染，聪慧过人。',
             '天潢贵胄': '本是皇室远支后裔，几代前便已家业凋零。你几番曲折，孤身一人流落到天山派外堡，虽出身不凡却从不张扬，只想凭本事光耀门楣。'
         };
-        const STEP_TITLES = { name: '角色命名', difficulty: '难度选择', origin: '出身选择', allocate: '属性分配' };
+        const CUSTOM_STATS_OPTIONS = {
+            '草莽之路': { stats: { '武学': 60, '学识': 15, '声望': 20, '金钱': 2500 } },
+            '诗书傍身': { stats: { '武学': 15, '学识': 60, '声望': 20, '金钱': 2500 } },
+            '江湖人脉': { stats: { '武学': 25, '学识': 25, '声望': 50, '金钱': 1500 } },
+            '家底殷实': { stats: { '武学': 30, '学识': 30, '声望': 25, '金钱': 4500 } },
+        };
+        const STEP_TITLES = { name: '角色命名', difficulty: '难度选择', origin: '出身选择', 'custom-origin': '自定义出身 · 详情设定', allocate: '属性分配' };
 
         const outPut = `
 <SLG_MODE>
@@ -613,7 +627,9 @@
             difficulty: null,
             origin: null,
             talents: { "根骨": 25, "悟性": 25, "心性": 25, "魅力": 25 },
-            remaining: 0
+            remaining: 0,
+            customDesc: '',
+            customStatsKey: null
         };
 
         async function initGame() {
@@ -666,6 +682,7 @@
             if (state.step === 'name') return renderName();
             if (state.step === 'difficulty') return renderDifficulty();
             if (state.step === 'origin') return renderOrigin();
+            if (state.step === 'custom-origin') return renderCustomOrigin();
             if (state.step === 'allocate') return renderAllocate();
         }
 
@@ -725,31 +742,99 @@
                             <div class="choice-desc">${ORIGIN_INTROS[name] || ''}</div>
                         </button>
                     `).join('')}
+                    <button class="choice-btn" data-origin="自定义" style="grid-column: 1 / -1">
+                        <div class="choice-title">自定义出身</div>
+                        <div class="choice-desc">撰写属于你自己的故事背景，天赋从零开始分配。</div>
+                    </button>
                 </div>
             `;
             modalBody.querySelectorAll('.choice-btn').forEach(btn => {
                 btn.addEventListener('click', (e) => {
                     const origin = e.currentTarget.getAttribute('data-origin');
                     state.origin = origin;
-                    state.talents = { ...ORIGIN_PRESETS[origin] };
-                    state.baseTalents = { ...ORIGIN_PRESETS[origin] };
-                    state.stats = { ...ORIGIN_STATS[origin] };
-                    state.inventory = { ...ORIGIN_INVENTORY[origin] };
-                    // 出身编码映射
-                    const bgMap = { '农家子弟': 'A', '府兵军户': 'B', '经史传家': 'C', '天潢贵胄': 'D' };
-                    state.userBackground = bgMap[origin] || 'A';
-                    try {
-                        if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
-                        if (window.gameData) window.gameData.playerTalents = { ...state.talents };
-                        if (typeof playerStats !== 'undefined') playerStats = { ...state.stats };
-                        if (window.gameData) window.gameData.playerStats = { ...state.stats };
-                        if (typeof inventory !== 'undefined') inventory = { ...state.inventory };
-                        if (window.gameData) window.gameData.inventory = { ...state.inventory };
-                        if (typeof userBackground !== 'undefined') userBackground = state.userBackground;
-                        if (window.gameData) window.gameData.userBackground = state.userBackground;
-                    } catch(_){ }
+                    if (origin === '自定义') {
+                        state.userBackground = 'E';
+                        state.talents = { '根骨': 10, '悟性': 10, '心性': 10, '魅力': 10 };
+                        state.baseTalents = { '根骨': 10, '悟性': 10, '心性': 10, '魅力': 10 };
+                        state.stats = null;
+                        state.inventory = {};
+                        try {
+                            if (typeof userBackground !== 'undefined') userBackground = 'E';
+                            if (window.gameData) window.gameData.userBackground = 'E';
+                        } catch(_){ }
+                    } else {
+                        state.talents = { ...ORIGIN_PRESETS[origin] };
+                        state.baseTalents = { ...ORIGIN_PRESETS[origin] };
+                        state.stats = { ...ORIGIN_STATS[origin] };
+                        state.inventory = { ...ORIGIN_INVENTORY[origin] };
+                        const bgMap = { '农家子弟': 'A', '府兵军户': 'B', '经史传家': 'C', '天潢贵胄': 'D' };
+                        state.userBackground = bgMap[origin] || 'A';
+                        try {
+                            if (typeof playerTalents !== 'undefined') playerTalents = { ...state.talents };
+                            if (window.gameData) window.gameData.playerTalents = { ...state.talents };
+                            if (typeof playerStats !== 'undefined') playerStats = { ...state.stats };
+                            if (window.gameData) window.gameData.playerStats = { ...state.stats };
+                            if (typeof inventory !== 'undefined') inventory = { ...state.inventory };
+                            if (window.gameData) window.gameData.inventory = { ...state.inventory };
+                            if (typeof userBackground !== 'undefined') userBackground = state.userBackground;
+                            if (window.gameData) window.gameData.userBackground = state.userBackground;
+                        } catch(_){ }
+                    }
                     console.log('[StartScreen] origin selected', origin, state.talents);
                     renderSelected(modalBody, e.currentTarget);
+                });
+            });
+        }
+
+        function renderCustomOrigin() {
+            btnNext.textContent = '下一步';
+            const _checkNext = () => {
+                const descOk = state.customDesc && state.customDesc.trim().length >= 5;
+                const statsOk = !!state.customStatsKey;
+                btnNext.disabled = !(descOk && statsOk);
+            };
+            _checkNext();
+            modalBody.innerHTML = `
+                <div class="custom-origin-wrap">
+                    <div>
+                        <div class="origin-section-label">出身背景描述 <span style="font-size:0.8em;opacity:0.55;font-family:'ZCOOL XiaoWei',sans-serif">（必填，5～150字）</span></div>
+                        <textarea class="origin-desc-textarea" maxlength="150"
+                            placeholder="描述角色的出身背景，将作为AI叙事参考。例如：出身江湖世家，父亲早年游历西域，在敦煌一带定居……">${state.customDesc || ''}</textarea>
+                        <div class="origin-desc-count">${(state.customDesc || '').length} / 150</div>
+                    </div>
+                    <div>
+                        <div class="origin-section-label">初始资产</div>
+                        <div class="diff-list" id="custom-stats-list">
+                            ${Object.entries(CUSTOM_STATS_OPTIONS).map(([key, opt]) => `
+                                <button class="choice-btn" data-stats-key="${key}">
+                                    <div class="choice-title">${key}</div>
+                                    <div class="choice-desc">武学${opt.stats['武学']} · 学识${opt.stats['学识']} · 声望${opt.stats['声望']} · 金钱${opt.stats['金钱']}</div>
+                                </button>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            const textarea = modalBody.querySelector('.origin-desc-textarea');
+            const countEl = modalBody.querySelector('.origin-desc-count');
+            textarea.addEventListener('input', function() {
+                state.customDesc = this.value;
+                countEl.textContent = this.value.length + ' / 150';
+                _checkNext();
+            });
+            setTimeout(() => textarea.focus(), 50);
+            const statsList = document.getElementById('custom-stats-list');
+            statsList.querySelectorAll('.choice-btn').forEach(btn => {
+                if (btn.getAttribute('data-stats-key') === state.customStatsKey) {
+                    renderSelected(statsList, btn);
+                }
+                btn.addEventListener('click', (e) => {
+                    const key = e.currentTarget.getAttribute('data-stats-key');
+                    state.customStatsKey = key;
+                    state.stats = { ...CUSTOM_STATS_OPTIONS[key].stats };
+                    state.inventory = {};
+                    renderSelected(statsList, e.currentTarget);
+                    _checkNext();
                 });
             });
         }
@@ -757,7 +842,7 @@
         function renderAllocate() {
             btnNext.classList.add('hidden');
             btnConfirm.classList.remove('hidden');
-            const points = DIFF_POINTS[state.difficulty] || 40;
+            const points = (DIFF_POINTS[state.difficulty] || 40) + (state.origin === '自定义' ? 40 : 0);
             // 初次进入时，若还未设置剩余点，则按难度赋值
             if (typeof state._initAlloc === 'undefined') {
                 state.remaining = points;
@@ -887,7 +972,8 @@
         btnBack.addEventListener('click', () => {
             if (state.step === 'difficulty') state.step = 'name';
             else if (state.step === 'origin') state.step = 'difficulty';
-            else if (state.step === 'allocate') state.step = 'origin';
+            else if (state.step === 'custom-origin') state.step = 'origin';
+            else if (state.step === 'allocate') state.step = (state.origin === '自定义') ? 'custom-origin' : 'origin';
             renderStep();
         });
         btnNext.addEventListener('click', () => {
@@ -900,6 +986,15 @@
                 state.step = 'origin';
             } else if (state.step === 'origin') {
                 if (!state.origin) return;
+                state._initAlloc = undefined;
+                if (state.origin === '自定义') {
+                    state.step = 'custom-origin';
+                } else {
+                    state.step = 'allocate';
+                }
+            } else if (state.step === 'custom-origin') {
+                const descOk = state.customDesc && state.customDesc.trim().length >= 5;
+                if (!descOk || !state.customStatsKey) return;
                 state._initAlloc = undefined;
                 state.step = 'allocate';
             }
@@ -925,6 +1020,7 @@
                     window.gameData.playerTalents = { ...state.talents };
                     window.gameData.playerStats = { ...state.stats };
                     window.gameData.userBackground = state.userBackground || 'A';
+                    window.gameData.userOriginDesc = state.customDesc || '';
                     window.gameData.inventory = { ...(state.inventory || {}) };
                 }
                 if (typeof syncGameDataFromVariables === 'function') {
@@ -974,7 +1070,8 @@
                         t: state.talents,
                         s: state.stats,
                         bg: state.userBackground || 'A',
-                        inv: state.inventory || {}
+                        inv: state.inventory || {},
+                        od: state.customDesc || ''
                     };
                     try { localStorage.setItem('jxz_launchIntent', 'newGame'); } catch(_){}
                     location.href = 'index.html?intent=newGame&creation=' + encodeURIComponent(JSON.stringify(creationPayload));

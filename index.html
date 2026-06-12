@@ -4740,6 +4740,7 @@ function buildSaveName() {
                             if (_cd.t) { playerTalents = _cd.t; gameData.playerTalents = { ..._cd.t }; }
                             if (_cd.s) { playerStats = _cd.s; gameData.playerStats = { ..._cd.s }; }
                             if (_cd.bg) { userBackground = _cd.bg; gameData.userBackground = _cd.bg; }
+                            if (_cd.od !== undefined) { gameData.userOriginDesc = _cd.od; }
                             if (_cd.inv) { inventory = _cd.inv; gameData.inventory = { ..._cd.inv }; }
                             if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
                         } catch(e) { console.warn('解析创建数据失败', e); }
