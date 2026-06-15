@@ -59,8 +59,14 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>瀚海归义录</title>
+    <script>
+        // 安卓 WebView 环境标识（Capacitor APK 中运行时注入）
+        if (typeof window.Android === 'undefined' && /Android/i.test(navigator.userAgent)) {
+            window.Android = {};
+        }
+    </script>
     
     <!-- <script>
         // Git commit编号配置 - 修改这里即可更新所有引用
@@ -3263,9 +3269,16 @@ function exportSave() {
     var json = storageService.exportSaveToJson(saveName);
     delete gameData._activeEvent;
     var filename = 'jxz_save_' + saveName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') + '.json';
-    storageService.downloadJson(filename, json);
     toggleDropdown('history-dropdown');
-    showModal('存档已导出！');
+    var p = storageService.downloadJson(filename, json);
+    if (p && typeof p.then === 'function') {
+        p.then(function(result) {
+            // 'modal'：已弹复制框，不再叠加提示；'abort'：用户主动取消，静默
+            if (result !== 'modal' && result !== 'abort') showModal('存档已导出！');
+        });
+    } else {
+        showModal('存档已导出！');
+    }
 }
 
 function importSave() {

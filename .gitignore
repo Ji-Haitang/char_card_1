@@ -1,0 +1,17 @@
+# Node
+node_modules/
+apk/node_modules/
+
+# Capacitor Android 构建产物
+apk/android/build/
+apk/android/.gradle/
+apk/android/app/build/
+apk/android/capacitor-cordova-android-plugins/build/
+apk/android/.idea/workspace.xml
+apk/android/.idea/caches/
+
+# 打包暂存目录
+apk/www/
+
+# APK 输出
+*.apk

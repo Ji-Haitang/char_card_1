@@ -1,0 +1,31 @@
+{
+  "name": "git",
+  "version": "1.0.0",
+  "description": "一个基于网页的武侠角色扮演游戏，支持在SillyTavern等AI对话环境中运行。游戏采用模块化架构，将配置、状态管理、UI更新、游戏逻辑等功能分离到不同的文件中，便于维护和扩展。",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.js",
+    "sync": "node build.js && npx cap sync android"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Ji-Haitang/char_card_1.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/Ji-Haitang/char_card_1/issues"
+  },
+  "homepage": "https://github.com/Ji-Haitang/char_card_1#readme",
+  "dependencies": {
+    "@capacitor/android": "^8.4.0",
+    "@capacitor/cli": "^8.4.0",
+    "@capacitor/core": "^8.4.0",
+    "@capacitor/filesystem": "^8.1.2",
+    "@capacitor/share": "^8.0.1"
+  },
+  "devDependencies": {
+    "sharp": "^0.35.1"
+  }
+}

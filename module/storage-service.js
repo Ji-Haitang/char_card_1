@@ -768,11 +768,95 @@ var storageService = (function() {
 
     function downloadJson(filename, jsonString) {
         var blob = new Blob([jsonString], { type: 'application/json' });
+        // 安卓 WebView 环境：优先系统分享，失败则弹复制框
+        if (window.Android !== undefined) {
+            // 使用 Capacitor 原生插件：写文件 → 调用 Android 原生分享 Intent
+            var Filesystem = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem;
+            var Share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
+            if (Filesystem && Share) {
+                return Filesystem.writeFile({
+                    path: filename,
+                    data: jsonString,
+                    directory: 'CACHE',
+                    encoding: 'utf8'
+                }).then(function(result) {
+                    return Share.share({
+                        title: filename,
+                        files: [result.uri]
+                    });
+                }).then(function() {
+                    return 'shared';
+                }).catch(function(e) {
+                    console.log('[exportSave] native share error:', e.name, e.message);
+                    if (e && (e.name === 'AbortError' || (e.message && e.message.toLowerCase().includes('cancel')))) return 'abort';
+                    _showJsonCopyModal(filename, jsonString);
+                    return 'modal';
+                });
+            }
+            // Capacitor 插件不可用时：弹复制框兜底
+            console.log('[exportSave] Capacitor plugins not available, showing copy modal');
+            _showJsonCopyModal(filename, jsonString);
+            return Promise.resolve('modal');
+        }
+        // 网页 / ST 环境：普通 <a download>
+        _downloadJsonFallback(blob, filename);
+        return Promise.resolve('download');
+    }
+
+    // 在 WebView 中弹出 JSON 内容框，供用户手动复制
+    function _showJsonCopyModal(filename, jsonString) {
+        var overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.88);z-index:99999;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:16px;';
+        var inner = document.createElement('div');
+        inner.style.cssText = 'background:#1a1a2e;border:1px solid #555;border-radius:12px;padding:16px;width:100%;max-height:85vh;display:flex;flex-direction:column;box-sizing:border-box;gap:8px;';
+        var title = document.createElement('div');
+        title.style.cssText = 'color:#c8a96e;font-size:14px;';
+        title.textContent = '导出存档';
+        var hint = document.createElement('div');
+        hint.style.cssText = 'color:#888;font-size:11px;';
+        hint.textContent = filename + ' — 全选复制后粘贴保存';
+        var ta = document.createElement('textarea');
+        ta.readOnly = true;
+        ta.value = jsonString;
+        ta.style.cssText = 'flex:1;min-height:180px;height:180px;background:#111;color:#ccc;border:1px solid #333;border-radius:6px;padding:8px;font-size:10px;resize:none;font-family:monospace;word-break:break-all;';
+        var btnRow = document.createElement('div');
+        btnRow.style.cssText = 'display:flex;gap:8px;';
+        var copyBtn = document.createElement('button');
+        copyBtn.textContent = '全选复制';
+        copyBtn.style.cssText = 'flex:1;padding:10px;background:#4a7c59;color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer;';
+        copyBtn.onclick = function() {
+            ta.select();
+            ta.setSelectionRange(0, 99999);
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch(e) {}
+            if (!ok && navigator.clipboard) {
+                navigator.clipboard.writeText(jsonString).catch(function(){});
+                ok = true;
+            }
+            copyBtn.textContent = ok ? '✓ 已复制' : '复制失败，请手动选中';
+        };
+        var closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭';
+        closeBtn.style.cssText = 'flex:1;padding:10px;background:#444;color:white;border:none;border-radius:6px;font-size:13px;cursor:pointer;';
+        closeBtn.onclick = function() { document.body.removeChild(overlay); };
+        btnRow.appendChild(copyBtn);
+        btnRow.appendChild(closeBtn);
+        inner.appendChild(title);
+        inner.appendChild(hint);
+        inner.appendChild(ta);
+        inner.appendChild(btnRow);
+        overlay.appendChild(inner);
+        document.body.appendChild(overlay);
+    }
+
+    function _downloadJsonFallback(blob, filename) {
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
         a.download = filename;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         URL.revokeObjectURL(url);
     }
 

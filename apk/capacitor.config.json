@@ -1,0 +1,13 @@
+{
+  "appId": "com.jihaitang.jxz",
+  "appName": "瀚海",
+  "webDir": "www",
+  "server": {
+    "androidScheme": "https",
+    "hostname": "localhost"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "webContentsDebuggingEnabled": true
+  }
+}
