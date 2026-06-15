@@ -472,7 +472,7 @@
 </head>
 <body>
     <div class="backdrop"></div>
-    <audio id="bgm" src="music/" autoplay loop preload="auto" crossorigin="anonymous" playsinline></audio>
+    <audio id="bgm" src="bgm/主界面.mp3" autoplay loop preload="auto" crossorigin="anonymous" playsinline></audio>
     <div class="viewport-box">
     <main class="frame" role="application" aria-label="开局界面">
         <nav class="menu" aria-label="主菜单">
@@ -521,6 +521,7 @@
     <!-- 独立前端所需模块 -->
     <script src="module/idb-storage.js"></script>
     <script src="module/storage-service.js"></script>
+    <script src="module/st-converter.js"></script>
     <script src="module/response-parser.js"></script>
     <script src="module/summary-history-service.js"></script>
     <script src="module/api-service.js"></script>
@@ -1122,6 +1123,10 @@
                 '<div class="choice-title">导入存档</div>' +
                 '<div class="choice-desc">从 JSON 文件恢复</div>' +
             '</button>';
+            html += '<button class="choice-btn" id="btn-import-st-save-start">' +
+                '<div class="choice-title">导入 SillyTavern 存档</div>' +
+                '<div class="choice-desc">从 .jsonl 文件转换导入</div>' +
+            '</button>';
             html += '</div>';
             modalBody.innerHTML = html;
 
@@ -1154,6 +1159,39 @@
                         }).catch(function(err) {
                             alert('导入失败：' + err.message);
                         });
+                    });
+                    input.click();
+                });
+            }
+
+            // 绑定 ST 存档导入事件
+            var btnImportST = document.getElementById('btn-import-st-save-start');
+            if (btnImportST) {
+                btnImportST.addEventListener('click', function() {
+                    var input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = '.jsonl';
+                    input.addEventListener('change', function() {
+                        if (!input.files || !input.files[0]) return;
+                        if (typeof storageService === 'undefined') { alert('存储服务不可用'); return; }
+                        if (typeof convertSTJsonl !== 'function') { alert('ST 转换模块未加载，请刷新页面后重试'); return; }
+                        var reader = new FileReader();
+                        reader.onload = function(ev) {
+                            var result = convertSTJsonl(ev.target.result);
+                            if (!result.success) { alert('转换失败：' + result.error); return; }
+                            if (result.warnings && result.warnings.length > 0) console.warn('[ImportST]', result.warnings.join('; '));
+                            try {
+                                var id = storageService.importSavePayload(result.payload);
+                                var warnText = result.warnings && result.warnings.length > 0 ? '\n提示：' + result.warnings.join('；') : '';
+                                alert('ST 存档导入成功！\n存档名：' + result.saveName + warnText + '\n即将进入游戏…');
+                                try { var bgm = document.getElementById('bgm'); if (bgm) { bgm.pause(); bgm.currentTime = 0; } } catch(_){}
+                                try { localStorage.setItem('jxz_launchIntent', 'loadSave'); localStorage.setItem('jxz_loadSaveId', id); } catch(_){}
+                                location.href = 'index.html?intent=loadSave&saveId=' + encodeURIComponent(id);
+                            } catch(err) {
+                                alert('导入失败：' + err.message);
+                            }
+                        };
+                        reader.readAsText(input.files[0], 'utf-8');
                     });
                     input.click();
                 });

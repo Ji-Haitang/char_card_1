@@ -1094,6 +1094,7 @@
     <script src="module/idb-storage.js"></script>
     <script src="module/idb-snapshot.js"></script>
     <script src="module/storage-service.js"></script>
+    <script src="module/st-converter.js"></script>
     <script src="module/sync-utils.js"></script>
     <script src="module/memory-recall.js"></script>
     <script src="module/pipeline.js"></script>
@@ -3086,6 +3087,7 @@ function showLoadModal() {
     html += '<div class="modal-buttons" style="flex-direction:column;gap:8px;">'
         + '<button class="modal-btn" style="width:100%;" onclick="exportSave();closeLoadModal();">导出存档文件 (JSON)</button>'
         + '<button class="modal-btn" style="width:100%;" onclick="importSaveFromLoadModal()">导入存档文件 (JSON)</button>'
+        + '<button class="modal-btn" style="width:100%;" onclick="importSTSaveFromLoadModal()">导入 SillyTavern 存档 (.jsonl)</button>'
         + '<button class="modal-btn cancel" style="width:100%;" onclick="closeLoadModal()">关闭</button>'
         + '</div>'
         + '</div></div>';
@@ -3114,6 +3116,101 @@ function loadSaveSlotFromLoadModal(saveId) {
 function importSaveFromLoadModal() {
     closeLoadModal();
     importSave();
+}
+
+function importSTSaveFromLoadModal() {
+    closeLoadModal();
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.jsonl';
+    input.onchange = function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            var text = ev.target.result;
+            if (typeof convertSTJsonl !== 'function') {
+                showModal('ST 转换模块未加载，请刷新页面后重试');
+                return;
+            }
+            var result = convertSTJsonl(text);
+            if (!result.success) {
+                showModal('转换失败：' + result.error);
+                return;
+            }
+            if (result.warnings && result.warnings.length > 0) {
+                console.warn('[ImportST]', result.warnings.join('; '));
+            }
+            try {
+                var payload = result.payload;
+                gameData = mergeWithDefaults(payload.gameData, defaultGameData);
+                hydrateVariableSystemFromGameData(gameData);
+                var summaryHistory = payload.summaryHistory || [];
+                if (summaryHistory.length > 0) {
+                    summaryHistoryService.save(summaryHistory);
+                } else if (gameData.summary_Small) {
+                    summaryHistoryService.rebuildFromSummarySmall(gameData.summary_Small);
+                } else {
+                    summaryHistoryService.save([]);
+                }
+                if (typeof weekHistoryService !== 'undefined') {
+                    weekHistoryService.importAll(payload.weekHistory || []);
+                }
+                var uiConv = payload.uiConversation || [];
+                storageService.replaceUIConversation(uiConv);
+                storageService.clearSnapshot();
+                if (typeof storageService.clearEmbeddings === 'function') storageService.clearEmbeddings();
+                if (typeof memoryRecall !== 'undefined') memoryRecall.clearCache();
+                syncVariablesFromGameData();
+                updateAllDisplays();
+                if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
+                if (userLocation === 'tianshanpai' || !userLocation) {
+                    switchScene('map');
+                    document.getElementById('map-scene').classList.add('active');
+                } else {
+                    switchScene(userLocation);
+                }
+                if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
+                var _activeScene = document.querySelector('.scene.active');
+                if (_activeScene && _activeScene.id !== 'map-scene') {
+                    if (typeof displayNpcs === 'function') displayNpcs(_activeScene.id.replace('-scene', ''));
+                }
+                if (uiConv.length > 0) {
+                    for (var i = uiConv.length - 1; i >= 0; i--) {
+                        if (uiConv[i].role === 'assistant') {
+                            if (typeof renderMainText === 'function') renderMainText(uiConv[i].content);
+                            break;
+                        }
+                    }
+                }
+                hideRandomEvent();
+                hideBattleEvent();
+                currentRandomEvent = null;
+                currentBattleEvent = null;
+                inputEnable = 1;
+                updateFreeActionInputState();
+                if (typeof storageService.setMarkWeekUiIndex === 'function') {
+                    var mwIdx = typeof payload.markWeekUiIndex === 'number' ? payload.markWeekUiIndex : uiConv.length;
+                    storageService.setMarkWeekUiIndex(mwIdx);
+                }
+                if (typeof storageService.clearSummaryBuff === 'function') storageService.clearSummaryBuff();
+                if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
+                    bgmManager.init(document.getElementById('bgm-player'));
+                    if (gameData.bgmName) bgmManager.resume(gameData.bgmName);
+                    else bgmManager.stop();
+                }
+                // 保存到本地存档槽
+                var id = storageService.importSavePayload(payload);
+                storageService.saveAppState({ gameData: gameData });
+                var warnText = result.warnings && result.warnings.length > 0 ? '\n提示：' + result.warnings.join('；') : '';
+                showModal('ST 存档导入成功！\n存档名：' + result.saveName + warnText);
+            } catch(err) {
+                showModal('导入失败：' + err.message);
+            }
+        };
+        reader.readAsText(file, 'utf-8');
+    };
+    input.click();
 }
 
 function loadSaveSlot(saveId) {
