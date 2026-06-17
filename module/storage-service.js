@@ -769,7 +769,8 @@ var storageService = (function() {
     function downloadJson(filename, jsonString) {
         var blob = new Blob([jsonString], { type: 'application/json' });
         // 安卓 WebView 环境：优先系统分享，失败则弹复制框
-        if (window.Android !== undefined) {
+        var isCapacitorWebView = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+        if (isCapacitorWebView) {
             // 使用 Capacitor 原生插件：写文件 → 调用 Android 原生分享 Intent
             var Filesystem = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Filesystem;
             var Share = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Share;
