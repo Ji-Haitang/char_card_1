@@ -232,6 +232,9 @@
                                     <span class="simple-stat-name">剩余点数</span>
                                     <span class="simple-stat-value" id="remaining-points-value">0</span>
                                 </div>
+                                <div class="reset-combat-btn-row">
+                                    <button class="reset-combat-btn" onclick="resetCombatStats()">属性重置</button>
+                                </div>
                                 <div class="skill-list">
                                     <div id="learned-skills"></div>
                                 </div>
@@ -1990,6 +1993,26 @@
             }
         }
 
+        // 属性重置
+        function resetCombatStats() {
+            showConfirmModal(
+                '属性重置',
+                '确定要重置所有战斗数值？<br>已消耗的属性点将全部返还。',
+                () => {
+                    combatStats.攻击力 = 20;
+                    combatStats.生命值 = 50;
+                    combatStats.暴击率 = 10;
+                    combatStats.暴击伤害 = 150;
+                    combatStats.格挡 = 0;
+                    combatStats.穿甲 = 0;
+                    combatStats.回转 = 0;
+                    combatStats.吸血 = 0;
+                    combatStats.反伤 = 0;
+                    updateStatsDisplay();
+                }
+            );
+        }
+
         // NPC动作
         function npcAction(npcId, action) {
             const popup = document.getElementById('npc-info-popup');
@@ -3616,6 +3639,7 @@
         window.addLifesteal = addLifesteal;
         window.addThorns = addThorns;
         window.addTurnover = addTurnover;
+        window.resetCombatStats = resetCombatStats;
         window.npcAction = npcAction;
         window.goToLocation = goToLocation;
         window.sendFreeAction = sendFreeAction;

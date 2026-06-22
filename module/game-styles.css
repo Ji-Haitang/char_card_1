@@ -823,6 +823,29 @@ body {
     opacity: 0.6;
 }
 
+/* 属性重置按钮 */
+.reset-combat-btn-row {
+    text-align: center;
+    margin-top: 8px;
+}
+
+.reset-combat-btn {
+    padding: clamp(3px, 0.8vw, 4px) clamp(14px, 3vw, 20px);
+    background: #e07b4a;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: clamp(0.75rem, 1.8vw, 0.875rem);
+    font-weight: bold;
+    transition: all 0.3s ease;
+}
+
+.reset-combat-btn:hover {
+    background: #c96b3a;
+    transform: scale(1.05);
+}
+
 /* 武功列表 */
 .skill-list {
     margin-top: clamp(10px, 2vw, 15px);

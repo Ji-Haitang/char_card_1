@@ -589,6 +589,23 @@ body {
     border-color: var(--accent-red) !important;
 }
 
+/* 属性重置按钮 - 古风主题覆盖 */
+.reset-combat-btn {
+    background: var(--paper-base) !important;
+    color: var(--ink-dark) !important;
+    border: 1px solid var(--ink-dark) !important;
+    border-radius: 2px !important;
+    font-family: var(--font-serif) !important;
+    transform: none !important;
+}
+
+.reset-combat-btn:hover {
+    background: var(--paper-dark) !important;
+    color: var(--accent-red) !important;
+    border-color: var(--accent-red) !important;
+    transform: none !important;
+}
+
 .stats-divider {
     background: var(--ink-light) !important;
 }
