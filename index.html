@@ -5007,6 +5007,34 @@ function buildSaveName() {
                             }
                         }
                     } catch(_e) { console.warn('读档恢复正文失败', _e); }
+                    // 恢复存档时的活跃事件选项框（与 importSave 逻辑对齐）
+                    hideRandomEvent();
+                    hideBattleEvent();
+                    var _loadActiveEvent = gameData._activeEvent || null;
+                    delete gameData._activeEvent;
+                    if (inputEnable === 0 && _loadActiveEvent) {
+                        if (_loadActiveEvent.事件类型 === '战斗事件') {
+                            currentRandomEvent = _loadActiveEvent;
+                            currentBattleEvent = _loadActiveEvent;
+                            battleEvent = 1;
+                            displayBattleEvent(_loadActiveEvent);
+                        } else {
+                            currentRandomEvent = _loadActiveEvent;
+                            randomEvent = 1;
+                            displayRandomEvent(_loadActiveEvent);
+                        }
+                    } else if (inputEnable === 0 && currentSpecialEvent) {
+                        // 特殊事件链进行中且本环节无选项框，保持按钮禁用
+                        currentRandomEvent = null;
+                        currentBattleEvent = null;
+                    } else {
+                        currentRandomEvent = null;
+                        currentBattleEvent = null;
+                        inputEnable = 1;
+                    }
+                    if (typeof renderMainText === 'function' && currentStoryText) {
+                        renderMainText(currentStoryText);
+                    }
                 } else {
                     // 非读档：正常解析开场白（含 SIDE_NOTE 应用）
                     try {
