@@ -2785,6 +2785,13 @@ const outPut = `
         function startBattle() {
             if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
             
+            // 进入战斗前关闭战斗事件框并清除战斗标志位
+            // 注意：保留 currentBattleEvent，战斗结算时仍需用其敌方信息/奖励/事件描述
+            const battleEventContainer = document.getElementById('battle-event-container');
+            if (battleEventContainer) battleEventContainer.classList.remove('show');
+            battleEvent = 0;
+            if (typeof gameData !== 'undefined') gameData.battleEvent = 0;
+            
             const enemyInfo = currentBattleEvent.敌方信息;
             currentBattleType = 'event';
             
