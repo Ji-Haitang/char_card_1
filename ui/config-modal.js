@@ -30,10 +30,16 @@ function showConfigModal() {
         '<div class="cfg-field"><label class="cfg-label">API Key</label>' +
         '<input id="api-key-input" type="password" placeholder="sk-..." value="' + _escapeHtml(config.apiKey) + '" class="cfg-input"></div>' +
 
-        // 连接测试按钮 + 状态
+        // 连接测试按钮 + 切换设置按钮
         '<div class="cfg-field cfg-row">' +
         '<button id="api-connect-btn" onclick="_doConnectTest()" class="cfg-btn cfg-btn-blue">🔗 连接测试</button>' +
+        '<button onclick="_togglePresetDropdown()" class="cfg-btn cfg-btn-subtle">⚙ 切换设置</button>' +
+        '</div>' +
+        '<div id="api-preset-container" style="display:none;margin-top:-4px;margin-bottom:4px"></div>' +
+        // 连接状态 + 分隔线
+        '<div class="cfg-field" style="padding-top:0;margin-top:-4px">' +
         '<span id="api-connect-status" class="cfg-status">未连接</span></div>' +
+        '<hr style="margin:6px 0 10px;border:none;border-top:1px solid rgba(128,128,128,0.2)">' +
 
         // 模型选择区域
         '<div class="cfg-field">' +
@@ -153,6 +159,7 @@ function saveConfigAndClose() {
         return;
     }
     apiService.updateConfig(newConfig);
+    _saveConfigHistory(newConfig);
     // Phase 3：保存 embedding 配置
     if (typeof embeddingService !== 'undefined') {
         var embEnabled = !!(document.getElementById('emb-enabled-input') && document.getElementById('emb-enabled-input').checked);
@@ -274,6 +281,83 @@ async function _doSendTest() {
 function _escapeHtml(str) {
     if (!str) return '';
     return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ========== 历史配置切换 ==========
+
+function _loadConfigHistory() {
+    try {
+        var raw = localStorage.getItem('jxz_apiConfigHistory');
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) {
+        return [];
+    }
+}
+
+function _saveConfigHistory(cfg) {
+    var history = _loadConfigHistory();
+    // 生成标签：模型名 · 域名（或类型）
+    var domain = '';
+    try {
+        domain = cfg.type === 'gemini' ? 'Gemini' : new URL(cfg.endpoint).hostname.replace(/^www\./, '');
+    } catch (e) {
+        domain = cfg.type || 'OpenAI';
+    }
+    var label = (cfg.model || '未知模型') + ' · ' + domain;
+    // 移除相同 endpoint+model 的旧记录（去重）
+    history = history.filter(function(h) {
+        return !(h.endpoint === cfg.endpoint && h.model === cfg.model);
+    });
+    // 新配置插到最前面
+    history.unshift(Object.assign({}, cfg, { _label: label }));
+    // 最多保留 3 条（先进先出）
+    if (history.length > 3) history = history.slice(0, 3);
+    try {
+        localStorage.setItem('jxz_apiConfigHistory', JSON.stringify(history));
+    } catch (e) {}
+}
+
+function _togglePresetDropdown() {
+    var container = document.getElementById('api-preset-container');
+    if (!container) return;
+    // 切换显隐
+    var isVisible = container.style.display !== 'none';
+    if (isVisible) {
+        container.style.display = 'none';
+        return;
+    }
+    var history = _loadConfigHistory();
+    if (history.length === 0) {
+        container.innerHTML = '<div style="padding:5px 2px;color:#999;font-size:12px">暂无历史配置，保存后将自动记录</div>';
+    } else {
+        var html = '<select class="cfg-input" onchange="_applyPreset(this.value);this.value=\'\'"><option value="">-- 选择历史配置回填 --</option>';
+        for (var i = 0; i < history.length; i++) {
+            html += '<option value="' + i + '">' + _escapeHtml(history[i]._label) + '</option>';
+        }
+        html += '</select>';
+        container.innerHTML = html;
+    }
+    container.style.display = 'block';
+}
+
+function _applyPreset(indexStr) {
+    var idx = parseInt(indexStr, 10);
+    if (isNaN(idx)) return;
+    var history = _loadConfigHistory();
+    var preset = history[idx];
+    if (!preset) return;
+    var el;
+    el = document.getElementById('api-type-select');      if (el) el.value = preset.type || 'openai';
+    el = document.getElementById('api-endpoint-input');   if (el) el.value = preset.endpoint || '';
+    el = document.getElementById('api-key-input');        if (el) el.value = preset.apiKey || '';
+    el = document.getElementById('api-model-input');      if (el) el.value = preset.model || '';
+    el = document.getElementById('api-temp-input');       if (el) el.value = preset.temperature != null ? preset.temperature : 0.9;
+    el = document.getElementById('api-max-tokens-input'); if (el) el.value = preset.maxOutputTokens || 18000;
+    el = document.getElementById('api-ctx-tokens-input'); if (el) el.value = preset.maxContextTokens || 500000;
+    el = document.getElementById('api-cors-proxy-input'); if (el && preset.corsProxyUrl) el.value = preset.corsProxyUrl;
+    // 回填完成后收起下拉
+    var container = document.getElementById('api-preset-container');
+    if (container) container.style.display = 'none';
 }
 
 // ========== Phase 3: Embedding 辅助函数 ==========
