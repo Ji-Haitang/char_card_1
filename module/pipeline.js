@@ -385,6 +385,13 @@ var pipeline = (function() {
      * 返回 Promise<{text: string, aborted: boolean}>
      */
     function _requestWithStream(messages) {
+        // 按 API 配置决定流式 / 非流式（正文与总结统一遵循同一开关）
+        var _streamMode = (apiService.getConfig && apiService.getConfig().streamMode) || 'stream';
+        if (_streamMode === 'non-stream') {
+            return _fallbackNonStream(messages).then(function(text) {
+                return { text: text, aborted: _abortRequested };
+            });
+        }
         return new Promise(function(resolve, reject) {
             var accumulatedText = '';
             var accumulatedThinking = ''; // 累积思维链（reasoning_content 字段，如 DeepSeek/Qwen）
@@ -609,14 +616,14 @@ var pipeline = (function() {
                         }).join('\n\n');
 
                         // ⑪ 持久化 summaryBuff
-                        if (storageService.setSummaryBuff) {
-                            storageService.setSummaryBuff({
+                        if (storageService.enqueueSummaryBuff) {
+                            storageService.enqueueSummaryBuff({
                                 targetMarkWeek: _targetMarkWeek,
                                 prevMarkWeekUiIndex: _oldIdx,
                                 turnCount: _turnCount,
                                 text: _buffText
                             });
-                            console.log('[Pipeline] summaryBuff 已收集: targetMarkWeek=' + _targetMarkWeek + ', turnCount=' + _turnCount + ', chars=' + _buffText.length + ', oldIdx=' + _oldIdx);
+                            console.log('[Pipeline] summaryBuff 已入队: targetMarkWeek=' + _targetMarkWeek + ', turnCount=' + _turnCount + ', chars=' + _buffText.length + ', oldIdx=' + _oldIdx);
                         }
 
                         // ⑫ 写初版总结（source='runTurn'）

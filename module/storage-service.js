@@ -221,7 +221,7 @@ var storageService = (function() {
         if (typeof markWeekUiIndex === 'number') _cache[KEY_MARK_WEEK_UI_INDEX] = markWeekUiIndex;
 
         var summaryBuff = _lsGet(LS_SUMMARY_BUFF);
-        _cache[KEY_SUMMARY_BUFF] = (summaryBuff && typeof summaryBuff === 'object') ? summaryBuff : null;
+        _cache[KEY_SUMMARY_BUFF] = _normalizeSummaryBuffQueue(summaryBuff);
 
         // 旧格式存档 → 转为索引 + 独立 key（仅缓存中）
         var saves = _lsGet(LS_SAVES);
@@ -383,7 +383,7 @@ var storageService = (function() {
             summaryHistory:  (typeof summaryHistoryService !== 'undefined') ? structuredClone(summaryHistoryService.getAll()) : [],
             weekHistory:     (typeof weekHistoryService !== 'undefined') ? structuredClone(weekHistoryService.getAll()) : [],
             markWeekUiIndex: getMarkWeekUiIndex(),
-            summaryBuff:     getSummaryBuff() ? structuredClone(getSummaryBuff()) : null,
+            summaryBuff:     structuredClone(getSummaryBuffQueue()),
             lastUserMessage: (typeof lastUserMessage !== 'undefined') ? lastUserMessage : ''
         };
         _snapshotCache = snap;
@@ -439,12 +439,8 @@ var storageService = (function() {
         // 还原 markWeekUiIndex
         setMarkWeekUiIndex(typeof snap.markWeekUiIndex === 'number' ? snap.markWeekUiIndex : 0);
 
-        // 还原 summaryBuff
-        if (snap.summaryBuff) {
-            setSummaryBuff(snap.summaryBuff);
-        } else {
-            clearSummaryBuff();
-        }
+        // 还原 summaryBuff 队列（兼容旧单槽格式）
+        setSummaryBuffQueue(snap.summaryBuff);
 
         console.log('[Storage] 已从快照还原状态');
         return true;
@@ -499,22 +495,74 @@ var storageService = (function() {
         _lsSet(LS_MARK_WEEK_UI_INDEX, value);
     }
 
-    // --- summaryBuff（周总结优化：待总结的正文缓冲）---
+    // --- summaryBuff 队列（周总结优化：待总结的正文缓冲，FIFO 队列）---
 
-    function getSummaryBuff() {
-        return _cache[KEY_SUMMARY_BUFF] || null;
+    // 归一化为数组：兼容旧单槽格式（单对象）与新队列格式（数组）
+    function _normalizeSummaryBuffQueue(raw) {
+        if (Array.isArray(raw)) {
+            return raw.filter(function(b) { return b && typeof b === 'object'; });
+        }
+        if (raw && typeof raw === 'object') return [raw];
+        return [];
     }
 
-    function setSummaryBuff(buff) {
-        _cache[KEY_SUMMARY_BUFF] = buff;
-        _idbPut(KEY_SUMMARY_BUFF, buff);
-        _lsSet(LS_SUMMARY_BUFF, buff);
+    function _persistSummaryBuffQueue(queue) {
+        var q = Array.isArray(queue) ? queue : [];
+        _cache[KEY_SUMMARY_BUFF] = q;
+        _idbPut(KEY_SUMMARY_BUFF, q);
+        _lsSet(LS_SUMMARY_BUFF, q);
     }
 
+    // 读取整个队列（FIFO，队首为最早待总结条目）
+    function getSummaryBuffQueue() {
+        return _normalizeSummaryBuffQueue(_cache[KEY_SUMMARY_BUFF]);
+    }
+
+    // 覆盖整个队列（兼容旧单槽格式，供存档 / 快照还原使用）
+    function setSummaryBuffQueue(raw) {
+        _persistSummaryBuffQueue(_normalizeSummaryBuffQueue(raw));
+    }
+
+    // 查看队首（最早一条），不出队
+    function peekSummaryBuff() {
+        var q = getSummaryBuffQueue();
+        return q.length > 0 ? q[0] : null;
+    }
+
+    // 入队：追加到队尾；若已存在同一 targetMarkWeek 条目则原地替换（避免同周重复堆积）
+    function enqueueSummaryBuff(buff) {
+        if (!buff || !buff.targetMarkWeek) return;
+        var q = getSummaryBuffQueue();
+        var replaced = false;
+        for (var i = 0; i < q.length; i++) {
+            if (q[i].targetMarkWeek === buff.targetMarkWeek) {
+                q[i] = buff;
+                replaced = true;
+                break;
+            }
+        }
+        if (!replaced) q.push(buff);
+        _persistSummaryBuffQueue(q);
+        console.log('[Storage] summaryBuff 入队' + (replaced ? '(替换)' : '') + ', targetMarkWeek=' + buff.targetMarkWeek + ', 队列长度=' + q.length);
+    }
+
+    // 出队：移除指定 targetMarkWeek 条目；未指定则移除队首
+    function dequeueSummaryBuff(targetMarkWeek) {
+        var q = getSummaryBuffQueue();
+        if (q.length === 0) return;
+        var before = q.length;
+        if (typeof targetMarkWeek === 'undefined' || targetMarkWeek === null) {
+            q.shift();
+        } else {
+            q = q.filter(function(b) { return b.targetMarkWeek !== targetMarkWeek; });
+        }
+        _persistSummaryBuffQueue(q);
+        console.log('[Storage] summaryBuff 出队, targetMarkWeek=' + targetMarkWeek + ', ' + before + ' → ' + q.length);
+    }
+
+    // 清空整个队列（新游戏 / 读档重置）
     function clearSummaryBuff() {
-        _cache[KEY_SUMMARY_BUFF] = null;
-        _idbPut(KEY_SUMMARY_BUFF, null);
-        _lsSet(LS_SUMMARY_BUFF, null);
+        _persistSummaryBuffQueue([]);
     }
 
     // --- Summary History (供 summaryHistoryService 使用) ---
@@ -574,7 +622,7 @@ var storageService = (function() {
             summaryHistory: (typeof summaryHistoryService !== 'undefined') ? structuredClone(summaryHistoryService.getAll()) : [],
             weekHistory: (typeof weekHistoryService !== 'undefined') ? structuredClone(weekHistoryService.getAll()) : [],
             markWeekUiIndex: getMarkWeekUiIndex(),
-            summaryBuff: getSummaryBuff() ? structuredClone(getSummaryBuff()) : null,
+            summaryBuff: structuredClone(getSummaryBuffQueue()),
             uiConversation: structuredClone(loadUIConversation()),
             embeddings: embExport,
             previewWeek: (typeof gameData !== 'undefined' && gameData) ? gameData.currentWeek : null,
@@ -682,12 +730,8 @@ var storageService = (function() {
         var _mwIdx = typeof payload.markWeekUiIndex === 'number' ? payload.markWeekUiIndex : (Array.isArray(payload.uiConversation) ? payload.uiConversation.length : 0);
         setMarkWeekUiIndex(_mwIdx);
         console.log('[Storage] 已恢复 markWeekUiIndex=' + _mwIdx);
-        if (payload.summaryBuff && typeof payload.summaryBuff === 'object') {
-            setSummaryBuff(payload.summaryBuff);
-            console.log('[Storage] 已恢复 summaryBuff, targetMarkWeek=' + payload.summaryBuff.targetMarkWeek);
-        } else {
-            clearSummaryBuff();
-        }
+        setSummaryBuffQueue(payload.summaryBuff);
+        console.log('[Storage] 已恢复 summaryBuff 队列, 条数=' + getSummaryBuffQueue().length);
 
         console.log('[Storage] 存档导入: ' + id + ' (' + (payload.saveName || '导入存档') + ')');
         return id;
@@ -734,7 +778,7 @@ var storageService = (function() {
             summaryHistory: (typeof summaryHistoryService !== 'undefined') ? summaryHistoryService.getAll() : [],
             weekHistory: (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [],
             markWeekUiIndex: getMarkWeekUiIndex(),
-            summaryBuff: getSummaryBuff(),
+            summaryBuff: getSummaryBuffQueue(),
             uiConversation: loadUIConversation(),
             embeddings: embExport,
             createdAt: Date.now()
@@ -880,8 +924,11 @@ var storageService = (function() {
         updateSnapshotLastUserMessage: updateSnapshotLastUserMessage,
         getMarkWeekUiIndex: getMarkWeekUiIndex,
         setMarkWeekUiIndex: setMarkWeekUiIndex,
-        getSummaryBuff: getSummaryBuff,
-        setSummaryBuff: setSummaryBuff,
+        getSummaryBuffQueue: getSummaryBuffQueue,
+        setSummaryBuffQueue: setSummaryBuffQueue,
+        peekSummaryBuff: peekSummaryBuff,
+        enqueueSummaryBuff: enqueueSummaryBuff,
+        dequeueSummaryBuff: dequeueSummaryBuff,
         clearSummaryBuff: clearSummaryBuff,
         loadSummaryHistory: loadSummaryHistory,
         saveSummaryHistory: saveSummaryHistory,

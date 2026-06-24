@@ -57,9 +57,15 @@ function showConfigModal() {
         '<div style="flex:1"><label class="cfg-label">最大输出 Token</label>' +
         '<input id="api-max-tokens-input" type="number" min="100" max="128000" step="100" value="' + config.maxOutputTokens + '" class="cfg-input"></div></div>' +
 
-        // 上下文窗口
-        '<div class="cfg-field"><label class="cfg-label">上下文窗口（Token）</label>' +
+        // 上下文窗口 + 请求方式（流式/非流式）
+        '<div class="cfg-field cfg-row">' +
+        '<div style="flex:1"><label class="cfg-label">上下文窗口（Token）</label>' +
         '<input id="api-ctx-tokens-input" type="number" min="1000" max="2000000" step="1000" value="' + config.maxContextTokens + '" class="cfg-input"></div>' +
+        '<div style="flex:1"><label class="cfg-label">请求方式</label>' +
+        '<select id="api-stream-mode-select" class="cfg-input">' +
+        '<option value="stream"' + (config.streamMode !== 'non-stream' ? ' selected' : '') + '>流式</option>' +
+        '<option value="non-stream"' + (config.streamMode === 'non-stream' ? ' selected' : '') + '>非流式</option>' +
+        '</select></div></div>' +
 
         // CORS 代理地址（仅 web 环境显示）
         (apiService.getRunEnv() === 'web' ?
@@ -147,7 +153,8 @@ function saveConfigAndClose() {
         model: document.getElementById('api-model-input').value.trim(),
         temperature: parseFloat(document.getElementById('api-temp-input').value) || 0.85,
         maxOutputTokens: parseInt(document.getElementById('api-max-tokens-input').value) || 8192,
-        maxContextTokens: parseInt(document.getElementById('api-ctx-tokens-input').value) || 128000
+        maxContextTokens: parseInt(document.getElementById('api-ctx-tokens-input').value) || 128000,
+        streamMode: (document.getElementById('api-stream-mode-select') && document.getElementById('api-stream-mode-select').value) || 'stream'
     };
     // CORS 代理地址（仅 web 环境有此输入框）
     var corsInput = document.getElementById('api-cors-proxy-input');

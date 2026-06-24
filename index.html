@@ -3358,11 +3358,9 @@ function loadSaveSlot(saveId) {
         storageService.setMarkWeekUiIndex(_mwIdx);
         console.log('[LoadSave] 已恢复 markWeekUiIndex=' + _mwIdx);
     }
-    if (payload.summaryBuff && typeof storageService.setSummaryBuff === 'function') {
-        storageService.setSummaryBuff(payload.summaryBuff);
-        console.log('[LoadSave] 已恢复 summaryBuff, targetMarkWeek=' + payload.summaryBuff.targetMarkWeek);
-    } else if (typeof storageService.clearSummaryBuff === 'function') {
-        storageService.clearSummaryBuff();
+    if (typeof storageService.setSummaryBuffQueue === 'function') {
+        storageService.setSummaryBuffQueue(payload.summaryBuff);
+        console.log('[LoadSave] 已恢复 summaryBuff 队列, 条数=' + storageService.getSummaryBuffQueue().length);
     }
     // 读档后恢复 BGM（bgmEnabled/bgmVolume 已从 gameData 恢复，重新 init 同步状态）
     if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
@@ -3526,12 +3524,10 @@ function importSave() {
                 storageService.setMarkWeekUiIndex(_impMwIdx);
                 console.log('[ImportSave] 已恢复 markWeekUiIndex=' + _impMwIdx);
             }
-            // 恢复 summaryBuff
-            if (payload.summaryBuff && typeof storageService.setSummaryBuff === 'function') {
-                storageService.setSummaryBuff(payload.summaryBuff);
-                console.log('[ImportSave] 已恢复 summaryBuff, targetMarkWeek=' + payload.summaryBuff.targetMarkWeek);
-            } else if (typeof storageService.clearSummaryBuff === 'function') {
-                storageService.clearSummaryBuff();
+            // 恢复 summaryBuff 队列
+            if (typeof storageService.setSummaryBuffQueue === 'function') {
+                storageService.setSummaryBuffQueue(payload.summaryBuff);
+                console.log('[ImportSave] 已恢复 summaryBuff 队列, 条数=' + storageService.getSummaryBuffQueue().length);
             }
             // 导入完成，快照已在前面清空
             // 导入存档后恢复 BGM
@@ -4952,11 +4948,9 @@ function buildSaveName() {
                             storageService.setMarkWeekUiIndex(_mwIdx);
                             console.log('[LoadSave] 已恢复 markWeekUiIndex=' + _mwIdx);
                         }
-                        if (savePayload.summaryBuff && typeof storageService.setSummaryBuff === 'function') {
-                            storageService.setSummaryBuff(savePayload.summaryBuff);
-                            console.log('[LoadSave] 已恢复 summaryBuff, targetMarkWeek=' + savePayload.summaryBuff.targetMarkWeek);
-                        } else if (typeof storageService.clearSummaryBuff === 'function') {
-                            storageService.clearSummaryBuff();
+                        if (typeof storageService.setSummaryBuffQueue === 'function') {
+                            storageService.setSummaryBuffQueue(savePayload.summaryBuff);
+                            console.log('[LoadSave] 已恢复 summaryBuff 队列, 条数=' + storageService.getSummaryBuffQueue().length);
                         }
                         // 持久化存档恢复后的状态到 localStorage
                         storageService.saveAppState({ gameData: gameData });

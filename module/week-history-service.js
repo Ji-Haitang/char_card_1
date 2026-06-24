@@ -43,11 +43,14 @@ var weekHistoryService = (function() {
         var recordSource = source || 'runTurn';
         var _cw = typeof currentWeek !== 'undefined' ? currentWeek : 1;
         var _suffix = '\n[至' + (_cw - 1) + '周的历史记录]';
+        var _mwUiIdx = (typeof storageService !== 'undefined' && storageService.getMarkWeekUiIndex)
+            ? storageService.getMarkWeekUiIndex() : 0;
         for (var i = 0; i < summaries.length; i++) {
             history.push({
                 id: _uuid(),
                 week: _cw,
                 markWeek: typeof markWeek !== 'undefined' ? markWeek : 1,
+                markWeekUiIndex: _mwUiIdx,
                 summaryText: summaries[i] + _suffix,
                 source: recordSource,
                 createdAt: Date.now()

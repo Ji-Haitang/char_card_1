@@ -30,7 +30,7 @@ var summaryRunner = (function() {
      * 调度：检查是否有待处理的 buff，若有则异步触发 runSummary
      */
     function scheduleSummary() {
-        var buff = storageService.getSummaryBuff();
+        var buff = storageService.peekSummaryBuff();
         if (!buff || !buff.text || !buff.targetMarkWeek) return;
         if (_running) {
             console.log('[SummaryRunner] scheduleSummary: 上次尚未完成，跳过本次调度');
@@ -45,7 +45,7 @@ var summaryRunner = (function() {
      * （在 storageService.init() 之后调用）
      */
     function resumeOnLoad() {
-        var buff = storageService.getSummaryBuff();
+        var buff = storageService.peekSummaryBuff();
         if (!buff || !buff.text || !buff.targetMarkWeek) return;
         console.log('[SummaryRunner] resumeOnLoad: 发现未完成 buff, targetMarkWeek=' + buff.targetMarkWeek + ', 将自动重试');
         if (!_running) scheduleSummary();
@@ -54,6 +54,33 @@ var summaryRunner = (function() {
     // =========================================================================
     // 核心执行
     // =========================================================================
+
+    /**
+     * 按 API 配置决定流式 / 非流式获取周总结。
+     * 流式可让连接持续有数据流动，避免网关对"长时间无响应的非流式请求"返回 504。
+     * 与正文请求共用同一开关（apiService.config.streamMode）。
+     * @returns {Promise<{content:string, usage:*}>}
+     */
+    function _sendForSummary(messages, signal) {
+        var streamMode = (apiService.getConfig && apiService.getConfig().streamMode) || 'stream';
+        // 周总结不受弹窗「最大输出 Token」限制：maxOutputTokens=null → 由模型默认上限决定
+        if (streamMode !== 'stream') {
+            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null });
+        }
+        return new Promise(function(resolve, reject) {
+            var handle = apiService.sendMessagesStream(messages, {
+                onToken: function() {},
+                onThinking: function() {},
+                onComplete: function(fullText, usage) { resolve({ content: fullText, usage: usage }); },
+                onError: function(err) { reject(err); }
+            }, { maxOutputTokens: null });
+            // 中断信号（点击重生成时取消）联动到流式句柄
+            if (signal) {
+                if (signal.aborted) { handle.abort(); }
+                else { signal.addEventListener('abort', function() { handle.abort(); }, { once: true }); }
+            }
+        });
+    }
 
     async function runSummary(buff) {
         _running = true;
@@ -66,10 +93,11 @@ var summaryRunner = (function() {
             if (typeof weekHistoryService !== 'undefined' &&
                 weekHistoryService.hasRunSummaryEntry &&
                 weekHistoryService.hasRunSummaryEntry(buff.targetMarkWeek)) {
-                storageService.clearSummaryBuff();
-                console.log('[SummaryRunner] 已存在 runSummary 条目, markWeek=' + buff.targetMarkWeek + ', 清空 buff 并退出');
+                storageService.dequeueSummaryBuff(buff.targetMarkWeek);
+                console.log('[SummaryRunner] 已存在 runSummary 条目, markWeek=' + buff.targetMarkWeek + ', 出队并处理下一条');
                 _running = false;
                 _abortController = null;
+                scheduleSummary();
                 return;
             }
 
@@ -99,7 +127,7 @@ var summaryRunner = (function() {
             console.groupEnd();
 
             // 调用 API（传入中断信号，点击重生成时可即时取消）
-            var apiResult = await apiService.sendMessages(messages, { signal: _signal });
+            var apiResult = await _sendForSummary(messages, _signal);
 
             // LLM 返回后再次确认未被取消（防止在返回前极短时间内点击重生成）
             if (_signal.aborted) {
@@ -134,14 +162,9 @@ var summaryRunner = (function() {
             // 替换 weekHistory 中的初版总结
             weekHistoryService.replaceByMarkWeek(buff.targetMarkWeek, summaryText, 'runSummary');
 
-            // 校验 targetMarkWeek 匹配后再清空 buff（防止重生成期间错误清空新 buff）
-            var currentBuff = storageService.getSummaryBuff();
-            if (currentBuff && currentBuff.targetMarkWeek === buff.targetMarkWeek) {
-                storageService.clearSummaryBuff();
-                console.log('[SummaryRunner] ✓ 周总结替换成功，已清空 buff, markWeek=' + buff.targetMarkWeek);
-            } else {
-                console.log('[SummaryRunner] buff 已被更新为新 markWeek，跳过 clear（旧=' + buff.targetMarkWeek + ', 新=' + (currentBuff ? currentBuff.targetMarkWeek : 'null') + '）');
-            }
+            // 出队本周 buff（按 targetMarkWeek 精确移除，不影响队列中其它周）
+            storageService.dequeueSummaryBuff(buff.targetMarkWeek);
+            console.log('[SummaryRunner] ✓ 周总结替换成功，已出队 buff, markWeek=' + buff.targetMarkWeek);
 
         } catch (e) {
             _abortController = null;

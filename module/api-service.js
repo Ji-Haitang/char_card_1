@@ -14,6 +14,7 @@ var apiService = (function() {
         temperature: 0.9,
         maxOutputTokens: 18000,
         maxContextTokens: 500000,
+        streamMode: 'stream',  // 'stream' 流式 | 'non-stream' 非流式（正文与总结统一遵循）
         corsProxyUrl: 'https://jxz-cors-proxy.nicholaswuai.workers.dev/'  // 部署后替换为你的 Worker 地址
     };
 
@@ -83,32 +84,50 @@ var apiService = (function() {
         return url;
     }
 
+    // 解析本次请求的最大输出 token：
+    // - options.maxOutputTokens === null → 不限制（省略 max_tokens，由模型默认上限决定）
+    // - 数字 → 使用该值
+    // - 未指定 → 使用全局配置 config.maxOutputTokens
+    function _resolveMaxOutputTokens(options) {
+        if (options && Object.prototype.hasOwnProperty.call(options, 'maxOutputTokens')) {
+            return options.maxOutputTokens;
+        }
+        return config.maxOutputTokens;
+    }
+
     async function sendMessages(messages, options) {
         if (!config.endpoint || !config.apiKey || !config.model) {
             throw new Error('请先配置 API 信息（endpoint, key, model）');
         }
         var signal = options && options.signal;
+        var maxTokens = _resolveMaxOutputTokens(options);
         if (config.type === 'gemini') {
-            return _callGemini(messages, signal);
+            return _callGemini(messages, signal, maxTokens);
         }
-        return _callOpenAI(messages, signal);
+        return _callOpenAI(messages, signal, maxTokens);
     }
 
-    async function _callOpenAI(messages, signal) {
+    async function _callOpenAI(messages, signal, maxTokens) {
         var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/chat/completions');
         console.log('[API] 发送请求到 OpenAI:', url);
+        var _reqBody = {
+            model: config.model,
+            messages: messages,
+            temperature: config.temperature
+        };
+        // maxTokens 为 null 表示不限制（省略 max_tokens）；数字按值；undefined 回退全局配置
+        if (typeof maxTokens === 'number') {
+            _reqBody.max_tokens = maxTokens;
+        } else if (typeof maxTokens === 'undefined') {
+            _reqBody.max_tokens = config.maxOutputTokens;
+        }
         var fetchOptions = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + config.apiKey
             },
-            body: JSON.stringify({
-                model: config.model,
-                messages: messages,
-                temperature: config.temperature,
-                max_tokens: config.maxOutputTokens
-            })
+            body: JSON.stringify(_reqBody)
         };
         if (signal) fetchOptions.signal = signal;
         var response = await fetch(url, fetchOptions);
@@ -125,7 +144,7 @@ var apiService = (function() {
         };
     }
 
-    async function _callGemini(messages) {
+    async function _callGemini(messages, signal, maxTokens) {
         var systemMsgs = messages.filter(function(m) { return m.role === 'system'; });
         var chatMsgs = messages.filter(function(m) { return m.role !== 'system'; });
         var systemPrompt = systemMsgs.map(function(m) { return m.content; }).join('\n\n');
@@ -140,16 +159,19 @@ var apiService = (function() {
         var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/models/' + config.model + ':generateContent?key=' + encodeURIComponent(config.apiKey));
         console.log('[API] 发送请求到 Gemini:', url);
 
+        var _genConfig = { temperature: config.temperature };
+        if (typeof maxTokens === 'number') {
+            _genConfig.maxOutputTokens = maxTokens;
+        } else if (typeof maxTokens === 'undefined') {
+            _genConfig.maxOutputTokens = config.maxOutputTokens;
+        }
         var response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 contents: contents,
                 systemInstruction: { parts: [{ text: systemPrompt }] },
-                generationConfig: {
-                    temperature: config.temperature,
-                    maxOutputTokens: config.maxOutputTokens
-                }
+                generationConfig: _genConfig
             })
         });
         if (!response.ok) {
@@ -292,24 +314,25 @@ var apiService = (function() {
      * @param {object} callbacks - { onToken(text), onThinking(text), onComplete(fullText, usage), onError(err) }
      * @returns {{ abort: Function }} 中断控制器
      */
-    function sendMessagesStream(messages, callbacks) {
+    function sendMessagesStream(messages, callbacks, options) {
         if (!config.endpoint || !config.apiKey || !config.model) {
             callbacks.onError(new Error('请先配置 API 信息'));
             return { abort: function() {} };
         }
 
         var controller = new AbortController();
+        var maxTokens = _resolveMaxOutputTokens(options);
 
         if (config.type === 'gemini') {
-            _streamGemini(messages, callbacks, controller);
+            _streamGemini(messages, callbacks, controller, maxTokens);
         } else {
-            _streamOpenAI(messages, callbacks, controller);
+            _streamOpenAI(messages, callbacks, controller, maxTokens);
         }
 
         return { abort: function() { controller.abort(); } };
     }
 
-    async function _streamOpenAI(messages, callbacks, controller) {
+    async function _streamOpenAI(messages, callbacks, controller, maxTokens) {
         var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/chat/completions');
         var fullContent = '';
         var fullThinking = '';
@@ -318,9 +341,14 @@ var apiService = (function() {
             model: config.model,
             messages: messages,
             temperature: config.temperature,
-            max_tokens: config.maxOutputTokens,
             stream: true
         };
+        // maxTokens 为 null 表示不限制（省略 max_tokens）；数字按值；undefined 回退全局配置
+        if (typeof maxTokens === 'number') {
+            requestBody.max_tokens = maxTokens;
+        } else if (typeof maxTokens === 'undefined') {
+            requestBody.max_tokens = config.maxOutputTokens;
+        }
         console.log('[API][DEBUG] 流式请求 body (非messages部分):', JSON.stringify({
             model: requestBody.model,
             temperature: requestBody.temperature,
@@ -397,7 +425,7 @@ var apiService = (function() {
         }
     }
 
-    async function _streamGemini(messages, callbacks, controller) {
+    async function _streamGemini(messages, callbacks, controller, maxTokens) {
         var systemMsgs = messages.filter(function(m) { return m.role === 'system'; });
         var chatMsgs = messages.filter(function(m) { return m.role !== 'system'; });
         var systemPrompt = systemMsgs.map(function(m) { return m.content; }).join('\n\n');
@@ -410,6 +438,12 @@ var apiService = (function() {
 
         var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/models/' + config.model + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(config.apiKey));
         var fullContent = '';
+        var _streamGenConfig = { temperature: config.temperature };
+        if (typeof maxTokens === 'number') {
+            _streamGenConfig.maxOutputTokens = maxTokens;
+        } else if (typeof maxTokens === 'undefined') {
+            _streamGenConfig.maxOutputTokens = config.maxOutputTokens;
+        }
 
         try {
             var response = await fetch(url, {
@@ -418,10 +452,7 @@ var apiService = (function() {
                 body: JSON.stringify({
                     contents: contents,
                     systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
-                    generationConfig: {
-                        temperature: config.temperature,
-                        maxOutputTokens: config.maxOutputTokens
-                    }
+                    generationConfig: _streamGenConfig
                 }),
                 signal: controller.signal
             });
