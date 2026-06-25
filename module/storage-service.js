@@ -560,6 +560,22 @@ var storageService = (function() {
         console.log('[Storage] summaryBuff 出队, targetMarkWeek=' + targetMarkWeek + ', ' + before + ' → ' + q.length);
     }
 
+    // 轮转：将指定 targetMarkWeek 条目移到队尾（失败重试时调用，避免队头阻塞后续周）
+    // 按 targetMarkWeek 精确定位，与队列位置无关；runSummary 替换 runTurn 也是按 targetMarkWeek 匹配，不受轮转影响
+    function rotateSummaryBuff(targetMarkWeek) {
+        var q = getSummaryBuffQueue();
+        if (q.length <= 1) return; // 0 或 1 条无需轮转（原地重试即可）
+        var idx = -1;
+        for (var i = 0; i < q.length; i++) {
+            if (q[i].targetMarkWeek === targetMarkWeek) { idx = i; break; }
+        }
+        if (idx === -1) return; // 不在队列中（可能已出队）
+        var item = q.splice(idx, 1)[0];
+        q.push(item);
+        _persistSummaryBuffQueue(q);
+        console.log('[Storage] summaryBuff 轮转至队尾, targetMarkWeek=' + targetMarkWeek + ', 队列长度=' + q.length);
+    }
+
     // 清空整个队列（新游戏 / 读档重置）
     function clearSummaryBuff() {
         _persistSummaryBuffQueue([]);
@@ -929,6 +945,7 @@ var storageService = (function() {
         peekSummaryBuff: peekSummaryBuff,
         enqueueSummaryBuff: enqueueSummaryBuff,
         dequeueSummaryBuff: dequeueSummaryBuff,
+        rotateSummaryBuff: rotateSummaryBuff,
         clearSummaryBuff: clearSummaryBuff,
         loadSummaryHistory: loadSummaryHistory,
         saveSummaryHistory: saveSummaryHistory,

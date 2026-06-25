@@ -175,6 +175,11 @@ var summaryRunner = (function() {
                 return;
             }
             console.warn('[SummaryRunner] ✗ 总结失败，' + _retryDelay + 'ms 后重试:', e.message);
+            // 方案A：失败时将本条 buff 轮转至队尾，避免队头阻塞后续周。
+            // 轮转按 targetMarkWeek 精确定位，替换 runTurn 也按 targetMarkWeek 匹配，与队列顺序无关，不会错位。
+            if (storageService.rotateSummaryBuff) {
+                storageService.rotateSummaryBuff(buff.targetMarkWeek);
+            }
             setTimeout(function() {
                 _running = false;
                 scheduleSummary();
