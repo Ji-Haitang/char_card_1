@@ -131,7 +131,8 @@ var pipeline = (function() {
         if (!userContent) return summaryText;
 
         var prefix = _extractLocationNpcPrefix(userContent);
-        return prefix ? (prefix + summaryText) : summaryText;
+        // 头尾各放一遍前缀，提升地点/NPC在向量中的权重，改善召回精度
+        return prefix ? (prefix + summaryText + '\n' + prefix) : summaryText;
     }
 
     /**
@@ -183,6 +184,7 @@ var pipeline = (function() {
                     storageService.saveEmbedding(s.id, f32, meta);
                     if (typeof memoryRecall !== 'undefined') memoryRecall.addToCache({ id: s.id, vector: f32, text: meta.text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
                     console.log('[EmbSync] 已补生成 emb_' + s.id + ' (' + (i + 1) + '/' + missing.length + ')');
+                    _setProgressLog('已补生成 emb_' + s.id + ' (' + (i + 1) + '/' + missing.length + ')');
                 }
             } catch (e) {
                 console.warn('[EmbSync] 补生成 emb_' + s.id + ' 失败:', e && e.message || e);
@@ -192,10 +194,64 @@ var pipeline = (function() {
     }
 
     /**
-     * 执行单轮消息处理（自动选择流式/非流式）
-     * @param {string} message - 用户消息
-     * @param {object} options - 可选配置 { isRegenerate: false }
+     * 在发起请求前，核对 eventHistory 与 wevt_（L2 事件向量）的一致性：
+     * - wevt_ 有但 eventHistory 无 → 删孤（删孤先于重写，事件号复用安全，见方案 §4.1）
+     * - eventHistory 有但 wevt_ 缺失 → 补生成（向量化失败的事件下一轮自愈）
+     * 与 L0 的 _syncEmbeddingsWithSummaryHistory 完全分开，各走各的缓存。
      */
+    async function _syncL2EmbeddingsWithEventHistory() {
+        if (typeof embeddingService === 'undefined' || !embeddingService.isEnabled()) return;
+        if (typeof eventHistoryService === 'undefined' || typeof storageService === 'undefined') return;
+        if (!storageService.loadAllL2Embeddings) return;
+
+        var allEvents = eventHistoryService.getAll();
+        var eventIds = new Set(allEvents.map(function(e) { return e.id; }));
+
+        var l2Records = storageService.loadAllL2Embeddings();
+        var l2Ids = new Set(l2Records.map(function(r) { return r.id; }));
+
+        // 1. wevt_ 有但 eventHistory 无 → 删孤
+        var toDelete = l2Records.filter(function(r) { return !eventIds.has(r.id); });
+        if (toDelete.length > 0) {
+            toDelete.forEach(function(r) {
+                storageService.deleteL2Embedding(r.id);
+                if (typeof memoryRecall !== 'undefined' && memoryRecall.removeFromCacheL2) memoryRecall.removeFromCacheL2(r.id);
+            });
+            console.log('[L2Sync] 删除孤立 wevt_ ' + toDelete.length + ' 条: ' + toDelete.map(function(r){ return r.id; }).join(', '));
+        }
+
+        // 2. eventHistory 有但 wevt_ 缺失 → 补生成
+        var missing = allEvents.filter(function(e) { return e.id && !l2Ids.has(e.id); });
+        if (missing.length === 0) {
+            if (toDelete.length === 0) {
+                console.log('[L2Sync] wevt_ 与 eventHistory 完全一致，共 ' + l2Records.length + ' 条');
+            }
+            return;
+        }
+        console.log('[L2Sync] 发现 ' + missing.length + ' 条事件缺少 wevt_，开始补生成: ' + missing.map(function(e){ return e.id; }).join(', '));
+        var fp = embeddingService.getFingerprint();
+        for (var i = 0; i < missing.length; i++) {
+            var ev = missing[i];
+            try {
+                var text = eventHistoryService.buildEventEmbedText(ev);
+                var vecs = await embeddingService.embed([text]);
+                if (vecs && vecs.length > 0) {
+                    var f32 = new Float32Array(vecs[0]);
+                    var meta = { text: text, week: ev.week || 0, fingerprint: fp, createdAt: Date.now() };
+                    storageService.saveL2Embedding(ev.id, f32, meta);
+                    if (typeof memoryRecall !== 'undefined' && memoryRecall.addToCacheL2) {
+                        memoryRecall.addToCacheL2({ id: ev.id, vector: f32, text: text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+                    }
+                    console.log('[L2Sync] 已补生成 wevt_' + ev.id + ' (' + (i + 1) + '/' + missing.length + ')');
+                    _setProgressLog('已补生成 wevt_' + ev.id + ' (' + (i + 1) + '/' + missing.length + ')');
+                }
+            } catch (e) {
+                console.warn('[L2Sync] 补生成 wevt_' + ev.id + ' 失败:', e && e.message || e);
+            }
+        }
+        console.log('[L2Sync] 补生成完毕，共处理 ' + missing.length + ' 条');
+    }
+
     async function runTurn(message, options) {
         options = options || {};
         var isRegenerate = options.isRegenerate || false;
@@ -205,6 +261,14 @@ var pipeline = (function() {
 
         var lastAssistantReply = _getLastAssistantContent(storageService.loadUIConversation());
 
+        // 向量补全阶段：提前显示蒙版，防止用户误以为卡死
+        var _embEnabled = typeof embeddingService !== 'undefined' && embeddingService.isEnabled && embeddingService.isEnabled();
+        if (_embEnabled) {
+            _showStreamMask();
+            _setInteractionEnabled(false);
+            _setStreamLog('施延年翻阅旧卷');
+        }
+
         // Phase 3：发起请求前，同步 emb_ 与 summaryHistory 一致性
         try {
             await _syncEmbeddingsWithSummaryHistory();
@@ -212,8 +276,16 @@ var pipeline = (function() {
             console.warn('[EmbSync] 同步异常，跳过:', syncErr && syncErr.message || syncErr);
         }
 
+        // Phase L2：发起请求前，同步 wevt_ 与 eventHistory 一致性（删孤先于召回）
+        try {
+            await _syncL2EmbeddingsWithEventHistory();
+        } catch (l2SyncErr) {
+            console.warn('[L2Sync] 同步异常，跳过:', l2SyncErr && l2SyncErr.message || l2SyncErr);
+        }
+
         // Phase 3：向量召回（在 buildMessages 前，不阻塞流程）
         var recalledMemories = [];
+        var recalledEvents = null;
         if (typeof memoryRecall !== 'undefined' && typeof embeddingService !== 'undefined' && embeddingService.isEnabled()) {
             try {
                 var allSummaries = summaryHistoryService.getAll();
@@ -221,7 +293,7 @@ var pipeline = (function() {
                 // ① 排除 RecentMemories 候选池：与 _selectRecentSummaries 保持相同阈值
                 var _wh = (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [];
                 var _lastWHEntry = _wh.length > 0 ? _wh[_wh.length - 1] : null;
-                var _recentThreshold = _lastWHEntry ? ((_lastWHEntry.markWeek || _lastWHEntry.week || 1) - 1) : 1;
+                var _recentThreshold = _lastWHEntry ? (_lastWHEntry.markWeek || _lastWHEntry.week || 1) : 1;
                 var excludeIds = allSummaries
                     .filter(function(s) { return (s.week || 1) >= _recentThreshold; })
                     .map(function(s) { return s.id; });
@@ -285,10 +357,205 @@ var pipeline = (function() {
                 console.log('排除RecentMemories: ' + excludeIds.length + '条 | focusNPC=[' + _focusCharacters.join(',') + ']');
                 console.groupEnd();
 
-                recalledMemories = await memoryRecall.recallRelevantMemories(_intentVec, 15, excludeIds, 3000, _focusCharacters, _contextVec);
+                // rerankQuery：intent 为主，context 截取前 500 字作补充（与 L2 精排 query 对齐）
+                var _l0RerankQuery = _intentText + (_contextText ? ('\n' + _contextText.slice(0, 500)) : '');
+                recalledMemories = await memoryRecall.recallRelevantMemories(_intentVec, 10, excludeIds, 3000, _focusCharacters, _contextVec, _intentText.length, _contextText.length, _l0RerankQuery);
+
+                // === L2 剧情事件层：双路 RRF 召回 → Rerank 精排 → 因果链 → 挂载 L0 ===
+                if (typeof eventHistoryService !== 'undefined' && memoryRecall.recallL2Events && _intentVec) {
+                    try {
+                        var _allEvents = eventHistoryService.getAll();
+                        if (_allEvents.length > 0) {
+                            // L2 排除近期事件（week >= 同一 threshold，已在上下文窗口里）
+                            // 兜底：老存档事件 week=0 时，用 uiEnd 相对位置判断（近 40 条内视为近期，约 2×STEP_DEFAULT）
+                            var _uiConvLen = _uiForQuery.length;
+                            var _excludeL2 = _allEvents
+                                .filter(function(e) {
+                                    var ew = e.week || 0;
+                                    if (ew > 0) return ew >= _recentThreshold;
+                                    // week=0：uiEnd 在末尾 40 条内则视为近期
+                                    return typeof e.uiEnd === 'number' && e.uiEnd >= _uiConvLen - 40;
+                                })
+                                .map(function(e) { return e.id; });
+
+                            var _l2Candidates = memoryRecall.recallL2Events(_intentVec, _contextVec, {
+                                excludeIds: _excludeL2,
+                                focusCharacters: _focusCharacters,
+                                candidateLimit: 30,
+                                intentTextLen: _intentText.length,
+                                contextTextLen: _contextText.length
+                            });
+
+                            console.log('[Pipeline][L2] 粗排候选 ' + _l2Candidates.length + ' 条（排除近期 ' + _excludeL2.length + ' 条，allEvents=' + _allEvents.length + '）');
+                            if (_l2Candidates.length > 0) {
+                                // 实体强命中（focus + 高相似）跳过 rerank，直接保留
+                                var _ENTITY_BYPASS = 0.72;
+                                var _mustKeep = [];
+                                var _normal = [];
+                                for (var _li = 0; _li < _l2Candidates.length; _li++) {
+                                    var _c = _l2Candidates[_li];
+                                    var _simMax = Math.max(_c.similarity || 0, _c.simContext || 0);
+                                    var _isFocus = false;
+                                    for (var _fk = 0; _fk < _focusCharacters.length; _fk++) {
+                                        if (_c.text && _c.text.indexOf(_focusCharacters[_fk]) !== -1) { _isFocus = true; break; }
+                                    }
+                                    if (_isFocus && _simMax >= _ENTITY_BYPASS + 0.03) _mustKeep.push(_c);
+                                    else _normal.push(_c);
+                                }
+
+                                console.log('[Pipeline][L2] 分流：实体强命中(免精排) ' + _mustKeep.length + ' 条 | 送精排 ' + _normal.length + ' 条'
+                                    + (_mustKeep.length > 0 ? ' | mustKeep=[' + _mustKeep.map(function(c){ return c.id; }).join(',') + ']' : ''));
+
+                                // rerank 精排普通候选（焦点在前的自然语言 query）
+                                var _rerankQuery = _intentText + (_contextText ? ('\n' + _contextText.slice(0, 500)) : '');
+                                var _rerankTopN = Math.max(0, 7 - _mustKeep.length);
+                                var _reranked = [];
+                                if (_normal.length > 0 && _rerankTopN > 0 && typeof reranker !== 'undefined') {
+                                    _reranked = await reranker.rerankEvents(_rerankQuery, _normal, { topN: _rerankTopN, minScore: 0.10 });
+
+                                    // Rerank 前→后对比日志
+                                    console.groupCollapsed('[Pipeline][L2] Rerank 前→后对比（送入 ' + _normal.length + ' 条→精排后 ' + _reranked.length + ' 条）');
+                                    console.log('── 精排前（RRF 分降序）──');
+                                    var _bfTop = Math.min(10, _normal.length);
+                                    for (var _bri = 0; _bri < _bfTop; _bri++) {
+                                        var _bc = _normal[_bri];
+                                        console.log('[' + (_bri + 1) + '] rrf=' + (_bc.rrfScore || 0).toFixed(5) + ' intent=' + (_bc.similarity || 0).toFixed(4) + ' | ' + _bc.id);
+                                        console.log('    ' + (_bc.text || '').slice(0, 100));
+                                    }
+                                    console.log('── 精排后（Rerank 分降序）──');
+                                    for (var _ari = 0; _ari < _reranked.length; _ari++) {
+                                        var _ac = _reranked[_ari];
+                                        var _prevRank = -1;
+                                        for (var _pri = 0; _pri < _normal.length; _pri++) { if (_normal[_pri].id === _ac.id) { _prevRank = _pri + 1; break; } }
+                                        var _delta = _prevRank > 0 ? (_prevRank - (_ari + 1) > 0 ? '↑' + (_prevRank - _ari - 1) : (_prevRank === _ari + 1 ? '─' : '↓' + (_ari + 1 - _prevRank))) : '?';
+                                        console.log('[' + (_ari + 1) + '] rerank=' + (_ac.rerankScore || 0).toFixed(4) + ' (原RRF排' + _prevRank + ' ' + _delta + ') | ' + _ac.id);
+                                        console.log('    ' + (_ac.text || '').slice(0, 100));
+                                    }
+                                    console.groupEnd();
+                                } else if (_rerankTopN <= 0) {
+                                    console.log('[Pipeline][L2] mustKeep 已占满名额，跳过精排');
+                                }
+
+                                // DIRECT 候选 = mustKeep ∪ reranked（按 id 去重，mustKeep 在前）
+                                var _directIds = {};
+                                var _directCands = [];
+                                var _pushDirect = function(c) { if (c && !_directIds[c.id]) { _directIds[c.id] = true; _directCands.push(c); } };
+                                _mustKeep.forEach(_pushDirect);
+                                _reranked.forEach(_pushDirect);
+
+                                // 候选 → 完整事件对象
+                                var _eventById = {};
+                                for (var _ei = 0; _ei < _allEvents.length; _ei++) _eventById[_allEvents[_ei].id] = _allEvents[_ei];
+                                var _directEvents = [];
+                                for (var _di = 0; _di < _directCands.length; _di++) {
+                                    var _evObj = _eventById[_directCands[_di].id];
+                                    if (_evObj) _directEvents.push(_evObj);
+                                }
+
+                                // 挂载键：uiConv 消息 id → index；summaryHistory id → UIid
+                                var _idxMap = new Map();
+                                for (var _ui = 0; _ui < _uiForQuery.length; _ui++) _idxMap.set(_uiForQuery[_ui].id, _ui);
+                                var _summaryById = {};
+                                var _allSum = summaryHistoryService.getAll();
+                                for (var _ssi = 0; _ssi < _allSum.length; _ssi++) _summaryById[_allSum[_ssi].id] = _allSum[_ssi].UIid;
+
+                                // 挂载 L0 证据 + 记录 usedL0（最多7条或5000 token先到为准）
+                                // 降级机制：预算超限时先尝试不带证据版本；若仍超限则停止。
+                                // 一旦触发降级，后续事件全部走无证据路径（allowEvidence 开关）。
+                                var _usedL0 = {};
+                                var _directWithEvidence = [];
+                                var _l2Tokens = 0;
+                                var _L2_TOKEN_LIMIT = 5000;
+                                var _allowEvidence = true;
+                                var _estTok = function(t) { if (!t) return 0; var ch = (t.match(/[\u4e00-\u9fff]/g)||[]).length; return Math.ceil(ch + (t.length - ch) / 4); };
+                                for (var _dwei = 0; _dwei < _directEvents.length; _dwei++) {
+                                    var ev = _directEvents[_dwei];
+                                    // 收集该事件范围内的 L0 证据（仅当 allowEvidence 时才挂载）
+                                    var evidence = [];
+                                    var _candidateL0Ids = [];
+                                    if (_allowEvidence) {
+                                        for (var _mi = 0; _mi < recalledMemories.length; _mi++) {
+                                            var l0 = recalledMemories[_mi];
+                                            var _uiid = _summaryById[l0.id];
+                                            var _l0Idx = (_uiid != null) ? _idxMap.get(_uiid) : null;
+                                            if (_l0Idx != null && typeof ev.uiStart === 'number' && typeof ev.uiEnd === 'number'
+                                                && _l0Idx >= ev.uiStart && _l0Idx <= ev.uiEnd) {
+                                                evidence.push({ week: l0.week, text: l0.text });
+                                                _candidateL0Ids.push(l0.id);
+                                            }
+                                        }
+                                    }
+                                    var _evBase = _estTok((ev.title || '') + (ev.description || ''));
+                                    var _evEvidCost = evidence.reduce(function(s, e2) { return s + _estTok(e2.text); }, 0);
+                                    var _evCostFull = _evBase + _evEvidCost;
+                                    var _evCostNoEvid = _evBase;
+
+                                    // 第一条事件不受 token 限制（保证至少注入一条）
+                                    if (_directWithEvidence.length === 0) {
+                                        for (var _li = 0; _li < _candidateL0Ids.length; _li++) _usedL0[_candidateL0Ids[_li]] = true;
+                                        _l2Tokens += _evCostFull;
+                                        _directWithEvidence.push({ event: ev, evidence: evidence });
+                                        continue;
+                                    }
+
+                                    if (_l2Tokens + _evCostFull <= _L2_TOKEN_LIMIT) {
+                                        // 预算充足：带完整证据放入
+                                        for (var _li2 = 0; _li2 < _candidateL0Ids.length; _li2++) _usedL0[_candidateL0Ids[_li2]] = true;
+                                        _l2Tokens += _evCostFull;
+                                        _directWithEvidence.push({ event: ev, evidence: evidence });
+                                    } else if (_l2Tokens + _evCostNoEvid <= _L2_TOKEN_LIMIT) {
+                                        // 降级：不带证据放入，开关关闭，后续全部无证据
+                                        if (_allowEvidence && evidence.length > 0) _allowEvidence = false;
+                                        _l2Tokens += _evCostNoEvid;
+                                        _directWithEvidence.push({ event: ev, evidence: [] });
+                                    } else {
+                                        // 即使不带证据也放不下：停止
+                                        break;
+                                    }
+                                }
+
+                                // 因果链扩展（前因，仅描述、不挂 L0）
+                                var _priorEvents = memoryRecall.traceCausation
+                                    ? memoryRecall.traceCausation(_directEvents, _eventById, { maxDepth: 4, maxAdd: 20 })
+                                    : [];
+
+                                // 转为 id→事件 字典，供 prompt-builder 内联渲染树形因果链
+                                var _priorById = {};
+                                for (var _pbi = 0; _pbi < _priorEvents.length; _pbi++) {
+                                    _priorById[_priorEvents[_pbi].id] = _priorEvents[_pbi];
+                                }
+
+                                recalledEvents = { direct: _directWithEvidence, priorById: _priorById };
+
+                                // 孤儿 L0 = 未被挂载的 L0 → 仍作 RecalledMemories
+                                recalledMemories = recalledMemories.filter(function(l0) { return !_usedL0[l0.id]; });
+
+                                console.log('[Pipeline][L2] DIRECT ' + _directWithEvidence.length + ' (mustKeep ' + _mustKeep.length + '+精排 ' + _reranked.length + ') token=' + _l2Tokens + (_allowEvidence ? '' : ' [已降级无证据]') + ' | 前因 ' + _priorEvents.length + ' | 孤儿L0 ' + recalledMemories.length);
+                                // 折叠详情：逐条 DIRECT 事件 + 挂载证据数，对齐 L0 召回粒度
+                                console.groupCollapsed('[Pipeline][L2] 最终装配详情（展开查看）');
+                                _directWithEvidence.forEach(function(d, idx) {
+                                    var _ev = d.event;
+                                    var _kept = _directIds[_ev.id] && _mustKeep.some(function(c){ return c.id === _ev.id; });
+                                    console.log('DIRECT[' + (idx + 1) + '] ' + _ev.id + (_kept ? ' (实体强命中)' : ' (精排)')
+                                        + ' week=' + (_ev.week || 0) + ' ui=' + _ev.uiStart + '..' + _ev.uiEnd
+                                        + ' | 挂载L0证据 ' + d.evidence.length + ' 条 | ' + (_ev.title || '') + '：' + (_ev.description || ''));
+                                    d.evidence.forEach(function(ed) { console.log('    [证据] week=' + ed.week + ' ' + (ed.text || '').slice(0, 80)); });
+                                });
+                                _priorEvents.forEach(function(pe, idx) {
+                                    console.log('前因[' + (idx + 1) + '] ' + pe.id + ' | ' + (pe.title || '') + '：' + (pe.description || ''));
+                                });
+                                console.groupEnd();
+                            }
+                        }
+                    } catch (l2Err) {
+                        console.warn('[Pipeline] L2 召回/组装失败，降级:', l2Err && l2Err.message || l2Err);
+                        recalledEvents = null;
+                    }
+                }
             } catch (recallErr) {
                 console.warn('[Pipeline] 向量召回失败，降级为空:', recallErr && recallErr.message || recallErr);
                 recalledMemories = [];
+                recalledEvents = null;
             }
         }
 
@@ -298,7 +565,8 @@ var pipeline = (function() {
             summaryHistory: summaryHistoryService.getAll(),
             weekHistory: (typeof weekHistoryService !== 'undefined') ? weekHistoryService.getAll() : [],
             lastAssistantReply: lastAssistantReply,
-            recalledMemories: recalledMemories
+            recalledMemories: recalledMemories,
+            recalledEvents: recalledEvents
         });
 
         // === [DEBUG] 发起请求前：打印事件相关变量当前值 ===
@@ -725,6 +993,13 @@ var pipeline = (function() {
                     }
                 })();
             }
+
+            // Phase L2：fire-and-forget 触发 runEventSum（滑动窗口事件抽取，与 L0 embedding 并列）
+            // 本轮 assistant 楼层已写入 uiConversation，触发判定按总条目差驱动（含 user）
+            // 注：embedding 未开启时仍执行事件抽取入库，仅跳过 wevt_ 向量化
+            if (typeof eventRunner !== 'undefined') {
+                setTimeout(function() { eventRunner.maybeSchedule(); }, 0);
+            }
             // 触发自动存档（仅独立前端，函数由 index.html 定义）
             // 仅在 SIDE_NOTE 成功解析时才存档，截断响应跳过
             if (typeof autoSave === 'function' && parsed.sideNote !== null) {
@@ -838,6 +1113,13 @@ var pipeline = (function() {
             span.style.animationDelay = (i * 0.07) + 's';
             el.appendChild(span);
         }
+    }
+
+    // 补全进度用：直接 textContent，不做逐字动画，适合逐条高频刷新
+    function _setProgressLog(text) {
+        var el = document.getElementById('stream-log');
+        if (!el) return;
+        el.textContent = text || '';
     }
 
     function _setInteractionEnabled(enabled) {

@@ -20,6 +20,12 @@ var storageService = (function() {
     var KEY_SAVE_INDEX = 'saveIndex';
     var KEY_MARK_WEEK_UI_INDEX = 'markWeekUiIndex';
     var KEY_SUMMARY_BUFF = 'summaryBuff';
+    // L2 剧情事件层（向量化方案优化2）
+    var KEY_EVENT_HISTORY = 'eventHistory';
+    var KEY_EVENT_META = 'eventMeta';
+    var KEY_EVENT_WATERMARK = 'eventWatermark';
+    var KEY_EVENT_STEP = 'eventStep';
+    var EVENT_STEP_DEFAULT = 20;
 
     // localStorage key（兼容旧格式）
     var LS_APP_STATE = 'jxz_appState';
@@ -29,6 +35,10 @@ var storageService = (function() {
     var LS_SAVES = 'jxz_saves';
     var LS_MARK_WEEK_UI_INDEX = 'jxz_markWeekUiIndex';
     var LS_SUMMARY_BUFF = 'jxz_summaryBuff';
+    var LS_EVENT_HISTORY = 'jxz_eventHistory';
+    var LS_EVENT_META = 'jxz_eventMeta';
+    var LS_EVENT_WATERMARK = 'jxz_eventWatermark';
+    var LS_EVENT_STEP = 'jxz_eventStep';
 
     // localStorage key（快照降级，仅存体积可控的字段）
     var LS_SNAPSHOT_APPSTATE = 'jxz_snapshot';
@@ -223,6 +233,16 @@ var storageService = (function() {
         var summaryBuff = _lsGet(LS_SUMMARY_BUFF);
         _cache[KEY_SUMMARY_BUFF] = _normalizeSummaryBuffQueue(summaryBuff);
 
+        // L2 剧情事件层
+        var eventHistory = _lsGet(LS_EVENT_HISTORY);
+        if (Array.isArray(eventHistory)) _cache[KEY_EVENT_HISTORY] = eventHistory;
+        var eventMeta = _lsGet(LS_EVENT_META);
+        if (eventMeta && typeof eventMeta === 'object') _cache[KEY_EVENT_META] = eventMeta;
+        var eventWatermark = _lsGet(LS_EVENT_WATERMARK);
+        if (typeof eventWatermark === 'number') _cache[KEY_EVENT_WATERMARK] = eventWatermark;
+        var eventStep = _lsGet(LS_EVENT_STEP);
+        if (typeof eventStep === 'number') _cache[KEY_EVENT_STEP] = eventStep;
+
         // 旧格式存档 → 转为索引 + 独立 key（仅缓存中）
         var saves = _lsGet(LS_SAVES);
         if (saves && Array.isArray(saves)) {
@@ -351,6 +371,124 @@ var storageService = (function() {
             }
         }
         console.log('[Storage] 已清空所有 embedding 记录');
+        // L2 向量同步清空（与 L0 一起重置，避免不同存档/新游戏污染）
+        clearL2Embeddings();
+    }
+
+    // --- L2 剧情事件向量（wevt_<id>，向量化方案优化2）---
+
+    /**
+     * 保存一条 L2 事件向量记录
+     * @param {string} id - 事件 id（evt-N）
+     * @param {Float32Array} vector
+     * @param {object} metadata - { text, week, fingerprint, createdAt }
+     */
+    function saveL2Embedding(id, vector, metadata) {
+        if (!id) return;
+        var key = 'wevt_' + id;
+        var record = Object.assign({ id: id, vector: vector, type: 'event' }, metadata || {});
+        _cache[key] = record;
+        if (_idbAvailable) {
+            idbStorage.put(key, record).catch(function(e) {
+                console.warn('[Storage][L2Embedding] IDB 写入失败:', e && e.message || e);
+            });
+        }
+    }
+
+    /**
+     * 加载全部 L2 事件向量记录（启动时预热 _cacheL2 用）
+     */
+    function loadAllL2Embeddings() {
+        var result = [];
+        var keys = Object.keys(_cache);
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf('wevt_') === 0) {
+                result.push(_cache[keys[i]]);
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 删除指定 L2 事件向量记录
+     */
+    function deleteL2Embedding(id) {
+        var key = 'wevt_' + id;
+        delete _cache[key];
+        _idbRemove(key);
+    }
+
+    /**
+     * 清空全部 L2 事件向量记录
+     */
+    function clearL2Embeddings() {
+        var keys = Object.keys(_cache);
+        var n = 0;
+        for (var i = 0; i < keys.length; i++) {
+            if (keys[i].indexOf('wevt_') === 0) {
+                _idbRemove(keys[i]);
+                delete _cache[keys[i]];
+                n++;
+            }
+        }
+        if (n > 0) console.log('[Storage] 已清空 ' + n + ' 条 L2 事件向量');
+    }
+
+    // --- L2 事件历史 / 元数据 / watermark / step ---
+
+    function loadEventHistory() {
+        return _cache[KEY_EVENT_HISTORY] || [];
+    }
+
+    function saveEventHistory(history) {
+        var h = Array.isArray(history) ? history : [];
+        _cache[KEY_EVENT_HISTORY] = h;
+        _idbPut(KEY_EVENT_HISTORY, h);
+        _lsSet(LS_EVENT_HISTORY, h);
+    }
+
+    function loadEventMeta() {
+        return _cache[KEY_EVENT_META] || { arcs: {}, facts: {} };
+    }
+
+    function saveEventMeta(meta) {
+        var m = (meta && typeof meta === 'object') ? meta : { arcs: {}, facts: {} };
+        _cache[KEY_EVENT_META] = m;
+        _idbPut(KEY_EVENT_META, m);
+        _lsSet(LS_EVENT_META, m);
+    }
+
+    function loadEventWatermark() {
+        var v = _cache[KEY_EVENT_WATERMARK];
+        return typeof v === 'number' ? v : 0;
+    }
+
+    function saveEventWatermark(pos) {
+        var value = typeof pos === 'number' ? pos : 0;
+        _cache[KEY_EVENT_WATERMARK] = value;
+        _idbPut(KEY_EVENT_WATERMARK, value);
+        _lsSet(LS_EVENT_WATERMARK, value);
+    }
+
+    function loadEventStep() {
+        var v = _cache[KEY_EVENT_STEP];
+        return typeof v === 'number' ? v : EVENT_STEP_DEFAULT;
+    }
+
+    function saveEventStep(step) {
+        var value = typeof step === 'number' ? step : EVENT_STEP_DEFAULT;
+        _cache[KEY_EVENT_STEP] = value;
+        _idbPut(KEY_EVENT_STEP, value);
+        _lsSet(LS_EVENT_STEP, value);
+    }
+
+    function clearEventLayer() {
+        saveEventHistory([]);
+        saveEventMeta({ arcs: {}, facts: {} });
+        saveEventWatermark(0);
+        saveEventStep(EVENT_STEP_DEFAULT);
+        clearL2Embeddings();
+        console.log('[Storage] 已清空 L2 事件层（eventHistory/eventMeta/watermark/step/wevt_）');
     }
 
     // --- 全量快照（snapshot_db）---
@@ -362,7 +500,7 @@ var storageService = (function() {
         });
     }
 
-    var _SNAPSHOT_KEYS = ['appState', 'uiConversation', 'summaryHistory', 'weekHistory', 'markWeekUiIndex', 'summaryBuff', 'lastUserMessage'];
+    var _SNAPSHOT_KEYS = ['appState', 'uiConversation', 'summaryHistory', 'weekHistory', 'markWeekUiIndex', 'summaryBuff', 'lastUserMessage', 'eventHistory', 'eventMeta', 'eventWatermark', 'eventStep'];
 
     function _idbSnapshotRemoveAll() {
         if (!_idbSnapshotAvailable) return;
@@ -384,7 +522,11 @@ var storageService = (function() {
             weekHistory:     (typeof weekHistoryService !== 'undefined') ? structuredClone(weekHistoryService.getAll()) : [],
             markWeekUiIndex: getMarkWeekUiIndex(),
             summaryBuff:     structuredClone(getSummaryBuffQueue()),
-            lastUserMessage: (typeof lastUserMessage !== 'undefined') ? lastUserMessage : ''
+            lastUserMessage: (typeof lastUserMessage !== 'undefined') ? lastUserMessage : '',
+            eventHistory:    structuredClone(loadEventHistory()),
+            eventMeta:       structuredClone(loadEventMeta()),
+            eventWatermark:  loadEventWatermark(),
+            eventStep:       loadEventStep()
         };
         _snapshotCache = snap;
         if (_idbSnapshotAvailable) {
@@ -395,7 +537,11 @@ var storageService = (function() {
                 idbSnapshot.put('weekHistory',     snap.weekHistory),
                 idbSnapshot.put('markWeekUiIndex', snap.markWeekUiIndex),
                 idbSnapshot.put('summaryBuff',     snap.summaryBuff),
-                idbSnapshot.put('lastUserMessage', snap.lastUserMessage)
+                idbSnapshot.put('lastUserMessage', snap.lastUserMessage),
+                idbSnapshot.put('eventHistory',    snap.eventHistory),
+                idbSnapshot.put('eventMeta',       snap.eventMeta),
+                idbSnapshot.put('eventWatermark',  snap.eventWatermark),
+                idbSnapshot.put('eventStep',       snap.eventStep)
             ]);
         }
         // localStorage 降级：仅存体积可控的字段
@@ -441,6 +587,12 @@ var storageService = (function() {
 
         // 还原 summaryBuff 队列（兼容旧单槽格式）
         setSummaryBuffQueue(snap.summaryBuff);
+
+        // 还原 L2 事件层（wevt_ 向量不在快照，由下一轮 _syncL2 删孤补缺自愈）
+        saveEventHistory(Array.isArray(snap.eventHistory) ? snap.eventHistory : []);
+        saveEventMeta(snap.eventMeta || { arcs: {}, facts: {} });
+        saveEventWatermark(typeof snap.eventWatermark === 'number' ? snap.eventWatermark : 0);
+        saveEventStep(typeof snap.eventStep === 'number' ? snap.eventStep : EVENT_STEP_DEFAULT);
 
         console.log('[Storage] 已从快照还原状态');
         return true;
@@ -622,6 +774,41 @@ var storageService = (function() {
         return _getSaveIndex();
     }
 
+    // 序列化 L2 事件向量（Float32Array → number[]，供存档导出）
+    function _serializeL2Embeddings() {
+        var recs = loadAllL2Embeddings();
+        return recs.map(function(r) {
+            var vec = r.vector;
+            var arr = (vec instanceof Float32Array) ? Array.from(vec) : (Array.isArray(vec) ? vec : []);
+            return { id: r.id, vector: arr, text: r.text || '', week: r.week || 0, fingerprint: r.fingerprint || '', createdAt: r.createdAt || 0, type: 'event' };
+        });
+    }
+
+    // 恢复 L2 事件层（存档导入/读档用）：先清空再写入 eventHistory/eventMeta/watermark/step + wevt_
+    function _restoreL2FromPayload(payload) {
+        clearL2Embeddings();
+        saveEventHistory(Array.isArray(payload.eventHistory) ? payload.eventHistory : []);
+        saveEventMeta(payload.eventMeta || { arcs: {}, facts: {} });
+        saveEventWatermark(typeof payload.eventWatermark === 'number' ? payload.eventWatermark : 0);
+        saveEventStep(typeof payload.eventStep === 'number' ? payload.eventStep : EVENT_STEP_DEFAULT);
+        if (Array.isArray(payload.l2Embeddings) && payload.l2Embeddings.length > 0) {
+            for (var i = 0; i < payload.l2Embeddings.length; i++) {
+                var er = payload.l2Embeddings[i];
+                if (!er || !er.id) continue;
+                var f32 = new Float32Array(Array.isArray(er.vector) ? er.vector : []);
+                saveL2Embedding(er.id, f32, {
+                    text: er.text || '', week: er.week || 0,
+                    fingerprint: er.fingerprint || '', createdAt: er.createdAt || 0
+                });
+            }
+            console.log('[Storage] 已恢复 ' + payload.l2Embeddings.length + ' 条 L2 事件向量');
+        }
+        if (typeof memoryRecall !== 'undefined' && memoryRecall.clearCacheL2) {
+            memoryRecall.clearCacheL2();
+            if (memoryRecall.initL2) memoryRecall.initL2();
+        }
+    }
+
     function createSave(saveName) {
         var id = 'save_' + Date.now();
         // Phase 3：序列化 embeddings（Float32Array → number[]）
@@ -631,6 +818,7 @@ var storageService = (function() {
             var arr = (vec instanceof Float32Array) ? Array.from(vec) : (Array.isArray(vec) ? vec : []);
             return { id: r.id, vector: arr, text: r.text || '', week: r.week || 0, fingerprint: r.fingerprint || '', createdAt: r.createdAt || 0 };
         });
+        var l2Export = _serializeL2Embeddings();
         var payload = {
             id: id,
             saveName: saveName,
@@ -641,6 +829,11 @@ var storageService = (function() {
             summaryBuff: structuredClone(getSummaryBuffQueue()),
             uiConversation: structuredClone(loadUIConversation()),
             embeddings: embExport,
+            eventHistory: structuredClone(loadEventHistory()),
+            eventMeta: structuredClone(loadEventMeta()),
+            eventWatermark: loadEventWatermark(),
+            eventStep: loadEventStep(),
+            l2Embeddings: l2Export,
             previewWeek: (typeof gameData !== 'undefined' && gameData) ? gameData.currentWeek : null,
             previewLocation: (typeof gameData !== 'undefined' && gameData) ? gameData.mapLocation : null,
             createdAt: Date.now()
@@ -749,6 +942,9 @@ var storageService = (function() {
         setSummaryBuffQueue(payload.summaryBuff);
         console.log('[Storage] 已恢复 summaryBuff 队列, 条数=' + getSummaryBuffQueue().length);
 
+        // 恢复 L2 事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
+        _restoreL2FromPayload(payload);
+
         console.log('[Storage] 存档导入: ' + id + ' (' + (payload.saveName || '导入存档') + ')');
         return id;
     }
@@ -766,28 +962,33 @@ var storageService = (function() {
 
     // --- 导入导出 ---
 
-    function buildSavePayload(saveName) {
-        // Phase 3：序列化 embeddings（Float32Array → number[] 保证 JSON 兼容）
-        var embRecords = loadAllEmbeddings();
-        var embExport = embRecords.map(function(r) {
-            var vec = r.vector;
-            var arr;
-            if (vec instanceof Float32Array) {
-                arr = Array.from(vec);
-            } else if (Array.isArray(vec)) {
-                arr = vec;
-            } else {
-                arr = [];
-            }
-            return {
-                id: r.id,
-                vector: arr,
-                text: r.text || '',
-                week: r.week || 0,
-                fingerprint: r.fingerprint || '',
-                createdAt: r.createdAt || 0
-            };
-        });
+    function buildSavePayload(saveName, includeVectors) {
+        // includeVectors 默认 true；传 false 时不写入 embeddings/l2Embeddings，可大幅减小体积
+        var _inclVec = (includeVectors !== false);
+        var embExport = [];
+        if (_inclVec) {
+            // Phase 3：序列化 embeddings（Float32Array → number[] 保证 JSON 兼容）
+            var embRecords = loadAllEmbeddings();
+            embExport = embRecords.map(function(r) {
+                var vec = r.vector;
+                var arr;
+                if (vec instanceof Float32Array) {
+                    arr = Array.from(vec);
+                } else if (Array.isArray(vec)) {
+                    arr = vec;
+                } else {
+                    arr = [];
+                }
+                return {
+                    id: r.id,
+                    vector: arr,
+                    text: r.text || '',
+                    week: r.week || 0,
+                    fingerprint: r.fingerprint || '',
+                    createdAt: r.createdAt || 0
+                };
+            });
+        }
         return {
             saveName: saveName,
             gameData: (typeof gameData !== 'undefined') ? gameData : null,
@@ -797,13 +998,18 @@ var storageService = (function() {
             summaryBuff: getSummaryBuffQueue(),
             uiConversation: loadUIConversation(),
             embeddings: embExport,
+            eventHistory: loadEventHistory(),
+            eventMeta: loadEventMeta(),
+            eventWatermark: loadEventWatermark(),
+            eventStep: loadEventStep(),
+            l2Embeddings: _inclVec ? _serializeL2Embeddings() : [],
             createdAt: Date.now()
         };
     }
 
-    function exportSaveToJson(saveName) {
-        var payload = buildSavePayload(saveName);
-        return JSON.stringify(payload, null, 2);
+    function exportSaveToJson(saveName, includeVectors) {
+        var payload = buildSavePayload(saveName, includeVectors);
+        return JSON.stringify(payload);
     }
 
     function importSaveFromJson(file) {
@@ -955,6 +1161,21 @@ var storageService = (function() {
         loadAllEmbeddings: loadAllEmbeddings,
         deleteEmbedding: deleteEmbedding,
         clearEmbeddings: clearEmbeddings,
+        saveL2Embedding: saveL2Embedding,
+        loadAllL2Embeddings: loadAllL2Embeddings,
+        deleteL2Embedding: deleteL2Embedding,
+        clearL2Embeddings: clearL2Embeddings,
+        loadEventHistory: loadEventHistory,
+        saveEventHistory: saveEventHistory,
+        loadEventMeta: loadEventMeta,
+        saveEventMeta: saveEventMeta,
+        loadEventWatermark: loadEventWatermark,
+        saveEventWatermark: saveEventWatermark,
+        loadEventStep: loadEventStep,
+        saveEventStep: saveEventStep,
+        clearEventLayer: clearEventLayer,
+        restoreL2FromPayload: _restoreL2FromPayload,
+        serializeL2Embeddings: _serializeL2Embeddings,
         buildSavePayload: buildSavePayload,
         exportSaveToJson: exportSaveToJson,
         importSaveFromJson: importSaveFromJson,

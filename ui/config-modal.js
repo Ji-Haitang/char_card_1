@@ -96,6 +96,9 @@ function showConfigModal() {
         '<div class="cfg-field"><label class="cfg-label">模型名称</label>' +
         '<input id="emb-model-input" type="text" class="cfg-input" placeholder="BAAI/bge-m3" value="' +
         _escapeHtml((_emb && _emb.getConfig().model) || 'BAAI/bge-m3') + '"></div>' +
+        '<div class="cfg-field"><label class="cfg-label">重排模型（Rerank）</label>' +
+        '<input id="emb-rerank-model-input" type="text" class="cfg-input" placeholder="BAAI/bge-reranker-v2-m3" value="' +
+        _escapeHtml((_emb && _emb.getConfig().rerankModel) || 'BAAI/bge-reranker-v2-m3') + '"></div>' +
         '<div class="cfg-field">' +
         '<button class="cfg-btn" onclick="_doEmbeddingTest()">🔌 测试连接</button>&nbsp;' +
         '<button class="cfg-btn" onclick="_doRebuildEmbeddingIndex()">🔄 重建索引</button>' +
@@ -173,12 +176,19 @@ function saveConfigAndClose() {
         var embEndpoint = (document.getElementById('emb-endpoint-input') || {}).value || '';
         var embKey = (document.getElementById('emb-key-input') || {}).value || '';
         var embModel = (document.getElementById('emb-model-input') || {}).value || '';
+        var embRerankModel = (document.getElementById('emb-rerank-model-input') || {}).value || '';
+        var _wasEnabled = embeddingService.isEnabled();
         embeddingService.updateConfig({
             enabled: embEnabled,
             endpoint: embEndpoint.trim(),
             apiKey: embKey.trim(),
-            model: embModel.trim()
+            model: embModel.trim(),
+            rerankModel: embRerankModel.trim() || 'BAAI/bge-reranker-v2-m3'
         });
+        // Phase L2：embedding 从关切换到开 → 触发事件层从 watermark=0 起补建
+        if (!_wasEnabled && embEnabled && typeof eventRunner !== 'undefined') {
+            eventRunner.resumeOnLoad();
+        }
     }
     closeConfigModal();
     if (typeof showModal === 'function') showModal('API 配置已保存！');

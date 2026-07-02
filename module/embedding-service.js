@@ -19,7 +19,8 @@ var embeddingService = (function() {
         enabled: false,
         endpoint: 'https://api.siliconflow.cn/v1',
         apiKey: '',
-        model: 'BAAI/bge-m3'
+        model: 'BAAI/bge-m3',
+        rerankModel: 'BAAI/bge-reranker-v2-m3'
     };
 
     // --- 多 Key 轮询状态 ---

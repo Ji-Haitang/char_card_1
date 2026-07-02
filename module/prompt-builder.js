@@ -46,7 +46,7 @@ var promptBuilder = (function() {
         if (weekHistory && weekHistory.length > 0) {
             var lastEntry = weekHistory[weekHistory.length - 1];
             var lastMarkWeek = lastEntry.markWeek || lastEntry.week || 1;
-            threshold = lastMarkWeek - 1;
+            threshold = lastMarkWeek;
         }
         return summaryHistory.filter(function(entry) {
             return (entry.week || 1) >= threshold;
@@ -71,12 +71,106 @@ var promptBuilder = (function() {
     }
 
     /**
+     * 递归渲染因果链（内联树形，小白X风格）。
+     * @param {object} eventObj  - 当前事件对象（含 causedBy）
+     * @param {object} priorById - id→事件 字典
+     * @param {number} depth     - 当前深度（从1开始）
+     * @param {object} visited   - 防环 visited 集合
+     * @returns {string[]} 渲染行数组
+     */
+    function _renderCausalChain(eventObj, priorById, depth, visited) {
+        if (depth > 4) return [];
+        var lines = [];
+        var causedBy = Array.isArray(eventObj.causedBy) ? eventObj.causedBy : [];
+        // 每一层缩进：第1层 "  "，第2层 "  │  "，第3层 "  │  │  "…
+        var indent = '  ' + '│  '.repeat(depth - 1);
+        for (var i = 0; i < causedBy.length; i++) {
+            var cid = causedBy[i];
+            if (!cid || visited[cid]) continue;
+            var ce = priorById[cid];
+            if (!ce) continue;
+            visited[cid] = true;
+            lines.push(indent + '├─ 前因 ' + _weekToTimestamp(ce.week || 1) + (ce.title ? ' ' + ce.title : ''));
+            lines.push(indent + '│     ' + (ce.description || ''));
+            var childLines = _renderCausalChain(ce, priorById, depth + 1, visited);
+            for (var ci = 0; ci < childLines.length; ci++) lines.push(childLines[ci]);
+        }
+        return lines;
+    }
+
+    /**
+     * 构建 RecalledMemories 块（L2 剧情事件 + 孤儿 L0 统一）。
+     * L2 部分用 [剧情记忆] 格式（内联因果树 + L0 证据锚点）；
+     * 孤儿 L0 用 [背景证据] 格式。
+     * @param {{direct:Array, priorById:object}|null} recalledEvents
+     * @param {Array} recalledMemories - 孤儿 L0 数组
+     */
+    function _buildRecalledBlock(recalledEvents, recalledMemories) {
+        var direct = (recalledEvents && recalledEvents.direct) || [];
+        var priorById = (recalledEvents && recalledEvents.priorById) || {};
+        var orphans = recalledMemories || [];
+
+        if (direct.length === 0 && orphans.length === 0) return '';
+
+        var lines = [];
+        lines.push('<!-- <RecalledMemories> contains recalled plot events and background evidence relevant to the current action. -->');
+        lines.push('');
+        lines.push('<RecalledMemories>');
+
+        // --- [剧情记忆] L2 直接命中事件（内联因果链 + L0 证据）---
+        if (direct.length > 0) {
+            lines.push('');
+            lines.push('[剧情记忆]');
+            lines.push('');
+            for (var i = 0; i < direct.length; i++) {
+                var ev = direct[i].event || {};
+                var evidence = direct[i].evidence || [];
+                lines.push((i + 1) + '. ' + _weekToTimestamp(ev.week || 1) + (ev.title ? ' ' + ev.title : ''));
+                lines.push(ev.description || '');
+
+                // 因果链（内联树形）
+                var causalLines = _renderCausalChain(ev, priorById, 1, {});
+                for (var ci = 0; ci < causalLines.length; ci++) lines.push(causalLines[ci]);
+
+                // L0 证据锚点
+                for (var e = 0; e < evidence.length; e++) {
+                    if (evidence[e] && evidence[e].text) {
+                        var _evWeekStamp = _weekToTimestamp(evidence[e].week || 1);
+                        lines.push('  事件细节[📌' + _evWeekStamp.slice(1) + ' ' + evidence[e].text);
+                    }
+                }
+
+                if (i < direct.length - 1) lines.push('');
+            }
+        }
+
+        // --- [背景证据] 孤儿 L0（未被任何事件覆盖）---
+        if (orphans.length > 0) {
+            lines.push('');
+            lines.push('[背景证据]');
+            lines.push('');
+            for (var j = 0; j < orphans.length; j++) {
+                var rm = orphans[j];
+                if (rm && rm.text) {
+                    var _rmWeekStamp = _weekToTimestamp(rm.week || 1);
+                    lines.push('[📌' + _rmWeekStamp.slice(1) + ' ' + rm.text);
+                }
+            }
+        }
+
+        lines.push('');
+        lines.push('</RecalledMemories>');
+        return lines.join('\n');
+    }
+
+    /**
      * 构建 HistorySummary 块（三段式结构）
      * @param {Array} previousMemories  - 经预算截断的 weekHistory 条目
      * @param {Array} recentSummaries   - 近期 summaryHistory 条目（RecentMemories）
-     * @param {Array} recalledMemories  - 向量召回条目，按相似度排序（RecalledMemories）
+     * @param {Array} recalledMemories  - 向量召回的孤儿 L0 条目
+     * @param {object} [recalledEvents] - L2 召回事件 { direct, priorById }
      */
-    function _buildHistorySummaryBlock(previousMemories, recentSummaries, recalledMemories) {
+    function _buildHistorySummaryBlock(previousMemories, recentSummaries, recalledMemories, recalledEvents) {
         var lines = ['<!-- <HistorySummary> is a brief summary of what has happened so far. Please read it to continue the story. -->'];
         lines.push('');
         lines.push('<HistorySummary>');
@@ -89,7 +183,6 @@ var promptBuilder = (function() {
         if (previousMemories && previousMemories.length > 0) {
             for (var i = 0; i < previousMemories.length; i++) {
                 var pe = previousMemories[i];
-                // 去掉尾部内嵌的 [至X周的历史记录] 标记，以及头部时间戳（由渲染层统一控制格式）
                 var peText = (pe.summaryText || '').replace(/\n?\[至\d+周的历史记录\]\s*$/, '').trim();
                 lines.push('');
                 lines.push(peText);
@@ -98,20 +191,11 @@ var promptBuilder = (function() {
         lines.push('');
         lines.push('</PreviousMemories>');
 
-        // --- RecalledMemories：向量语义召回 ---
-        if (recalledMemories && recalledMemories.length > 0) {
+        // --- RecalledMemories：[剧情记忆] L2 事件（内联因果树 + L0 证据）+ [背景证据] 孤儿 L0 ---
+        var recalledBlock = _buildRecalledBlock(recalledEvents, recalledMemories);
+        if (recalledBlock) {
             lines.push('');
-            lines.push('<!-- <RecalledMemories> contains older memories semantically relevant to the current action. Please read them for continuity. -->');
-            lines.push('');
-            lines.push('<RecalledMemories>');
-            for (var j = 0; j < recalledMemories.length; j++) {
-                var rm = recalledMemories[j];
-                lines.push('');
-                lines.push(_weekToTimestamp(rm.week || 1));
-                lines.push(rm.text);
-            }
-            lines.push('');
-            lines.push('</RecalledMemories>');
+            lines.push(recalledBlock);
         }
 
         // --- RecentMemories：最近几周的 summaryHistory ---
@@ -334,8 +418,11 @@ var promptBuilder = (function() {
             console.log('[PromptBuilder] RecalledMemories 去重: ' + rawRecalledMemories.length + ' -> ' + recalledMemories.length);
         }
 
+        // --- RecalledEvents：L2 剧情事件层（召回主干）---
+        var recalledEvents = params.recalledEvents || null;
+
         // --- 构建各条消息（先用空 HistorySummary 占位，后续注入）---
-        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], []);
+        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null);
         var msg1Content = _buildMsg1System(variables, npcBlocks, historySummaryPlaceholder);
         var msg2Content = '[Start a new chat]';
         var msg3Content = _buildMsg3LatestReply(lastAssistantReply);
@@ -359,7 +446,7 @@ var promptBuilder = (function() {
                         + 24; // 6 messages × ~4 tokens structure overhead
 
         // 先扣除 RecentMemories + RecalledMemories 占用，剩余预算给 PreviousMemories
-        var recentAndRecalledBlock = _buildHistorySummaryBlock([], recentSummaries, recalledMemories);
+        var recentAndRecalledBlock = _buildHistorySummaryBlock([], recentSummaries, recalledMemories, recalledEvents);
         var recentAndRecalledTokens = tokenUtils.estimate(recentAndRecalledBlock);
         var previousBudget = Math.max(0, totalAvailable - fixedTokens - recentAndRecalledTokens);
 
@@ -371,7 +458,7 @@ var promptBuilder = (function() {
         }
 
         // --- 构建最终 HistorySummary（含全三段）---
-        var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories);
+        var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories, recalledEvents);
         msg1Content = _buildMsg1System(variables, npcBlocks, finalHistorySummary);
 
         // --- 组装 messages ---
@@ -386,10 +473,26 @@ var promptBuilder = (function() {
 
         // --- 调试日志 ---
         var actualTokens = tokenUtils.estimateMessages(messages);
+        var _directCnt = recalledEvents && recalledEvents.direct ? recalledEvents.direct.length : 0;
+        var _priorCnt = recalledEvents && recalledEvents.priorById ? Object.keys(recalledEvents.priorById).length : 0;
+
+        // 折叠显示最终注入 HistorySummary 内容（RecalledMemories 部分）
+        console.groupCollapsed('[PromptBuilder] 最终注入内容（展开查看 HistorySummary）');
+        if (_directCnt > 0 || (recalledMemories && recalledMemories.length > 0)) {
+            console.log('--- RecalledMemories（L2 剧情记忆，直接命中 ' + _directCnt + ' + 前因 ' + _priorCnt + ' | 孤儿L0 ' + (recalledMemories ? recalledMemories.length : 0) + '）---');
+            var _evBlock = _buildRecalledBlock(recalledEvents, recalledMemories);
+            console.log(_evBlock.length > 2000 ? _evBlock.slice(0, 2000) + '\n...(截断)' : _evBlock);
+        }
+        if (_directCnt === 0 && (!recalledMemories || recalledMemories.length === 0)) {
+            console.log('（本轮无 RecalledMemories 注入）');
+        }
+        console.groupEnd();
+
         console.log('[PromptBuilder] 6-msg 结构 | NPC注入: ' + npcBlocks.length +
                     ' | 行动指导: ' + (actionGuide ? '是' : '否') +
                     ' | RecentSummaries: ' + recentSummaries.length +
                     ' | PreviousWeekHistory: ' + selectedPrevious.length + '/' + weekHistory.length +
+                    ' | RecalledEvents: ' + _directCnt + '(前因' + _priorCnt + ')' +
                     ' | RecalledMemories: ' + recalledMemories.length +
                     ' | Token估算: ' + actualTokens + '/' + totalAvailable);
 

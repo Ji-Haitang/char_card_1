@@ -1094,12 +1094,15 @@
     <script src="module/week-history-service.js"></script>
     <script src="module/summary-runner.js"></script>
     <script src="module/embedding-service.js"></script>
+    <script src="module/reranker.js"></script>
     <script src="module/idb-storage.js"></script>
     <script src="module/idb-snapshot.js"></script>
     <script src="module/storage-service.js"></script>
+    <script src="module/event-history-service.js"></script>
     <script src="module/st-converter.js"></script>
     <script src="module/sync-utils.js"></script>
     <script src="module/memory-recall.js"></script>
+    <script src="module/event-runner.js"></script>
     <script src="module/pipeline.js"></script>
     
     <!-- UI 模块 -->
@@ -3115,9 +3118,12 @@ function showLoadModal() {
     }
 
     html += '<div class="modal-buttons" style="flex-direction:column;gap:8px;">'
+        + '<label style="display:flex;align-items:center;gap:8px;color:#aaa;font-size:13px;cursor:pointer;padding:2px 0;">'
+        + '<input type="checkbox" id="export-include-vectors-chk" checked style="width:15px;height:15px;cursor:pointer;">'
+        + '导出时附带历史向量</label>'
         + '<button class="modal-btn" style="width:100%;" onclick="exportSave();closeLoadModal();">导出存档文件 (JSON)</button>'
         + '<button class="modal-btn" style="width:100%;" onclick="importSaveFromLoadModal()">导入存档文件 (JSON)</button>'
-        + '<button class="modal-btn" style="width:100%;" onclick="importSTSaveFromLoadModal()">导入 SillyTavern 存档 (.jsonl)</button>'
+        + '<button class="modal-btn" style="width:100%;" onclick="importSTSaveFromLoadModal()">导入 SillyTavern 存档 (.JSONL)</button>'
         + '<button class="modal-btn cancel" style="width:100%;" onclick="closeLoadModal()">关闭</button>'
         + '</div>'
         + '</div></div>';
@@ -3232,6 +3238,8 @@ function importSTSaveFromLoadModal() {
                 // 保存到本地存档槽
                 var id = storageService.importSavePayload(payload);
                 storageService.saveAppState({ gameData: gameData });
+                // Phase L2：ST 存档无事件层，导入后从 watermark=0 起补建 L2
+                if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
                 var warnText = result.warnings && result.warnings.length > 0 ? '\n提示：' + result.warnings.join('；') : '';
                 showModal('ST 存档导入成功！\n存档名：' + result.saveName + warnText);
             } catch(err) {
@@ -3292,6 +3300,11 @@ function loadSaveSlot(saveId) {
             memoryRecall.init();
         }
         console.log('[LoadSave] 已恢复 ' + payload.embeddings.length + ' 条 embedding 记录');
+    }
+    // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
+    if (typeof storageService.restoreL2FromPayload === 'function') {
+        storageService.restoreL2FromPayload(payload);
+        if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
     }
     syncVariablesFromGameData();
     updateAllDisplays();
@@ -3391,7 +3404,9 @@ function exportSave() {
     // 导出时保存当前活跃事件，供 importSave 恢复选项框
     gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
     var saveName = buildSaveName();
-    var json = storageService.exportSaveToJson(saveName);
+    var chk = document.getElementById('export-include-vectors-chk');
+    var includeVectors = chk ? chk.checked : true;
+    var json = storageService.exportSaveToJson(saveName, includeVectors);
     delete gameData._activeEvent;
     var filename = 'jxz_save_' + saveName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') + '.json';
     toggleDropdown('history-dropdown');
@@ -3462,6 +3477,11 @@ function importSave() {
                     memoryRecall.init();
                 }
                 console.log('[ImportSave] 已恢复 ' + payload.embeddings.length + ' 条 embedding 记录');
+            }
+            // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
+            if (typeof storageService.restoreL2FromPayload === 'function') {
+                storageService.restoreL2FromPayload(payload);
+                if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
             }
             syncVariablesFromGameData();
             updateAllDisplays();
@@ -4690,6 +4710,8 @@ function buildSaveName() {
             var _runningSummary = typeof summaryRunner !== 'undefined' && summaryRunner.isRunning();
             console.log('[Regenerate] 点击重生成 | summaryRunner.isRunning=' + _runningSummary + ' | msg=' + editedMsg.substring(0, 40));
             if (_runningSummary) summaryRunner.cancel();
+            // Phase L2：取消正在飞行的事件抽取（防止旧结果写回已回滚的事件层）
+            if (typeof eventRunner !== 'undefined') eventRunner.cancel();
 
             // 从全量快照还原所有字段
             var ok = storageService.restoreFromSnapshot();
@@ -4817,6 +4839,10 @@ function buildSaveName() {
                 // Phase 3：初始化向量召回缓存
                 if (typeof memoryRecall !== 'undefined') {
                     await memoryRecall.init();
+                    // Phase L2：初始化 L2 事件向量缓存
+                    if (typeof memoryRecall.initL2 === 'function') {
+                        await memoryRecall.initL2();
+                    }
                 }
             }
 
@@ -4839,6 +4865,10 @@ function buildSaveName() {
                 if (typeof summaryRunner !== 'undefined') {
                     summaryRunner.resumeOnLoad();
                 }
+                // Phase L2：刷新恢复时检查是否需补建事件层（newGame/loadSave 分支会再各自调用）
+                if (typeof eventRunner !== 'undefined' && !launchIntent) {
+                    eventRunner.resumeOnLoad();
+                }
 
                 // newGame 意图：从 URL 参数应用创建数据（file:// 下 localStorage 跨页不可用）
                 if (launchIntent === 'newGame') {
@@ -4855,6 +4885,13 @@ function buildSaveName() {
                     }
                     if (typeof memoryRecall !== 'undefined') {
                         memoryRecall.clearCache();
+                    }
+                    // Phase L2：新游戏时清空事件层（eventHistory/eventMeta/watermark/step + wevt_）
+                    if (typeof storageService !== 'undefined' && typeof storageService.clearEventLayer === 'function') {
+                        storageService.clearEventLayer();
+                    }
+                    if (typeof memoryRecall !== 'undefined' && typeof memoryRecall.clearCacheL2 === 'function') {
+                        memoryRecall.clearCacheL2();
                     }
                     // 新游戏时清空 weekHistory
                     if (typeof weekHistoryService !== 'undefined') {
@@ -4951,6 +4988,11 @@ function buildSaveName() {
                         if (typeof storageService.setSummaryBuffQueue === 'function') {
                             storageService.setSummaryBuffQueue(savePayload.summaryBuff);
                             console.log('[LoadSave] 已恢复 summaryBuff 队列, 条数=' + storageService.getSummaryBuffQueue().length);
+                        }
+                        // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
+                        if (typeof storageService.restoreL2FromPayload === 'function') {
+                            storageService.restoreL2FromPayload(savePayload);
+                            if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
                         }
                         // 持久化存档恢复后的状态到 localStorage
                         storageService.saveAppState({ gameData: gameData });
