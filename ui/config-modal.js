@@ -57,6 +57,32 @@ function showConfigModal() {
         '<div style="flex:1"><label class="cfg-label">最大输出 Token</label>' +
         '<input id="api-max-tokens-input" type="number" min="100" max="128000" step="100" value="' + config.maxOutputTokens + '" class="cfg-input"></div></div>' +
 
+        // Top P + Top K（默认不勾选=不发送该参数，勾上才带进请求体）
+        '<div class="cfg-field cfg-row">' +
+        '<div style="flex:1"><label class="cfg-label">Top P</label>' +
+        '<div class="cfg-row" style="align-items:center;gap:6px">' +
+        '<input id="api-top-p-input" type="number" min="0" max="1" step="0.01" value="' + config.topP + '" class="cfg-input" style="flex:1">' +
+        '<label style="display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;font-size:12px">' +
+        '<input type="checkbox" id="api-top-p-enabled"' + (config.topPEnabled ? ' checked' : '') + '>启用</label></div></div>' +
+        '<div style="flex:1"><label class="cfg-label">Top K</label>' +
+        '<div class="cfg-row" style="align-items:center;gap:6px">' +
+        '<input id="api-top-k-input" type="number" min="0" max="500" step="1" value="' + config.topK + '" class="cfg-input" style="flex:1">' +
+        '<label style="display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;font-size:12px">' +
+        '<input type="checkbox" id="api-top-k-enabled"' + (config.topKEnabled ? ' checked' : '') + '>启用</label></div></div></div>' +
+
+        // Frequency Penalty + Presence Penalty（同样默认不勾选）
+        '<div class="cfg-field cfg-row">' +
+        '<div style="flex:1"><label class="cfg-label">Frequency Penalty</label>' +
+        '<div class="cfg-row" style="align-items:center;gap:6px">' +
+        '<input id="api-freq-penalty-input" type="number" min="-2" max="2" step="0.05" value="' + config.frequencyPenalty + '" class="cfg-input" style="flex:1">' +
+        '<label style="display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;font-size:12px">' +
+        '<input type="checkbox" id="api-freq-penalty-enabled"' + (config.frequencyPenaltyEnabled ? ' checked' : '') + '>启用</label></div></div>' +
+        '<div style="flex:1"><label class="cfg-label">Presence Penalty</label>' +
+        '<div class="cfg-row" style="align-items:center;gap:6px">' +
+        '<input id="api-pres-penalty-input" type="number" min="-2" max="2" step="0.05" value="' + config.presencePenalty + '" class="cfg-input" style="flex:1">' +
+        '<label style="display:flex;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;font-size:12px">' +
+        '<input type="checkbox" id="api-pres-penalty-enabled"' + (config.presencePenaltyEnabled ? ' checked' : '') + '>启用</label></div></div></div>' +
+
         // 上下文窗口 + 请求方式（流式/非流式）
         '<div class="cfg-field cfg-row">' +
         '<div style="flex:1"><label class="cfg-label">上下文窗口（Token）</label>' +
@@ -157,7 +183,15 @@ function saveConfigAndClose() {
         temperature: parseFloat(document.getElementById('api-temp-input').value) || 0.85,
         maxOutputTokens: parseInt(document.getElementById('api-max-tokens-input').value) || 8192,
         maxContextTokens: parseInt(document.getElementById('api-ctx-tokens-input').value) || 128000,
-        streamMode: (document.getElementById('api-stream-mode-select') && document.getElementById('api-stream-mode-select').value) || 'stream'
+        streamMode: (document.getElementById('api-stream-mode-select') && document.getElementById('api-stream-mode-select').value) || 'stream',
+        topP: parseFloat(document.getElementById('api-top-p-input').value),
+        topPEnabled: !!(document.getElementById('api-top-p-enabled') && document.getElementById('api-top-p-enabled').checked),
+        topK: parseInt(document.getElementById('api-top-k-input').value, 10),
+        topKEnabled: !!(document.getElementById('api-top-k-enabled') && document.getElementById('api-top-k-enabled').checked),
+        frequencyPenalty: parseFloat(document.getElementById('api-freq-penalty-input').value),
+        frequencyPenaltyEnabled: !!(document.getElementById('api-freq-penalty-enabled') && document.getElementById('api-freq-penalty-enabled').checked),
+        presencePenalty: parseFloat(document.getElementById('api-pres-penalty-input').value),
+        presencePenaltyEnabled: !!(document.getElementById('api-pres-penalty-enabled') && document.getElementById('api-pres-penalty-enabled').checked)
     };
     // CORS 代理地址（仅 web 环境有此输入框）
     var corsInput = document.getElementById('api-cors-proxy-input');
@@ -371,6 +405,14 @@ function _applyPreset(indexStr) {
     el = document.getElementById('api-temp-input');       if (el) el.value = preset.temperature != null ? preset.temperature : 0.9;
     el = document.getElementById('api-max-tokens-input'); if (el) el.value = preset.maxOutputTokens || 18000;
     el = document.getElementById('api-ctx-tokens-input'); if (el) el.value = preset.maxContextTokens || 500000;
+    el = document.getElementById('api-top-p-input');          if (el) el.value = preset.topP != null ? preset.topP : 1;
+    el = document.getElementById('api-top-p-enabled');        if (el) el.checked = !!preset.topPEnabled;
+    el = document.getElementById('api-top-k-input');          if (el) el.value = preset.topK != null ? preset.topK : 200;
+    el = document.getElementById('api-top-k-enabled');        if (el) el.checked = !!preset.topKEnabled;
+    el = document.getElementById('api-freq-penalty-input');   if (el) el.value = preset.frequencyPenalty != null ? preset.frequencyPenalty : 0.3;
+    el = document.getElementById('api-freq-penalty-enabled'); if (el) el.checked = !!preset.frequencyPenaltyEnabled;
+    el = document.getElementById('api-pres-penalty-input');   if (el) el.value = preset.presencePenalty != null ? preset.presencePenalty : 0.2;
+    el = document.getElementById('api-pres-penalty-enabled'); if (el) el.checked = !!preset.presencePenaltyEnabled;
     el = document.getElementById('api-cors-proxy-input'); if (el && preset.corsProxyUrl) el.value = preset.corsProxyUrl;
     // 回填完成后收起下拉
     var container = document.getElementById('api-preset-container');

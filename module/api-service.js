@@ -12,6 +12,12 @@ var apiService = (function() {
         model: '',
         type: 'openai',
         temperature: 0.9,
+        // 采样参数排除开关：仿 SillyTavern「排除该参数」——关闭时请求体里完全不带该字段，
+        // 由服务端/模型自身默认值决定；开启时才带上下面的具体数值。默认全部关闭（不发送）。
+        topP: 1,                    topPEnabled: false,
+        topK: 200,                  topKEnabled: false,
+        frequencyPenalty: 0.3,      frequencyPenaltyEnabled: false,
+        presencePenalty: 0.2,       presencePenaltyEnabled: false,
         maxOutputTokens: 18000,
         maxContextTokens: 500000,
         streamMode: 'stream',  // 'stream' 流式 | 'non-stream' 非流式（正文与总结统一遵循）
@@ -95,6 +101,16 @@ var apiService = (function() {
         return config.maxOutputTokens;
     }
 
+    // 按「排除开关」把已启用的采样参数写进请求体/generationConfig；关闭的参数完全不写入 key，
+    // 交由服务端/模型自身默认值决定（与 SillyTavern「排除该参数」效果一致）。
+    // isGemini=true 时用 Gemini 的 camelCase 字段名，否则用 OpenAI 兼容的 snake_case。
+    function _applyExtraSamplerParams(target, isGemini) {
+        if (config.topPEnabled) target[isGemini ? 'topP' : 'top_p'] = config.topP;
+        if (config.topKEnabled) target[isGemini ? 'topK' : 'top_k'] = config.topK;
+        if (config.frequencyPenaltyEnabled) target[isGemini ? 'frequencyPenalty' : 'frequency_penalty'] = config.frequencyPenalty;
+        if (config.presencePenaltyEnabled) target[isGemini ? 'presencePenalty' : 'presence_penalty'] = config.presencePenalty;
+    }
+
     async function sendMessages(messages, options) {
         if (!config.endpoint || !config.apiKey || !config.model) {
             throw new Error('请先配置 API 信息（endpoint, key, model）');
@@ -121,6 +137,7 @@ var apiService = (function() {
         } else if (typeof maxTokens === 'undefined') {
             _reqBody.max_tokens = config.maxOutputTokens;
         }
+        _applyExtraSamplerParams(_reqBody, false);
         var fetchOptions = {
             method: 'POST',
             headers: {
@@ -165,6 +182,7 @@ var apiService = (function() {
         } else if (typeof maxTokens === 'undefined') {
             _genConfig.maxOutputTokens = config.maxOutputTokens;
         }
+        _applyExtraSamplerParams(_genConfig, true);
         var response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -349,6 +367,7 @@ var apiService = (function() {
         } else if (typeof maxTokens === 'undefined') {
             requestBody.max_tokens = config.maxOutputTokens;
         }
+        _applyExtraSamplerParams(requestBody, false);
         console.log('[API][DEBUG] 流式请求 body (非messages部分):', JSON.stringify({
             model: requestBody.model,
             temperature: requestBody.temperature,
@@ -444,6 +463,7 @@ var apiService = (function() {
         } else if (typeof maxTokens === 'undefined') {
             _streamGenConfig.maxOutputTokens = config.maxOutputTokens;
         }
+        _applyExtraSamplerParams(_streamGenConfig, true);
 
         try {
             var response = await fetch(url, {
