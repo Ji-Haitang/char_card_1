@@ -240,7 +240,7 @@ var pipeline = (function() {
                     var meta = { text: text, week: ev.week || 0, fingerprint: fp, createdAt: Date.now() };
                     storageService.saveL2Embedding(ev.id, f32, meta);
                     if (typeof memoryRecall !== 'undefined' && memoryRecall.addToCacheL2) {
-                        memoryRecall.addToCacheL2({ id: ev.id, vector: f32, text: text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt });
+                        memoryRecall.addToCacheL2({ id: ev.id, vector: f32, text: text, week: meta.week, fingerprint: fp, createdAt: meta.createdAt, keywords: ev.keywords, npc: ev.npc, location: ev.location });
                     }
                     console.log('[L2Sync] 已补生成 wevt_' + ev.id + ' (' + (i + 1) + '/' + missing.length + ')');
                     _setProgressLog('已补生成 wevt_' + ev.id + ' (' + (i + 1) + '/' + missing.length + ')');
@@ -359,7 +359,10 @@ var pipeline = (function() {
 
                 // rerankQuery：intent 为主，context 截取前 500 字作补充（与 L2 精排 query 对齐）
                 var _l0RerankQuery = _intentText + (_contextText ? ('\n' + _contextText.slice(0, 500)) : '');
-                recalledMemories = await memoryRecall.recallRelevantMemories(_intentVec, 10, excludeIds, 3000, _focusCharacters, _contextVec, _intentText.length, _contextText.length, _l0RerankQuery);
+                // [相关碎片记忆] token 上限：由 系统设置-游戏设置-召回管理 弹窗控制（gameData.recallConfig.fragments.maxTokens）
+                var _recallCfg = (gameData && gameData.recallConfig) || {};
+                var _fragmentsMaxTokens = (_recallCfg.fragments && _recallCfg.fragments.maxTokens) || 3000;
+                recalledMemories = await memoryRecall.recallRelevantMemories(_intentVec, 10, excludeIds, _fragmentsMaxTokens, _focusCharacters, _contextVec, _intentText.length, _contextText.length, _l0RerankQuery);
 
                 // === L2 剧情事件层：双路 RRF 召回 → Rerank 精排 → 因果链 → 挂载 L0 ===
                 if (typeof eventHistoryService !== 'undefined' && memoryRecall.recallL2Events && _intentVec) {
@@ -383,28 +386,24 @@ var pipeline = (function() {
                                 focusCharacters: _focusCharacters,
                                 candidateLimit: 30,
                                 intentTextLen: _intentText.length,
-                                contextTextLen: _contextText.length
+                                contextTextLen: _contextText.length,
+                                intentText: _intentText,
+                                contextText: _contextText
                             });
 
                             console.log('[Pipeline][L2] 粗排候选 ' + _l2Candidates.length + ' 条（排除近期 ' + _excludeL2.length + ' 条，allEvents=' + _allEvents.length + '）');
                             if (_l2Candidates.length > 0) {
-                                // 实体强命中（focus + 高相似）跳过 rerank，直接保留
-                                var _ENTITY_BYPASS = 0.72;
-                                var _mustKeep = [];
-                                var _normal = [];
-                                for (var _li = 0; _li < _l2Candidates.length; _li++) {
-                                    var _c = _l2Candidates[_li];
-                                    var _simMax = Math.max(_c.similarity || 0, _c.simContext || 0);
-                                    var _isFocus = false;
-                                    for (var _fk = 0; _fk < _focusCharacters.length; _fk++) {
-                                        if (_c.text && _c.text.indexOf(_focusCharacters[_fk]) !== -1) { _isFocus = true; break; }
-                                    }
-                                    if (_isFocus && _simMax >= _ENTITY_BYPASS + 0.03) _mustKeep.push(_c);
-                                    else _normal.push(_c);
-                                }
+                                // mustKeep 规则简化：_l2Candidates 已按 rrfScore（融合 intent/context/词法三路信号）降序，
+                                // 直接取全局排名 Top _MUSTKEEP_CAP 条免精排，其余全部送 _normal 精排。
+                                // 不再区分"实体强命中"/"词法旁路"——rrfScore 本身已经融合了这些信号，且固定 3 条
+                                // 能保证精排至少拿到 7-3=4 个名额，避免旧规则里 mustKeep 无上限占满 DIRECT 预算、
+                                // 精排完全被跳过的情况。
+                                var _MUSTKEEP_CAP = 3;
+                                var _mustKeep = _l2Candidates.slice(0, _MUSTKEEP_CAP);
+                                var _normal = _l2Candidates.slice(_MUSTKEEP_CAP);
 
-                                console.log('[Pipeline][L2] 分流：实体强命中(免精排) ' + _mustKeep.length + ' 条 | 送精排 ' + _normal.length + ' 条'
-                                    + (_mustKeep.length > 0 ? ' | mustKeep=[' + _mustKeep.map(function(c){ return c.id; }).join(',') + ']' : ''));
+                                console.log('[Pipeline][L2] 分流：RRF Top' + _MUSTKEEP_CAP + '(免精排) ' + _mustKeep.length + ' 条 | 送精排 ' + _normal.length + ' 条'
+                                    + (_mustKeep.length > 0 ? ' | mustKeep=[' + _mustKeep.map(function(c){ return c.id + (c.lexBypass ? '🔓词法' : ''); }).join(',') + ']' : ''));
 
                                 // rerank 精排普通候选（焦点在前的自然语言 query）
                                 var _rerankQuery = _intentText + (_contextText ? ('\n' + _contextText.slice(0, 500)) : '');
@@ -452,6 +451,30 @@ var pipeline = (function() {
                                     if (_evObj) _directEvents.push(_evObj);
                                 }
 
+                                // 因果链追溯 + 链路合并（A1 策略）：若某条直接命中事件的前因恰好也是本轮
+                                // 其他直接命中事件，则把它从顶层编号列表里剔除，合并进引用它的那条因果链
+                                // （由 priorById 提供内容，不再单独挂 L0 证据）。多条命中事件共享同一前因时
+                                // 不做去重/交叉引用，各自渲染时都会完整展示一遍。
+                                var _traceResult = memoryRecall.traceCausation
+                                    ? memoryRecall.traceCausation(_directEvents, _eventById, { maxDepth: 4, maxAdd: 20 })
+                                    : { traced: [], absorbedIds: [] };
+                                var _priorEvents = _traceResult.traced || [];
+                                var _absorbedIds = _traceResult.absorbedIds || [];
+                                if (_absorbedIds.length > 0) {
+                                    var _absorbedSet = {};
+                                    for (var _asi = 0; _asi < _absorbedIds.length; _asi++) _absorbedSet[_absorbedIds[_asi]] = true;
+                                    var _beforeMergeCount = _directEvents.length;
+                                    _directEvents = _directEvents.filter(function(ev) { return !_absorbedSet[ev.id]; });
+                                    console.log('[Pipeline][L2] 链路合并：' + _absorbedIds.length + ' 条直接命中事件被合并为前因（顶层 '
+                                        + _beforeMergeCount + ' → ' + _directEvents.length + '）| 合并id=[' + _absorbedIds.join(',') + ']');
+                                }
+
+                                // 转为 id→事件 字典，供 prompt-builder 内联渲染树形因果链
+                                var _priorById = {};
+                                for (var _pbi = 0; _pbi < _priorEvents.length; _pbi++) {
+                                    _priorById[_priorEvents[_pbi].id] = _priorEvents[_pbi];
+                                }
+
                                 // 挂载键：uiConv 消息 id → index；summaryHistory id → UIid
                                 var _idxMap = new Map();
                                 for (var _ui = 0; _ui < _uiForQuery.length; _ui++) _idxMap.set(_uiForQuery[_ui].id, _ui);
@@ -459,13 +482,14 @@ var pipeline = (function() {
                                 var _allSum = summaryHistoryService.getAll();
                                 for (var _ssi = 0; _ssi < _allSum.length; _ssi++) _summaryById[_allSum[_ssi].id] = _allSum[_ssi].UIid;
 
-                                // 挂载 L0 证据 + 记录 usedL0（最多7条或5000 token先到为准）
+                                // 挂载 L0 证据 + 记录 usedL0（最多7条或 [相关历史事件] token 上限先到为准）
                                 // 降级机制：预算超限时先尝试不带证据版本；若仍超限则停止。
                                 // 一旦触发降级，后续事件全部走无证据路径（allowEvidence 开关）。
                                 var _usedL0 = {};
                                 var _directWithEvidence = [];
                                 var _l2Tokens = 0;
-                                var _L2_TOKEN_LIMIT = 5000;
+                                // [相关历史事件] token 上限：由 系统设置-游戏设置-召回管理 弹窗控制（gameData.recallConfig.events.maxTokens）
+                                var _L2_TOKEN_LIMIT = (_recallCfg.events && _recallCfg.events.maxTokens) || 5000;
                                 var _allowEvidence = true;
                                 var _estTok = function(t) { if (!t) return 0; var ch = (t.match(/[\u4e00-\u9fff]/g)||[]).length; return Math.ceil(ch + (t.length - ch) / 4); };
                                 for (var _dwei = 0; _dwei < _directEvents.length; _dwei++) {
@@ -514,21 +538,17 @@ var pipeline = (function() {
                                     }
                                 }
 
-                                // 因果链扩展（前因，仅描述、不挂 L0）
-                                var _priorEvents = memoryRecall.traceCausation
-                                    ? memoryRecall.traceCausation(_directEvents, _eventById, { maxDepth: 4, maxAdd: 20 })
-                                    : [];
-
-                                // 转为 id→事件 字典，供 prompt-builder 内联渲染树形因果链
-                                var _priorById = {};
-                                for (var _pbi = 0; _pbi < _priorEvents.length; _pbi++) {
-                                    _priorById[_priorEvents[_pbi].id] = _priorEvents[_pbi];
+                                // [相关历史事件] 开关：由 系统设置-游戏设置-召回管理 弹窗控制（gameData.recallConfig.events.enabled）
+                                // 关闭时不注入 recalledEvents，且不把挂载证据用掉的 L0 从 recalledMemories 中剔除，
+                                // 保证这些 L0 仍能作为 [相关碎片记忆] 注入。
+                                var _eventsEnabled = !_recallCfg.events || _recallCfg.events.enabled !== false;
+                                if (_eventsEnabled) {
+                                    recalledEvents = { direct: _directWithEvidence, priorById: _priorById, absorbedIds: _absorbedIds };
+                                    // 孤儿 L0 = 未被挂载的 L0 → 仍作 RecalledMemories
+                                    recalledMemories = recalledMemories.filter(function(l0) { return !_usedL0[l0.id]; });
+                                } else {
+                                    recalledEvents = null;
                                 }
-
-                                recalledEvents = { direct: _directWithEvidence, priorById: _priorById };
-
-                                // 孤儿 L0 = 未被挂载的 L0 → 仍作 RecalledMemories
-                                recalledMemories = recalledMemories.filter(function(l0) { return !_usedL0[l0.id]; });
 
                                 console.log('[Pipeline][L2] DIRECT ' + _directWithEvidence.length + ' (mustKeep ' + _mustKeep.length + '+精排 ' + _reranked.length + ') token=' + _l2Tokens + (_allowEvidence ? '' : ' [已降级无证据]') + ' | 前因 ' + _priorEvents.length + ' | 孤儿L0 ' + recalledMemories.length);
                                 // 折叠详情：逐条 DIRECT 事件 + 挂载证据数，对齐 L0 召回粒度
@@ -536,7 +556,7 @@ var pipeline = (function() {
                                 _directWithEvidence.forEach(function(d, idx) {
                                     var _ev = d.event;
                                     var _kept = _directIds[_ev.id] && _mustKeep.some(function(c){ return c.id === _ev.id; });
-                                    console.log('DIRECT[' + (idx + 1) + '] ' + _ev.id + (_kept ? ' (实体强命中)' : ' (精排)')
+                                    console.log('DIRECT[' + (idx + 1) + '] ' + _ev.id + (_kept ? ' (mustKeep)' : ' (精排)')
                                         + ' week=' + (_ev.week || 0) + ' ui=' + _ev.uiStart + '..' + _ev.uiEnd
                                         + ' | 挂载L0证据 ' + d.evidence.length + ' 条 | ' + (_ev.title || '') + '：' + (_ev.description || ''));
                                     d.evidence.forEach(function(ed) { console.log('    [证据] week=' + ed.week + ' ' + (ed.text || '').slice(0, 80)); });

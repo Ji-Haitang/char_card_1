@@ -30,6 +30,12 @@ var summaryRunner = (function() {
      * 调度：检查是否有待处理的 buff，若有则异步触发 runSummary
      */
     function scheduleSummary() {
+        // 系统设置-游戏设置-总结管理：关闭「每周总结」开关时，直接跳过（触发时机不变，仅多了个开关控制）
+        if (typeof gameData !== 'undefined' && gameData && gameData.summaryConfig
+            && gameData.summaryConfig.weekly && gameData.summaryConfig.weekly.enabled === false) {
+            console.log('[SummaryRunner] scheduleSummary: 「每周总结」开关已关闭，跳过');
+            return;
+        }
         var buff = storageService.peekSummaryBuff();
         if (!buff || !buff.text || !buff.targetMarkWeek) return;
         if (_running) {

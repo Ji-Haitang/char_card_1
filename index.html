@@ -541,6 +541,8 @@
                         <button class="gs-tab" data-tab="difficulty" onclick="gsSelectTab('difficulty')">难度设置</button>
                         <button class="gs-tab" data-tab="music" onclick="gsSelectTab('music')">音乐设置</button>
                         <button class="gs-tab" data-tab="font" onclick="gsSelectTab('font')">正文字体</button>
+                        <button class="gs-tab" data-tab="summary" onclick="gsSelectTab('summary')">总结管理</button>
+                        <button class="gs-tab" data-tab="recall" onclick="gsSelectTab('recall')">召回管理</button>
                     </div>
                     <!-- 右侧内容区 -->
                     <div class="gs-panel-wrap">
@@ -575,7 +577,6 @@
                         <!-- 难度设置 -->
                         <div class="gs-panel" id="gs-panel-difficulty">
                             <h3>难度设置</h3>
-                            <p>选择游戏难度，将影响行动成功率的计算：</p>
                             <div class="difficulty-options">
                                 <label class="difficulty-option">
                                     <input type="radio" name="gs-difficulty" value="easy" id="gs-diff-easy">
@@ -625,11 +626,86 @@
                         <!-- 正文字体 -->
                         <div class="gs-panel" id="gs-panel-font">
                             <h3>正文字体大小</h3>
-                            <p>拖动滑动条设置正文字体大小（1~5档）。</p>
                             <div style="display:flex;align-items:center;gap:12px;margin:16px 0;">
                                 <span>小</span>
                                 <input type="range" id="gs-font-range" class="gs-range" min="1" max="5" step="1" value="2" oninput="gsOnFontLevel(this)">
                                 <span>大</span>
+                            </div>
+                        </div>
+                        <!-- 总结管理 -->
+                        <div class="gs-panel" id="gs-panel-summary">
+                            <h3>总结管理</h3>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">每周总结</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-summary-weekly-toggle" onchange="gsOnSummaryWeeklyToggle(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-summary-weekly-hint">开</span>
+                                </label>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">事件总结</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-summary-event-toggle" onchange="gsOnSummaryEventToggle(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-summary-event-hint">开</span>
+                                </label>
+                                <span class="gs-switch-label">总结轮次</span>
+                                <input type="number" class="gs-recall-tokens" id="gs-summary-turns-per-batch" min="1" step="1" oninput="gsOnSummaryTurnsPerBatch(this)">
+                            </div>
+                        </div>
+                        <!-- 召回管理 -->
+                        <div class="gs-panel" id="gs-panel-recall">
+                            <h3>召回管理</h3>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">每周总结</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-recall-previous-toggle" onchange="gsOnRecallToggle('previous', this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-recall-previous-hint">开</span>
+                                </label>
+                                <input type="number" class="gs-recall-tokens" id="gs-recall-previous-tokens" min="0" step="1000" oninput="gsOnRecallTokens('previous', this)">
+                                <span class="gs-switch-label">token</span>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">已确立事实</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-recall-facts-toggle" onchange="gsOnRecallToggle('facts', this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-recall-facts-hint">开</span>
+                                </label>
+                                <input type="number" class="gs-recall-tokens" id="gs-recall-facts-tokens" min="0" step="100" oninput="gsOnRecallTokens('facts', this)">
+                                <span class="gs-switch-label">token</span>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">人物弧光</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-recall-arcs-toggle" onchange="gsOnRecallToggle('arcs', this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-recall-arcs-hint">开</span>
+                                </label>
+                                <input type="number" class="gs-recall-tokens" id="gs-recall-arcs-tokens" min="0" step="100" oninput="gsOnRecallTokens('arcs', this)">
+                                <span class="gs-switch-label">token</span>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">相关历史事件</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-recall-events-toggle" onchange="gsOnRecallToggle('events', this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-recall-events-hint">开</span>
+                                </label>
+                                <input type="number" class="gs-recall-tokens" id="gs-recall-events-tokens" min="0" step="100" oninput="gsOnRecallTokens('events', this)">
+                                <span class="gs-switch-label">token</span>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">相关碎片记忆</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-recall-fragments-toggle" onchange="gsOnRecallToggle('fragments', this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-recall-fragments-hint">开</span>
+                                </label>
+                                <input type="number" class="gs-recall-tokens" id="gs-recall-fragments-tokens" min="0" step="100" oninput="gsOnRecallTokens('fragments', this)">
+                                <span class="gs-switch-label">token</span>
                             </div>
                         </div>
                     </div>
@@ -3156,6 +3232,9 @@ function importSaveFromLoadModal() {
 
 function importSTSaveFromLoadModal() {
     closeLoadModal();
+    // 取消上一个存档可能还在飞行中的 周总结/事件总结 请求，避免旧结果写回导入后的新存档
+    if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
+    if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.jsonl';
@@ -3252,6 +3331,9 @@ function importSTSaveFromLoadModal() {
 }
 
 function loadSaveSlot(saveId) {
+    // 取消上一个存档可能还在飞行中的 周总结/事件总结 请求，避免旧结果在切换存档后写回新存档（“串台”）
+    if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
+    if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     var payload = storageService.loadSave(saveId);
     if (!payload) { showModal('存档加载失败'); return; }
     gameData = mergeWithDefaults(payload.gameData, defaultGameData);
@@ -3305,6 +3387,9 @@ function loadSaveSlot(saveId) {
     if (typeof storageService.restoreL2FromPayload === 'function') {
         storageService.restoreL2FromPayload(payload);
         if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
+        if (typeof memoryRecall !== 'undefined' && typeof memoryRecall._refreshAliasMap === 'function' && typeof eventHistoryService !== 'undefined') {
+            memoryRecall._refreshAliasMap(eventHistoryService.getMeta());
+        }
     }
     syncVariablesFromGameData();
     updateAllDisplays();
@@ -3422,6 +3507,9 @@ function exportSave() {
 }
 
 function importSave() {
+    // 取消上一个存档可能还在飞行中的 周总结/事件总结 请求，避免旧结果写回导入后的新存档
+    if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
+    if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -3482,6 +3570,9 @@ function importSave() {
             if (typeof storageService.restoreL2FromPayload === 'function') {
                 storageService.restoreL2FromPayload(payload);
                 if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
+                if (typeof memoryRecall !== 'undefined' && typeof memoryRecall._refreshAliasMap === 'function' && typeof eventHistoryService !== 'undefined') {
+                    memoryRecall._refreshAliasMap(eventHistoryService.getMeta());
+                }
             }
             syncVariablesFromGameData();
             updateAllDisplays();
@@ -4500,6 +4591,39 @@ function buildSaveName() {
             const lvl = (typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2;
             const fontRange = document.getElementById('gs-font-range');
             if (fontRange) fontRange.value = lvl;
+
+            // 总结管理
+            const _summaryCfg = (typeof gameData !== 'undefined' && gameData.summaryConfig) ? gameData.summaryConfig : {};
+            const _weeklyEnabled = !(_summaryCfg.weekly && _summaryCfg.weekly.enabled === false);
+            const _eventEnabled  = !(_summaryCfg.event && _summaryCfg.event.enabled === false);
+            const weeklyToggle = document.getElementById('gs-summary-weekly-toggle');
+            const weeklyHint   = document.getElementById('gs-summary-weekly-hint');
+            const turnsInput   = document.getElementById('gs-summary-turns-per-batch');
+            const eventToggle  = document.getElementById('gs-summary-event-toggle');
+            const eventHint    = document.getElementById('gs-summary-event-hint');
+            if (weeklyToggle) weeklyToggle.checked = _weeklyEnabled;
+            if (weeklyHint)   weeklyHint.textContent = _weeklyEnabled ? '开' : '关';
+            // 显示用户配置的"归位基线"（turnsPerBatch），而不是可能被自适应逻辑临时调高的当前 eventStep
+            if (turnsInput)   turnsInput.value = (_summaryCfg.event && typeof _summaryCfg.event.turnsPerBatch === 'number')
+                ? _summaryCfg.event.turnsPerBatch
+                : Math.round(((typeof storageService !== 'undefined' ? storageService.loadEventStep() : 20) || 20) / 2);
+            if (eventToggle)  eventToggle.checked = _eventEnabled;
+            if (eventHint)    eventHint.textContent = _eventEnabled ? '开' : '关';
+
+            // 召回管理
+            const _recallDefaults = { previous: 20000, facts: 2000, arcs: 1000, events: 5000, fragments: 3000 };
+            const _recallCfg = (typeof gameData !== 'undefined' && gameData.recallConfig) ? gameData.recallConfig : {};
+            ['previous', 'facts', 'arcs', 'events', 'fragments'].forEach(function(key) {
+                const section = _recallCfg[key] || {};
+                const enabled = (section.enabled !== false);
+                const tokens  = (typeof section.maxTokens === 'number') ? section.maxTokens : _recallDefaults[key];
+                const toggle  = document.getElementById('gs-recall-' + key + '-toggle');
+                const hint    = document.getElementById('gs-recall-' + key + '-hint');
+                const input   = document.getElementById('gs-recall-' + key + '-tokens');
+                if (toggle) toggle.checked = enabled;
+                if (hint)   hint.textContent = enabled ? '开' : '关';
+                if (input)  { input.value = tokens; input.disabled = !enabled; }
+            });
         }
 
         // 游戏设置弹窗内各控件的事件处理
@@ -4551,6 +4675,58 @@ function buildSaveName() {
             const lvl = parseInt(el.value, 10) || 2;
             textFontLevel = lvl;
             applyFontLevel(lvl);
+        }
+
+        // 总结管理：每周总结(runSummary)/事件总结(runEventSum) 开关（触发时机不变，仅多个开关控制）+ 事件总结总结轮次
+        function gsOnSummaryWeeklyToggle(el) {
+            if (typeof gameData === 'undefined') return;
+            if (!gameData.summaryConfig) gameData.summaryConfig = {};
+            if (!gameData.summaryConfig.weekly) gameData.summaryConfig.weekly = { enabled: true };
+            gameData.summaryConfig.weekly.enabled = el.checked;
+            const hint = document.getElementById('gs-summary-weekly-hint');
+            if (hint) hint.textContent = el.checked ? '开' : '关';
+        }
+
+        function gsOnSummaryTurnsPerBatch(el) {
+            var val = parseInt(el.value, 10);
+            if (isNaN(val) || val < 1) val = 10;
+            if (typeof storageService !== 'undefined') storageService.saveEventStep(val * 2);
+            // 同时写入 gameData.summaryConfig.event.turnsPerBatch 作为「归位基线」，
+            // 否则「卡长场景 step+=10」批次正常入库后会把 eventStep 归位覆盖回硬编码默认值
+            if (typeof gameData !== 'undefined') {
+                if (!gameData.summaryConfig) gameData.summaryConfig = {};
+                if (!gameData.summaryConfig.event) gameData.summaryConfig.event = { enabled: true };
+                gameData.summaryConfig.event.turnsPerBatch = val;
+            }
+        }
+
+        function gsOnSummaryEventToggle(el) {
+            if (typeof gameData === 'undefined') return;
+            if (!gameData.summaryConfig) gameData.summaryConfig = {};
+            if (!gameData.summaryConfig.event) gameData.summaryConfig.event = { enabled: true };
+            gameData.summaryConfig.event.enabled = el.checked;
+            const hint = document.getElementById('gs-summary-event-hint');
+            if (hint) hint.textContent = el.checked ? '开' : '关';
+        }
+
+        // 召回管理：[已确立事实]/[人物弧光]/[相关历史事件]/[相关碎片记忆] 开关 + token 上限
+        function gsOnRecallToggle(key, el) {
+            if (typeof gameData === 'undefined') return;
+            if (!gameData.recallConfig) gameData.recallConfig = {};
+            if (!gameData.recallConfig[key]) gameData.recallConfig[key] = { enabled: true, maxTokens: 2000 };
+            gameData.recallConfig[key].enabled = el.checked;
+            const hint  = document.getElementById('gs-recall-' + key + '-hint');
+            const input = document.getElementById('gs-recall-' + key + '-tokens');
+            if (hint)  hint.textContent = el.checked ? '开' : '关';
+            if (input) input.disabled = !el.checked;
+        }
+
+        function gsOnRecallTokens(key, el) {
+            if (typeof gameData === 'undefined') return;
+            if (!gameData.recallConfig) gameData.recallConfig = {};
+            if (!gameData.recallConfig[key]) gameData.recallConfig[key] = { enabled: true, maxTokens: 2000 };
+            const val = parseInt(el.value, 10);
+            gameData.recallConfig[key].maxTokens = (isNaN(val) || val < 0) ? 0 : val;
         }
         // ========== 游戏设置弹窗结束 ==========
 
@@ -4720,6 +4896,9 @@ function buildSaveName() {
                 showModal('快照数据损坏，无法重新生成');
                 return;
             }
+            if (typeof memoryRecall !== 'undefined' && typeof memoryRecall._refreshAliasMap === 'function' && typeof eventHistoryService !== 'undefined') {
+                memoryRecall._refreshAliasMap(eventHistoryService.getMeta());
+            }
 
             if (typeof updateAllDisplays === 'function') updateAllDisplays();
             if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
@@ -4842,6 +5021,10 @@ function buildSaveName() {
                     // Phase L2：初始化 L2 事件向量缓存
                     if (typeof memoryRecall.initL2 === 'function') {
                         await memoryRecall.initL2();
+                    }
+                    // 词法路：刷新别名表
+                    if (typeof memoryRecall._refreshAliasMap === 'function' && typeof eventHistoryService !== 'undefined') {
+                        memoryRecall._refreshAliasMap(eventHistoryService.getMeta());
                     }
                 }
             }
@@ -4993,6 +5176,9 @@ function buildSaveName() {
                         if (typeof storageService.restoreL2FromPayload === 'function') {
                             storageService.restoreL2FromPayload(savePayload);
                             if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
+                            if (typeof memoryRecall !== 'undefined' && typeof memoryRecall._refreshAliasMap === 'function' && typeof eventHistoryService !== 'undefined') {
+                                memoryRecall._refreshAliasMap(eventHistoryService.getMeta());
+                            }
                         }
                         // 持久化存档恢复后的状态到 localStorage
                         storageService.saveAppState({ gameData: gameData });

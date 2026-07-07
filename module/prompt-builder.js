@@ -74,16 +74,19 @@ var promptBuilder = (function() {
      * 递归渲染因果链（内联树形，小白X风格）。
      * @param {object} eventObj  - 当前事件对象（含 causedBy）
      * @param {object} priorById - id→事件 字典
-     * @param {number} depth     - 当前深度（从1开始）
+     * @param {number} visualDepth - 视觉缩进层级（从1开始，每一跳都 +1，不受合并影响，保证树形缩进正常递进）
+     * @param {number} budgetDepth - 追溯配额层级（从1开始；命中"链路合并"节点后重置为1，与 traceCausation 的
+     *        "合并后重新4层配额"对齐；超过4时截断渲染——即使数据已经追溯到了也不再展开，避免层级失控）
      * @param {object} visited   - 防环 visited 集合
+     * @param {object} [absorbedSet] - id→true 的集合，标记该 id 是否为"链路合并"节点（本身也是本轮直接命中事件）
      * @returns {string[]} 渲染行数组
      */
-    function _renderCausalChain(eventObj, priorById, depth, visited) {
-        if (depth > 4) return [];
+    function _renderCausalChain(eventObj, priorById, visualDepth, budgetDepth, visited, absorbedSet) {
+        if (budgetDepth > 4) return [];
         var lines = [];
         var causedBy = Array.isArray(eventObj.causedBy) ? eventObj.causedBy : [];
-        // 每一层缩进：第1层 "  "，第2层 "  │  "，第3层 "  │  │  "…
-        var indent = '  ' + '│  '.repeat(depth - 1);
+        // 每一层缩进：第1层 "  "，第2层 "  │  "，第3层 "  │  │  "…（用 visualDepth，合并链也持续加深缩进）
+        var indent = '  ' + '│  '.repeat(visualDepth - 1);
         for (var i = 0; i < causedBy.length; i++) {
             var cid = causedBy[i];
             if (!cid || visited[cid]) continue;
@@ -92,44 +95,186 @@ var promptBuilder = (function() {
             visited[cid] = true;
             lines.push(indent + '├─ 前因 ' + _weekToTimestamp(ce.week || 1) + (ce.title ? ' ' + ce.title : ''));
             lines.push(indent + '│     ' + (ce.description || ''));
-            var childLines = _renderCausalChain(ce, priorById, depth + 1, visited);
+            // 合并节点：追溯配额从这里重新计（对齐 traceCausation 的"合并后重新4层配额"），但视觉缩进照常递增
+            var childBudgetDepth = (absorbedSet && absorbedSet[cid]) ? 1 : budgetDepth + 1;
+            var childLines = _renderCausalChain(ce, priorById, visualDepth + 1, childBudgetDepth, visited, absorbedSet);
             for (var ci = 0; ci < childLines.length; ci++) lines.push(childLines[ci]);
         }
         return lines;
     }
 
     /**
-     * 构建 RecalledMemories 块（L2 剧情事件 + 孤儿 L0 统一）。
-     * L2 部分用 [剧情记忆] 格式（内联因果树 + L0 证据锚点）；
-     * 孤儿 L0 用 [背景证据] 格式。
+     * 判定实体名是否在（本次用户输入 + 上一次 AI 回复）文本中出现，与 worldbookEngine.matchNPCs 的
+     * 在场判定规则保持一致（纯子串匹配）。
+     */
+    function _isPresentIn(searchText, name) {
+        return !!name && !!searchText && searchText.indexOf(name) !== -1;
+    }
+
+    /**
+     * 构建 [已确立事实] 文本块。
+     * eventMeta.facts 的 key 形如 "主体|谓语"（如 "洛潜幽|对叶情凡的看法"）。
+     * 在场判定：主体名出现在 searchText（本次用户输入 + 上一次 AI 回复）中。
+     * 每个在场主体最多注入 10 条 isState===true 或 谓语以"看法"结尾 的事实，按 _addedAt 新→旧排序。
+     * @param {string} searchText
+     * @param {number} tokenBudget
+     * @returns {string} 正文（不含 [已确立事实] 标题行），无内容时返回空串
+     */
+    function _buildFactsSection(searchText, tokenBudget) {
+        if (typeof eventHistoryService === 'undefined') return '';
+        var meta = eventHistoryService.getMeta();
+        var facts = meta.facts || {};
+        var keys = Object.keys(facts);
+        if (keys.length === 0) return '';
+
+        var bySubject = {};
+        var subjectOrder = [];
+        for (var i = 0; i < keys.length; i++) {
+            var fk = keys[i];
+            var sepIdx = fk.indexOf('|');
+            if (sepIdx < 0) continue;
+            var subject = fk.slice(0, sepIdx);
+            var predicate = fk.slice(sepIdx + 1);
+            var fact = facts[fk];
+            if (!fact) continue;
+            if (!(fact.isState === true || /看法$/.test(predicate))) continue;
+            if (!_isPresentIn(searchText, subject)) continue;
+            if (!bySubject[subject]) { bySubject[subject] = []; subjectOrder.push(subject); }
+            bySubject[subject].push({ p: predicate, fact: fact });
+        }
+        if (subjectOrder.length === 0) return '';
+
+        var lines = [];
+        var used = 0;
+        for (var s = 0; s < subjectOrder.length; s++) {
+            var subj = subjectOrder[s];
+            var arr = bySubject[subj];
+            arr.sort(function(a, b) { return (b.fact._addedAt || 0) - (a.fact._addedAt || 0); });
+            arr = arr.slice(0, 10);
+
+            var subjLines = [subj + ':'];
+            for (var k = 0; k < arr.length; k++) {
+                var fd = arr[k];
+                subjLines.push('  - ' + fd.p + ': ' + (fd.fact.o || ''));
+            }
+            var block = subjLines.join('\n');
+            var t = tokenUtils.estimate(block);
+            if (used + t > tokenBudget && lines.length > 0) break;
+            lines.push(block);
+            used += t;
+        }
+        return lines.join('\n');
+    }
+
+    /**
+     * 构建 [人物弧光] 文本块。
+     * 在场判定：eventMeta.arcs 的角色名出现在 searchText 中。
+     * 展示格式：trajectory（旧→新，FIFO 数组）用 → 串联，最右边追加 newMoment（若非空）。
+     * @param {string} searchText
+     * @param {number} tokenBudget
+     * @returns {string} 正文（不含 [人物弧光] 标题行），无内容时返回空串
+     */
+    function _buildArcsSection(searchText, tokenBudget) {
+        if (typeof eventHistoryService === 'undefined') return '';
+        var meta = eventHistoryService.getMeta();
+        var arcs = meta.arcs || {};
+        var names = Object.keys(arcs);
+        if (names.length === 0) return '';
+
+        var candidates = [];
+        for (var i = 0; i < names.length; i++) {
+            var name = names[i];
+            if (!_isPresentIn(searchText, name)) continue;
+            candidates.push({ name: name, arc: arcs[name] });
+        }
+        if (candidates.length === 0) return '';
+        candidates.sort(function(a, b) { return (b.arc._addedAt || 0) - (a.arc._addedAt || 0); });
+
+        var lines = [];
+        var used = 0;
+        for (var c = 0; c < candidates.length; c++) {
+            var name = candidates[c].name;
+            var arc = candidates[c].arc;
+            var trajArr = Array.isArray(arc.trajectory) ? arc.trajectory.slice()
+                : (arc.trajectory ? [String(arc.trajectory)] : []);
+            if (arc.newMoment) trajArr.push(arc.newMoment);
+            if (trajArr.length === 0) continue;
+            var ln = '- ' + name + '：' + trajArr.join(' → ');
+            var t = tokenUtils.estimate(ln);
+            if (used + t > tokenBudget && lines.length > 0) break;
+            lines.push(ln);
+            used += t;
+        }
+        return lines.join('\n');
+    }
+
+    /**
+     * 构建 RecalledMemories 块（[已确立事实] + [人物弧光] + L2 剧情事件 + 孤儿 L0 统一）。
+     * L2 部分用 [相关历史事件] 格式（内联因果树 + L0 证据锚点）；
+     * 孤儿 L0 用 [相关碎片记忆] 格式。
      * @param {{direct:Array, priorById:object}|null} recalledEvents
      * @param {Array} recalledMemories - 孤儿 L0 数组
+     * @param {string} [searchText] - 本次用户输入 + 上一次 AI 回复，用于 [已确立事实]/[人物弧光] 在场判定
+     * @param {object} [recallConfig] - gameData.recallConfig：{facts,arcs,events,fragments} 各带 {enabled,maxTokens}
      */
-    function _buildRecalledBlock(recalledEvents, recalledMemories) {
+    function _buildRecalledBlock(recalledEvents, recalledMemories, searchText, recallConfig) {
         var direct = (recalledEvents && recalledEvents.direct) || [];
         var priorById = (recalledEvents && recalledEvents.priorById) || {};
+        var absorbedSet = {};
+        var _absorbedIds = (recalledEvents && recalledEvents.absorbedIds) || [];
+        for (var _asi = 0; _asi < _absorbedIds.length; _asi++) absorbedSet[_absorbedIds[_asi]] = true;
         var orphans = recalledMemories || [];
+        var cfg = recallConfig || {};
+        var factsCfg = cfg.facts || {};
+        var arcsCfg = cfg.arcs || {};
+        var eventsCfg = cfg.events || {};
+        var fragmentsCfg = cfg.fragments || {};
 
-        if (direct.length === 0 && orphans.length === 0) return '';
+        var factsText = (factsCfg.enabled !== false) ? _buildFactsSection(searchText || '', factsCfg.maxTokens || 2000) : '';
+        var arcsText = (arcsCfg.enabled !== false) ? _buildArcsSection(searchText || '', arcsCfg.maxTokens || 1000) : '';
+        var showEvents = (eventsCfg.enabled !== false) && direct.length > 0;
+        var showFragments = (fragmentsCfg.enabled !== false) && orphans.length > 0;
+
+        if (!factsText && !arcsText && !showEvents && !showFragments) return '';
 
         var lines = [];
         lines.push('<!-- <RecalledMemories> contains recalled plot events and background evidence relevant to the current action. -->');
         lines.push('');
         lines.push('<RecalledMemories>');
 
-        // --- [剧情记忆] L2 直接命中事件（内联因果链 + L0 证据）---
-        if (direct.length > 0) {
+        // --- [已确立事实] 在场主体的已确立事实（isState 或 看法类）---
+        if (factsText) {
             lines.push('');
-            lines.push('[剧情记忆]');
+            lines.push('[已确立事实]');
             lines.push('');
-            for (var i = 0; i < direct.length; i++) {
-                var ev = direct[i].event || {};
-                var evidence = direct[i].evidence || [];
+            lines.push(factsText);
+        }
+
+        // --- [人物弧光] 在场角色的弧光轨迹（trajectory → ... → newMoment）---
+        if (arcsText) {
+            lines.push('');
+            lines.push('[人物弧光]');
+            lines.push('');
+            lines.push(arcsText);
+        }
+
+        // --- [相关历史事件] L2 直接命中事件（内联因果链 + L0 证据）---
+        // 按时间顺序排序仅用于展示（越靠下越新），不影响上游的选择/token预算逻辑
+        if (showEvents) {
+            var sortedDirect = direct.slice().sort(function(a, b) {
+                return ((a.event && a.event.week) || 0) - ((b.event && b.event.week) || 0);
+            });
+            lines.push('');
+            lines.push('[相关历史事件]');
+            lines.push('');
+            for (var i = 0; i < sortedDirect.length; i++) {
+                var ev = sortedDirect[i].event || {};
+                var evidence = sortedDirect[i].evidence || [];
                 lines.push((i + 1) + '. ' + _weekToTimestamp(ev.week || 1) + (ev.title ? ' ' + ev.title : ''));
                 lines.push(ev.description || '');
 
                 // 因果链（内联树形）
-                var causalLines = _renderCausalChain(ev, priorById, 1, {});
+                var causalLines = _renderCausalChain(ev, priorById, 1, 1, {}, absorbedSet);
                 for (var ci = 0; ci < causalLines.length; ci++) lines.push(causalLines[ci]);
 
                 // L0 证据锚点
@@ -140,17 +285,21 @@ var promptBuilder = (function() {
                     }
                 }
 
-                if (i < direct.length - 1) lines.push('');
+                if (i < sortedDirect.length - 1) lines.push('');
             }
         }
 
-        // --- [背景证据] 孤儿 L0（未被任何事件覆盖）---
-        if (orphans.length > 0) {
+        // --- [相关碎片记忆] 孤儿 L0（未被任何事件覆盖）---
+        // 同样按时间顺序排序仅用于展示（越靠下越新）
+        if (showFragments) {
+            var sortedOrphans = orphans.slice().sort(function(a, b) {
+                return ((a && a.week) || 0) - ((b && b.week) || 0);
+            });
             lines.push('');
-            lines.push('[背景证据]');
+            lines.push('[相关碎片记忆]');
             lines.push('');
-            for (var j = 0; j < orphans.length; j++) {
-                var rm = orphans[j];
+            for (var j = 0; j < sortedOrphans.length; j++) {
+                var rm = sortedOrphans[j];
                 if (rm && rm.text) {
                     var _rmWeekStamp = _weekToTimestamp(rm.week || 1);
                     lines.push('[📌' + _rmWeekStamp.slice(1) + ' ' + rm.text);
@@ -169,8 +318,10 @@ var promptBuilder = (function() {
      * @param {Array} recentSummaries   - 近期 summaryHistory 条目（RecentMemories）
      * @param {Array} recalledMemories  - 向量召回的孤儿 L0 条目
      * @param {object} [recalledEvents] - L2 召回事件 { direct, priorById }
+     * @param {string} [searchText]     - 本次用户输入 + 上一次 AI 回复，用于 [已确立事实]/[人物弧光] 在场判定
+     * @param {object} [recallConfig]   - gameData.recallConfig
      */
-    function _buildHistorySummaryBlock(previousMemories, recentSummaries, recalledMemories, recalledEvents) {
+    function _buildHistorySummaryBlock(previousMemories, recentSummaries, recalledMemories, recalledEvents, searchText, recallConfig) {
         var lines = ['<!-- <HistorySummary> is a brief summary of what has happened so far. Please read it to continue the story. -->'];
         lines.push('');
         lines.push('<HistorySummary>');
@@ -191,8 +342,8 @@ var promptBuilder = (function() {
         lines.push('');
         lines.push('</PreviousMemories>');
 
-        // --- RecalledMemories：[剧情记忆] L2 事件（内联因果树 + L0 证据）+ [背景证据] 孤儿 L0 ---
-        var recalledBlock = _buildRecalledBlock(recalledEvents, recalledMemories);
+        // --- RecalledMemories：[已确立事实] + [人物弧光] + [相关历史事件]（内联因果树 + L0 证据）+ [相关碎片记忆] 孤儿 L0 ---
+        var recalledBlock = _buildRecalledBlock(recalledEvents, recalledMemories, searchText, recallConfig);
         if (recalledBlock) {
             lines.push('');
             lines.push(recalledBlock);
@@ -396,6 +547,10 @@ var promptBuilder = (function() {
         var npcBlocks = worldbookEngine.matchNPCs(userMessage, lastAssistantReply);
         var actionGuide = worldbookEngine.matchActionGuide(userMessage);
 
+        // --- 召回与场中判定公用文本：本次用户输入 + 上一次 AI 回复（与 worldbookEngine.matchNPCs 一致）---
+        var _recallSearchText = (userMessage || '') + (lastAssistantReply || '');
+        var _recallConfig = gd.recallConfig || {};
+
         // --- 模型检测 ---
         var modelName = (apiService.getConfig().model || '').toLowerCase();
         var isDeepSeek = modelName.indexOf('deepseek') !== -1;
@@ -422,7 +577,7 @@ var promptBuilder = (function() {
         var recalledEvents = params.recalledEvents || null;
 
         // --- 构建各条消息（先用空 HistorySummary 占位，后续注入）---
-        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null);
+        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null, _recallSearchText, _recallConfig);
         var msg1Content = _buildMsg1System(variables, npcBlocks, historySummaryPlaceholder);
         var msg2Content = '[Start a new chat]';
         var msg3Content = _buildMsg3LatestReply(lastAssistantReply);
@@ -446,9 +601,16 @@ var promptBuilder = (function() {
                         + 24; // 6 messages × ~4 tokens structure overhead
 
         // 先扣除 RecentMemories + RecalledMemories 占用，剩余预算给 PreviousMemories
-        var recentAndRecalledBlock = _buildHistorySummaryBlock([], recentSummaries, recalledMemories, recalledEvents);
+        var recentAndRecalledBlock = _buildHistorySummaryBlock([], recentSummaries, recalledMemories, recalledEvents, _recallSearchText, _recallConfig);
         var recentAndRecalledTokens = tokenUtils.estimate(recentAndRecalledBlock);
-        var previousBudget = Math.max(0, totalAvailable - fixedTokens - recentAndRecalledTokens);
+        // [已确立事实]之上的「每周总结」开关：控制 <PreviousMemories>（weekHistory）是否注入及其 token 上限，
+        // 由 系统设置-游戏设置-召回管理 弹窗控制（gameData.recallConfig.previous），默认 20000
+        var _previousCfg = _recallConfig.previous || {};
+        var _previousEnabled = _previousCfg.enabled !== false;
+        var _previousMaxTokens = (typeof _previousCfg.maxTokens === 'number') ? _previousCfg.maxTokens : 20000;
+        var previousBudget = _previousEnabled
+            ? Math.max(0, Math.min(_previousMaxTokens, totalAvailable - fixedTokens - recentAndRecalledTokens))
+            : 0;
 
         // PreviousMemories：在预算内从最新到最旧截取 weekHistory
         var selectedPrevious = _selectPreviousWithinBudget(weekHistory, previousBudget);
@@ -458,7 +620,7 @@ var promptBuilder = (function() {
         }
 
         // --- 构建最终 HistorySummary（含全三段）---
-        var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories, recalledEvents);
+        var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories, recalledEvents, _recallSearchText, _recallConfig);
         msg1Content = _buildMsg1System(variables, npcBlocks, finalHistorySummary);
 
         // --- 组装 messages ---
@@ -476,14 +638,13 @@ var promptBuilder = (function() {
         var _directCnt = recalledEvents && recalledEvents.direct ? recalledEvents.direct.length : 0;
         var _priorCnt = recalledEvents && recalledEvents.priorById ? Object.keys(recalledEvents.priorById).length : 0;
 
-        // 折叠显示最终注入 HistorySummary 内容（RecalledMemories 部分）
+        // 折叠显示最终注入 HistorySummary 内容（[已确立事实]/[人物弧光]/[相关历史事件]/[相关碎片记忆]）
         console.groupCollapsed('[PromptBuilder] 最终注入内容（展开查看 HistorySummary）');
-        if (_directCnt > 0 || (recalledMemories && recalledMemories.length > 0)) {
-            console.log('--- RecalledMemories（L2 剧情记忆，直接命中 ' + _directCnt + ' + 前因 ' + _priorCnt + ' | 孤儿L0 ' + (recalledMemories ? recalledMemories.length : 0) + '）---');
-            var _evBlock = _buildRecalledBlock(recalledEvents, recalledMemories);
-            console.log(_evBlock.length > 2000 ? _evBlock.slice(0, 2000) + '\n...(截断)' : _evBlock);
-        }
-        if (_directCnt === 0 && (!recalledMemories || recalledMemories.length === 0)) {
+        var _evBlock = _buildRecalledBlock(recalledEvents, recalledMemories, _recallSearchText, _recallConfig);
+        if (_evBlock) {
+            console.log('--- RecalledMemories（直接命中事件 ' + _directCnt + ' + 前因 ' + _priorCnt + ' | 孤儿L0 ' + (recalledMemories ? recalledMemories.length : 0) + '）---');
+            console.log(_evBlock);
+        } else {
             console.log('（本轮无 RecalledMemories 注入）');
         }
         console.groupEnd();

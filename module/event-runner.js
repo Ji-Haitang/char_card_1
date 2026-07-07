@@ -29,6 +29,19 @@ var eventRunner = (function() {
     var BACKFILL_DISTANCE = 20;      // 回灌历史事件的距离阈值
     var CAUSE_MAX = 2;               // 单事件 causedBy 上限
 
+    /**
+     * 自适应 step 的"归位基线"：优先用系统设置-游戏设置-总结管理 弹窗里配置的
+     * gameData.summaryConfig.event.turnsPerBatch（用户设置的"总结轮次"×2），
+     * 未配置时才回退 STEP_DEFAULT。避免"卡长场景 step+=10"后正常入库归位时
+     * 把用户自定义的 eventStep 覆盖回硬编码的 20。
+     */
+    function _getBaseStep() {
+        var turns = (typeof gameData !== 'undefined' && gameData && gameData.summaryConfig
+            && gameData.summaryConfig.event && typeof gameData.summaryConfig.event.turnsPerBatch === 'number')
+            ? gameData.summaryConfig.event.turnsPerBatch : null;
+        return (turns && turns >= 1) ? turns * 2 : STEP_DEFAULT;
+    }
+
     // =========================================================================
     // System Prompt（规格内化，参考 §6.1）
     // =========================================================================
@@ -83,7 +96,8 @@ var eventRunner = (function() {
         '    }',
         '  ],',
         '  "arcUpdates": [ { "name": "萧白瑚", "trajectory": "从戒备转为试探性靠近", "progress": 0.35, "newMoment": "主动来丹房送药并久留" } ],',
-        '  "factUpdates": [ { "s": "主角", "p": "对萧白瑚的看法", "o": "心存好奇又愧疚", "isState": true, "trend": "投缘" } ]',
+        '  "factUpdates": [ { "s": "主角", "p": "对萧白瑚的看法", "o": "心存好奇又愧疚", "isState": true, "trend": "投缘" } ],',
+        '  "aliasUpdates": [ { "alias": "沐雪", "canonical": "定情信物·沐雪刀" } ]',
         '}',
         '',
         '【字段规则】',
@@ -92,6 +106,7 @@ var eventRunner = (function() {
         '- keywords：每条事件必带 3~6 个关键词（专名/物件/动作）',
         '- npc/location/causedBy 选填：causedBy 0~2 个，仅在因果明确（直接导致/明确动机/承接后果）时填，指向已记录或本批事件，不确定填 []',
         '- arcUpdates/factUpdates：只列本批有变化项，无变化给 []',
+        '- aliasUpdates：NPC/物件在叙事中以别名、昵称、简称出现且可明确归属全称时才输出 {alias, canonical}；已在【已记录别名】中出现过的不要重复输出；无新别名给 []',
         '',
         '【六、正念前导】先在 mindful_prelude 的 dedup_analysis 里以“叙事线”为单位梳理本批（每条线一句话概括其起承转合、标注首尾楼层），每条叙事线对应产出一条事件；再自检哪些是新事件、哪些事实变了，压低重复与幻觉。',
         '',
@@ -110,6 +125,12 @@ var eventRunner = (function() {
      * 调度：满足触发即点火；运行中则置 _pending，跑完补跑
      */
     function maybeSchedule() {
+        // 系统设置-游戏设置-总结管理：关闭「事件总结」开关时，直接跳过（触发时机不变，仅多了个开关控制）
+        if (typeof gameData !== 'undefined' && gameData && gameData.summaryConfig
+            && gameData.summaryConfig.event && gameData.summaryConfig.event.enabled === false) {
+            console.log('[EventRunner] maybeSchedule: 「事件总结」开关已关闭，跳过');
+            return;
+        }
         if (_running) {
             _pending = true;
             console.log('[EventRunner] maybeSchedule: 已运行中，置 _pending');
@@ -420,15 +441,15 @@ var eventRunner = (function() {
             var branch = '';
 
             if (mapped.length === 0) {
-                // 0 条事件：纯过场水 → 推进到 windowEnd，step 归位
+                // 0 条事件：纯过场水 → 推进到 windowEnd，step 归位（归位到用户配置的基线，不是硬编码默认值）
                 newWatermark = windowEnd;
-                newStep = STEP_DEFAULT;
+                newStep = _getBaseStep();
                 branch = '0事件→watermark=windowEnd';
             } else if (validEvents.length === 0) {
                 // 全部映射失败：无法判定边界 → 全部入库、推进 windowEnd 避免停滞
                 committed = invalidEvents;
                 newWatermark = windowEnd;
-                newStep = STEP_DEFAULT;
+                newStep = _getBaseStep();
                 branch = '全部映射失败→全入库,watermark=windowEnd';
             } else {
                 var maxUiEnd = -Infinity;
@@ -448,13 +469,13 @@ var eventRunner = (function() {
                     newWatermark = watermark;
                     branch = '产出全缓提→step+=' + STEP_INCREMENT + ',watermark不动';
                 } else {
-                    // ≥1 入库：watermark = D 里最小 uiStart，step 归位
+                    // ≥1 入库：watermark = D 里最小 uiStart，step 归位（归位到用户配置的基线）
                     var minDStart = Infinity;
                     for (var d3 = 0; d3 < validEvents.length; d3++) {
                         if (inD[validEvents[d3].id] && validEvents[d3].uiStart < minDStart) minDStart = validEvents[d3].uiStart;
                     }
                     newWatermark = (minDStart === Infinity) ? windowEnd : minDStart;
-                    newStep = STEP_DEFAULT;
+                    newStep = _getBaseStep();
                     branch = '正常入库→watermark=D最小uiStart(' + newWatermark + ')';
                 }
             }
@@ -474,17 +495,25 @@ var eventRunner = (function() {
                     await _vectorizeEvents(committed, _signal);
                 }
 
-                // 应用批次级增量（弧光/事实）
-                eventHistoryService.applyMetaUpdates({
+                // 应用批次级增量（弧光/事实/别名）
+                var _newMeta1 = eventHistoryService.applyMetaUpdates({
                     arcUpdates: Array.isArray(parsed.arcUpdates) ? parsed.arcUpdates : [],
-                    factUpdates: Array.isArray(parsed.factUpdates) ? parsed.factUpdates : []
+                    factUpdates: Array.isArray(parsed.factUpdates) ? parsed.factUpdates : [],
+                    aliasUpdates: Array.isArray(parsed.aliasUpdates) ? parsed.aliasUpdates : []
                 }, windowEnd);
+                if (typeof memoryRecall !== 'undefined' && memoryRecall._refreshAliasMap) {
+                    memoryRecall._refreshAliasMap(_newMeta1);
+                }
             } else if (mapped.length === 0) {
                 // 纯过场：若 LLM 仍吐了弧光/事实变化，也应用（少见但无害）
-                eventHistoryService.applyMetaUpdates({
+                var _newMeta2 = eventHistoryService.applyMetaUpdates({
                     arcUpdates: Array.isArray(parsed.arcUpdates) ? parsed.arcUpdates : [],
-                    factUpdates: Array.isArray(parsed.factUpdates) ? parsed.factUpdates : []
+                    factUpdates: Array.isArray(parsed.factUpdates) ? parsed.factUpdates : [],
+                    aliasUpdates: Array.isArray(parsed.aliasUpdates) ? parsed.aliasUpdates : []
                 }, windowEnd);
+                if (typeof memoryRecall !== 'undefined' && memoryRecall._refreshAliasMap) {
+                    memoryRecall._refreshAliasMap(_newMeta2);
+                }
             }
             // 注意：branch=「产出全缓提」时不应用 meta（下一轮重读会重新吐出），避免半截场景过早落状态
 
@@ -564,7 +593,7 @@ var eventRunner = (function() {
                 var meta = { text: text, week: ev.week || 0, fingerprint: fp, createdAt: ev.createdAt || Date.now() };
                 storageService.saveL2Embedding(ev.id, vec, meta);
                 if (memoryRecall.addToCacheL2) {
-                    memoryRecall.addToCacheL2({ id: ev.id, vector: vec, text: text, week: ev.week || 0, fingerprint: fp, createdAt: meta.createdAt });
+                    memoryRecall.addToCacheL2({ id: ev.id, vector: vec, text: text, week: ev.week || 0, fingerprint: fp, createdAt: meta.createdAt, keywords: ev.keywords, npc: ev.npc, location: ev.location });
                 }
                 _successCount++;
             } catch (err) {

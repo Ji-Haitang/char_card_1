@@ -192,6 +192,7 @@ var memoryRecall = (function() {
             _cacheL2 = [];
         }
         _initializedL2 = true;
+        _rebuildLexicalIndex();
     }
 
     function addToCacheL2(record) {
@@ -204,6 +205,9 @@ var memoryRecall = (function() {
             fingerprint: record.fingerprint || '',
             createdAt: record.createdAt || Date.now()
         });
+        // 词法倒排索引同步（keywords/npc/location 由调用方随 record 一并传入）
+        _deindexEventTerms(record.id); // 先清旧词（覆盖写场景）
+        _indexEventTerms(record.id, record.keywords, record.npc, record.location);
     }
 
     function removeFromCacheL2(id) {
@@ -212,12 +216,231 @@ var memoryRecall = (function() {
         if (_cacheL2.length < before) {
             console.log('[MemoryRecall] L2 已移除缓存记录:', id);
         }
+        _deindexEventTerms(id);
     }
 
     function clearCacheL2() {
         _cacheL2 = [];
         _initializedL2 = false;
+        _invertedIndex = new Map();
+        _termMatchFactor = new Map();
+        _docTerms = new Map();
+        _docOriginalTerms = new Map();
         console.log('[MemoryRecall] L2 缓存已清空');
+    }
+
+    // =========================================================================
+    // 词法检索：倒排索引 / 别名表 / 打分（Section 六）
+    // =========================================================================
+
+    var _invertedIndex     = new Map(); // Map<term, Set<eventId>>
+    var _termMatchFactor   = new Map(); // Map<term, number>  原始=1.0 / 子串=0.5
+    var _docTerms          = new Map(); // Map<eventId, Set<term>>  用于精准删除
+    var _docOriginalTerms  = new Map(); // Map<eventId, Set<term>>  仅原始词（未展开子串），用于打分去重
+    var _aliasMap          = new Map(); // Map<alias, canonical>  动态，从 eventMeta.aliases 加载
+
+    var LEXICAL_BASE = 0.5;        // 词法路 RRF 基准权重（固定常数，不乘 lengthFactor）
+    var LEXICAL_BYPASS_CAP = 5;    // 词法旁路上限（实际旁路数 = min(此值, ceil(全L2事件数×20%))）
+
+    /**
+     * 子串展开最小长度：ceil(词长/2)，但至少 2（2 字词不再细分，避免单字噪声）
+     */
+    function _substringMinLen(len) {
+        return Math.max(2, Math.ceil(len / 2));
+    }
+
+    function _indexTerm(term, eventId, factor) {
+        if (!term) return;
+        if (!_invertedIndex.has(term)) _invertedIndex.set(term, new Set());
+        _invertedIndex.get(term).add(eventId);
+        var prev = _termMatchFactor.get(term);
+        if (prev == null || factor > prev) _termMatchFactor.set(term, factor);
+        if (!_docTerms.has(eventId)) _docTerms.set(eventId, new Set());
+        _docTerms.get(eventId).add(term);
+    }
+
+    /**
+     * 将一条事件的 keywords ∪ npc ∪ [location] 写入倒排索引（含子串展开）
+     */
+    function _indexEventTerms(eventId, keywords, npc, location) {
+        if (!eventId) return;
+        var raw = [];
+        if (Array.isArray(keywords)) raw = raw.concat(keywords);
+        if (Array.isArray(npc)) raw = raw.concat(npc);
+        if (location) raw.push(location);
+        var seen = {};
+        var originalSet = _docOriginalTerms.get(eventId);
+        if (!originalSet) { originalSet = new Set(); _docOriginalTerms.set(eventId, originalSet); }
+        for (var i = 0; i < raw.length; i++) {
+            var k = (raw[i] || '').toString().trim();
+            if (!k || seen[k]) continue;
+            seen[k] = true;
+            originalSet.add(k);
+            _indexTerm(k, eventId, 1.0);
+            var minLen = _substringMinLen(k.length);
+            if (minLen < k.length) {
+                for (var subLen = minLen; subLen < k.length; subLen++) {
+                    for (var start = 0; start + subLen <= k.length; start++) {
+                        var sub = k.substring(start, start + subLen);
+                        if (sub) _indexTerm(sub, eventId, 0.5);
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * 精准清理某事件在倒排索引中的所有 term（含子串）
+     */
+    function _deindexEventTerms(eventId) {
+        var terms = _docTerms.get(eventId);
+        if (!terms) return;
+        terms.forEach(function(term) {
+            var set = _invertedIndex.get(term);
+            if (set) {
+                set.delete(eventId);
+                if (set.size === 0) {
+                    _invertedIndex.delete(term);
+                    _termMatchFactor.delete(term);
+                }
+            }
+        });
+        _docTerms.delete(eventId);
+        _docOriginalTerms.delete(eventId);
+    }
+
+    /**
+     * 全量重建倒排索引（初始化/存档恢复后调用）。
+     * keywords/npc/location 数据来源于 eventHistoryService（wevt_ 向量记录本身不携带这些字段）。
+     */
+    function _rebuildLexicalIndex() {
+        _invertedIndex = new Map();
+        _termMatchFactor = new Map();
+        _docTerms = new Map();
+        _docOriginalTerms = new Map();
+        if (typeof eventHistoryService === 'undefined' || !eventHistoryService.getAll) return;
+        try {
+            var events = eventHistoryService.getAll();
+            for (var i = 0; i < events.length; i++) {
+                var ev = events[i];
+                if (!ev || !ev.id) continue;
+                _indexEventTerms(ev.id, ev.keywords, ev.npc, ev.location);
+            }
+            console.log('[MemoryRecall] 词法倒排索引重建完成，索引词 ' + _invertedIndex.size + ' 个，覆盖事件 ' + _docTerms.size + ' 条');
+        } catch (e) {
+            console.warn('[MemoryRecall] 词法倒排索引重建失败:', e && e.message || e);
+        }
+    }
+
+    /**
+     * 用 eventMeta.aliases 重建内存别名表（alias → canonical）。
+     * 调用时机：应用初始化、读存档/导入完成、每次 applyMetaUpdates() 执行后。
+     */
+    function _refreshAliasMap(eventMeta) {
+        _aliasMap = new Map();
+        var aliases = eventMeta && eventMeta.aliases;
+        if (aliases && typeof aliases === 'object') {
+            var keys = Object.keys(aliases);
+            for (var i = 0; i < keys.length; i++) {
+                var alias = keys[i];
+                var canonical = aliases[alias];
+                if (alias && canonical) _aliasMap.set(alias, canonical);
+            }
+        }
+        console.log('[MemoryRecall] 别名表已刷新，共 ' + _aliasMap.size + ' 条');
+    }
+
+    /**
+     * 词法打分：关键词倒查原文（遍历倒排索引键，对 intentText/contextText 做 includes），
+     * 不对用户输入分词。含别名扩展（alias 命中 → canonical 对应事件集追加分）。
+     *
+     * 去重规则：按「事件」为单位打分——同一事件内，若某个纯子串展开项（非原始词）被一个
+     * 已命中的更长词（原始词或另一子串）完整包含，则视为同一信号的重复，跳过其贡献，
+     * 避免长关键词因展开出多个子串而被反复计分（例：「洞庭君」命中时，其子串「洞庭」「庭君」
+     * 不再重复加分；但若「洞庭」本身也是该事件的独立原始词，则仍照常计分）。
+     *
+     * @returns {Map<eventId, {score:number, hits:Array<{term,side,matchFactor,idf}>}>}
+     */
+    function _scoreLexical(intentText, contextText) {
+        var result = new Map();
+        intentText = intentText || '';
+        contextText = contextText || '';
+        if (!intentText && !contextText) return result;
+        if (_invertedIndex.size === 0) return result;
+
+        var N = _cacheL2.length;
+        function idfOf(term) {
+            var set = _invertedIndex.get(term);
+            var df = set ? set.size : 0;
+            return Math.log((N + 1) / (df + 1));
+        }
+        function sideOf(term) {
+            var inIntent = intentText.indexOf(term) !== -1;
+            var inContext = contextText.indexOf(term) !== -1;
+            if (inIntent && inContext) return { w: 1.5, side: 'both' };
+            if (inIntent) return { w: 1.5, side: 'intent' };
+            if (inContext) return { w: 1.0, side: 'context' };
+            return null;
+        }
+
+        _docTerms.forEach(function(terms, id) {
+            var hitsRaw = [];
+            terms.forEach(function(term) {
+                var sw = sideOf(term);
+                if (!sw) return;
+                hitsRaw.push({ term: term, side: sw.side, w: sw.w, factor: _termMatchFactor.get(term) || 1.0 });
+            });
+            if (hitsRaw.length === 0) return;
+
+            // 优先保留更长（更精确）的命中，短子串若已被已保留的长词包含则跳过
+            hitsRaw.sort(function(a, b) { return b.term.length - a.term.length; });
+            var originalSet = _docOriginalTerms.get(id);
+            var accepted = [];
+            for (var i = 0; i < hitsRaw.length; i++) {
+                var h = hitsRaw[i];
+                var isOriginal = originalSet && originalSet.has(h.term);
+                if (!isOriginal) {
+                    var subsumed = false;
+                    for (var j = 0; j < accepted.length; j++) {
+                        if (accepted[j].term.length > h.term.length && accepted[j].term.indexOf(h.term) !== -1) {
+                            subsumed = true;
+                            break;
+                        }
+                    }
+                    if (subsumed) continue;
+                }
+                accepted.push(h);
+            }
+
+            var entry = { score: 0, hits: [] };
+            for (var k = 0; k < accepted.length; k++) {
+                var a = accepted[k];
+                var idf = idfOf(a.term);
+                entry.score += a.w * a.factor * idf;
+                entry.hits.push({ term: a.term, side: a.side, matchFactor: a.factor, idf: idf });
+            }
+            result.set(id, entry);
+        });
+
+        // 别名扩展：alias 命中 intentText/contextText → 给 canonical 对应事件集追加 matchFactor=0.9 分
+        if (_aliasMap.size > 0) {
+            _aliasMap.forEach(function(canonical, alias) {
+                var sw = sideOf(alias);
+                if (!sw) return;
+                var idSet = _invertedIndex.get(canonical);
+                if (!idSet) return;
+                var idf = idfOf(canonical);
+                var contrib = sw.w * 0.9 * idf;
+                idSet.forEach(function(id) {
+                    if (!result.has(id)) result.set(id, { score: 0, hits: [] });
+                    var entry = result.get(id);
+                    entry.score += contrib;
+                    entry.hits.push({ term: alias + '→' + canonical, side: 'alias', matchFactor: 0.9, idf: idf });
+                });
+            });
+        }
+
+        return result;
     }
 
     // =========================================================================
@@ -647,12 +870,50 @@ var memoryRecall = (function() {
             }
         }
 
+        // --- 词法路（第三路）：关键词倒查原文，含别名贡献 ---
+        var _lexResultMap = _scoreLexical(opts.intentText || '', opts.contextText || '');
+        var _lexRanked = Array.from(_lexResultMap.entries())
+            .map(function(e) { return [e[0], e[1].score]; })
+            .sort(function(a, b) { return b[1] - a[1]; });
+        var _lexHitsById = {};
+        _lexResultMap.forEach(function(v, id) { _lexHitsById[id] = v.hits; });
+
+        var _lexBypassIds = new Set();
+        var _bypassN = 0;
+        if (_lexRanked.length > 0) {
+            _bypassN = Math.min(LEXICAL_BYPASS_CAP, Math.ceil(_cacheL2.length * 0.20));
+            if (_bypassN > 0) {
+                var _topNThreshold = _lexRanked[Math.min(_bypassN - 1, _lexRanked.length - 1)][1];
+                for (var ti = 0; ti < _lexRanked.length; ti++) {
+                    if (_lexRanked[ti][1] >= _topNThreshold) _lexBypassIds.add(_lexRanked[ti][0]);
+                    else break; // 降序，可提前退出
+                }
+            }
+        }
+
+        // 给 rrfMap 中已有的命中事件追加词法 RRF 分（不在 rrfMap 的 id 已被 excludeSet/指纹/无向量过滤，忽略）
+        for (var li = 0; li < _lexRanked.length; li++) {
+            var _lid = _lexRanked[li][0];
+            if (rrfMap[_lid]) {
+                rrfMap[_lid].lexScore = _lexRanked[li][1];
+                rrfMap[_lid].lexRank = li;
+                rrfMap[_lid].rrfScore += LEXICAL_BASE / (RRF_K + li + 1);
+            }
+        }
+
         var list = Object.keys(rrfMap).map(function(k) { return rrfMap[k]; });
         list.sort(function(a, b) { return b.rrfScore - a.rrfScore; });
 
         var scored = [];
         for (var si = 0; si < list.length && scored.length < candidateLimit; si++) {
             var item = list[si];
+            // 词法高置信旁路：与向量阈值为「或」关系，绕过向量相似度阈值和实体软过滤
+            if (_lexBypassIds.has(item.id)) {
+                scored.push({ id: item.id, text: item.text, week: item.week,
+                    similarity: item.simIntent, simContext: item.simContext, rrfScore: item.rrfScore,
+                    lexBypass: true });
+                continue;
+            }
             var simMax = Math.max(item.simIntent, item.simContext != null ? item.simContext : 0);
             // 过阈值：两路取大（与 L0 一致）
             if (simMax < MIN_SIM) continue;
@@ -665,18 +926,20 @@ var memoryRecall = (function() {
                 if (!match) continue;
             }
             scored.push({ id: item.id, text: item.text, week: item.week,
-                similarity: item.simIntent, simContext: item.simContext, rrfScore: item.rrfScore });
+                similarity: item.simIntent, simContext: item.simContext, rrfScore: item.rrfScore,
+                lexBypass: false });
         }
 
         console.log('[MemoryRecall][L2] 候选 ' + scored.length + ' 条 | 缓存 ' + _cacheL2.length + ' 条 | 排除 ' + excludeIds.length + ' 条'
             + (hasContextVec ? ' | 双路RRF' : ' | 单路')
+            + ' | 词法命中 ' + _lexRanked.length + ' 条(旁路 ' + _lexBypassIds.size + ' 条)'
             + (focusArr.length > 0 ? ' | focusNPC=[' + focusArr.join(',') + ']' : ''));
 
-        // 折叠详情 log（四段式：① Intent路 ② Context路 ③ RRF融合前十 ④ 最终入选/送精排）
+        // 折叠详情 log（五段式：① Intent路 ② Context路 ③ 词法路 ④ RRF融合前十 ⑤ 最终入选/送精排）
         console.groupCollapsed('[MemoryRecall][L2] 召回详情（展开查看）');
         console.log('相似度阈值: ' + MIN_SIM + ' | 实体绕行阈值: ' + ENTITY_BYPASS_SIM + ' | RRF_K: ' + RRF_K
             + ' | focusNPC: [' + focusArr.join(', ') + '] | candidateLimit: ' + candidateLimit + ' | 排除: ' + excludeIds.length
-            + ' | w_intent=' + _wIntent.toFixed(3) + ' w_context=' + _wContext.toFixed(3));
+            + ' | w_intent=' + _wIntent.toFixed(3) + ' w_context=' + _wContext.toFixed(3) + ' w_lex=' + LEXICAL_BASE);
 
         // --- ① L2 Intent 路 Top 10 ---
         console.groupCollapsed('① Intent 路 Top10（共 ' + intentScored.length + ' 条，w=' + _wIntent.toFixed(3) + '）');
@@ -702,21 +965,54 @@ var memoryRecall = (function() {
             console.groupEnd();
         }
 
-        // --- ③ L2 RRF 融合 Top 10（阈值过滤前）---
-        console.groupCollapsed('③ RRF 融合 Top10（过滤前，共 ' + list.length + ' 条）');
+        // --- ③ L2 词法路 Top 10（新增）---
+        console.groupCollapsed('③ 词法路 Top10（命中 ' + _lexRanked.length + ' 条，w_lex=' + LEXICAL_BASE + '，旁路上限=' + _bypassN + '）');
+        if (_lexRanked.length === 0) {
+            console.log('（本轮查询无词法命中）');
+        } else {
+            // 文本查找：优先取 rrfMap（已含 intentScored 的 text），未命中则回退线性查 _cacheL2（极少数无向量事件兜底）
+            var _lexTextFor = function(id) {
+                if (rrfMap[id] && rrfMap[id].text) return rrfMap[id].text;
+                for (var qi = 0; qi < _cacheL2.length; qi++) {
+                    if (_cacheL2[qi].id === id) return _cacheL2[qi].text || '';
+                }
+                return '';
+            };
+            var _lexTop = Math.min(10, _lexRanked.length);
+            for (var _li2 = 0; _li2 < _lexTop; _li2++) {
+                var _lid2 = _lexRanked[_li2][0];
+                var _lscore = _lexRanked[_li2][1];
+                var _lhits = _lexHitsById[_lid2] || [];
+                var _isBypass = _lexBypassIds.has(_lid2);
+                console.log('[' + (_li2 + 1) + '] lex=' + _lscore.toFixed(4) + (_isBypass ? ' 🔓旁路' : '') + ' | ' + _lid2);
+                console.log('    命中词: ' + _lhits.map(function(h) {
+                    return h.term + '(' + h.side + ' ×' + h.matchFactor.toFixed(1) + ' idf=' + h.idf.toFixed(2) + ')';
+                }).join('、'));
+                console.log('    ' + (_lexTextFor(_lid2) || '（无缓存文本）').slice(0, 100));
+            }
+        }
+        console.groupEnd();
+
+        // --- ④ L2 RRF 融合 Top 10（阈值过滤前）---
+        console.groupCollapsed('④ RRF 融合 Top10（过滤前，共 ' + list.length + ' 条）');
         var _l2rTop = Math.min(10, list.length);
         for (var _l2ri = 0; _l2ri < _l2rTop; _l2ri++) {
             var _l2rr = list[_l2ri];
             var _l2simMax = Math.max(_l2rr.simIntent, _l2rr.simContext != null ? _l2rr.simContext : 0);
             var _l2tag = _l2simMax < MIN_SIM ? ' ❌<MIN_SIM' : '';
+            var _lexPart = '';
+            if (typeof _l2rr.lexRank === 'number') {
+                var _lexContrib = LEXICAL_BASE / (RRF_K + _l2rr.lexRank + 1);
+                _lexPart = ' lex=+' + _lexContrib.toFixed(5) + (_lexBypassIds.has(_l2rr.id) ? '(🔓旁路)' : '');
+            }
             console.log('[' + (_l2ri + 1) + '] rrf=' + _l2rr.rrfScore.toFixed(5) + ' intent=' + _l2rr.simIntent.toFixed(4)
-                + (_l2rr.simContext != null ? ' ctx=' + _l2rr.simContext.toFixed(4) : '') + _l2tag + ' | ' + _l2rr.id);
+                + (_l2rr.simContext != null ? ' ctx=' + _l2rr.simContext.toFixed(4) : '') + _lexPart + _l2tag + ' | ' + _l2rr.id);
             console.log('    ' + (_l2rr.text || '').slice(0, 100));
         }
         console.groupEnd();
 
-        // --- ④ L2 最终入选（送往精排）---
-        console.groupCollapsed('④ 最终入选 ' + scored.length + ' 条（送往精排，candidateLimit=' + candidateLimit + '）');
+        // --- ⑤ L2 最终入选（送往精排）---
+        console.groupCollapsed('⑤ 最终入选 ' + scored.length + ' 条（送往精排，candidateLimit=' + candidateLimit + '）');
         if (scored.length === 0) {
             // 补充扫描：找出相似度最高的5条供诊断
             var _l2fb = [];
@@ -743,7 +1039,8 @@ var memoryRecall = (function() {
             for (var _l2fi = 0; _l2fi < scored.length; _l2fi++) {
                 var _l2fr = scored[_l2fi];
                 var _l2ctx = _l2fr.simContext != null ? ' ctx=' + _l2fr.simContext.toFixed(4) : '';
-                console.log('[' + (_l2fi + 1) + '] intent=' + _l2fr.similarity.toFixed(4) + _l2ctx + ' rrf=' + _l2fr.rrfScore.toFixed(5) + ' | ' + _l2fr.id);
+                var _l2reason = _l2fr.lexBypass ? ' 🔓词法旁路' : ' ✅向量阈值';
+                console.log('[' + (_l2fi + 1) + '] intent=' + _l2fr.similarity.toFixed(4) + _l2ctx + ' rrf=' + _l2fr.rrfScore.toFixed(5) + _l2reason + ' | ' + _l2fr.id);
                 console.log('    ' + (_l2fr.text || '').slice(0, 100));
             }
         }
@@ -756,10 +1053,17 @@ var memoryRecall = (function() {
 
     /**
      * 因果链追溯：对每条命中事件沿 causedBy 递归追前因（深度≤maxDepth，总注入≤maxAdd），带 visited 防环。
-     * 返回前因事件对象数组（已去掉本就在 directEvents 里的，仅描述用，不挂 L0）。
+     * 链路合并（A1 策略）：若追溯到的某个前因 id 本身也是本轮直接命中事件，不再排除/断链，而是把它当作
+     * 普通前因节点收录（供 prompt-builder 内联渲染进引用它的那条链），并对它自己的 causedBy 重新给予一份
+     * 完整的 maxDepth 追溯配额（因为它自己作为 directEvents 之一，在初始化阶段已经把自己的 causedBy 以
+     * depth=1 入队过一次，天然获得"合并后重新计深度"的效果，无需额外处理）。这个 id 需要从调用方的顶层
+     * 编号列表里剔除（改由 priorById 提供内容），返回值里通过 absorbedIds 告知调用方。
+     * 多条命中事件共享同一前因时，不做去重/交叉引用，各自独立渲染时都会完整展示一遍（由调用方保证）。
      * @param {Array} directEvents - 直接命中的事件对象（含 id/causedBy）
      * @param {Map|object} eventMap - id → 事件对象 的映射
      * @param {object} [opts] - { maxDepth=4, maxAdd=20 }
+     * @returns {{traced:Array, absorbedIds:Array}} traced=需要收录进 priorById 的前因事件（含被合并的直接命中事件）；
+     *          absorbedIds=被合并、应从顶层编号列表剔除的直接命中事件 id 列表
      */
     function traceCausation(directEvents, eventMap, opts) {
         opts = opts || {};
@@ -773,15 +1077,17 @@ var memoryRecall = (function() {
         for (var d = 0; d < directEvents.length; d++) directIds[directEvents[d].id] = true;
 
         var visited = {};
+        var absorbed = {};   // 被合并进其他直接命中事件因果链的 directEvents id
         var refCount = {};   // 被引用次数（多命中引用的因优先）
         var depthOf = {};    // 最浅深度
         var collected = [];
 
-        // BFS 队列
+        // BFS 队列：每条直接命中事件（无论最终是否被合并）都在此把自己的 causedBy 以 depth=1 入队，
+        // 这一步天然保证了"合并节点自己的前因"重新获得一份完整 maxDepth 配额，故意不在此处预标记
+        // visited[ev.id]，以便直接命中事件互相引用时能被下面的主循环发现并标记为 absorbed。
         var queue = [];
         for (var i = 0; i < directEvents.length; i++) {
             var ev = directEvents[i];
-            visited[ev.id] = true;
             var cb = Array.isArray(ev.causedBy) ? ev.causedBy : [];
             for (var c = 0; c < cb.length; c++) queue.push({ id: cb[c], depth: 1 });
         }
@@ -794,7 +1100,8 @@ var memoryRecall = (function() {
             if (visited[node.id]) continue;
             visited[node.id] = true;
             var pe = getEvent(node.id);
-            if (!pe || directIds[node.id]) continue;
+            if (!pe) continue;
+            if (directIds[node.id]) absorbed[node.id] = true; // 链路合并：标记为被吸收的直接命中事件
             collected.push(pe);
             var pcb = Array.isArray(pe.causedBy) ? pe.causedBy : [];
             for (var k = 0; k < pcb.length; k++) {
@@ -802,24 +1109,42 @@ var memoryRecall = (function() {
             }
         }
 
+        // 安全兜底：若合并会导致本轮所有直接命中事件全部被吸收（理论上仅在 causedBy 数据成环时发生），
+        // 则放弃本轮合并，避免顶层编号列表被清空。
+        var absorbedIds = Object.keys(absorbed);
+        if (absorbedIds.length >= directEvents.length && directEvents.length > 0) {
+            console.warn('[MemoryRecall][L2] 因果链合并检测到异常（可能 causedBy 成环），放弃本轮合并');
+            absorbedIds = [];
+        }
+        var absorbedSet = {};
+        for (var ai = 0; ai < absorbedIds.length; ai++) absorbedSet[absorbedIds[ai]] = true;
+
         // 排序：被引用多的 + 浅层的优先
         collected.sort(function(a, b) {
             var ra = refCount[a.id] || 0, rb = refCount[b.id] || 0;
             if (ra !== rb) return rb - ra;
             return (depthOf[a.id] || 99) - (depthOf[b.id] || 99);
         });
-        var _traced = collected.slice(0, maxAdd);
+
+        // maxAdd 只裁剪"普通前因"，被合并的直接命中事件必须全部保留——否则会既不在顶层编号、
+        // 又没有前因内容可渲染，导致该事件彻底从 prompt 里消失。
+        var _mergeNodes = collected.filter(function(pe) { return absorbedSet[pe.id]; });
+        var _normalPriors = collected.filter(function(pe) { return !absorbedSet[pe.id]; });
+        var _remainingBudget = Math.max(0, maxAdd - _mergeNodes.length);
+        var _traced = _mergeNodes.concat(_normalPriors.slice(0, _remainingBudget));
+
         if (_traced.length > 0) {
-            console.groupCollapsed('[MemoryRecall][L2] 因果链追溯 ' + _traced.length + ' 条前因（命中 ' + directEvents.length + ' 条，maxDepth=' + maxDepth + ', maxAdd=' + maxAdd + '）');
+            console.groupCollapsed('[MemoryRecall][L2] 因果链追溯 ' + _traced.length + ' 条前因（命中 ' + directEvents.length + ' 条，maxDepth=' + maxDepth + ', maxAdd=' + maxAdd
+                + (absorbedIds.length > 0 ? '，链路合并 ' + absorbedIds.length + ' 条' : '') + '）');
             _traced.forEach(function(pe, idx) {
                 console.log('[' + (idx + 1) + '] 深度=' + (depthOf[pe.id] || '?') + ' 被引=' + (refCount[pe.id] || 0) + ' id=' + pe.id
-                    + ' | ' + (pe.title || '') + '：' + (pe.description || ''));
+                    + (absorbedSet[pe.id] ? ' 🔗合并(原为直接命中)' : '') + ' | ' + (pe.title || '') + '：' + (pe.description || ''));
             });
             console.groupEnd();
         } else if (directEvents.length > 0) {
             console.log('[MemoryRecall][L2] 因果链追溯：命中 ' + directEvents.length + ' 条事件均无可追溯前因');
         }
-        return _traced;
+        return { traced: _traced, absorbedIds: absorbedIds };
     }
 
     // =========================================================================
@@ -850,6 +1175,7 @@ var memoryRecall = (function() {
         clearCacheL2: clearCacheL2,
         recallL2Events: recallL2Events,
         traceCausation: traceCausation,
+        _refreshAliasMap: _refreshAliasMap,
         getStats: getStats,
         float32ToBuffer: float32ToBuffer,
         bufferToFloat32: bufferToFloat32

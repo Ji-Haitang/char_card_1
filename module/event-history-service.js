@@ -134,7 +134,7 @@ var eventHistoryService = (function() {
     // eventMeta（批次级滚动状态：arcs + facts）
     // =========================================================================
 
-    function _defaultMeta() { return { arcs: {}, facts: {} }; }
+    function _defaultMeta() { return { arcs: {}, facts: {}, aliases: {} }; }
 
     function loadMeta() {
         var meta = null;
@@ -149,6 +149,7 @@ var eventHistoryService = (function() {
         if (!meta || typeof meta !== 'object') return _defaultMeta();
         if (!meta.arcs) meta.arcs = {};
         if (!meta.facts) meta.facts = {};
+        if (!meta.aliases) meta.aliases = {};
         return meta;
     }
 
@@ -183,6 +184,7 @@ var eventHistoryService = (function() {
         var fl = typeof floor === 'number' ? floor : 0;
         var arcUpdates = Array.isArray(updates.arcUpdates) ? updates.arcUpdates : [];
         var factUpdates = Array.isArray(updates.factUpdates) ? updates.factUpdates : [];
+        var aliasUpdates = Array.isArray(updates.aliasUpdates) ? updates.aliasUpdates : [];
 
         for (var i = 0; i < arcUpdates.length; i++) {
             var a = arcUpdates[i];
@@ -256,9 +258,17 @@ var eventHistoryService = (function() {
             }
         }
 
+        if (!meta.aliases) meta.aliases = {};
+        for (var ai = 0; ai < aliasUpdates.length; ai++) {
+            var au = aliasUpdates[ai];
+            if (!au || !au.alias || !au.canonical) continue;
+            meta.aliases[String(au.alias).trim()] = String(au.canonical).trim();
+        }
+
         saveMeta(meta);
-        if (arcUpdates.length > 0 || factUpdates.length > 0 || evicted > 0) {
+        if (arcUpdates.length > 0 || factUpdates.length > 0 || evicted > 0 || aliasUpdates.length > 0) {
             console.log('[EventHistory] eventMeta 已合并 arcs+' + arcUpdates.length + ' facts+' + factUpdates.length +
+                ' aliases+' + aliasUpdates.length +
                 (evicted > 0 ? '（淘汰旧背景事实 ' + evicted + ' 条）' : ''));
         }
         return meta;
@@ -266,7 +276,7 @@ var eventHistoryService = (function() {
 
     function importMeta(meta) {
         if (!meta || typeof meta !== 'object') { saveMeta(_defaultMeta()); return; }
-        saveMeta({ arcs: meta.arcs || {}, facts: meta.facts || {} });
+        saveMeta({ arcs: meta.arcs || {}, facts: meta.facts || {}, aliases: meta.aliases || {} });
     }
 
     function clearMeta() { saveMeta(_defaultMeta()); }
@@ -377,10 +387,22 @@ var eventHistoryService = (function() {
             lines = lines.concat(factLines);
         }
 
+        // ---- 已记录别名：防止 LLM 重复输出已知 alias，无在场/预算限制（体量通常很小）----
+        var aliasKeys = Object.keys(meta.aliases || {});
+        if (aliasKeys.length > 0) {
+            var aliasLines = [];
+            for (var al = 0; al < aliasKeys.length; al++) {
+                var aliasKey = aliasKeys[al];
+                aliasLines.push('- ' + aliasKey + ' → ' + meta.aliases[aliasKey]);
+            }
+            lines.push('【已记录别名（勿重复输出）】');
+            lines = lines.concat(aliasLines);
+        }
+
         if (hasFilter) {
             console.log('[EventHistory] 基线注入：弧光 ' + arcLines.length + '/' + arcNames.length +
                 '（跳过 完成' + arcSkipDone + '、未出场' + arcSkipAbsent + '）| 事实 ' + factLines.length + '/' + factKeys.length +
-                '（跳过 不相关' + factSkipAbsent + '）| 在场实体 ' + Object.keys(focus).length + ' 个');
+                '（跳过 不相关' + factSkipAbsent + '）| 别名 ' + aliasKeys.length + ' 条 | 在场实体 ' + Object.keys(focus).length + ' 个');
         }
 
         return lines.join('\n');

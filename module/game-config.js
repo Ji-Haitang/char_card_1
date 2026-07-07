@@ -896,7 +896,20 @@ const defaultGameData = {
     inputEnable: 1,          // 新增：自由行动输入框可用状态（1=可用，0=不可用）
     bgmName: '',             // BGM：当前正在播放的BGM路径（战斗BGM期间不更新此字段）
     bgmEnabled: true,        // BGM：是否开启（通过音乐设置弹窗控制）
-    bgmVolume: 0.5           // BGM：音量，范围 0.0~1.0（通过音乐设置弹窗控制）
+    bgmVolume: 0.5,          // BGM：音量，范围 0.0~1.0（通过音乐设置弹窗控制）
+    recallConfig: {          // 新增：<RecalledMemories> 召回管理（通过 系统设置-游戏设置-召回管理 弹窗控制）
+        previous:  { enabled: true, maxTokens: 20000 }, // <PreviousMemories>（weekHistory，超限保留较新/丢弃较旧）
+        facts:     { enabled: true, maxTokens: 2000 },  // [已确立事实]
+        arcs:      { enabled: true, maxTokens: 1000 },  // [人物弧光]
+        events:    { enabled: true, maxTokens: 5000 },  // [相关历史事件]
+        fragments: { enabled: true, maxTokens: 3000 }   // [相关碎片记忆]
+    },
+    summaryConfig: {         // 新增：总结管理（通过 系统设置-游戏设置-总结管理 弹窗控制）
+        weekly: { enabled: true },  // 每周总结（runSummary），触发时机不变，仅控制开关
+        event:  { enabled: true, turnsPerBatch: 10 }   // 事件总结（runEventSum），触发时机不变，仅控制开关；
+                                                        // turnsPerBatch 是自适应 eventStep 的归位基线（×2＝eventStep），
+                                                        // 防止「卡长场景 step+=10」正常入库归位时被硬编码默认值覆盖
+    }
 };
 
 // === BGM 配置 ===

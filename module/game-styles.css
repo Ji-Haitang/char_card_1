@@ -3732,6 +3732,16 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     min-width: 24px;
 }
 
+/* 召回管理 - token 上限输入框 */
+.gs-recall-tokens {
+    width: 72px;
+    padding: 4px 6px;
+    font-size: 14px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    text-align: right;
+}
+
 /* Range ���� */
 .gs-range {
     -webkit-appearance: none;
