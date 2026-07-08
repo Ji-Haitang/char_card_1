@@ -270,7 +270,7 @@ async function _doConnectTest() {
             }
         }
     } catch (e) {
-        status.textContent = '🔴 连接失败: ' + e.message;
+        status.textContent = '🔴 连接失败: ' + e.message + '（若使用本地代理工具，可点击"✎ 手动输入"直接填写模型名）';
         status.style.color = '#f44336';
         select.innerHTML = '<option value="">-- 连接失败 --</option>';
         select.disabled = true;

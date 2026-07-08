@@ -574,6 +574,19 @@ const slgSceneSynonyms = {
     '大街': '街道', '小巷': '街道', '巷子': '街道', '长街': '街道', '胡同': '街道'
 };
 
+// GameMode=0 → 1 切换时，LLM 可能受历史上下文影响仍输出的旧版（普通模式）地点名
+// 命中这批名称时，走旧的 img/location/{name}_{昼|夜}.webp 图片规则（兜底，见 matchScene / updateStoryDisplay）
+const legacySceneOptions = [
+    '议事厅',
+    '藏经阁',
+    '伙房',
+    '铁匠铺',
+    '后山',
+    '男弟子房',
+    '女弟子房',
+    '丹房'
+];
+
 // SLG模式可选场景配置
 const slgSceneOptions = [
     '沙漠',

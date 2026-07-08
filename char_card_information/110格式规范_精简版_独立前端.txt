@@ -11,7 +11,10 @@
 格式: 
   <SLG_MODE>
   <MAIN_TEXT>
-  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{string: 固定填"none"}}
+  {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|none
+  ...
+  {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|none
   </MAIN_TEXT>
 
   <SUMMARY>
@@ -54,6 +57,8 @@
   正文规则:
     段落数: 8-12
     段落字数: 150-250 
+    段落标记: 每段末尾用"|"分隔四个字段，每个字段代表一个标记
+    标记顺序: 段落正文|NPC名|场景名|NPC表情|none
   总结规则:
     字数: 80-120字  
   旁注规则:
@@ -69,9 +74,9 @@
   </MAIN_TEXT>
 
   <SUMMARY>
-  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
+  {{string: 以"[第x年第x月第x周] {{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
   ...
-  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
+  {{string: 以"[第x年第x月第x周] {{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
   </SUMMARY>
 
   <SIDE_NOTE>
@@ -137,9 +142,9 @@
   </MAIN_TEXT>
 
   <SUMMARY>
-  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
+  {{string: 以"[第x年第x月第x周] {{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
   ...
-  {{string: 以"xx年x月x周，{{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
+  {{string: 以"[第x年第x月第x周] {{user}}和某人在某地做了某事"形式总结<RecentHistory>标签中的内容并逐条罗列，高度概况，每条控制在50字以内}}
   </SUMMARY>
 
   <SIDE_NOTE>

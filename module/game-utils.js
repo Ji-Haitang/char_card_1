@@ -526,7 +526,12 @@ function fuzzyMatch(input, options, synonyms = {}, threshold = 0.5) {
  */
 function matchScene(sceneName) {
     if (!sceneName || sceneName === 'none' || sceneName === '无') return 'none';
-    
+
+    // 兜底：GameMode 0→1 切换时，LLM 可能仍输出旧版（普通模式）地点名，此处做精确匹配（不模糊）
+    if (typeof legacySceneOptions !== 'undefined' && legacySceneOptions.includes(sceneName.trim())) {
+        return sceneName.trim();
+    }
+
     const result = fuzzyMatch(
         sceneName,
         slgSceneOptions,

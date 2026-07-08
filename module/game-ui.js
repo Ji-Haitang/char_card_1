@@ -621,8 +621,12 @@ function updateStoryDisplay() {
                 const sceneImg = document.createElement('img');
 
                 const sceneName = pageData.scene; // 例如 演武场 / 山门 / 公田…
+                // 兜底：命中旧版（普通模式）地点名时，走旧的 img/location/{name}_{昼|夜}.webp 规则
+                const isLegacyScene = (typeof legacySceneOptions !== 'undefined') && legacySceneOptions.includes(sceneName);
                 // https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene_webp/{{当前mapLocation}}/{{昼or夜}}/{{pageData.scene}}.webp
-                const sceneUrl = _assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
+                const sceneUrl = isLegacyScene
+                    ? _assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
+                    : _assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
                 sceneImg.src = sceneUrl;
                 sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
                 try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {}
