@@ -1605,6 +1605,10 @@ body {
 .gs-switch-row {
     border-bottom-color: var(--paper-dark);
 }
+.gs-tab.active {
+    border-left-color: var(--accent-red);
+    border-bottom-color: var(--accent-red);
+}
 .gs-footer {
     background: var(--paper-base);
     border-top-color: var(--ink-light);

@@ -26,6 +26,12 @@ var storageService = (function() {
     var KEY_EVENT_WATERMARK = 'eventWatermark';
     var KEY_EVENT_STEP = 'eventStep';
     var EVENT_STEP_DEFAULT = 20;
+    // 提示词管理：全局配置（不随存档走，所有存档共用一份），结构 { [promptKey]: string }
+    var KEY_PROMPT_OVERRIDES = 'promptOverrides';
+    // 自定义世界书：全局配置（不随存档走），结构 [{id,name,keywords,content,enabled}]，数组顺序即插入顺序
+    // 两个独立的分类/插入位置：1=主角信息后/] 之前，2=</fresh>与<user_input>之间
+    var KEY_CUSTOM_WORLDBOOK = 'customWorldbook';
+    var KEY_CUSTOM_WORLDBOOK_2 = 'customWorldbook2';
 
     // localStorage key（兼容旧格式）
     var LS_APP_STATE = 'jxz_appState';
@@ -39,6 +45,9 @@ var storageService = (function() {
     var LS_EVENT_META = 'jxz_eventMeta';
     var LS_EVENT_WATERMARK = 'jxz_eventWatermark';
     var LS_EVENT_STEP = 'jxz_eventStep';
+    var LS_PROMPT_OVERRIDES = 'jxz_promptOverrides';
+    var LS_CUSTOM_WORLDBOOK = 'jxz_customWorldbook';
+    var LS_CUSTOM_WORLDBOOK_2 = 'jxz_customWorldbook2';
 
     // localStorage key（快照降级，仅存体积可控的字段）
     var LS_SNAPSHOT_APPSTATE = 'jxz_snapshot';
@@ -242,6 +251,16 @@ var storageService = (function() {
         if (typeof eventWatermark === 'number') _cache[KEY_EVENT_WATERMARK] = eventWatermark;
         var eventStep = _lsGet(LS_EVENT_STEP);
         if (typeof eventStep === 'number') _cache[KEY_EVENT_STEP] = eventStep;
+
+        // 提示词管理覆盖表
+        var promptOverrides = _lsGet(LS_PROMPT_OVERRIDES);
+        if (promptOverrides && typeof promptOverrides === 'object') _cache[KEY_PROMPT_OVERRIDES] = promptOverrides;
+
+        // 自定义世界书
+        var customWorldbook = _lsGet(LS_CUSTOM_WORLDBOOK);
+        if (Array.isArray(customWorldbook)) _cache[KEY_CUSTOM_WORLDBOOK] = customWorldbook;
+        var customWorldbook2 = _lsGet(LS_CUSTOM_WORLDBOOK_2);
+        if (Array.isArray(customWorldbook2)) _cache[KEY_CUSTOM_WORLDBOOK_2] = customWorldbook2;
 
         // 旧格式存档 → 转为索引 + 独立 key（仅缓存中）
         var saves = _lsGet(LS_SAVES);
@@ -489,6 +508,51 @@ var storageService = (function() {
         saveEventStep(EVENT_STEP_DEFAULT);
         clearL2Embeddings();
         console.log('[Storage] 已清空 L2 事件层（eventHistory/eventMeta/watermark/step/wevt_）');
+    }
+
+    // --- 提示词管理（promptOverrides，全局配置，不随存档走）---
+
+    function loadPromptOverrides() {
+        var v = _cache[KEY_PROMPT_OVERRIDES];
+        return (v && typeof v === 'object') ? v : {};
+    }
+
+    function savePromptOverride(key, text) {
+        var all = loadPromptOverrides();
+        var next = {};
+        for (var k in all) { if (all.hasOwnProperty(k)) next[k] = all[k]; }
+        next[key] = text;
+        _cache[KEY_PROMPT_OVERRIDES] = next;
+        _idbPut(KEY_PROMPT_OVERRIDES, next);
+        _lsSet(LS_PROMPT_OVERRIDES, next);
+    }
+
+    function resetPromptOverride(key) {
+        var all = loadPromptOverrides();
+        if (!all.hasOwnProperty(key)) return;
+        var next = {};
+        for (var k in all) { if (all.hasOwnProperty(k) && k !== key) next[k] = all[k]; }
+        _cache[KEY_PROMPT_OVERRIDES] = next;
+        _idbPut(KEY_PROMPT_OVERRIDES, next);
+        _lsSet(LS_PROMPT_OVERRIDES, next);
+    }
+
+    // --- 自定义世界书（customWorldbook，全局配置，不随存档走）---
+
+    function _wbKey(slot) { return (slot === '2') ? KEY_CUSTOM_WORLDBOOK_2 : KEY_CUSTOM_WORLDBOOK; }
+    function _wbLsKey(slot) { return (slot === '2') ? LS_CUSTOM_WORLDBOOK_2 : LS_CUSTOM_WORLDBOOK; }
+
+    function loadCustomWorldbook(slot) {
+        var v = _cache[_wbKey(slot)];
+        return Array.isArray(v) ? v : [];
+    }
+
+    function saveCustomWorldbook(slot, list) {
+        var value = Array.isArray(list) ? list : [];
+        var key = _wbKey(slot);
+        _cache[key] = value;
+        _idbPut(key, value);
+        _lsSet(_wbLsKey(slot), value);
     }
 
     // --- 全量快照（snapshot_db）---
@@ -1174,6 +1238,11 @@ var storageService = (function() {
         loadEventStep: loadEventStep,
         saveEventStep: saveEventStep,
         clearEventLayer: clearEventLayer,
+        loadPromptOverrides: loadPromptOverrides,
+        savePromptOverride: savePromptOverride,
+        resetPromptOverride: resetPromptOverride,
+        loadCustomWorldbook: loadCustomWorldbook,
+        saveCustomWorldbook: saveCustomWorldbook,
         restoreL2FromPayload: _restoreL2FromPayload,
         serializeL2Embeddings: _serializeL2Embeddings,
         buildSavePayload: buildSavePayload,

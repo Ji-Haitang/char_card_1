@@ -15,6 +15,88 @@
 var promptBuilder = (function() {
 
     /**
+     * 提示词覆盖读取简写：有用户自定义则用自定义，否则用原始常量
+     */
+    function _po(key, fallback) {
+        return (typeof promptOverrides !== 'undefined') ? promptOverrides.get(key, fallback) : fallback;
+    }
+
+    // --- 地点信息（PROMPT_CORE_020）拆分为按地点单独编辑的字典 ---
+    // GameMode==0 时固定使用"天山派"，GameMode!=1 时按 gameData.mapLocation 选取下列地点之一
+    var LOCATION_ORDER = [
+        '伊州', '千佛洞', '博斯坦村', '博格达峰', '哈密绿洲', '大沙海', '天山派外堡',
+        '崆峒派', '拜火教总坛', '昆仑派', '月牙泉', '沙州', '瓜州', '白驼山',
+        '迪坎儿村', '高昌', '龟兹'
+    ];
+    var LOCATION_REGISTRY = ['天山派'].concat(LOCATION_ORDER);
+    var _locationDefaults = null; // 懒加载，首次使用时从 PROMPT_CORE_020 解析
+
+    /**
+     * 从原始 PROMPT_CORE_020 模板（未经 EJS 渲染的字符串）中，按已知地点名切出每个地点的原始正文，
+     * 用于「提示词管理」弹窗展示默认内容 / 恢复默认，以及运行时按地点单独取用（支持覆盖）
+     */
+    function _parseLocationDefaults() {
+        var map = {};
+        var tpl = (typeof PROMPT_CORE_020 !== 'undefined') ? PROMPT_CORE_020 : '';
+        if (!tpl) return map;
+
+        // 天山派（GameMode==0 分支）
+        var s0Marker = '<%_ if (GameModeforLocation == 0) { _%>';
+        var e0Marker = '<%_ } else { _%>';
+        var s0 = tpl.indexOf(s0Marker);
+        var e0 = tpl.indexOf(e0Marker);
+        if (s0 !== -1 && e0 !== -1 && e0 > s0) {
+            map['天山派'] = tpl.slice(s0 + s0Marker.length, e0).replace(/^\n+|\n+$/g, '');
+        }
+
+        // 各 mapLocation 分支
+        for (var i = 0; i < LOCATION_ORDER.length; i++) {
+            var loc = LOCATION_ORDER[i];
+            var startMarker = (i === 0)
+                ? "<%_ if (mapLocationforLocation == '" + loc + "') { _%>"
+                : "<%_ } else if (mapLocationforLocation == '" + loc + "') { _%>";
+            var startIdx = tpl.indexOf(startMarker);
+            if (startIdx === -1) continue;
+            var contentStart = startIdx + startMarker.length;
+            var endIdx;
+            if (i < LOCATION_ORDER.length - 1) {
+                var nextMarker = "<%_ } else if (mapLocationforLocation == '" + LOCATION_ORDER[i + 1] + "') { _%>";
+                endIdx = tpl.indexOf(nextMarker, contentStart);
+            } else {
+                endIdx = -1;
+            }
+            if (endIdx === -1) {
+                // 最后一个地点，或找不到下一个标记：截止到收尾的 "<%_ } _%>\n<%_ } _%>"
+                endIdx = tpl.indexOf('<%_ } _%>\n<%_ } _%>', contentStart);
+            }
+            if (endIdx === -1) endIdx = tpl.length;
+            map[loc] = tpl.slice(contentStart, endIdx).replace(/^\n+|\n+$/g, '');
+        }
+        return map;
+    }
+
+    function _getLocationDefaults() {
+        if (!_locationDefaults) _locationDefaults = _parseLocationDefaults();
+        return _locationDefaults;
+    }
+
+    /**
+     * 渲染 <LocationIntroduction> 块：按 GameMode/mapLocation 选取地点，支持用户覆盖单个地点的正文
+     */
+    function _renderLocationIntro(gd) {
+        gd = gd || {};
+        var key = (gd.GameMode == 0) ? '天山派' : (gd.mapLocation || '天山派外堡');
+        var defaults = _getLocationDefaults();
+        var body = _po('LOCATION_' + key, defaults[key] || '');
+        return '\n<!-- <LocationIntroduction> is the introduction of current location in story -->\n<LocationIntroduction>\n说明: 当前{{user}}在下面介绍的地点活动，请以该地点作为故事发展的舞台，合理推进剧情，输出文本\n' +
+            body + '\n</LocationIntroduction>   \n';
+    }
+
+    // 暴露地点注册表和默认内容表，供「提示词管理」弹窗使用
+    window.LOCATION_REGISTRY = LOCATION_REGISTRY;
+    window.getPromptLocationDefaults = _getLocationDefaults;
+
+    /**
      * 获取 token 预算配置
      */
     function _getBudgetConfig() {
@@ -378,7 +460,7 @@ var promptBuilder = (function() {
      * 结构: opening + <settings>(info + character=010) + [Details...](020 + MainNPCs + 040)
      *       + <background>(<fresh> + <writing_style> + <history>(HistorySummary + [Start a new Chat]))
      */
-    function _buildMsg1System(variables, npcBlocks, historySummaryBlock) {
+    function _buildMsg1System(variables, npcBlocks, wbBlocks, historySummaryBlock) {
         var playerName = variables.user || '主角';
         var parts = [];
 
@@ -393,7 +475,7 @@ var promptBuilder = (function() {
         parts.push('## `<info>`是需参照的信息以及资料。');
         parts.push('<info>');
         parts.push('');
-        parts.push(PROMPT_INFO_TONE);
+        parts.push(_po('INFO_TONE', PROMPT_INFO_TONE));
         parts.push('');
         parts.push('</info>');
         parts.push('');
@@ -402,7 +484,7 @@ var promptBuilder = (function() {
         parts.push('<character>');
         parts.push('');
         // 010 天山派背景
-        parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_010, variables));
+        parts.push(templateEngine.renderPromptTemplate(_po('CORE_010', PROMPT_CORE_010), variables));
         parts.push('');
         parts.push('</character>');
         parts.push('</settings>');
@@ -411,8 +493,8 @@ var promptBuilder = (function() {
         // [Details of the fictional world...]
         parts.push('[Details of the fictional world the RP is set in:');
         parts.push('');
-        // 020 地点介绍
-        parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_020, variables));
+        // 020 地点介绍（按 GameMode/mapLocation 选取单个地点，支持按地点单独覆盖）
+        parts.push(_renderLocationIntro(variables.gameData));
         parts.push('');
 
         // <MainNPCs>
@@ -430,8 +512,17 @@ var promptBuilder = (function() {
         parts.push('');
 
         // 040 主角属性
-        parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_040, variables));
+        parts.push(templateEngine.renderPromptTemplate(_po('CORE_040', PROMPT_CORE_040), variables));
         parts.push('');
+
+        // 自定义世界书（系统设置-游戏设置-提示词管理 里维护，按启用状态+关键词命中插入，插入位置：</UserInfo> 与 ] 之间）
+        if (wbBlocks && wbBlocks.length > 0) {
+            for (var wi = 0; wi < wbBlocks.length; wi++) {
+                parts.push(templateEngine.renderPromptTemplate(wbBlocks[wi], variables));
+                parts.push('');
+            }
+        }
+
         parts.push(']');
         parts.push('');
 
@@ -440,7 +531,7 @@ var promptBuilder = (function() {
         parts.push('');
         parts.push('');
         // <writing_style>
-        parts.push(PROMPT_WRITING_STYLE);
+        parts.push(_po('WRITING_STYLE', PROMPT_WRITING_STYLE));
         parts.push('');
 
         // <history>
@@ -480,12 +571,20 @@ var promptBuilder = (function() {
      * 结构: 用户输入 + <MainTextGuidance> + 105列表 + 110格式规范
      *       + </history></background> + <Order> + <ThinkGuidance> + </Order>
      */
-    function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek) {
+    function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2) {
         var parts = [];
 
         // <fresh>
         parts.push(PROMPT_FRESH);
         parts.push('');
+
+        // 自定义世界书分类No.2（系统设置-游戏设置-提示词管理 里维护，插入位置：</fresh> 与 <user_input> 之间）
+        if (wbBlocks2 && wbBlocks2.length > 0) {
+            for (var w2 = 0; w2 < wbBlocks2.length; w2++) {
+                parts.push(templateEngine.renderPromptTemplate(wbBlocks2[w2], variables));
+                parts.push('');
+            }
+        }
 
         // 用户输入
         parts.push('# `<user_input>`作为本次交互的用户输入，以`<user_input>`为大纲指导，丰富细节，进行扩写后输出，不得省略或跳过用户输入中的情节，并合理流畅地继续向下推进');
@@ -517,11 +616,13 @@ var promptBuilder = (function() {
         parts.push('');
 
         // <Order> (含 EJS enamor 条件)
-        parts.push(templateEngine.renderPromptTemplate(PROMPT_ORDER, variables));
+        parts.push(templateEngine.renderPromptTemplate(_po('ORDER', PROMPT_ORDER), variables));
         parts.push('');
 
         // <ThinkGuidance> (根据模型选择版本，需经过模板引擎替换 {{user}} 等变量)
-        var thinkGuidance = isDeepSeek ? PROMPT_THINK_GUIDANCE_DEEPSEEK : PROMPT_THINK_GUIDANCE;
+        var thinkGuidance = isDeepSeek
+            ? _po('THINK_GUIDANCE_DEEPSEEK', PROMPT_THINK_GUIDANCE_DEEPSEEK)
+            : _po('THINK_GUIDANCE', PROMPT_THINK_GUIDANCE);
         parts.push(templateEngine.renderPromptTemplate(thinkGuidance, variables));
         parts.push('\n</Order>');
 
@@ -546,6 +647,8 @@ var promptBuilder = (function() {
         // --- 世界书触发 ---
         var npcBlocks = worldbookEngine.matchNPCs(userMessage, lastAssistantReply);
         var actionGuide = worldbookEngine.matchActionGuide(userMessage);
+        var wbBlocks1 = (typeof customWorldbook !== 'undefined') ? customWorldbook.match('1', userMessage, lastAssistantReply) : [];
+        var wbBlocks2 = (typeof customWorldbook !== 'undefined') ? customWorldbook.match('2', userMessage, lastAssistantReply) : [];
 
         // --- 召回与场中判定公用文本：本次用户输入 + 上一次 AI 回复（与 worldbookEngine.matchNPCs 一致）---
         var _recallSearchText = (userMessage || '') + (lastAssistantReply || '');
@@ -578,10 +681,10 @@ var promptBuilder = (function() {
 
         // --- 构建各条消息（先用空 HistorySummary 占位，后续注入）---
         var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null, _recallSearchText, _recallConfig);
-        var msg1Content = _buildMsg1System(variables, npcBlocks, historySummaryPlaceholder);
+        var msg1Content = _buildMsg1System(variables, npcBlocks, wbBlocks1, historySummaryPlaceholder);
         var msg2Content = '[Start a new chat]';
         var msg3Content = _buildMsg3LatestReply(lastAssistantReply);
-        var msg4Content = _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek);
+        var msg4Content = _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2);
         var msg5Content = templateEngine.renderPromptTemplate(
             isDeepSeek ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : PROMPT_JAILBREAK_PREFILL, variables);
         var msg6Content = isDeepSeek
@@ -621,7 +724,7 @@ var promptBuilder = (function() {
 
         // --- 构建最终 HistorySummary（含全三段）---
         var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories, recalledEvents, _recallSearchText, _recallConfig);
-        msg1Content = _buildMsg1System(variables, npcBlocks, finalHistorySummary);
+        msg1Content = _buildMsg1System(variables, npcBlocks, wbBlocks1, finalHistorySummary);
 
         // --- 组装 messages ---
         var messages = [
@@ -639,14 +742,14 @@ var promptBuilder = (function() {
         var _priorCnt = recalledEvents && recalledEvents.priorById ? Object.keys(recalledEvents.priorById).length : 0;
 
         // 折叠显示最终注入 HistorySummary 内容（[已确立事实]/[人物弧光]/[相关历史事件]/[相关碎片记忆]）
-        console.groupCollapsed('[PromptBuilder] 最终注入内容（展开查看 HistorySummary）');
         var _evBlock = _buildRecalledBlock(recalledEvents, recalledMemories, _recallSearchText, _recallConfig);
-        if (_evBlock) {
-            console.log('--- RecalledMemories（直接命中事件 ' + _directCnt + ' + 前因 ' + _priorCnt + ' | 孤儿L0 ' + (recalledMemories ? recalledMemories.length : 0) + '）---');
-            console.log(_evBlock);
-        } else {
-            console.log('（本轮无 RecalledMemories 注入）');
-        }
+        var _recallDebugText = _evBlock
+            ? ('--- RecalledMemories（直接命中事件 ' + _directCnt + ' + 前因 ' + _priorCnt + ' | 孤儿L0 ' + (recalledMemories ? recalledMemories.length : 0) + '）---\n' + _evBlock)
+            : '（本轮无 RecalledMemories 注入）';
+        try { window._lastPromptRecallBlock = _recallDebugText; } catch (e) {}
+
+        console.groupCollapsed('[PromptBuilder] 最终注入内容（展开查看 HistorySummary）');
+        console.log(_recallDebugText);
         console.groupEnd();
 
         console.log('[PromptBuilder] 6-msg 结构 | NPC注入: ' + npcBlocks.length +

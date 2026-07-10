@@ -97,7 +97,7 @@ var eventRunner = (function() {
         '  ],',
         '  "arcUpdates": [ { "name": "萧白瑚", "trajectory": "从戒备转为试探性靠近", "progress": 0.35, "newMoment": "主动来丹房送药并久留" } ],',
         '  "factUpdates": [ { "s": "主角", "p": "对萧白瑚的看法", "o": "心存好奇又愧疚", "isState": true, "trend": "投缘" } ],',
-        '  "aliasUpdates": [ { "alias": "沐雪", "canonical": "定情信物·沐雪刀" } ]',
+        '  "aliasUpdates": [ { "alias": "药酒", "canonical": "鹿茸酒" } ]',
         '}',
         '',
         '【字段规则】',

@@ -22,7 +22,10 @@ var worldbookEngine = (function() {
         for (var i = 0; i < NPC_REGISTRY.length; i++) {
             var entry = NPC_REGISTRY[i];
             if (searchText.indexOf(entry.name) !== -1) {
-                var content = window[entry.varName];
+                var overrideKey = entry.varName.replace(/^PROMPT_/, '');
+                var content = (typeof promptOverrides !== 'undefined')
+                    ? promptOverrides.get(overrideKey, window[entry.varName])
+                    : window[entry.varName];
                 if (content) {
                     matched.push({ name: entry.name, content: content });
                 }
@@ -44,7 +47,10 @@ var worldbookEngine = (function() {
             var entry = ACTION_REGISTRY[i];
             for (var k = 0; k < entry.keys.length; k++) {
                 if (userInput.indexOf(entry.keys[k]) !== -1) {
-                    return window[entry.varName] || null;
+                    var overrideKey = entry.varName.replace(/^PROMPT_/, '');
+                    return (typeof promptOverrides !== 'undefined')
+                        ? promptOverrides.get(overrideKey, window[entry.varName] || null)
+                        : (window[entry.varName] || null);
                 }
             }
         }

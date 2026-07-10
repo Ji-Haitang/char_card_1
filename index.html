@@ -543,6 +543,7 @@
                         <button class="gs-tab" data-tab="font" onclick="gsSelectTab('font')">正文字体</button>
                         <button class="gs-tab" data-tab="summary" onclick="gsSelectTab('summary')">总结管理</button>
                         <button class="gs-tab" data-tab="recall" onclick="gsSelectTab('recall')">召回管理</button>
+                        <button class="gs-tab" data-tab="prompts" onclick="gsSelectTab('prompts')">提示词管理</button>
                     </div>
                     <!-- 右侧内容区 -->
                     <div class="gs-panel-wrap">
@@ -707,6 +708,11 @@
                                 <input type="number" class="gs-recall-tokens" id="gs-recall-fragments-tokens" min="0" step="100" oninput="gsOnRecallTokens('fragments', this)">
                                 <span class="gs-switch-label">token</span>
                             </div>
+                        </div>
+                        <!-- 提示词管理 -->
+                        <div class="gs-panel" id="gs-panel-prompts">
+                            <h3>提示词管理</h3>
+                            <div id="gs-prompt-manager-root"></div>
                         </div>
                     </div>
                 </div>
@@ -897,10 +903,12 @@
         <div id="pipeline-log-modal" class="modal viewport-overlay" style="overflow: auto;">
             <div class="modal-content" style="max-width: 90%; width: 90%; margin: auto; height: 100%; max-height: none; display: flex; flex-direction: column; padding: 24px; text-align: left;">
                 <h3>Pipeline 日志</h3>
-                <div style="display:flex; gap:8px; margin-bottom:12px; flex-shrink:0;">
+                <div style="display:flex; gap:8px; margin-bottom:12px; flex-shrink:0; flex-wrap:wrap;">
                     <button id="pipeline-tab-send" class="modal-btn" onclick="switchPipelineTab('send')" style="flex:1;">发送消息</button>
                     <button id="pipeline-tab-reply" class="modal-btn cancel" onclick="switchPipelineTab('reply')" style="flex:1;">LLM 完整回复</button>
                     <button id="pipeline-tab-recall" class="modal-btn cancel" onclick="switchPipelineTab('recall')" style="flex:1;">召回信息</button>
+                    <button id="pipeline-tab-summarylog" class="modal-btn cancel" onclick="switchPipelineTab('summarylog')" style="flex:1;">每周总结日志</button>
+                    <button id="pipeline-tab-eventlog" class="modal-btn cancel" onclick="switchPipelineTab('eventlog')" style="flex:1;">事件总结日志</button>
                 </div>
                 <div id="pipeline-log-content" style="
                     flex: 1;
@@ -1120,6 +1128,7 @@
     </div>
 
     <!-- 加载外部库 -->
+    <script src="module/log-capture.js"></script>
     <script src="module/markdown-it.min.js"></script>
     
     <!-- 动态加载游戏模块 -->
@@ -1161,9 +1170,11 @@
     <script src="module/prompt-data-npc.js"></script>
     <script src="module/prompt-data-actions.js"></script>
     <script src="module/prompt-data-extra.js"></script>
+    <script src="module/prompt-overrides.js"></script>
     <script src="module/token-utils.js"></script>
     <script src="module/api-service.js"></script>
     <script src="module/worldbook-engine.js"></script>
+    <script src="module/custom-worldbook.js"></script>
     <script src="module/prompt-builder.js"></script>
     <script src="module/response-parser.js"></script>
     <script src="module/summary-history-service.js"></script>
@@ -1183,6 +1194,7 @@
     
     <!-- UI 模块 -->
     <script src="ui/config-modal.js"></script>
+    <script src="ui/prompt-manager-modal.js"></script>
     <script src="module/bgm-manager.js"></script>
 
     <script>
@@ -4356,10 +4368,14 @@ function buildSaveName() {
             const sendBtn = document.getElementById('pipeline-tab-send');
             const replyBtn = document.getElementById('pipeline-tab-reply');
             const recallBtn = document.getElementById('pipeline-tab-recall');
+            const summaryLogBtn = document.getElementById('pipeline-tab-summarylog');
+            const eventLogBtn = document.getElementById('pipeline-tab-eventlog');
             const content = document.getElementById('pipeline-log-content');
             sendBtn.className = 'modal-btn cancel';
             replyBtn.className = 'modal-btn cancel';
             recallBtn.className = 'modal-btn cancel';
+            summaryLogBtn.className = 'modal-btn cancel';
+            eventLogBtn.className = 'modal-btn cancel';
             if (tab === 'send') {
                 sendBtn.className = 'modal-btn';
                 const msgs = window._lastPipelineMessages;
@@ -4368,30 +4384,17 @@ function buildSaveName() {
             } else if (tab === 'reply') {
                 replyBtn.className = 'modal-btn';
                 content.textContent = window._lastPipelineLLMReply || '暂无数据';
+            } else if (tab === 'summarylog') {
+                summaryLogBtn.className = 'modal-btn';
+                const logs = window._summaryRunnerLogs;
+                content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「每周总结」相关日志';
+            } else if (tab === 'eventlog') {
+                eventLogBtn.className = 'modal-btn';
+                const logs = window._eventRunnerLogs;
+                content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「事件总结」相关日志';
             } else {
                 recallBtn.className = 'modal-btn';
-                const d = window._lastRecallDetails;
-                if (!d) { content.textContent = '暂无召回数据（请先发送一轮消息）'; return; }
-                const lines = [];
-                lines.push('=== 召回统计 ===');
-                lines.push('入选: ' + d.resultCount + ' 条 | 候选: ' + d.scored.length + ' 条 | 排除: ' + d.excludeCount + ' 条 | 缓存: ' + d.cacheCount + ' 条');
-                lines.push('相似度阈值: ' + d.minSim + ' | topK: ' + d.topK + ' | maxTokens: ' + d.maxTokens);
-                lines.push('');
-                lines.push('=== 查询文本 ===');
-                lines.push(d.queryText);
-                lines.push('');
-                lines.push('=== 全部候选（按相似度降序）===');
-                if (d.scored.length === 0) {
-                    lines.push('（无候选条目达到阈值）');
-                } else {
-                    d.scored.forEach(function(item) {
-                        const tag = item.inResult ? '✅ 入选' : '❌ 截断';
-                        lines.push(tag + ' [' + item.rank + '] sim=' + item.similarity.toFixed(4) + ' week=' + item.week + ' id=' + item.id);
-                        lines.push(item.text);
-                        lines.push('');
-                    });
-                }
-                content.textContent = lines.join('\n');
+                content.textContent = window._lastPromptRecallBlock || '暂无召回数据（请先发送一轮消息）';
             }
         }
 
@@ -4545,6 +4548,9 @@ function buildSaveName() {
             document.querySelectorAll('#game-settings-modal .gs-panel').forEach(p => {
                 p.classList.toggle('active', p.id === 'gs-panel-' + tabId);
             });
+            if (tabId === 'prompts' && typeof promptManagerModal !== 'undefined') {
+                promptManagerModal.render(document.getElementById('gs-prompt-manager-root'));
+            }
         }
 
         // 同步后台变量 → 弹窗控件

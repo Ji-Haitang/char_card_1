@@ -3670,11 +3670,41 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     display: block;
 }
 
+/* 小屏幕（手机）适配：防止总结管理/召回管理/提示词管理等面板里一行多控件被 modal 的 overflow:hidden 裁剪掉 */
+@media (max-width: 600px) {
+    .gs-modal-content { width: 96%; max-width: 96%; height: 94%; max-height: 94%; }
+    .gs-layout { flex-direction: column; }
+    .gs-tabs {
+        flex-direction: row;
+        flex-wrap: wrap;
+        width: 100%;
+        border-right: none;
+        border-bottom: 2px solid #e0e0e0;
+        padding: 8px 6px;
+        gap: 4px;
+    }
+    .gs-tab {
+        flex: 1 1 auto;
+        text-align: center;
+        border-left: none;
+        border-bottom: 3px solid transparent;
+        padding: 8px 6px;
+        font-size: 12px;
+    }
+    .gs-tab.active { border-left-color: transparent; border-bottom-color: #4ecdc4; }
+    .gs-panel-wrap { padding: 14px 14px; }
+    .gs-switch-label { flex: 1 1 100%; }
+    .gs-recall-tokens { width: 60px; }
+}
+
 /* ������ */
 .gs-switch-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    flex-wrap: wrap;
+    row-gap: 8px;
+    column-gap: 8px;
     padding: 14px 0;
     border-bottom: 1px solid #f0f0f0;
 }
@@ -3682,6 +3712,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
 .gs-switch-label {
     font-size: 15px;
     color: #2c2c2c;
+    min-width: 0;
 }
 
 /* Toggle ���� */
@@ -3735,6 +3766,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
 /* 召回管理 - token 上限输入框 */
 .gs-recall-tokens {
     width: 72px;
+    min-width: 0;
     padding: 4px 6px;
     font-size: 14px;
     border: 1px solid #ccc;
