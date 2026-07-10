@@ -404,6 +404,21 @@ function hideTooltip() {
     tooltip.classList.remove('show');
 }
 
+// 显示"属性查看-角色属性"里 7 项属性（根骨/悟性/心性/魅力/武学/学识/声望）当前数值对应的分档文案
+// 取基础值（不含装备加成），与 LLM prompt（040主角属性.txt）看到的数值一致
+function showAttrTooltip(event, attrName) {
+    let value;
+    if (typeof playerTalents !== 'undefined' && playerTalents.hasOwnProperty(attrName)) {
+        value = playerTalents[attrName];
+    } else if (typeof playerStats !== 'undefined' && playerStats.hasOwnProperty(attrName)) {
+        value = playerStats[attrName];
+    } else {
+        return;
+    }
+    const text = (typeof getAttributeTierText === 'function') ? getAttributeTierText(attrName, value) : '';
+    if (text) showTooltip(event, text);
+}
+
 // 渲染主要故事文本（供 pipeline / 开场白调用）
 function renderMainText(text) {
     if (!text) return;

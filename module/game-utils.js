@@ -520,6 +520,22 @@ function fuzzyMatch(input, options, synonyms = {}, threshold = 0.5) {
 }
 
 /**
+ * 按当前数值查找属性分档描述文案（与 040主角属性.txt 的 prompt 分档一致）
+ * @param {string} attrName 属性名，如 '根骨'/'武学' 等
+ * @param {number} value 当前基础数值（不含装备加成）
+ * @returns {string} 命中的分档文案，找不到则返回空字符串
+ */
+function getAttributeTierText(attrName, value) {
+    const tiers = (typeof attributeTierDescriptions !== 'undefined') ? attributeTierDescriptions[attrName] : null;
+    if (!tiers) return '';
+    const v = Number(value) || 0;
+    for (let i = 0; i < tiers.length; i++) {
+        if (v < tiers[i].max) return tiers[i].text;
+    }
+    return tiers[tiers.length - 1].text;
+}
+
+/**
  * 匹配场景名称
  * @param {string} sceneName LLM输出的场景名
  * @returns {string} 匹配后的标准场景名，或 'none'
