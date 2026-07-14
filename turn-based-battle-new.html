@@ -3239,8 +3239,12 @@ function initGame() {
     document.addEventListener('keydown', handleKeyPress);
     
     // 预加载战斗资源（立绘差分+特效）
-    const enemyName = gameState.enemy.name;
-    preloadBattleResources(enemyName).then(result => {
+    // 立绘命名规则与 getEnemyPortraitUrl 保持一致：特殊NPC用名称，普通敌人用类别
+    const enemyNpcName = gameState.enemy.name;
+    const enemySpriteBase = (enemyNpcName && commonNPCs[enemyNpcName])
+        ? enemyNpcName
+        : (gameState.enemy.category || '未知');
+    preloadBattleResources(enemySpriteBase).then(result => {
         console.log(`[战斗初始化] 资源预加载完成`);
     }).catch(err => {
         console.warn('[战斗初始化] 资源预加载出错:', err);
