@@ -5051,7 +5051,9 @@ function buildSaveName() {
             if (!isInRenderEnvironment()) {
                 apiService.loadConfig();
                 // 周总结优化：检查是否有上次未完成的 summaryBuff，自动重试
-                if (typeof summaryRunner !== 'undefined') {
+                // 仅在无 launchIntent（普通刷新/续会话）时才用「当前缓存」触发；newGame/loadSave 会先重置/覆盖
+                // summaryBuff，此处不应抢跑用旧数据发起请求，改由各自分支恢复完目标数据后再补触发（对齐 eventRunner）
+                if (typeof summaryRunner !== 'undefined' && !launchIntent) {
                     summaryRunner.resumeOnLoad();
                 }
                 // Phase L2：刷新恢复时检查是否需补建事件层（newGame/loadSave 分支会再各自调用）
@@ -5177,6 +5179,10 @@ function buildSaveName() {
                         if (typeof storageService.setSummaryBuffQueue === 'function') {
                             storageService.setSummaryBuffQueue(savePayload.summaryBuff);
                             console.log('[LoadSave] 已恢复 summaryBuff 队列, 条数=' + storageService.getSummaryBuffQueue().length);
+                        }
+                        // 周总结优化：目标存档自己的 summaryBuff 已恢复完毕，此时再检查续跑（对齐 eventRunner 的处理方式）
+                        if (typeof summaryRunner !== 'undefined') {
+                            summaryRunner.resumeOnLoad();
                         }
                         // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
                         if (typeof storageService.restoreL2FromPayload === 'function') {
