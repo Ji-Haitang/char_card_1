@@ -1613,6 +1613,23 @@ body {
     background: var(--paper-base);
     border-top-color: var(--ink-light);
 }
+
+/* Pipeline 日志弹窗 - 古风主题覆盖 */
+.pl-tabs {
+    border-bottom-color: var(--ink-light);
+}
+.pl-tab {
+    font-family: var(--font-serif);
+    color: var(--ink-medium);
+}
+.pl-tab:hover {
+    background: var(--paper-base);
+    color: var(--ink-dark);
+}
+.pl-tab.active {
+    color: var(--ink-black);
+    border-bottom-color: var(--accent-red);
+}
 .gs-range::-webkit-slider-runnable-track { background: var(--ink-medium); }
 .gs-range::-webkit-slider-thumb { background: var(--paper-light); border-color: var(--ink-light); }
 .gs-range::-moz-range-track { background: var(--ink-medium); }

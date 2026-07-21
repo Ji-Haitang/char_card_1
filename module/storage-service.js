@@ -26,6 +26,9 @@ var storageService = (function() {
     var KEY_EVENT_WATERMARK = 'eventWatermark';
     var KEY_EVENT_STEP = 'eventStep';
     var EVENT_STEP_DEFAULT = 20;
+    // L-地点 记忆层（地点信息迭代，仿 L2 事件层的独立 key 模式）
+    var KEY_LOCATION_MEMORY = 'locationMemory';
+    var KEY_LOCATION_BUFF = 'locationBuff';
     // 提示词管理：全局配置（不随存档走，所有存档共用一份），结构 { [promptKey]: string }
     var KEY_PROMPT_OVERRIDES = 'promptOverrides';
     // 自定义世界书：全局配置（不随存档走），结构 [{id,name,keywords,content,enabled}]，数组顺序即插入顺序
@@ -45,6 +48,8 @@ var storageService = (function() {
     var LS_EVENT_META = 'jxz_eventMeta';
     var LS_EVENT_WATERMARK = 'jxz_eventWatermark';
     var LS_EVENT_STEP = 'jxz_eventStep';
+    var LS_LOCATION_MEMORY = 'jxz_locationMemory';
+    var LS_LOCATION_BUFF = 'jxz_locationBuff';
     var LS_PROMPT_OVERRIDES = 'jxz_promptOverrides';
     var LS_CUSTOM_WORLDBOOK = 'jxz_customWorldbook';
     var LS_CUSTOM_WORLDBOOK_2 = 'jxz_customWorldbook2';
@@ -251,6 +256,12 @@ var storageService = (function() {
         if (typeof eventWatermark === 'number') _cache[KEY_EVENT_WATERMARK] = eventWatermark;
         var eventStep = _lsGet(LS_EVENT_STEP);
         if (typeof eventStep === 'number') _cache[KEY_EVENT_STEP] = eventStep;
+
+        // L-地点 记忆层
+        var locationMemory = _lsGet(LS_LOCATION_MEMORY);
+        if (locationMemory && typeof locationMemory === 'object') _cache[KEY_LOCATION_MEMORY] = locationMemory;
+        var locationBuff = _lsGet(LS_LOCATION_BUFF);
+        if (Array.isArray(locationBuff)) _cache[KEY_LOCATION_BUFF] = locationBuff;
 
         // 提示词管理覆盖表
         var promptOverrides = _lsGet(LS_PROMPT_OVERRIDES);
@@ -460,7 +471,9 @@ var storageService = (function() {
     }
 
     function saveEventHistory(history) {
-        var h = Array.isArray(history) ? history : [];
+        // 深拷贝隔断与旧存档/快照 payload 的共享引用（_restoreL2FromPayload 直接把 payload.eventHistory 传进来，
+        // event-history-service.js 的 appendEvents() 会对返回对象 push/sort/换槽，若不拷贝会直接污染旧 payload）
+        var h = Array.isArray(history) ? structuredClone(history) : [];
         _cache[KEY_EVENT_HISTORY] = h;
         _idbPut(KEY_EVENT_HISTORY, h);
         _lsSet(LS_EVENT_HISTORY, h);
@@ -471,7 +484,8 @@ var storageService = (function() {
     }
 
     function saveEventMeta(meta) {
-        var m = (meta && typeof meta === 'object') ? meta : { arcs: {}, facts: {} };
+        // 深拷贝隔断与旧存档/快照 payload 的共享引用（event-history-service.js 会对 meta.arcs/meta.facts 原地修改）
+        var m = (meta && typeof meta === 'object') ? structuredClone(meta) : { arcs: {}, facts: {} };
         _cache[KEY_EVENT_META] = m;
         _idbPut(KEY_EVENT_META, m);
         _lsSet(LS_EVENT_META, m);
@@ -508,6 +522,81 @@ var storageService = (function() {
         saveEventStep(EVENT_STEP_DEFAULT);
         clearL2Embeddings();
         console.log('[Storage] 已清空 L2 事件层（eventHistory/eventMeta/watermark/step/wevt_）');
+    }
+
+    // --- L-地点 记忆层（地点信息迭代，独立 key，架构对齐 eventHistory/eventMeta）---
+
+    /** 加载地点记忆字典：{ 地点名: {危险度,友善度,行动建议,子场景,version,lastUpdatedWeek,lastUpdatedAt} } */
+    function loadLocationMemory() {
+        var v = _cache[KEY_LOCATION_MEMORY];
+        return (v && typeof v === 'object') ? v : {};
+    }
+
+    function saveLocationMemory(memory) {
+        // 深拷贝后再存入 _cache：防止传入的 memory 引用自某个已缓存的存档/快照 payload（如 loadSaveSlot/importSavePayload/restoreFromSnapshot），
+        // 若不拷贝直接引用赋值，后续 location-runner.js 等处对返回的对象做原地修改（memory[loc]=...）会“泄漏”回那个旧 payload，造成串台
+        var m = (memory && typeof memory === 'object') ? structuredClone(memory) : {};
+        _cache[KEY_LOCATION_MEMORY] = m;
+        _idbPut(KEY_LOCATION_MEMORY, m);
+        _lsSet(LS_LOCATION_MEMORY, m);
+    }
+
+    // --- locationBuff 队列（地点访问采集缓冲，FIFO，完全仿 summaryBuff，不做合并/去重）---
+
+    function loadLocationBuffQueue() {
+        var v = _cache[KEY_LOCATION_BUFF];
+        return Array.isArray(v) ? v : [];
+    }
+
+    function _persistLocationBuffQueue(queue) {
+        // 同上：深拷贝隔断与旧存档/快照 payload 的共享引用（enqueue/dequeue 都走这里）
+        var q = Array.isArray(queue) ? structuredClone(queue) : [];
+        _cache[KEY_LOCATION_BUFF] = q;
+        _idbPut(KEY_LOCATION_BUFF, q);
+        _lsSet(LS_LOCATION_BUFF, q);
+    }
+
+    /** 查看队首（最早一条待处理访问），不出队 */
+    function peekLocationBuff() {
+        var q = loadLocationBuffQueue();
+        return q.length > 0 ? q[0] : null;
+    }
+
+    /** 入队：追加到队尾，不去重不合并（讨论后确认，同一地点连续两次访问严格按时序串行处理） */
+    function enqueueLocationBuff(buff) {
+        if (!buff || !buff.location || !buff.targetVisitId) return;
+        var q = loadLocationBuffQueue();
+        q.push(buff);
+        _persistLocationBuffQueue(q);
+        console.log('[Storage] locationBuff 入队, location=' + buff.location + ', targetVisitId=' + buff.targetVisitId + ', 队列长度=' + q.length);
+    }
+
+    /** 出队：按 targetVisitId 精确移除（不影响队列里其它地点/其它次访问） */
+    function dequeueLocationBuff(targetVisitId) {
+        var q = loadLocationBuffQueue();
+        if (q.length === 0) return;
+        var before = q.length;
+        q = q.filter(function(b) { return b.targetVisitId !== targetVisitId; });
+        _persistLocationBuffQueue(q);
+        console.log('[Storage] locationBuff 出队, targetVisitId=' + targetVisitId + ', ' + before + ' → ' + q.length);
+    }
+
+    /** 覆盖整个队列（供快照/存档恢复使用） */
+    function setLocationBuffQueue(raw) {
+        _persistLocationBuffQueue(Array.isArray(raw) ? raw : []);
+    }
+
+    /** 清空整个队列（新游戏/ST导入时使用） */
+    function clearLocationBuff() {
+        _persistLocationBuffQueue([]);
+    }
+
+    /** 新游戏/ST导入时清空整个 L-地点 记忆层（locationMemory + locationBuff + gameData.locationVisit） */
+    function clearLocationLayer() {
+        saveLocationMemory({});
+        clearLocationBuff();
+        if (typeof gameData !== 'undefined' && gameData) gameData.locationVisit = null;
+        console.log('[Storage] 已清空 L-地点 记忆层（locationMemory/locationBuff/locationVisit）');
     }
 
     // --- 提示词管理（promptOverrides，全局配置，不随存档走）---
@@ -564,7 +653,7 @@ var storageService = (function() {
         });
     }
 
-    var _SNAPSHOT_KEYS = ['appState', 'uiConversation', 'summaryHistory', 'weekHistory', 'markWeekUiIndex', 'summaryBuff', 'lastUserMessage', 'eventHistory', 'eventMeta', 'eventWatermark', 'eventStep'];
+    var _SNAPSHOT_KEYS = ['appState', 'uiConversation', 'summaryHistory', 'weekHistory', 'markWeekUiIndex', 'summaryBuff', 'lastUserMessage', 'eventHistory', 'eventMeta', 'eventWatermark', 'eventStep', 'locationMemory', 'locationBuff'];
 
     function _idbSnapshotRemoveAll() {
         if (!_idbSnapshotAvailable) return;
@@ -590,7 +679,9 @@ var storageService = (function() {
             eventHistory:    structuredClone(loadEventHistory()),
             eventMeta:       structuredClone(loadEventMeta()),
             eventWatermark:  loadEventWatermark(),
-            eventStep:       loadEventStep()
+            eventStep:       loadEventStep(),
+            locationMemory:  structuredClone(loadLocationMemory()),
+            locationBuff:    structuredClone(loadLocationBuffQueue())
         };
         _snapshotCache = snap;
         if (_idbSnapshotAvailable) {
@@ -605,7 +696,9 @@ var storageService = (function() {
                 idbSnapshot.put('eventHistory',    snap.eventHistory),
                 idbSnapshot.put('eventMeta',       snap.eventMeta),
                 idbSnapshot.put('eventWatermark',  snap.eventWatermark),
-                idbSnapshot.put('eventStep',       snap.eventStep)
+                idbSnapshot.put('eventStep',       snap.eventStep),
+                idbSnapshot.put('locationMemory',  snap.locationMemory),
+                idbSnapshot.put('locationBuff',    snap.locationBuff)
             ]);
         }
         // localStorage 降级：仅存体积可控的字段
@@ -624,10 +717,14 @@ var storageService = (function() {
 
         // 还原 gameData
         if (snap.appState.gameData) {
+            // 深拷贝隔断：snap.appState.gameData 虽是快照创建时 structuredClone 出来的独立对象，
+            // 但 mergeWithDefaults 不克隆数组字段，合并后仍会与 _snapshotCache 共享引用；
+            // 这里再克隆一次，避免下一次读取 _snapshotCache 时被此前的原地修改污染
+            var _snapGameDataClone = structuredClone(snap.appState.gameData);
             if (typeof mergeWithDefaults === 'function' && typeof defaultGameData !== 'undefined') {
-                gameData = mergeWithDefaults(snap.appState.gameData, defaultGameData);
+                gameData = mergeWithDefaults(_snapGameDataClone, defaultGameData);
             } else if (typeof gameData !== 'undefined') {
-                gameData = snap.appState.gameData;
+                gameData = _snapGameDataClone;
             }
             if (typeof syncVariablesFromGameData === 'function') syncVariablesFromGameData();
             saveAppState({ gameData: gameData });
@@ -657,6 +754,10 @@ var storageService = (function() {
         saveEventMeta(snap.eventMeta || { arcs: {}, facts: {} });
         saveEventWatermark(typeof snap.eventWatermark === 'number' ? snap.eventWatermark : 0);
         saveEventStep(typeof snap.eventStep === 'number' ? snap.eventStep : EVENT_STEP_DEFAULT);
+
+        // 还原 L-地点 记忆层
+        saveLocationMemory(snap.locationMemory || {});
+        setLocationBuffQueue(snap.locationBuff);
 
         console.log('[Storage] 已从快照还原状态');
         return true;
@@ -804,9 +905,11 @@ var storageService = (function() {
     }
 
     function saveSummaryHistory(history) {
-        _cache[KEY_SUMMARY_HISTORY] = history;
-        _idbPut(KEY_SUMMARY_HISTORY, history);
-        _lsSet(LS_SUMMARY_HISTORY, history);
+        // 深拷贝隔断与旧存档/快照 payload 的共享引用（同 saveEventHistory/saveWeekHistory 等的加固）
+        var h = Array.isArray(history) ? structuredClone(history) : [];
+        _cache[KEY_SUMMARY_HISTORY] = h;
+        _idbPut(KEY_SUMMARY_HISTORY, h);
+        _lsSet(LS_SUMMARY_HISTORY, h);
     }
 
     // --- Week History (供 weekHistoryService 使用，仅 index 独立前端链路) ---
@@ -816,9 +919,11 @@ var storageService = (function() {
     }
 
     function saveWeekHistory(history) {
-        _cache[KEY_WEEK_HISTORY] = history;
-        _idbPut(KEY_WEEK_HISTORY, history);
-        _lsSet(LS_WEEK_HISTORY, history);
+        // 深拷贝隔断与旧存档/快照 payload 的共享引用（week-history-service.js 的 replaceByMarkWeek() 会对记录元素原地改 summaryText/source）
+        var h = Array.isArray(history) ? structuredClone(history) : [];
+        _cache[KEY_WEEK_HISTORY] = h;
+        _idbPut(KEY_WEEK_HISTORY, h);
+        _lsSet(LS_WEEK_HISTORY, h);
     }
 
     // --- 存档系统 ---
@@ -898,6 +1003,8 @@ var storageService = (function() {
             eventWatermark: loadEventWatermark(),
             eventStep: loadEventStep(),
             l2Embeddings: l2Export,
+            locationMemory: structuredClone(loadLocationMemory()),
+            locationBuff: structuredClone(loadLocationBuffQueue()),
             previewWeek: (typeof gameData !== 'undefined' && gameData) ? gameData.currentWeek : null,
             previewLocation: (typeof gameData !== 'undefined' && gameData) ? gameData.mapLocation : null,
             createdAt: Date.now()
@@ -1009,6 +1116,11 @@ var storageService = (function() {
         // 恢复 L2 事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
         _restoreL2FromPayload(payload);
 
+        // 恢复 L-地点 记忆层（locationMemory/locationBuff；老存档/ST导入无此字段时回退空字典/空队列）
+        saveLocationMemory(payload.locationMemory || {});
+        setLocationBuffQueue(payload.locationBuff);
+        console.log('[Storage] 已恢复 locationMemory(' + Object.keys(payload.locationMemory || {}).length + '个地点) / locationBuff(' + (Array.isArray(payload.locationBuff) ? payload.locationBuff.length : 0) + '条)');
+
         console.log('[Storage] 存档导入: ' + id + ' (' + (payload.saveName || '导入存档') + ')');
         return id;
     }
@@ -1067,6 +1179,8 @@ var storageService = (function() {
             eventWatermark: loadEventWatermark(),
             eventStep: loadEventStep(),
             l2Embeddings: _inclVec ? _serializeL2Embeddings() : [],
+            locationMemory: loadLocationMemory(),
+            locationBuff: loadLocationBuffQueue(),
             createdAt: Date.now()
         };
     }
@@ -1238,6 +1352,15 @@ var storageService = (function() {
         loadEventStep: loadEventStep,
         saveEventStep: saveEventStep,
         clearEventLayer: clearEventLayer,
+        loadLocationMemory: loadLocationMemory,
+        saveLocationMemory: saveLocationMemory,
+        loadLocationBuffQueue: loadLocationBuffQueue,
+        peekLocationBuff: peekLocationBuff,
+        enqueueLocationBuff: enqueueLocationBuff,
+        dequeueLocationBuff: dequeueLocationBuff,
+        setLocationBuffQueue: setLocationBuffQueue,
+        clearLocationBuff: clearLocationBuff,
+        clearLocationLayer: clearLocationLayer,
         loadPromptOverrides: loadPromptOverrides,
         savePromptOverride: savePromptOverride,
         resetPromptOverride: resetPromptOverride,

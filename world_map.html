@@ -1037,6 +1037,21 @@
                 // 用传入数据覆盖默认的 npcCurrentFavor
                 npcCurrentFavor = { ...npcCurrentFavor, ...favorByName };
             } catch (e) {}
+
+            // 5) 地点信息迭代：locationOverrides（父页传来，locationMemory 里已更新地点的 危险度/友善度/行动建议）
+            // 浅合并覆盖 locationDangerInfo，只影响有数据的地点，其它地点保持硬编码默认值；
+            // index - SR.html 的 showWorldMap() 不传这个参数，收不到参数时这里直接跳过，行为和现在完全一样
+            try {
+                const overridesRaw = q.get('locationOverrides');
+                if (overridesRaw) {
+                    const overrides = JSON.parse(overridesRaw);
+                    Object.keys(overrides).forEach(function(loc) {
+                        if (locationDangerInfo[loc]) {
+                            Object.assign(locationDangerInfo[loc], overrides[loc]);
+                        }
+                    });
+                }
+            } catch (e) { /* 解析失败静默忽略，保留硬编码默认值 */ }
         }
 
         // 初始化地图标记

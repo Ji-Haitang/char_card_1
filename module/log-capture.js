@@ -2,8 +2,9 @@
  * log-capture.js - 轻量控制台日志拦截器
  *
  * 拦截 console.log，按前缀分流到内存环形缓冲区（各保留最近 20 条），
- * 供"历史管理-日志查看"弹窗的"每周总结日志"/"事件总结日志"标签页展示。
- * 每周总结日志 = [SummaryRunner] + [WeekHistory]；事件总结日志 = [EventRunner] + [EventHistory]。
+ * 供"历史管理-日志查看"弹窗的"每周总结日志"/"事件总结日志"/"地点更新日志"标签页展示。
+ * 每周总结日志 = [SummaryRunner] + [WeekHistory]；事件总结日志 = [EventRunner] + [EventHistory]；
+ * 地点更新日志 = [LocationRunner]。
  * 不修改 console.log 原有行为（原样透传），仅额外做一次前缀匹配 + 缓冲。
  *
  * 依赖：无（应尽早加载，越早越能捕获到启动阶段的日志）
@@ -14,6 +15,7 @@
 
     window._summaryRunnerLogs = window._summaryRunnerLogs || [];
     window._eventRunnerLogs = window._eventRunnerLogs || [];
+    window._locationRunnerLogs = window._locationRunnerLogs || [];
 
     function _stringifyArg(a) {
         if (typeof a === 'string') return a;
@@ -32,11 +34,13 @@
             if (typeof first === 'string') {
                 var isSummary = (first.indexOf('[SummaryRunner]') === 0 || first.indexOf('[WeekHistory]') === 0);
                 var isEvent = (first.indexOf('[EventRunner]') === 0 || first.indexOf('[EventHistory]') === 0);
-                if (isSummary || isEvent) {
+                var isLocation = (first.indexOf('[LocationRunner]') === 0);
+                if (isSummary || isEvent || isLocation) {
                     var parts = [];
                     for (var i = 0; i < arguments.length; i++) parts.push(_stringifyArg(arguments[i]));
                     var line = parts.join(' ');
-                    _pushLine(isSummary ? window._summaryRunnerLogs : window._eventRunnerLogs, line);
+                    var target = isSummary ? window._summaryRunnerLogs : (isEvent ? window._eventRunnerLogs : window._locationRunnerLogs);
+                    _pushLine(target, line);
                 }
             }
         } catch (e) { /* 拦截失败不影响原有日志输出 */ }

@@ -654,6 +654,14 @@
                                 <span class="gs-switch-label">总结轮次</span>
                                 <input type="number" class="gs-recall-tokens" id="gs-summary-turns-per-batch" min="1" step="1" oninput="gsOnSummaryTurnsPerBatch(this)">
                             </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">地点更新</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-summary-location-toggle" onchange="gsOnSummaryLocationToggle(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-summary-location-hint">开</span>
+                                </label>
+                            </div>
                         </div>
                         <!-- 召回管理 -->
                         <div class="gs-panel" id="gs-panel-recall">
@@ -902,13 +910,14 @@
         <!-- Pipeline日志弹窗 -->
         <div id="pipeline-log-modal" class="modal viewport-overlay" style="overflow: auto;">
             <div class="modal-content" style="max-width: 90%; width: 90%; margin: auto; height: 100%; max-height: none; display: flex; flex-direction: column; padding: 24px; text-align: left;">
-                <h3>Pipeline 日志</h3>
-                <div style="display:flex; gap:8px; margin-bottom:12px; flex-shrink:0; flex-wrap:wrap;">
-                    <button id="pipeline-tab-send" class="modal-btn" onclick="switchPipelineTab('send')" style="flex:1;">发送消息</button>
-                    <button id="pipeline-tab-reply" class="modal-btn cancel" onclick="switchPipelineTab('reply')" style="flex:1;">LLM 完整回复</button>
-                    <button id="pipeline-tab-recall" class="modal-btn cancel" onclick="switchPipelineTab('recall')" style="flex:1;">召回信息</button>
-                    <button id="pipeline-tab-summarylog" class="modal-btn cancel" onclick="switchPipelineTab('summarylog')" style="flex:1;">每周总结日志</button>
-                    <button id="pipeline-tab-eventlog" class="modal-btn cancel" onclick="switchPipelineTab('eventlog')" style="flex:1;">事件总结日志</button>
+                <!-- <h3>Pipeline 日志</h3> -->
+                <div class="pl-tabs" id="pipeline-log-tabs">
+                    <button id="pipeline-tab-send" class="pl-tab active" onclick="switchPipelineTab('send')">发送消息</button>
+                    <button id="pipeline-tab-reply" class="pl-tab" onclick="switchPipelineTab('reply')">LLM 完整回复</button>
+                    <button id="pipeline-tab-recall" class="pl-tab" onclick="switchPipelineTab('recall')">召回信息</button>
+                    <button id="pipeline-tab-summarylog" class="pl-tab" onclick="switchPipelineTab('summarylog')">每周总结日志</button>
+                    <button id="pipeline-tab-eventlog" class="pl-tab" onclick="switchPipelineTab('eventlog')">事件总结日志</button>
+                    <button id="pipeline-tab-locationlog" class="pl-tab" onclick="switchPipelineTab('locationlog')">地点更新日志</button>
                 </div>
                 <div id="pipeline-log-content" style="
                     flex: 1;
@@ -1190,6 +1199,7 @@
     <script src="module/sync-utils.js"></script>
     <script src="module/memory-recall.js"></script>
     <script src="module/event-runner.js"></script>
+    <script src="module/location-runner.js"></script>
     <script src="module/pipeline.js"></script>
     
     <!-- UI 模块 -->
@@ -1675,8 +1685,26 @@ const outPut = `
                 if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
                 if (typeof hydrateVariableSystemFromGameData === 'function') hydrateVariableSystemFromGameData(gameData);
                 if (typeof storageService !== 'undefined') {
+                    // 开场白正文/摘要补录到 uiConversation / summaryHistory（此函数每次刷新非读档路径都会重跑，
+                    // 用 uiConversation 是否为空作为“只记录一次”的判断，避免刷新时重复写入）
+                    try {
+                        var _uiConvForOpening = storageService.loadUIConversation();
+                        if (_uiConvForOpening.length === 0 && parsed.mainText) {
+                            var _openingMsgId = 'a' + Date.now();
+                            storageService.appendUIConversation({
+                                id: _openingMsgId,
+                                role: 'assistant',
+                                content: parsed.mainText,
+                                week: typeof currentWeek !== 'undefined' ? currentWeek : 1,
+                                createdAt: Date.now()
+                            });
+                            if (parsed.summaries && parsed.summaries.length > 0 && typeof summaryHistoryService !== 'undefined') {
+                                summaryHistoryService.append(parsed.summaries, 'special_event', _openingMsgId);
+                            }
+                            console.log('[applyParsedInit] 开场白已补录到 uiConversation/summaryHistory, UIid=' + _openingMsgId);
+                        }
+                    } catch (e) { console.error('[applyParsedInit] 开场白补录 uiConversation/summaryHistory 失败:', e); }
                     try { storageService.saveAppState({ gameData: gameData }); } catch(_){}
-                    // 开场白摘要已作为 special_event 写入 summaryHistory
                     // 开场白后无快照，重生成按钮应被禁用（updateFreeActionInputState 控制）
                 }
                 console.log('[applyParsedInit] 同步完成, gameData.summary_Small:', (gameData.summary_Small || '').substring(0, 80));
@@ -2786,7 +2814,10 @@ const outPut = `
             if (GameMode === 1) {
                 // 根据mapLocation的危险度进行事件判定（仅在haveEvent开启时）
                 if (haveEvent) {
-                    const dangerLevel = locationDangerLevels[mapLocation] || '低';
+                    // 地点信息迭代：优先读取 locationMemory 里 AI 已更新的危险度评级，没有再退回编译期默认值
+                    const _locMemForDanger = (typeof storageService !== 'undefined' && storageService.loadLocationMemory) ? storageService.loadLocationMemory() : {};
+                    const dangerLevel = (_locMemForDanger[mapLocation] && _locMemForDanger[mapLocation].危险度 && _locMemForDanger[mapLocation].危险度.评级)
+                        || locationDangerLevels[mapLocation] || '低';
                     const eventChance = dangerEventChance[dangerLevel];
                     
                     const eventRoll = Math.random() * 100;
@@ -2968,6 +2999,30 @@ const outPut = `
             GameMode = 0;
             slgModeData = [];
 
+            // 地点信息迭代：采集本次访问期间的历史，入队待处理（在 GameMode/mapLocation 重置之前）
+            if (gameData.locationVisit && gameData.locationVisit.active) {
+                var _lv = gameData.locationVisit;
+                var _uiConv = storageService.loadUIConversation();
+                var _assistantMsgsInRange = _uiConv.slice(_lv.startUiIndex)
+                    .filter(function(m) { return m.role === 'assistant' && m.id; });
+                var _summaryById = {};
+                summaryHistoryService.getAll().forEach(function(s) {
+                    if (s.UIid) _summaryById[s.UIid] = s.summaryText;
+                });
+                // 逐条楼层：有摘要用摘要，没摘要（缺 UIid，如老存档/special_event）直接用原文兜底
+                var _locText = _assistantMsgsInRange
+                    .map(function(m) { return _summaryById[m.id] || m.content; })
+                    .join('\n');
+                storageService.enqueueLocationBuff({
+                    location: _lv.location,
+                    targetVisitId: 'lv_' + Date.now(),
+                    turnCount: _assistantMsgsInRange.length,
+                    text: _locText
+                    // 不含 prevText：改为在 location-runner 真正处理时才实时读取
+                });
+            }
+            gameData.locationVisit = null;
+
             // 重置下山相关的变量
             randomEvent = 0;
             battleEvent = 0;
@@ -3018,6 +3073,10 @@ const outPut = `
             //     showModal(message);
             // }
             await handleMessageOutput(message);
+            // 地点信息迭代：异步触发地点更新（不阻塞本回合提交）
+            if (typeof locationRunner !== 'undefined') {
+                setTimeout(function() { locationRunner.scheduleLocationUpdate(); }, 0);
+            }
         }
 
         // 下拉菜单控制
@@ -3244,9 +3303,10 @@ function importSaveFromLoadModal() {
 
 function importSTSaveFromLoadModal() {
     closeLoadModal();
-    // 取消上一个存档可能还在飞行中的 周总结/事件总结 请求，避免旧结果写回导入后的新存档
+    // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果写回导入后的新存档
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
+    if (typeof locationRunner !== 'undefined') locationRunner.cancel();
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.jsonl';
@@ -3270,7 +3330,9 @@ function importSTSaveFromLoadModal() {
             }
             try {
                 var payload = result.payload;
-                gameData = mergeWithDefaults(payload.gameData, defaultGameData);
+                // 深拷贝隔断：下面 importSavePayload(payload) 会把这个 payload 存进 _cache[id]，
+                // mergeWithDefaults 不克隆数组字段（如 companionNPC/triggeredEvents），若不先克隆会与该存档槽共享引用
+                gameData = mergeWithDefaults(structuredClone(payload.gameData), defaultGameData);
                 hydrateVariableSystemFromGameData(gameData);
                 var summaryHistory = payload.summaryHistory || [];
                 if (summaryHistory.length > 0) {
@@ -3321,6 +3383,8 @@ function importSTSaveFromLoadModal() {
                     storageService.setMarkWeekUiIndex(mwIdx);
                 }
                 if (typeof storageService.clearSummaryBuff === 'function') storageService.clearSummaryBuff();
+                // 地点信息迭代：ST 存档没有 locationMemory 概念，直接清空（同 clearSummaryBuff 的处理方式）
+                if (typeof storageService.clearLocationLayer === 'function') storageService.clearLocationLayer();
                 if (!isInRenderEnvironment() && typeof bgmManager !== 'undefined') {
                     bgmManager.init(document.getElementById('bgm-player'));
                     if (gameData.bgmName) bgmManager.resume(gameData.bgmName);
@@ -3343,12 +3407,15 @@ function importSTSaveFromLoadModal() {
 }
 
 function loadSaveSlot(saveId) {
-    // 取消上一个存档可能还在飞行中的 周总结/事件总结 请求，避免旧结果在切换存档后写回新存档（“串台”）
+    // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果在切换存档后写回新存档（“串台”）
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
+    if (typeof locationRunner !== 'undefined') locationRunner.cancel();
     var payload = storageService.loadSave(saveId);
     if (!payload) { showModal('存档加载失败'); return; }
-    gameData = mergeWithDefaults(payload.gameData, defaultGameData);
+    // 深拷贝隔断：payload === _cache[saveId] 的直接引用，mergeWithDefaults 不克隆数组字段，
+    // 不先克隆的话合并后的 gameData 会和这个存档槽缓存对象共享引用，后续原地修改会污染旧存档
+    gameData = mergeWithDefaults(structuredClone(payload.gameData), defaultGameData);
     hydrateVariableSystemFromGameData(gameData);
     var summaryHistory = payload.summaryHistory || [];
     if (summaryHistory.length > 0) {
@@ -3394,6 +3461,15 @@ function loadSaveSlot(saveId) {
             memoryRecall.init();
         }
         console.log('[LoadSave] 已恢复 ' + payload.embeddings.length + ' 条 embedding 记录');
+    }
+    // 地点信息迭代：恢复目标存档自己的 locationMemory/locationBuff，恢复完毕后再检查续跑
+    if (typeof storageService.saveLocationMemory === 'function') {
+        storageService.saveLocationMemory(payload.locationMemory || {});
+        storageService.setLocationBuffQueue(payload.locationBuff);
+        console.log('[LoadSave] 已恢复 locationMemory(' + Object.keys(payload.locationMemory || {}).length + '个地点) / locationBuff(' + (Array.isArray(payload.locationBuff) ? payload.locationBuff.length : 0) + '条)');
+    }
+    if (typeof locationRunner !== 'undefined') {
+        locationRunner.resumeOnLoad();
     }
     // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
     if (typeof storageService.restoreL2FromPayload === 'function') {
@@ -3519,9 +3595,10 @@ function exportSave() {
 }
 
 function importSave() {
-    // 取消上一个存档可能还在飞行中的 周总结/事件总结 请求，避免旧结果写回导入后的新存档
+    // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果写回导入后的新存档
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
+    if (typeof locationRunner !== 'undefined') locationRunner.cancel();
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
@@ -3530,7 +3607,9 @@ function importSave() {
         if (!file) return;
         try {
             var payload = await storageService.importSaveFromJson(file);
-            gameData = mergeWithDefaults(payload.gameData, defaultGameData);
+            // 深拷贝隔断：即使这里的 payload 是本次新解析出的对象，克隆一层也能保证以后无论
+            // 是否有代码把它缓存进 _cache，gameData 的数组字段都不会与其它对象共享引用
+            gameData = mergeWithDefaults(structuredClone(payload.gameData), defaultGameData);
             hydrateVariableSystemFromGameData(gameData);
             var summaryHistory = payload.summaryHistory || [];
             if (summaryHistory.length > 0) {
@@ -3577,6 +3656,15 @@ function importSave() {
                     memoryRecall.init();
                 }
                 console.log('[ImportSave] 已恢复 ' + payload.embeddings.length + ' 条 embedding 记录');
+            }
+            // 地点信息迭代：恢复目标存档自己的 locationMemory/locationBuff，恢复完毕后再检查续跑
+            if (typeof storageService.saveLocationMemory === 'function') {
+                storageService.saveLocationMemory(payload.locationMemory || {});
+                storageService.setLocationBuffQueue(payload.locationBuff);
+                console.log('[ImportSave] 已恢复 locationMemory(' + Object.keys(payload.locationMemory || {}).length + '个地点) / locationBuff(' + (Array.isArray(payload.locationBuff) ? payload.locationBuff.length : 0) + '条)');
+            }
+            if (typeof locationRunner !== 'undefined') {
+                locationRunner.resumeOnLoad();
             }
             // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
             if (typeof storageService.restoreL2FromPayload === 'function') {
@@ -4365,35 +4453,26 @@ function buildSaveName() {
         }
         function switchPipelineTab(tab) {
             _pipelineCurrentTab = tab;
-            const sendBtn = document.getElementById('pipeline-tab-send');
-            const replyBtn = document.getElementById('pipeline-tab-reply');
-            const recallBtn = document.getElementById('pipeline-tab-recall');
-            const summaryLogBtn = document.getElementById('pipeline-tab-summarylog');
-            const eventLogBtn = document.getElementById('pipeline-tab-eventlog');
+            document.querySelectorAll('#pipeline-log-modal .pl-tab').forEach(t => {
+                t.classList.toggle('active', t.id === 'pipeline-tab-' + tab);
+            });
             const content = document.getElementById('pipeline-log-content');
-            sendBtn.className = 'modal-btn cancel';
-            replyBtn.className = 'modal-btn cancel';
-            recallBtn.className = 'modal-btn cancel';
-            summaryLogBtn.className = 'modal-btn cancel';
-            eventLogBtn.className = 'modal-btn cancel';
             if (tab === 'send') {
-                sendBtn.className = 'modal-btn';
                 const msgs = window._lastPipelineMessages;
                 if (!msgs || !msgs.length) { content.textContent = '暂无数据'; return; }
                 content.textContent = msgs.map((m, i) => '[' + i + '] ' + m.role + ':\n' + (typeof m.content === 'string' ? m.content : JSON.stringify(m.content))).join('\n\n---\n\n');
             } else if (tab === 'reply') {
-                replyBtn.className = 'modal-btn';
                 content.textContent = window._lastPipelineLLMReply || '暂无数据';
             } else if (tab === 'summarylog') {
-                summaryLogBtn.className = 'modal-btn';
                 const logs = window._summaryRunnerLogs;
                 content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「每周总结」相关日志';
             } else if (tab === 'eventlog') {
-                eventLogBtn.className = 'modal-btn';
                 const logs = window._eventRunnerLogs;
                 content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「事件总结」相关日志';
+            } else if (tab === 'locationlog') {
+                const logs = window._locationRunnerLogs;
+                content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「地点更新」相关日志';
             } else {
-                recallBtn.className = 'modal-btn';
                 content.textContent = window._lastPromptRecallBlock || '暂无召回数据（请先发送一轮消息）';
             }
         }
@@ -4498,6 +4577,24 @@ function buildSaveName() {
                 // 传递所有NPC的好感度
                 npcFavorability: JSON.stringify(npcFavorability)
             });
+
+            // 地点信息迭代：把 locationMemory 里已更新地点的 危险度/友善度/行动建议 转换成
+            // world_map.html 原有的英文字段名结构，供其浅合并覆盖显示（未更新的地点不受影响）
+            if (typeof storageService !== 'undefined' && storageService.loadLocationMemory) {
+                const _locMem = storageService.loadLocationMemory();
+                const _overrides = {};
+                Object.keys(_locMem).forEach(function(loc) {
+                    const d = _locMem[loc];
+                    const o = {};
+                    if (d.危险度) o.danger = { level: d.危险度.评级, desc: d.危险度.说明 };
+                    if (d.友善度) o.friendly = { level: d.友善度.评级, desc: d.友善度.说明 };
+                    if (Array.isArray(d.行动建议)) o.advice = d.行动建议;
+                    if (Object.keys(o).length > 0) _overrides[loc] = o;
+                });
+                if (Object.keys(_overrides).length > 0) {
+                    params.set('locationOverrides', JSON.stringify(_overrides));
+                }
+            }
             
             // 构建世界地图URL（根据你的实际部署情况调整）
             // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/world_map.html?${params.toString()}`;
@@ -4615,6 +4712,11 @@ function buildSaveName() {
                 : Math.round(((typeof storageService !== 'undefined' ? storageService.loadEventStep() : 20) || 20) / 2);
             if (eventToggle)  eventToggle.checked = _eventEnabled;
             if (eventHint)    eventHint.textContent = _eventEnabled ? '开' : '关';
+            const _locationEnabled = !(_summaryCfg.location && _summaryCfg.location.enabled === false);
+            const locationToggle = document.getElementById('gs-summary-location-toggle');
+            const locationHint   = document.getElementById('gs-summary-location-hint');
+            if (locationToggle) locationToggle.checked = _locationEnabled;
+            if (locationHint)   locationHint.textContent = _locationEnabled ? '开' : '关';
 
             // 召回管理
             const _recallDefaults = { previous: 20000, facts: 2000, arcs: 1000, events: 5000, fragments: 3000 };
@@ -4712,6 +4814,15 @@ function buildSaveName() {
             if (!gameData.summaryConfig.event) gameData.summaryConfig.event = { enabled: true };
             gameData.summaryConfig.event.enabled = el.checked;
             const hint = document.getElementById('gs-summary-event-hint');
+            if (hint) hint.textContent = el.checked ? '开' : '关';
+        }
+
+        function gsOnSummaryLocationToggle(el) {
+            if (typeof gameData === 'undefined') return;
+            if (!gameData.summaryConfig) gameData.summaryConfig = {};
+            if (!gameData.summaryConfig.location) gameData.summaryConfig.location = { enabled: true };
+            gameData.summaryConfig.location.enabled = el.checked;
+            const hint = document.getElementById('gs-summary-location-hint');
             if (hint) hint.textContent = el.checked ? '开' : '关';
         }
 
@@ -4894,6 +5005,8 @@ function buildSaveName() {
             if (_runningSummary) summaryRunner.cancel();
             // Phase L2：取消正在飞行的事件抽取（防止旧结果写回已回滚的事件层）
             if (typeof eventRunner !== 'undefined') eventRunner.cancel();
+            // 地点信息迭代：取消正在飞行的地点更新请求（防止旧结果写回已回滚的 locationMemory）
+            if (typeof locationRunner !== 'undefined') locationRunner.cancel();
 
             // 从全量快照还原所有字段
             var ok = storageService.restoreFromSnapshot();
@@ -5060,6 +5173,10 @@ function buildSaveName() {
                 if (typeof eventRunner !== 'undefined' && !launchIntent) {
                     eventRunner.resumeOnLoad();
                 }
+                // 地点信息迭代：同样只在无 launchIntent 时用当前缓存触发，newGame/loadSave 分支各自恢复完数据后再补触发
+                if (typeof locationRunner !== 'undefined' && !launchIntent) {
+                    locationRunner.resumeOnLoad();
+                }
 
                 // newGame 意图：从 URL 参数应用创建数据（file:// 下 localStorage 跨页不可用）
                 if (launchIntent === 'newGame') {
@@ -5083,6 +5200,10 @@ function buildSaveName() {
                     }
                     if (typeof memoryRecall !== 'undefined' && typeof memoryRecall.clearCacheL2 === 'function') {
                         memoryRecall.clearCacheL2();
+                    }
+                    // 地点信息迭代：新游戏时清空 L-地点 记忆层（locationMemory/locationBuff/locationVisit）
+                    if (typeof storageService !== 'undefined' && typeof storageService.clearLocationLayer === 'function') {
+                        storageService.clearLocationLayer();
                     }
                     // 新游戏时清空 weekHistory
                     if (typeof weekHistoryService !== 'undefined') {
@@ -5122,7 +5243,8 @@ function buildSaveName() {
                 if (launchIntent === 'loadSave' && loadSaveId) {
                     var savePayload = storageService.loadSave(loadSaveId);
                     if (savePayload && savePayload.gameData) {
-                        gameData = mergeWithDefaults(savePayload.gameData, defaultGameData);
+                        // 深拷贝隔断：savePayload === _cache[loadSaveId] 的直接引用，理由同 loadSaveSlot()
+                        gameData = mergeWithDefaults(structuredClone(savePayload.gameData), defaultGameData);
                         hydrateVariableSystemFromGameData(gameData);
                         syncVariablesFromGameData();
                         if (savePayload.summaryHistory && savePayload.summaryHistory.length > 0 && typeof summaryHistoryService !== 'undefined') {
@@ -5183,6 +5305,15 @@ function buildSaveName() {
                         // 周总结优化：目标存档自己的 summaryBuff 已恢复完毕，此时再检查续跑（对齐 eventRunner 的处理方式）
                         if (typeof summaryRunner !== 'undefined') {
                             summaryRunner.resumeOnLoad();
+                        }
+                        // 地点信息迭代：恢复目标存档自己的 locationMemory/locationBuff，恢复完毕后再检查续跑
+                        if (typeof storageService.saveLocationMemory === 'function') {
+                            storageService.saveLocationMemory(savePayload.locationMemory || {});
+                            storageService.setLocationBuffQueue(savePayload.locationBuff);
+                            console.log('[LoadSave] 已恢复 locationMemory(' + Object.keys(savePayload.locationMemory || {}).length + '个地点) / locationBuff(' + (Array.isArray(savePayload.locationBuff) ? savePayload.locationBuff.length : 0) + '条)');
+                        }
+                        if (typeof locationRunner !== 'undefined') {
+                            locationRunner.resumeOnLoad();
                         }
                         // Phase L2：恢复事件层（eventHistory/eventMeta/watermark/step + wevt_ 向量）
                         if (typeof storageService.restoreL2FromPayload === 'function') {

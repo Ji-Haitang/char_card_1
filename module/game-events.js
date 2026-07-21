@@ -1029,6 +1029,17 @@ function setupMessageListeners() {
             checkAllValueRanges();
             updateAllDisplays();
             // await saveGameData();
+
+            // 地点信息迭代：记录本次访问起点（目的地 + 当时的 uiConversation 下标）
+            // module/game-events.js 是 ST/独立前端共享文件，index - SR.html 没有 storageService，必须加环境守卫
+            if (!isInRenderEnvironment() && typeof storageService !== 'undefined' && typeof gameData !== 'undefined') {
+                gameData.locationVisit = {
+                    active: true,
+                    location: mapLocation,
+                    startUiIndex: storageService.loadUIConversation().length,
+                    startWeek: currentWeek
+                };
+            }
             
             // 发送消息
             GameMode = 1;

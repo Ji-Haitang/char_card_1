@@ -3654,6 +3654,45 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     font-weight: bold;
 }
 
+/* Pipeline 日志弹窗 - 水平选项卡（复用 gs-tab 的视觉语言，改为底部下划线指示当前项） */
+.pl-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 12px;
+    flex-shrink: 0;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.pl-tab {
+    flex: 1 1 auto;
+    background: none;
+    border: none;
+    border-bottom: 3px solid transparent;
+    padding: 10px 8px;
+    text-align: center;
+    cursor: pointer;
+    font-size: 14px;
+    color: #555;
+    transition: all 0.18s;
+    white-space: nowrap;
+}
+
+.pl-tab:hover {
+    background: #f0f0f0;
+    color: #2c2c2c;
+}
+
+.pl-tab.active {
+    color: #2c2c2c;
+    font-weight: bold;
+    border-bottom-color: #4ecdc4;
+}
+
+@media (max-width: 600px) {
+    .pl-tab { font-size: 12px; padding: 8px 4px; }
+}
+
 /* �Ҳ������� */
 .gs-panel-wrap {
     flex: 1;

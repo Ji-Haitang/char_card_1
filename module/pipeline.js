@@ -1040,6 +1040,8 @@ var pipeline = (function() {
             var _pipelineSummaryRunning = typeof summaryRunner !== 'undefined' && summaryRunner.isRunning();
             console.log('[Pipeline] catch 触发还原 | summaryRunner.isRunning=' + _pipelineSummaryRunning);
             if (_pipelineSummaryRunning) summaryRunner.cancel();
+            // 地点信息迭代：同样取消正在飞行的地点更新请求（防止旧结果写回已回滚的 locationMemory）
+            if (typeof locationRunner !== 'undefined') locationRunner.cancel();
             storageService.restoreFromSnapshot();
             if (typeof renderMainText === 'function') {
                 renderMainText(_getLastAssistantContent(storageService.loadUIConversation()));

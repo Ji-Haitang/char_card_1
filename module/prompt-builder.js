@@ -81,20 +81,185 @@ var promptBuilder = (function() {
     }
 
     /**
-     * 渲染 <LocationIntroduction> 块：按 GameMode/mapLocation 选取地点，支持用户覆盖单个地点的正文
+     * 取单个地点的编译期默认正文（地点信息迭代新增，供 location-runner.js 在该地点从未被 AI 更新过时兜底取用）
+     */
+    function getPromptLocationDefault(location) {
+        return _getLocationDefaults()[location] || '';
+    }
+
+    /**
+     * 渲染单个子场景块（地点信息迭代新增）：把 {介绍, 备注, 任意其它标题:[...]}
+     * 渲染回和原文同款缩进格式的文本片段，"介绍"在最前，"备注"在最后，其余按对象自身key顺序排列
+     */
+    function _renderSubSceneBlock(name, entry, indent) {
+        entry = entry || {};
+        var lines = [indent + name + ':'];
+        var innerIndent = indent + '  ';
+        if (entry['介绍'] !== undefined) lines.push(innerIndent + '介绍: ' + entry['介绍']);
+        Object.keys(entry).forEach(function(k) {
+            if (k === '介绍' || k === '备注') return;
+            var v = entry[k];
+            if (Array.isArray(v)) {
+                lines.push(innerIndent + k + ':');
+                v.forEach(function(item) { lines.push(innerIndent + '  - ' + item); });
+            } else if (typeof v === 'string') {
+                lines.push(innerIndent + k + ': ' + v);
+            }
+        });
+        if (entry['备注'] !== undefined) lines.push(innerIndent + '备注: ' + entry['备注']);
+        return lines.join('\n');
+    }
+
+    /**
+     * 把结构化的地点数据（locationMemory[location]）渲染回和 020地点介绍.txt 同款缩进格式的文本（地点信息迭代新增）
+     * 供两处使用：1) _renderLocationIntro 注入最终 prompt；2) location-runner.js 组装"当前地点信息"喂给下一次 LLM 请求
+     */
+    function renderLocationText(location, data) {
+        if (!data) return '';
+        var lines = [location + ':', '  概览:'];
+        if (data['危险度']) {
+            lines.push('    危险度:');
+            lines.push('      评级: ' + (data['危险度']['评级'] || ''));
+            lines.push('      说明: ' + (data['危险度']['说明'] || ''));
+        }
+        if (data['友善度']) {
+            lines.push('    友善度:');
+            lines.push('      评级: ' + (data['友善度']['评级'] || ''));
+            lines.push('      说明: ' + (data['友善度']['说明'] || ''));
+        }
+        if (Array.isArray(data['行动建议']) && data['行动建议'].length > 0) {
+            lines.push('    行动建议:');
+            data['行动建议'].forEach(function(item) { lines.push('      - ' + item); });
+        }
+        if (data['子场景'] && typeof data['子场景'] === 'object') {
+            lines.push('  子场景:');
+            Object.keys(data['子场景']).forEach(function(name) {
+                lines.push(_renderSubSceneBlock(name, data['子场景'][name], '    '));
+            });
+        }
+        return lines.join('\n');
+    }
+
+    /**
+     * 渲染 <LocationIntroduction> 块：按 GameMode/mapLocation 选取地点
+     * v0.6 更新（地点信息迭代）：取消 promptOverrides 中间层，优先级简化为 locationMemory（存档自身演变值）→ 编译期默认正文
      */
     function _renderLocationIntro(gd) {
         gd = gd || {};
         var key = (gd.GameMode == 0) ? '天山派' : (gd.mapLocation || '天山派外堡');
         var defaults = _getLocationDefaults();
-        var body = _po('LOCATION_' + key, defaults[key] || '');
+        var memoryEntry = (typeof storageService !== 'undefined' && storageService.loadLocationMemory)
+            ? storageService.loadLocationMemory()[key] : null;
+        var bodyFromMemory = memoryEntry ? renderLocationText(key, memoryEntry) : '';
+        var body = bodyFromMemory || defaults[key] || '';
         return '\n<!-- <LocationIntroduction> is the introduction of current location in story -->\n<LocationIntroduction>\n说明: 当前{{user}}在下面介绍的地点活动，请以该地点作为故事发展的舞台，合理推进剧情，输出文本\n' +
             body + '\n</LocationIntroduction>   \n';
+    }
+
+    /**
+     * 把地点介绍文本（编译期默认正文，或 renderLocationText 生成的文本）解析回结构化对象（地点信息迭代新增）
+     * 与 renderLocationText 互为逆运算，供「提示词管理」结构化编辑器在该地点从未被 AI 更新过时，
+     * 从编译期默认文本引导出一份初始结构化数据，而不需要给17个地点手工另写一份JSON默认值
+     * @returns {object} { 危险度:{评级,说明}|null, 友善度:{评级,说明}|null, 行动建议:string[], 子场景:{名:{介绍,备注,标签:string[]}} }
+     */
+    function parseLocationText(text) {
+        var result = { 危险度: null, 友善度: null, 行动建议: [], 子场景: {} };
+        if (!text) return result;
+        var rawLines = String(text).split('\n');
+        var lines = [];
+        for (var i = 0; i < rawLines.length; i++) {
+            if (!rawLines[i].trim()) continue;
+            var m = rawLines[i].match(/^(\s*)(.*?)\s*$/);
+            lines.push({ indent: m[1].length, content: m[2] });
+        }
+        if (lines.length === 0) return result;
+
+        function parseKV(content) {
+            var mm = content.match(/^([^:]+):\s*(.*)$/);
+            if (!mm) return null;
+            return { key: mm[1].trim(), value: mm[2].trim() };
+        }
+
+        var idx = 1; // 第一行是「地点名:」，跳过
+        while (idx < lines.length) {
+            var line = lines[idx];
+            var top = line.content.replace(/:$/, '');
+            if (top === '概览') {
+                var overviewIndent = line.indent;
+                idx++;
+                while (idx < lines.length && lines[idx].indent > overviewIndent) {
+                    var sub = lines[idx];
+                    var subKey = sub.content.replace(/:$/, '');
+                    if (subKey === '危险度' || subKey === '友善度') {
+                        var levelIndent = sub.indent;
+                        idx++;
+                        var obj = { 评级: '', 说明: '' };
+                        while (idx < lines.length && lines[idx].indent > levelIndent) {
+                            var kv = parseKV(lines[idx].content);
+                            if (kv) obj[kv.key] = kv.value;
+                            idx++;
+                        }
+                        result[subKey] = obj;
+                    } else if (subKey === '行动建议') {
+                        var adviceIndent = sub.indent;
+                        idx++;
+                        var arr = [];
+                        while (idx < lines.length && lines[idx].indent > adviceIndent) {
+                            var itemLine = lines[idx].content;
+                            if (itemLine.indexOf('- ') === 0) arr.push(itemLine.slice(2).trim());
+                            idx++;
+                        }
+                        result['行动建议'] = arr;
+                    } else {
+                        idx++;
+                    }
+                }
+            } else if (top === '子场景') {
+                var sceneListIndent = line.indent;
+                idx++;
+                while (idx < lines.length && lines[idx].indent > sceneListIndent) {
+                    var sceneLine = lines[idx];
+                    var sceneName = sceneLine.content.replace(/:$/, '');
+                    var sceneIndent = sceneLine.indent;
+                    idx++;
+                    var sceneObj = {};
+                    while (idx < lines.length && lines[idx].indent > sceneIndent) {
+                        var fLine = lines[idx];
+                        var mm2 = fLine.content.match(/^([^:]+):\s*(.*)$/);
+                        if (!mm2) { idx++; continue; }
+                        var fKey = mm2[1].trim();
+                        var fVal = mm2[2].trim();
+                        if (fVal) {
+                            sceneObj[fKey] = fVal; // 介绍/备注：单行值
+                            idx++;
+                        } else {
+                            // 无值 → 该标签下是列表
+                            var listIndent = fLine.indent;
+                            idx++;
+                            var list = [];
+                            while (idx < lines.length && lines[idx].indent > listIndent) {
+                                var li = lines[idx].content;
+                                if (li.indexOf('- ') === 0) list.push(li.slice(2).trim());
+                                idx++;
+                            }
+                            sceneObj[fKey] = list;
+                        }
+                    }
+                    result['子场景'][sceneName] = sceneObj;
+                }
+            } else {
+                idx++;
+            }
+        }
+        return result;
     }
 
     // 暴露地点注册表和默认内容表，供「提示词管理」弹窗使用
     window.LOCATION_REGISTRY = LOCATION_REGISTRY;
     window.getPromptLocationDefaults = _getLocationDefaults;
+    window.getPromptLocationDefault = getPromptLocationDefault;
+    window.renderLocationText = renderLocationText;
+    window.parseLocationText = parseLocationText;
 
     /**
      * 获取 token 预算配置

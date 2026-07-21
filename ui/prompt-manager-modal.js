@@ -4,13 +4,18 @@
  * 按 prompt-builder.js 实际拼装顺序，列出可查看/可编辑的 prompt 条目：
  *   - 可调条目：编辑后保存为 promptOverrides（全局配置，不随存档走）
  *   - 不可调条目：仅供查看原始内容
- *   - 下拉框条目（地点信息/主要NPC信息/行动指导/思维链）：任选一项单独编辑
+ *   - 下拉框条目（主要NPC信息/行动指导/思维链）：任选一项单独编辑，存 promptOverrides
+ *   - 地点信息（v0.6 更新）：不再走 promptOverrides，直接读/写 locationMemory（随存档走），
+ *     编辑器是独立的结构化表单（危险度/友善度/行动建议/子场景分开填写），不是自由文本框
  *
  * 依赖：prompt-overrides.js, prompt-data-core.js, prompt-data-npc.js,
- *        prompt-data-actions.js, prompt-data-extra.js, prompt-builder.js（LOCATION_REGISTRY）
+ *        prompt-data-actions.js, prompt-data-extra.js, prompt-builder.js（LOCATION_REGISTRY/renderLocationText/parseLocationText/getPromptLocationDefault）,
+ *        storage-service.js（loadLocationMemory/saveLocationMemory）
  */
 
 var promptManagerModal = (function() {
+
+    var _locState = null; // 地点信息结构化编辑器的当前表单状态
 
     // --- 行动指导：从 ACTION_REGISTRY 的首个 key 推导展示名 ---
     function _actionDisplayName(entry) {
@@ -111,9 +116,10 @@ var promptManagerModal = (function() {
     function _pmLocationDropdown() {
         var opts = '<option value="">-- 选择地点 --</option>';
         var reg = window.LOCATION_REGISTRY || [];
+        var memory = (typeof storageService !== 'undefined' && storageService.loadLocationMemory) ? storageService.loadLocationMemory() : {};
         for (var i = 0; i < reg.length; i++) {
-            var overridden = (typeof promptOverrides !== 'undefined') && promptOverrides.has('LOCATION_' + reg[i]);
-            opts += '<option value="' + _escapeHtml(reg[i]) + '">' + _escapeHtml(reg[i]) + (overridden ? '（已自定义）' : '') + '</option>';
+            var overridden = !!memory[reg[i]];
+            opts += '<option value="' + _escapeHtml(reg[i]) + '">' + _escapeHtml(reg[i]) + (overridden ? '（已被AI更新）' : '') + '</option>';
         }
         return '<div class="gs-switch-row">' +
             '<span class="gs-switch-label">地点信息</span>' +
@@ -169,8 +175,7 @@ var promptManagerModal = (function() {
     function _openLocation(sel) {
         var name = sel.value;
         if (!name) return;
-        var defaults = (typeof getPromptLocationDefaults === 'function') ? getPromptLocationDefaults() : {};
-        open('LOCATION_' + name, '地点信息 - ' + name, true, defaults[name] || '');
+        _openLocationStructured(name);
         sel.selectedIndex = 0;
     }
 
@@ -317,6 +322,314 @@ var promptManagerModal = (function() {
         _close();
         _refreshRoot();
         if (typeof showModal === 'function') showModal('已恢复默认提示词');
+    }
+
+    // ========== 地点信息结构化编辑器（v0.6：不再走 promptOverrides，直接读写 locationMemory） ==========
+
+    var _LOC_LEVEL_OPTIONS = ['低', '较低', '中', '较高', '高'];
+
+    // 把 locationMemory[name] 或 parseLocationText() 解析出的结构化对象，转成表单编辑用的可变状态
+    function _locBuildStateFromData(name, data) {
+        data = data || {};
+        var danger = data['危险度'] || {};
+        var friendly = data['友善度'] || {};
+        var advice = Array.isArray(data['行动建议']) ? data['行动建议'] : [];
+        var scenesObj = data['子场景'] || {};
+        var scenes = [];
+        Object.keys(scenesObj).forEach(function(sceneName) {
+            var s = scenesObj[sceneName] || {};
+            var labels = [];
+            Object.keys(s).forEach(function(k) {
+                if (k === '介绍' || k === '备注') return;
+                var v = s[k];
+                var valStr = Array.isArray(v) ? v.join('\n') : (typeof v === 'string' ? v : '');
+                labels.push({ label: k, value: valStr });
+            });
+            scenes.push({
+                name: sceneName,
+                intro: (typeof s['介绍'] === 'string') ? s['介绍'] : '',
+                note: (typeof s['备注'] === 'string') ? s['备注'] : '',
+                labels: labels
+            });
+        });
+        return {
+            name: name,
+            dangerLevel: danger['评级'] || '',
+            dangerDesc: danger['说明'] || '',
+            friendlyLevel: friendly['评级'] || '',
+            friendlyDesc: friendly['说明'] || '',
+            advice: advice.join('\n'),
+            scenes: scenes
+        };
+    }
+
+    function _locLevelSelectHtml(id, current) {
+        var html = '<select id="' + id + '" class="cfg-input" style="width:100px">';
+        html += '<option value=""' + (current ? '' : ' selected') + '>--</option>';
+        _LOC_LEVEL_OPTIONS.forEach(function(lv) {
+            html += '<option value="' + lv + '"' + (lv === current ? ' selected' : '') + '>' + lv + '</option>';
+        });
+        html += '</select>';
+        return html;
+    }
+
+    function _locRenderSceneBlock(scene, sceneIdx) {
+        var html = '<div class="loc-scene-block" style="border:1px solid rgba(128,128,128,0.35);border-radius:8px;padding:10px;margin-bottom:10px;">';
+        html += '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;">';
+        html += '<input type="text" class="cfg-input loc-scene-name" data-scene-idx="' + sceneIdx + '" value="' + _escapeHtml(scene.name) + '" placeholder="子场景名" style="flex:1">';
+        html += '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._locRemoveScene(' + sceneIdx + ')">删除该子场景</button>';
+        html += '</div>';
+        html += '<div style="margin-bottom:6px;"><label style="font-size:12px;opacity:0.7;">介绍</label><textarea class="cfg-input loc-scene-intro" data-scene-idx="' + sceneIdx + '" style="width:100%;min-height:50px;box-sizing:border-box;">' + _escapeHtml(scene.intro) + '</textarea></div>';
+        scene.labels.forEach(function(lb, labelIdx) {
+            html += '<div class="pm-wb-row" style="display:flex;align-items:center;gap:6px;margin-bottom:6px;">' +
+                '<button class="cfg-btn cfg-btn-subtle" style="flex:1;min-width:0;text-align:left" onclick="promptManagerModal._locOpenLabelEditor(' + sceneIdx + ',' + labelIdx + ')">' +
+                _escapeHtml(lb.label || '(未命名标签)') +
+                '</button>' +
+                '<button onclick="promptManagerModal._locRemoveLabel(' + sceneIdx + ',' + labelIdx + ')" ' +
+                'style="background:none;border:none;color:#c0392b;font-size:18px;line-height:1;cursor:pointer;padding:2px 8px;" title="删除标签">×</button>' +
+                '</div>';
+        });
+        html += '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._locAddLabel(' + sceneIdx + ')" style="margin-bottom:6px;">+ 新增标签</button>';
+        html += '<div><label style="font-size:12px;opacity:0.7;">备注</label><textarea class="cfg-input loc-scene-note" data-scene-idx="' + sceneIdx + '" style="width:100%;min-height:40px;box-sizing:border-box;">' + _escapeHtml(scene.note) + '</textarea></div>';
+        html += '</div>';
+        return html;
+    }
+
+    function _locRenderFormHtml() {
+        var st = _locState;
+        var html = '';
+        html += '<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">';
+        html += '<div><label style="font-size:12px;opacity:0.7;display:block;">危险度评级</label>' + _locLevelSelectHtml('loc-danger-level', st.dangerLevel) + '</div>';
+        html += '<div style="flex:1;min-width:160px;"><label style="font-size:12px;opacity:0.7;display:block;">危险度说明</label><input type="text" id="loc-danger-desc" class="cfg-input" style="width:100%;box-sizing:border-box;" value="' + _escapeHtml(st.dangerDesc) + '"></div>';
+        html += '</div>';
+        html += '<div style="display:flex;gap:12px;margin-bottom:10px;flex-wrap:wrap;">';
+        html += '<div><label style="font-size:12px;opacity:0.7;display:block;">友善度评级</label>' + _locLevelSelectHtml('loc-friendly-level', st.friendlyLevel) + '</div>';
+        html += '<div style="flex:1;min-width:160px;"><label style="font-size:12px;opacity:0.7;display:block;">友善度说明</label><input type="text" id="loc-friendly-desc" class="cfg-input" style="width:100%;box-sizing:border-box;" value="' + _escapeHtml(st.friendlyDesc) + '"></div>';
+        html += '</div>';
+        html += '<div style="margin-bottom:10px;"><label style="font-size:12px;opacity:0.7;display:block;">行动建议（一行一条）</label><textarea id="loc-advice" class="cfg-input" style="width:100%;min-height:70px;box-sizing:border-box;">' + _escapeHtml(st.advice) + '</textarea></div>';
+        html += '<h4 style="margin:10px 0 6px;">子场景</h4>';
+        html += '<div id="loc-scenes-container">';
+        st.scenes.forEach(function(scene, idx) { html += _locRenderSceneBlock(scene, idx); });
+        html += '</div>';
+        html += '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._locAddScene()" style="margin-bottom:10px;">+ 新增子场景</button>';
+        return html;
+    }
+
+    // 把 DOM 上当前输入同步回 _locState（在任何结构性改动——增删场景/标签——之前必须先调用，防止丢失用户已输入内容）
+    function _locSyncFromDom() {
+        var st = _locState;
+        if (!st) return;
+        var dl = document.getElementById('loc-danger-level'); if (dl) st.dangerLevel = dl.value;
+        var dd = document.getElementById('loc-danger-desc'); if (dd) st.dangerDesc = dd.value;
+        var fl = document.getElementById('loc-friendly-level'); if (fl) st.friendlyLevel = fl.value;
+        var fd = document.getElementById('loc-friendly-desc'); if (fd) st.friendlyDesc = fd.value;
+        var adv = document.getElementById('loc-advice'); if (adv) st.advice = adv.value;
+        document.querySelectorAll('.loc-scene-name').forEach(function(el) {
+            var idx = parseInt(el.getAttribute('data-scene-idx'), 10);
+            if (st.scenes[idx]) st.scenes[idx].name = el.value;
+        });
+        document.querySelectorAll('.loc-scene-intro').forEach(function(el) {
+            var idx = parseInt(el.getAttribute('data-scene-idx'), 10);
+            if (st.scenes[idx]) st.scenes[idx].intro = el.value;
+        });
+        document.querySelectorAll('.loc-scene-note').forEach(function(el) {
+            var idx = parseInt(el.getAttribute('data-scene-idx'), 10);
+            if (st.scenes[idx]) st.scenes[idx].note = el.value;
+        });
+    }
+
+    function _locRefreshFormArea() {
+        var container = document.getElementById('loc-editor-body');
+        if (container) container.innerHTML = _locRenderFormHtml();
+    }
+
+    function _locAddScene() {
+        _locSyncFromDom();
+        _locState.scenes.push({ name: '', intro: '', note: '', labels: [] });
+        _locRefreshFormArea();
+    }
+
+    function _locRemoveScene(idx) {
+        _locSyncFromDom();
+        _locState.scenes.splice(idx, 1);
+        _locRefreshFormArea();
+    }
+
+    function _locAddLabel(sceneIdx) {
+        _locSyncFromDom();
+        _locState.scenes[sceneIdx].labels.push({ label: '', value: '' });
+        _locRefreshFormArea();
+        _locOpenLabelEditor(sceneIdx, _locState.scenes[sceneIdx].labels.length - 1);
+    }
+
+    function _locRemoveLabel(sceneIdx, labelIdx) {
+        _locSyncFromDom();
+        _locState.scenes[sceneIdx].labels.splice(labelIdx, 1);
+        _locRefreshFormArea();
+    }
+
+    // 标签编辑弹窗（参考世界书条目编辑弹窗的样式，层叠在地点信息编辑弹窗之上）
+    function _locOpenLabelEditor(sceneIdx, labelIdx) {
+        _locSyncFromDom();
+        var scene = _locState && _locState.scenes[sceneIdx];
+        var lb = scene && scene.labels[labelIdx];
+        if (!lb) return;
+
+        var existing = document.getElementById('loc-label-editor-modal');
+        if (existing) existing.remove();
+
+        var innerHtml =
+            '<h3 class="cfg-title">编辑标签</h3>' +
+            '<div class="cfg-field"><label class="cfg-label">标签名称</label>' +
+            '<input id="loc-label-editor-name" type="text" class="cfg-input" value="' + _escapeHtml(lb.label) + '" placeholder="如：建筑特色"></div>' +
+            '<div class="cfg-field"><label class="cfg-label">具体介绍（一行一条）</label>' +
+            '<textarea id="loc-label-editor-value" class="cfg-input" style="width:100%;height:32vh;min-height:160px;white-space:pre-wrap;overflow-wrap:break-word;word-break:break-word;box-sizing:border-box;resize:vertical">' + _escapeHtml(lb.value) + '</textarea></div>' +
+            '<div class="modal-buttons" style="margin-top:12px">' +
+            '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._locCloseLabelEditor()">取消</button>' +
+            '<button class="cfg-btn cfg-btn-green" onclick="promptManagerModal._locSaveLabelEditor(' + sceneIdx + ',' + labelIdx + ')">保存</button>' +
+            '</div>';
+
+        var html;
+        if (typeof fitModalToViewport === 'function') {
+            html = '<div id="loc-label-editor-modal" class="modal viewport-overlay" style="z-index:5100">' +
+                '<div class="modal-content" style="display:flex;justify-content:flex-start;align-items:center;background:transparent;border:none;box-shadow:none;padding:3% 16px;box-sizing:border-box;overflow-y:auto">' +
+                '<div class="cfg-panel" style="max-width:560px;width:100%;box-sizing:border-box">' + innerHtml + '</div>' +
+                '</div></div>';
+        } else {
+            html = '<div id="loc-label-editor-modal" class="cfg-overlay" style="z-index:5100">' +
+                '<div class="cfg-panel" style="max-width:560px;width:100%;box-sizing:border-box">' + innerHtml + '</div>' +
+                '</div>';
+        }
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modal = document.getElementById('loc-label-editor-modal');
+        if (typeof fitModalToViewport === 'function') {
+            modal.style.display = 'block';
+            requestAnimationFrame(function() {
+                fitModalToViewport(modal);
+                if (typeof bindModalAutoFit === 'function') bindModalAutoFit(modal);
+            });
+        } else {
+            modal.style.display = 'flex';
+        }
+    }
+
+    function _locCloseLabelEditor() {
+        var modal = document.getElementById('loc-label-editor-modal');
+        if (modal) modal.remove();
+    }
+
+    function _locSaveLabelEditor(sceneIdx, labelIdx) {
+        var nameEl = document.getElementById('loc-label-editor-name');
+        var valueEl = document.getElementById('loc-label-editor-value');
+        var scene = _locState && _locState.scenes[sceneIdx];
+        var lb = scene && scene.labels[labelIdx];
+        if (!lb) { _locCloseLabelEditor(); return; }
+        if (nameEl) lb.label = nameEl.value;
+        if (valueEl) lb.value = valueEl.value;
+        _locCloseLabelEditor();
+        _locRefreshFormArea();
+    }
+
+    function _openLocationStructured(name) {
+        var memory = (typeof storageService !== 'undefined' && storageService.loadLocationMemory) ? storageService.loadLocationMemory() : {};
+        var existing = memory[name];
+        var data;
+        if (existing) {
+            data = existing;
+        } else {
+            var raw = (typeof getPromptLocationDefault === 'function') ? getPromptLocationDefault(name) : '';
+            data = (typeof parseLocationText === 'function') ? parseLocationText(raw) : {};
+        }
+        _locState = _locBuildStateFromData(name, data);
+
+        var existingModal = document.getElementById('prompt-editor-modal');
+        if (existingModal) existingModal.remove();
+
+        var innerHtml =
+            '<h3 class="cfg-title">地点信息 - ' + _escapeHtml(name) + (existing ? ' <span style="font-size:13px;color:#4CAF50">（已被AI更新过）</span>' : '') + '</h3>' +
+            '<p class="cfg-hint">修改后点击“保存”生效，直接写入该地点在当前存档的 locationMemory。点击“恢复默认”会删除该地点的 locationMemory 记录，下次改由 AI 更新或编译期默认正文生效。</p>' +
+            '<div id="loc-editor-body" style="max-height:55vh;overflow-y:auto;padding-right:4px;">' + _locRenderFormHtml() + '</div>' +
+            '<div class="modal-buttons" style="margin-top:12px">' +
+                '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._locResetDefault()">恢复默认</button>' +
+                '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._close()">取消</button>' +
+                '<button class="cfg-btn cfg-btn-green" onclick="promptManagerModal._locSave()">保存</button>' +
+            '</div>';
+
+        var html;
+        if (typeof fitModalToViewport === 'function') {
+            html = '<div id="prompt-editor-modal" class="modal viewport-overlay" style="z-index:5000">' +
+                '<div class="modal-content" style="display:flex;justify-content:flex-start;align-items:center;background:transparent;border:none;box-shadow:none;padding:3% 16px;box-sizing:border-box;overflow-y:auto">' +
+                '<div class="cfg-panel" style="max-width:720px;width:100%;box-sizing:border-box">' + innerHtml + '</div>' +
+                '</div></div>';
+        } else {
+            html = '<div id="prompt-editor-modal" class="cfg-overlay" style="z-index:5000">' +
+                '<div class="cfg-panel" style="max-width:720px;width:100%;box-sizing:border-box">' + innerHtml + '</div>' +
+                '</div>';
+        }
+
+        document.body.insertAdjacentHTML('beforeend', html);
+        var modal = document.getElementById('prompt-editor-modal');
+        if (typeof fitModalToViewport === 'function') {
+            modal.style.display = 'block';
+            requestAnimationFrame(function() {
+                fitModalToViewport(modal);
+                if (typeof bindModalAutoFit === 'function') bindModalAutoFit(modal);
+            });
+        } else {
+            modal.style.display = 'flex';
+        }
+    }
+
+    function _locSave() {
+        _locSyncFromDom();
+        var st = _locState;
+        if (!st || !st.name || typeof storageService === 'undefined') { _close(); return; }
+
+        var memory = storageService.loadLocationMemory();
+        var oldEntry = memory[st.name];
+        var oldVersion = (oldEntry && oldEntry.version) || 0;
+
+        var scenesObj = {};
+        st.scenes.forEach(function(scene) {
+            var sceneName = (scene.name || '').trim();
+            if (!sceneName) return;
+            var entry = {};
+            if (scene.intro && scene.intro.trim()) entry['介绍'] = scene.intro.trim();
+            scene.labels.forEach(function(lb) {
+                var labelName = (lb.label || '').trim();
+                if (!labelName) return;
+                var items = (lb.value || '').split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+                if (items.length > 0) entry[labelName] = items;
+            });
+            if (scene.note && scene.note.trim()) entry['备注'] = scene.note.trim();
+            scenesObj[sceneName] = entry;
+        });
+
+        var adviceArr = (st.advice || '').split('\n').map(function(s) { return s.trim(); }).filter(Boolean);
+
+        memory[st.name] = {
+            危险度: st.dangerLevel ? { 评级: st.dangerLevel, 说明: st.dangerDesc || '' } : null,
+            友善度: st.friendlyLevel ? { 评级: st.friendlyLevel, 说明: st.friendlyDesc || '' } : null,
+            行动建议: adviceArr,
+            子场景: scenesObj,
+            version: oldVersion + 1,
+            lastUpdatedWeek: (typeof currentWeek !== 'undefined') ? currentWeek : 0,
+            lastUpdatedAt: Date.now()
+        };
+        storageService.saveLocationMemory(memory);
+        _close();
+        _refreshRoot();
+        if (typeof showModal === 'function') showModal('已保存地点信息');
+    }
+
+    function _locResetDefault() {
+        if (typeof storageService === 'undefined' || !_locState || !_locState.name) { _close(); return; }
+        var memory = storageService.loadLocationMemory();
+        delete memory[_locState.name];
+        storageService.saveLocationMemory(memory);
+        _close();
+        _refreshRoot();
+        if (typeof showModal === 'function') showModal('已恢复默认地点信息');
     }
 
     // ========== 自定义世界书 ==========
@@ -511,6 +824,15 @@ var promptManagerModal = (function() {
         render: render,
         open: open,
         _openLocation: _openLocation,
+        _locAddScene: _locAddScene,
+        _locRemoveScene: _locRemoveScene,
+        _locAddLabel: _locAddLabel,
+        _locRemoveLabel: _locRemoveLabel,
+        _locOpenLabelEditor: _locOpenLabelEditor,
+        _locCloseLabelEditor: _locCloseLabelEditor,
+        _locSaveLabelEditor: _locSaveLabelEditor,
+        _locSave: _locSave,
+        _locResetDefault: _locResetDefault,
         _openNpc: _openNpc,
         _openAction: _openAction,
         _openThink: _openThink,

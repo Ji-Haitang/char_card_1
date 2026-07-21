@@ -1010,10 +1010,12 @@ const defaultGameData = {
     },
     summaryConfig: {         // 新增：总结管理（通过 系统设置-游戏设置-总结管理 弹窗控制）
         weekly: { enabled: true },  // 每周总结（runSummary），触发时机不变，仅控制开关
-        event:  { enabled: true, turnsPerBatch: 10 }   // 事件总结（runEventSum），触发时机不变，仅控制开关；
+        event:  { enabled: true, turnsPerBatch: 10 },  // 事件总结（runEventSum），触发时机不变，仅控制开关；
                                                         // turnsPerBatch 是自适应 eventStep 的归位基线（×2＝eventStep），
                                                         // 防止「卡长场景 step+=10」正常入库归位时被硬编码默认值覆盖
-    }
+        location: { enabled: true }  // 地点更新（location-runner.runLocationUpdate），触发时机不变，仅控制开关
+    },
+    locationVisit: null      // 新增：当前"下山地点"访问会话的临时标记（{active,location,startUiIndex,startWeek}），返回天山派时清空
 };
 
 // === BGM 配置 ===
