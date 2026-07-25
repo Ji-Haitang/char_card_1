@@ -1,0 +1,9 @@
+schema_version: 1
+module_path: char_card_data
+title: 角色卡与SLG叙事数据（天山派背景）
+scope:
+    - char_card_information/
+source_files: []
+depends_on: []
+related_to:
+    - path: dev_tools

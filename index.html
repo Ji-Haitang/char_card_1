@@ -318,6 +318,7 @@
                     <div class="npc-container" id="yishiting-npcs"></div>
                     <div class="scene-actions">
                         <button class="scene-btn" onclick="performAction('汇报', 'yishiting')">汇报</button>
+                        <button class="scene-btn" onclick="showBountyModal()">悬赏任务</button>
                     </div>
                 </div>
 
@@ -428,6 +429,31 @@
                 <div id="worldmap-modal" class="modal worldmap-modal" style="display: none; position: absolute; z-index: 3000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
                     <div class="worldmap-container" style="width: 100%; height: 100%; margin: 0; position: relative;">
                         <iframe id="worldmap-iframe" class="worldmap-iframe" style="width: 100%; height: 100%; border: none; border-radius: 10px;"></iframe>
+                    </div>
+                </div>
+
+                <!-- 悬赏任务弹窗 -->
+                <style>
+                    .bounty-card { background: rgba(255,255,255,0.06); border: 1px solid #7a6a4f; border-radius: 8px; padding: 12px; margin-bottom: 10px; cursor: pointer; }
+                    .bounty-card:hover { background: rgba(255,255,255,0.12); }
+                    .bounty-card-active { cursor: default; border-color: #d4af37; }
+                    .bounty-card-active:hover { background: rgba(255,255,255,0.06); }
+                    .bounty-card-tag { display: inline-block; font-size: 0.75rem; color: #d4af37; border: 1px solid #d4af37; border-radius: 4px; padding: 0 6px; margin-bottom: 6px; }
+                    .bounty-card-title { font-size: 1.05rem; font-weight: bold; margin-bottom: 4px; }
+                    .bounty-card-desc { font-size: 0.85rem; color: #ccc; margin-bottom: 6px; }
+                    .bounty-card-info { font-size: 0.8rem; color: #aaa; }
+                    .bounty-card-reward { font-size: 0.85rem; color: #d4af37; margin-top: 4px; }
+                    .bounty-empty-tip { text-align: center; color: #888; padding: 20px 0; }
+                </style>
+                <div id="bounty-modal" class="modal" style="display:none; position: fixed; z-index: 3100; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.7);">
+                    <div class="bounty-modal-inner" style="position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: 90%; max-width: 420px; max-height: 80vh; background: #1e1a14; border: 1px solid #7a6a4f; border-radius: 10px; padding: 20px; overflow-y: auto; color: #eee;">
+                        <div class="bounty-modal-title" style="font-size: 1.3rem; font-weight: bold; text-align: center; margin-bottom: 15px;">悬赏公告</div>
+                        <div id="bounty-list-container"></div>
+                        <div class="bounty-modal-footer" style="margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
+                            <button id="bounty-generate-btn" class="modal-btn" onclick="generateBountyTasks()">发布悬赏</button>
+                            <button id="bounty-abandon-btn" class="modal-btn" onclick="abandonBounty()" style="display:none">放弃任务</button>
+                            <button class="modal-btn cancel" onclick="closeBountyModal()">关闭</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -1189,6 +1215,7 @@
     <script src="module/summary-history-service.js"></script>
     <script src="module/week-history-service.js"></script>
     <script src="module/summary-runner.js"></script>
+    <script src="module/bounty-service.js"></script>
     <script src="module/embedding-service.js"></script>
     <script src="module/reranker.js"></script>
     <script src="module/idb-storage.js"></script>
@@ -2915,7 +2942,10 @@ const outPut = `
             if (typeof gameData !== 'undefined') gameData.battleEvent = 0;
             
             const enemyInfo = currentBattleEvent.敌方信息;
-            currentBattleType = 'event';
+            // 只防止被意外覆盖，不重新推导（worldmap-exit 悬赏分支已赋值为 'bounty' 为准）
+            if (currentBattleType !== 'bounty') {
+                currentBattleType = 'event';
+            }
             
             const battleData = {
                 player: {
@@ -4567,16 +4597,19 @@ function buildSaveName() {
             const modal = document.getElementById('worldmap-modal');
             const iframe = document.getElementById('worldmap-iframe');
             
-            // 准备传递给世界地图的数据
+            // 准备传递给世界地图的数据（只保留体积小的标量参数走URL，避免随游戏进度增长导致 "URI Too Long"）
             const params = new URLSearchParams({
                 reputation: playerStats.声望,
                 mapLocation: mapLocation,
                 randomEvent: randomEvent,
-                battleEvent: battleEvent,
-                companionNPC: JSON.stringify(companionNPC),
-                // 传递所有NPC的好感度
-                npcFavorability: JSON.stringify(npcFavorability)
+                battleEvent: battleEvent
             });
+
+            // 体积可能较大且随存档增长的数据改用 localStorage 传递（world_map.html 与本页同源，可直接读取）
+            try {
+                localStorage.setItem('worldmap_companionNPC', JSON.stringify(companionNPC));
+                localStorage.setItem('worldmap_npcFavorability', JSON.stringify(npcFavorability));
+            } catch (e) {}
 
             // 地点信息迭代：把 locationMemory 里已更新地点的 危险度/友善度/行动建议 转换成
             // world_map.html 原有的英文字段名结构，供其浅合并覆盖显示（未更新的地点不受影响）
@@ -4592,10 +4625,17 @@ function buildSaveName() {
                     if (Object.keys(o).length > 0) _overrides[loc] = o;
                 });
                 if (Object.keys(_overrides).length > 0) {
-                    params.set('locationOverrides', JSON.stringify(_overrides));
+                    try { localStorage.setItem('worldmap_locationOverrides', JSON.stringify(_overrides)); } catch (e) {}
+                } else {
+                    try { localStorage.removeItem('worldmap_locationOverrides'); } catch (e) {}
                 }
             }
             
+            // 悬赏：若有进行中任务，附带目标地点参数，供大地图叠加 ⚔ 标记
+            if (typeof activeBounty !== 'undefined' && activeBounty) {
+                params.set('bountyLocation', activeBounty.locationName);
+            }
+
             // 构建世界地图URL（根据你的实际部署情况调整）
             // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/world_map.html?${params.toString()}`;
             // 本地测试时使用：

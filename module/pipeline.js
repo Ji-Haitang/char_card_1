@@ -962,11 +962,14 @@ var pipeline = (function() {
                     try {
                         var allAfter = summaryHistoryService.getAll();
                         // 找出还没有 embedding 的条目
-                        var stats = memoryRecall.getStats();
+                        // 注：memoryRecall.getStats() 只返回 {total,initialized,...}，不含 entries 列表，
+                        // 不能用它判断"哪些id已缓存"（曾误用导致 cachedIds 恒为空，把整个 summaryHistory
+                        // 当作"新增"重新 embed，历史一多就会撑爆 embedding API 的单请求 token 上限）。
+                        // 改用与 _syncEmbeddingsWithSummaryHistory 相同的可靠数据源：已持久化的 emb_ 记录。
+                        var embRecords = storageService.loadAllEmbeddings();
                         var cachedIds = {};
-                        var cached = stats && stats.entries ? stats.entries : [];
-                        for (var ci = 0; ci < cached.length; ci++) {
-                            cachedIds[cached[ci].id] = true;
+                        for (var ci = 0; ci < embRecords.length; ci++) {
+                            cachedIds[embRecords[ci].id] = true;
                         }
                         var newSummaries = allAfter.filter(function(s) { return !cachedIds[s.id]; });
                         if (newSummaries.length === 0) return;
@@ -980,6 +983,9 @@ var pipeline = (function() {
                         });
 
                         var vectors = await embeddingService.embed(embedTexts);
+                        if (!vectors) {
+                            throw new Error('embed 返回空（可能是请求体过大或API错误，详见上方 [EmbeddingService] 日志）');
+                        }
 
                         var fp = embeddingService.getFingerprint();
                         var _lastNewEmb = null;

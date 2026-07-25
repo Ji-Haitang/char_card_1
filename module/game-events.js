@@ -609,6 +609,21 @@ function parseLLMResponse(response, mainTextContent) {
     // 处理随机事件
     if (response.随机事件) {
         currentRandomEvent = response.随机事件;
+
+        // 悬赏战斗：忽略 SIDENOTE 里 LLM 自行生成的敌方数据，统一以 activeBounty 为准，
+        // 保证奖励/难度与议事厅接取时展示的一致
+        if (currentBattleType === 'bounty' && currentRandomEvent.事件类型 === '战斗事件' && typeof activeBounty !== 'undefined' && activeBounty) {
+            currentRandomEvent = {
+                事件描述: `悬赏缉拿：${activeBounty.enemyName}`,
+                事件类型: '战斗事件',
+                敌方信息: {
+                    名称: activeBounty.enemyName,
+                    类别: '悬赏目标',
+                    属性: { 攻击力: '中', 生命力: '中', 武学: activeBounty.level },
+                    战斗报酬: { 类型: '金钱', 数值: activeBounty.goldReward }
+                }
+            };
+        }
         
         // 有随机事件时禁用输入
         inputEnable = 0;
@@ -639,6 +654,26 @@ function parseLLMResponse(response, mainTextContent) {
         
         hideRandomEvent();
         hideBattleEvent();
+
+        // 兜底：悬赏战斗模式下 LLM 未按格式规范输出战斗事件 JSON，主动从 activeBounty 构造，避免流程卡死
+        if (currentBattleType === 'bounty' && typeof activeBounty !== 'undefined' && activeBounty) {
+            console.warn('[bounty] LLM 未输出战斗事件，已从 activeBounty 兜底构造');
+            currentRandomEvent = {
+                事件描述: `悬赏缉拿：${activeBounty.enemyName}`,
+                事件类型: '战斗事件',
+                敌方信息: {
+                    名称: activeBounty.enemyName,
+                    类别: '悬赏目标',
+                    属性: { 攻击力: '中', 生命力: '中', 武学: activeBounty.level },
+                    战斗报酬: { 类型: '金钱', 数值: activeBounty.goldReward }
+                }
+            };
+            inputEnable = 0;
+            if (typeof updateFreeActionInputState === 'function') {
+                updateFreeActionInputState();
+            }
+            displayBattleEvent(currentRandomEvent);
+        }
     }
     console.log(`NPC好感度 ${npcFavorability}`);
     // 更新关系显示（如果在关系界面）
@@ -862,6 +897,79 @@ function setupMessageListeners() {
                 }
                 
                 hideBattleEvent();
+            } else if (currentBattleType === 'bounty') {
+                // 悬赏战斗结算：奖励来源固定为 activeBounty（不信任 SIDENOTE 里 LLM 自行编造的数值）
+                if (event.data.remainingItems) {
+                    const remaining = event.data.remainingItems;
+                    inventory['大力丸'] = remaining.daliwan || 0;
+                    inventory['筋骨贴'] = remaining.jingutie || 0;
+                    inventory['金疮药'] = remaining.jinchuangyao || 0;
+                    inventory['霹雳丸'] = remaining.piliwan || 0;
+
+                    Object.keys(inventory).forEach(key => {
+                        if (inventory[key] === 0) {
+                            delete inventory[key];
+                        }
+                    });
+
+                    console.log('[战斗-悬赏] 道具数量已同步:', remaining);
+                }
+
+                const _boYear = Math.floor((currentWeek - 1) / 48) + 1;
+                const _boRemaining = (currentWeek - 1) % 48;
+                const _boMonth = Math.floor(_boRemaining / 4) + 1;
+                const _boWeek = _boRemaining % 4 + 1;
+                const _boSeason = seasonNameMap[seasonStatus] || '冬天';
+                const _boLoc = mapLocation || '天山派';
+                const _bountyEnemyName = (activeBounty && activeBounty.enemyName) || (currentBattleEvent?.敌方信息?.名称) || '悬赏目标';
+
+                if (result === 'victory') {
+                    let rewardText = '';
+                    let dropText = '';
+
+                    // 赏金
+                    if (activeBounty && typeof activeBounty.goldReward === 'number') {
+                        applyBattleReward({ 类型: '金钱', 数值: activeBounty.goldReward });
+                        rewardText = `获得赏金：${activeBounty.goldReward}`;
+                    }
+                    // 声望
+                    if (activeBounty && typeof activeBounty.reputationReward === 'number') {
+                        playerStats.声望 += activeBounty.reputationReward;
+                        rewardText += (rewardText ? '<br>' : '') + `获得声望：${activeBounty.reputationReward}`;
+                    }
+                    // 掉落物
+                    const dropResult = generateBattleEventDrop(currentBattleEvent?.敌方信息);
+                    if (dropResult && dropResult.itemName) {
+                        dropText = `获得掉落：${dropResult.itemName}`;
+                    }
+
+                    activeBounty = null;
+                    checkAllValueRanges();
+                    updateAllDisplays();
+                    syncGameDataFromVariables();
+                    hideBattleEvent();
+
+                    await handleMessageOutput(
+                        `时间：第${_boYear}年第${_boMonth}月第${_boWeek}周<br>` +
+                        `季节：${_boSeason}<br>` +
+                        `地点：${_boLoc}<br>` +
+                        `悬赏目标：${_bountyEnemyName}<br>` +
+                        `战斗结果: 胜利，成功缉拿悬赏目标`);
+
+                    if (rewardText || dropText) {
+                        const modalLines = [rewardText, dropText].filter(Boolean).join('<br>');
+                        showModal(modalLines);
+                    }
+                } else if (result === 'defeat' || result === 'quit') {
+                    // 悬赏失败/放弃：不清空 activeBounty，玩家可再次前往挑战
+                    hideBattleEvent();
+                    await handleMessageOutput(
+                        `时间：第${_boYear}年第${_boMonth}月第${_boWeek}周<br>` +
+                        `季节：${_boSeason}<br>` +
+                        `地点：${_boLoc}<br>` +
+                        `悬赏目标：${_bountyEnemyName}<br>` +
+                        `战斗结果: ${result === 'quit' ? '放弃战斗' : '落败，悬赏目标逃脱'}`);
+                }
             } else {
                 // 非NPC切磋、非事件战斗的情况，也需要同步道具
                 if (event.data.remainingItems) {
@@ -1006,7 +1114,44 @@ function setupMessageListeners() {
                 // 再从ID获取名字（确保格式正确）
                 companionNames = npcIds.map(id => npcs[id]?.name || id).join('、');
             }
-            
+
+            // 悬赏战斗：优先于普通"下山游历"流程处理。bountyBattle 只有 index.html 专属的
+            // bounty-service.js + 改造后的 showWorldMap() 才会产生，SR 链路不可达（详见开发文档第九节）
+            if (event.data.bountyBattle === 1 && typeof activeBounty !== 'undefined' && activeBounty) {
+                currentBattleType = 'bounty';  // 提前标记，battle-exit 时判断用
+
+                const _actorNameBounty = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
+                const bountyUserMessage =
+                    `时间：第${year}年第${month}月第${week}周<br>` +
+                    `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                    `地点：${mapLocation}<br>` +
+                    `随行NPC：${companionNames}<br>` +
+                    `${_actorNameBounty}行动选择：悬赏缉拿`;
+
+                checkAllValueRanges();
+                updateAllDisplays();
+
+                // 地点信息迭代：与普通下山游历一致，不因走 bounty 分支而跳过
+                if (!isInRenderEnvironment() && typeof storageService !== 'undefined' && typeof gameData !== 'undefined') {
+                    gameData.locationVisit = {
+                        active: true,
+                        location: mapLocation,
+                        startUiIndex: storageService.loadUIConversation().length,
+                        startWeek: currentWeek
+                    };
+                }
+
+                // 关键：SIDENOTE 是否输出"随机事件.战斗事件"JSON结构由全局格式规范
+                // （char_card_information/110格式规范_精简版_独立前端.txt）里的 battleEventforFormat
+                // 条件决定，读的是 gameData.battleEvent，必须在调用 handleMessageOutput 前置 1
+                // （randomEvent 置 0 避免误触发选项事件）
+                battleEvent = 1;
+                randomEvent = 0;
+                GameMode = 1;
+                await handleMessageOutput(bountyUserMessage);
+                return;  // 不走普通 worldmap-exit 的后续逻辑
+            }
+
             // 构建事件信息
             let eventInfo = '';
             if (randomEvent === 1) {

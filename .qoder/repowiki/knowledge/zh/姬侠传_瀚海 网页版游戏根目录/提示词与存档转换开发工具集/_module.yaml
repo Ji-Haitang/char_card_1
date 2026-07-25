@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: dev_tools
+title: 提示词与存档转换开发工具集
+scope:
+    - tools/
+source_files: []
+depends_on: []
+related_to:
+    - path: char_card_data
+    - path: game_engine

@@ -1,0 +1,24 @@
+schema_version: 1
+module_path: ""
+title: 姬侠传/瀚海 网页版游戏根目录
+scope:
+    - ReadMe.md
+    - index - SR.html
+    - start-screen.html
+    - start-screen-noST.html
+    - turn-based-battle.html
+    - turn-based-battle-new.html
+    - world_map.html
+    - blackjack.html
+    - farm.html
+    - alchemy.html
+    - 打包APK.ps1
+    - .gitignore
+    - .nojekyll
+    - index.html
+    - 姬侠传开局界面.jpg
+    - 游戏宣传介绍.md
+    - 游戏指南.md
+source_files: []
+depends_on: []
+related_to: []

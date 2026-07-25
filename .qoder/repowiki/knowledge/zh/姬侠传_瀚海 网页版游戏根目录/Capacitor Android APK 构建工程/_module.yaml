@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: apk_build
+title: Capacitor Android APK 构建工程
+scope:
+    - apk/
+source_files: []
+depends_on: []
+related_to:
+    - path: game_engine
+    - path: history_versions

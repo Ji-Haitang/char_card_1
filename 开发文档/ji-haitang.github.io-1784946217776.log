@@ -1,0 +1,357 @@
+log-capture.js:47 [bgm-manager] 已加载
+log-capture.js:47 [IDB] 数据库打开成功
+log-capture.js:47 [Storage] IndexedDB 可用
+log-capture.js:47 [Storage] 从 IndexedDB 加载 1649 个 key
+log-capture.js:47 [IDB-Snapshot] 数据库打开成功
+log-capture.js:47 [Storage] snapshot_db 已加载，快照存在
+log-capture.js:47 [MemoryRecall] 初始化完成，缓存 1173 条 embedding
+log-capture.js:47 [MemoryRecall] L2 初始化完成，缓存 459 条事件向量
+log-capture.js:47 [MemoryRecall] 词法倒排索引重建完成，索引词 4035 个，覆盖事件 459 条
+log-capture.js:47 [MemoryRecall] 别名表已刷新，共 42 条
+log-capture.js:47 [applyParsedInit] summary 已存在，跳过
+log-capture.js:47 当前时间：11:00
+log-capture.js:47 昼夜状态更新为：daytime
+log-capture.js:47 NPC好感度 [object Object]
+log-capture.js:47 currentNpcLocations [object Object]
+log-capture.js:47 npcLocationA tiejiangpu
+log-capture.js:47 npcLocationB nvdizi
+log-capture.js:47 npcLocationC houshan
+log-capture.js:47 npcLocationD tiejiangpu
+log-capture.js:47 npcLocationE yanwuchang
+log-capture.js:47 npcLocationF cangjingge
+log-capture.js:47 npcLocationG houshan
+log-capture.js:47 npcLocationH gongtian
+log-capture.js:47 npcLocationI nvdizi
+log-capture.js:47 npcLocationJ yishiting
+log-capture.js:47 npcLocationK yanwuchang
+log-capture.js:47 npcLocationL none
+log-capture.js:47 npcLocationM shanmen
+log-capture.js:47 npcLocationN danfang
+log-capture.js:47 npcLocationO cangjingge
+log-capture.js:47 [applyParsedInit] 同步完成, gameData.summary_Small: [第1年第5月第3周]
+古月安思无视唐门毒雾威胁，返回男弟子房，从被窝中揪住唐沐梨的猫耳将其拽出。告知唐门老者堵门之事后，古月安思不顾其衣衫不整，将其夹在腋下扛
+favicon.ico:1  GET https://ji-haitang.github.io/favicon.ico 404 (Not Found)
+log-capture.js:47 [LocationRunner] cancel() 调用时无飞行中的请求（_abortController=null），仅重置 _running
+log-capture.js:47 [LoadSave] weekHistory 已恢复，共 11 条
+log-capture.js:47 [Storage] 快照已清空
+log-capture.js:47 [Storage] 已清空所有 embedding 记录
+log-capture.js:47 [Storage] 已清空 459 条 L2 事件向量
+log-capture.js:47 [MemoryRecall] 缓存已清空
+log-capture.js:47 [MemoryRecall] 初始化完成，缓存 1173 条 embedding
+log-capture.js:47 [LoadSave] 已恢复 1173 条 embedding 记录
+log-capture.js:47 [LoadSave] 已恢复 locationMemory(0个地点) / locationBuff(0条)
+log-capture.js:47 [Storage] 已恢复 459 条 L2 事件向量
+log-capture.js:47 [MemoryRecall] L2 缓存已清空
+log-capture.js:47 [MemoryRecall] L2 初始化完成，缓存 459 条事件向量
+log-capture.js:47 [MemoryRecall] 词法倒排索引重建完成，索引词 4035 个，覆盖事件 459 条
+log-capture.js:47 [MemoryRecall] 别名表已刷新，共 42 条
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [LoadSave] 已恢复 markWeekUiIndex=2267
+log-capture.js:47 [LoadSave] 已恢复 summaryBuff 队列, 条数=0
+log-capture.js:47 [SLG][骰子] roll=34.7 | 阈值 战斗<0 随机<10 | 危险度:低 | 判定→ randomEvent=0 battleEvent=0
+log-capture.js:47 [Storage] 全量快照已写入 snapshot_db
+log-capture.js:47 [Standalone] 全量快照已落盘，发起 API 请求
+log-capture.js:47 [EmbSync] 发现 1 条摘要缺少 emb_，开始补生成: smrzqp2q8_1tlox6
+log-capture.js:47 [EmbSync] 已补生成 emb_smrzqp2q8_1tlox6 (1/1)
+log-capture.js:47 [EmbSync] 补生成完毕，共处理 1 条
+log-capture.js:47 [L2Sync] wevt_ 与 eventHistory 完全一致，共 459 条
+pipeline.js:354 [Pipeline] Query向量构成（展开查看）
+index.html:1 Access to fetch at 'https://api.openai.com/v1/rerank' from origin 'https://ji-haitang.github.io' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+reranker.js:71  POST https://api.openai.com/v1/rerank net::ERR_FAILED
+rerankEvents @ reranker.js:71
+recallRelevantMemories @ memory-recall.js:618
+runTurn @ pipeline.js:365
+await in runTurn
+handleMessageOutput @ game-helpers.js:166
+await in handleMessageOutput
+sendFreeAction @ index.html:2903
+(anonymous) @ index.html:5487
+reranker.js:125 [Reranker] 重排失败，回退 RRF 顺序: Failed to fetch
+rerankEvents @ reranker.js:125
+await in rerankEvents
+recallRelevantMemories @ memory-recall.js:618
+runTurn @ pipeline.js:365
+await in runTurn
+handleMessageOutput @ game-helpers.js:166
+await in handleMessageOutput
+sendFreeAction @ index.html:2903
+(anonymous) @ index.html:5487
+memory-recall.js:620 [MemoryRecall][L0] Rerank 前→后对比（送入 20 条→精排后 10 条）
+log-capture.js:47 [MemoryRecall] 召回 10 条 | 候选 10 条 | 排除 51 条 | 缓存 1174 条 | 双路RRF | +Rerank | focusNPC=[雨烛,洛潜幽]
+memory-recall.js:703 [MemoryRecall][L0] 召回详情（展开查看）
+log-capture.js:47 [MemoryRecall][L2] 候选 21 条 | 缓存 459 条 | 排除 17 条 | 双路RRF | 词法命中 248 条(旁路 5 条) | focusNPC=[雨烛,洛潜幽]
+memory-recall.js:939 [MemoryRecall][L2] 召回详情（展开查看）
+log-capture.js:47 [Pipeline][L2] 粗排候选 21 条（排除近期 17 条，allEvents=459）
+log-capture.js:47 [Pipeline][L2] 分流：RRF Top3(免精排) 3 条 | 送精排 18 条 | mustKeep=[evt-271,evt-364🔓词法,evt-428🔓词法]
+index.html:1 Access to fetch at 'https://api.openai.com/v1/rerank' from origin 'https://ji-haitang.github.io' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+reranker.js:71  POST https://api.openai.com/v1/rerank net::ERR_FAILED
+rerankEvents @ reranker.js:71
+runTurn @ pipeline.js:413
+await in runTurn
+handleMessageOutput @ game-helpers.js:166
+await in handleMessageOutput
+sendFreeAction @ index.html:2903
+(anonymous) @ index.html:5487
+reranker.js:125 [Reranker] 重排失败，回退 RRF 顺序: Failed to fetch
+rerankEvents @ reranker.js:125
+await in rerankEvents
+runTurn @ pipeline.js:413
+await in runTurn
+handleMessageOutput @ game-helpers.js:166
+await in handleMessageOutput
+sendFreeAction @ index.html:2903
+(anonymous) @ index.html:5487
+pipeline.js:416 [Pipeline][L2] Rerank 前→后对比（送入 18 条→精排后 4 条）
+memory-recall.js:1137 [MemoryRecall][L2] 因果链追溯 7 条前因（命中 7 条，maxDepth=4, maxAdd=20）
+log-capture.js:47 [Pipeline][L2] DIRECT 7 (mustKeep 3+精排 4) token=1499 | 前因 7 | 孤儿L0 3
+pipeline.js:555 [Pipeline][L2] 最终装配详情（展开查看）
+log-capture.js:47 [PromptBuilder] PreviousMemories: 预算不足，丢弃最旧 8 条 weekHistory
+prompt-builder.js:916 [PromptBuilder] 最终注入内容（展开查看 HistorySummary）
+log-capture.js:47 [PromptBuilder] 6-msg 结构 | NPC注入: 2 | 行动指导: 否 | RecentSummaries: 51 | PreviousWeekHistory: 3/11 | RecalledEvents: 7(前因7) | RecalledMemories: 3 | Token估算: 78555/482000
+log-capture.js:47 [Pipeline][DEBUG] 发起请求前变量状态: enamor=1 randomEvent=0 battleEvent=0 | gameData.enamor=1 gameData.randomEvent=0 gameData.battleEvent=0 | currentRandomEvent=null currentBattleEvent=null
+pipeline.js:606 [Pipeline] 发送消息（共 6 条）
+log-capture.js:47 [Pipeline] 发送 API 请求（流式）...
+log-capture.js:47 [API][DEBUG] 流式请求 body (非messages部分): {"model":"gemini-3.1-pro-preview","temperature":0.9,"max_tokens":18000,"stream":true}
+log-capture.js:47 [Pipeline] 用户中断生成
+log-capture.js:47 [Pipeline] 流式请求完成, 内容长度: 0 中断: true
+pipeline.js:623 [Pipeline] LLM 完整回复
+pipeline.js:634 [Pipeline] 思维链
+log-capture.js:47 [Pipeline] 用户中断，跳过提交阶段
+log-capture.js:47 [Pipeline][DEBUG] 中断路径：事件变量已归零
+log-capture.js:47 [Regenerate] 点击重生成 | summaryRunner.isRunning=false | msg=时间：第1年第5月第3周<br>季节：春天<br>地点：月牙泉<br>随行NPC
+log-capture.js:47 [LocationRunner] cancel() 调用时无飞行中的请求（_abortController=null），仅重置 _running
+log-capture.js:47 [Storage] 已从快照还原状态
+log-capture.js:47 [Regenerate] restoreFromSnapshot 结果=true
+log-capture.js:47 [MemoryRecall] 别名表已刷新，共 42 条
+log-capture.js:47 [Regenerate] 使用编辑后消息重新发起请求: 时间：第1年第5月第3周<br>季节：春天<br>地点：月牙泉<br>随行NPC：雨烛、洛潜幽<br
+log-capture.js:47 [EmbSync] emb_ 与 summaryHistory 完全一致，共 1174 条
+log-capture.js:47 [L2Sync] wevt_ 与 eventHistory 完全一致，共 459 条
+pipeline.js:354 [Pipeline] Query向量构成（展开查看）
+index.html:1 Access to fetch at 'https://api.openai.com/v1/rerank' from origin 'https://ji-haitang.github.io' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+reranker.js:71  POST https://api.openai.com/v1/rerank net::ERR_FAILED
+rerankEvents @ reranker.js:71
+recallRelevantMemories @ memory-recall.js:618
+runTurn @ pipeline.js:365
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+reranker.js:125 [Reranker] 重排失败，回退 RRF 顺序: Failed to fetch
+rerankEvents @ reranker.js:125
+await in rerankEvents
+recallRelevantMemories @ memory-recall.js:618
+runTurn @ pipeline.js:365
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+memory-recall.js:620 [MemoryRecall][L0] Rerank 前→后对比（送入 20 条→精排后 10 条）
+log-capture.js:47 [MemoryRecall] 召回 10 条 | 候选 10 条 | 排除 51 条 | 缓存 1174 条 | 双路RRF | +Rerank | focusNPC=[雨烛,洛潜幽]
+memory-recall.js:703 [MemoryRecall][L0] 召回详情（展开查看）
+log-capture.js:47 [MemoryRecall][L2] 候选 21 条 | 缓存 459 条 | 排除 17 条 | 双路RRF | 词法命中 248 条(旁路 5 条) | focusNPC=[雨烛,洛潜幽]
+memory-recall.js:939 [MemoryRecall][L2] 召回详情（展开查看）
+log-capture.js:47 [Pipeline][L2] 粗排候选 21 条（排除近期 17 条，allEvents=459）
+log-capture.js:47 [Pipeline][L2] 分流：RRF Top3(免精排) 3 条 | 送精排 18 条 | mustKeep=[evt-271,evt-364🔓词法,evt-428🔓词法]
+index.html:1 Access to fetch at 'https://api.openai.com/v1/rerank' from origin 'https://ji-haitang.github.io' has been blocked by CORS policy: Response to preflight request doesn't pass access control check: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+reranker.js:71  POST https://api.openai.com/v1/rerank net::ERR_FAILED
+rerankEvents @ reranker.js:71
+runTurn @ pipeline.js:413
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+reranker.js:125 [Reranker] 重排失败，回退 RRF 顺序: Failed to fetch
+rerankEvents @ reranker.js:125
+await in rerankEvents
+runTurn @ pipeline.js:413
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+pipeline.js:416 [Pipeline][L2] Rerank 前→后对比（送入 18 条→精排后 4 条）
+memory-recall.js:1137 [MemoryRecall][L2] 因果链追溯 7 条前因（命中 7 条，maxDepth=4, maxAdd=20）
+log-capture.js:47 [Pipeline][L2] DIRECT 7 (mustKeep 3+精排 4) token=1499 | 前因 7 | 孤儿L0 3
+pipeline.js:555 [Pipeline][L2] 最终装配详情（展开查看）
+log-capture.js:47 [PromptBuilder] PreviousMemories: 预算不足，丢弃最旧 8 条 weekHistory
+prompt-builder.js:916 [PromptBuilder] 最终注入内容（展开查看 HistorySummary）
+log-capture.js:47 [PromptBuilder] 6-msg 结构 | NPC注入: 2 | 行动指导: 否 | RecentSummaries: 51 | PreviousWeekHistory: 3/11 | RecalledEvents: 7(前因7) | RecalledMemories: 3 | Token估算: 78555/482000
+log-capture.js:47 [Pipeline][DEBUG] 发起请求前变量状态: enamor=1 randomEvent=0 battleEvent=0 | gameData.enamor=1 gameData.randomEvent=0 gameData.battleEvent=0 | currentRandomEvent=null currentBattleEvent=null
+pipeline.js:606 [Pipeline] 发送消息（共 6 条）
+log-capture.js:47 [Pipeline] 发送 API 请求（流式）...
+log-capture.js:47 [API][DEBUG] 流式请求 body (非messages部分): {"model":"gemini-3.1-pro-preview","temperature":0.9,"max_tokens":18000,"stream":true}
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [Pipeline] 流式请求完成, 内容长度: 3426 中断: false
+pipeline.js:623 [Pipeline] LLM 完整回复
+pipeline.js:634 [Pipeline] 思维链
+log-capture.js:47 当前时间：08:00
+log-capture.js:47 昼夜状态更新为：daytime
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [好感度上限] K 本周已达上限(7)，不再增加
+log-capture.js:47 NPC好感度 [object Object]
+log-capture.js:47 currentNpcLocations [object Object]
+log-capture.js:47 npcLocationA tiejiangpu
+log-capture.js:47 npcLocationB nvdizi
+log-capture.js:47 npcLocationC houshan
+log-capture.js:47 npcLocationD tiejiangpu
+log-capture.js:47 npcLocationE yanwuchang
+log-capture.js:47 npcLocationF cangjingge
+log-capture.js:47 npcLocationG houshan
+log-capture.js:47 npcLocationH gongtian
+log-capture.js:47 npcLocationI nvdizi
+log-capture.js:47 npcLocationJ yishiting
+log-capture.js:47 npcLocationK yanwuchang
+log-capture.js:47 npcLocationL none
+log-capture.js:47 npcLocationM shanmen
+log-capture.js:47 npcLocationN danfang
+log-capture.js:47 npcLocationO cangjingge
+log-capture.js:47 [Pipeline][DEBUG] 提交路径：syncGameDataFromVariables 后已归零，即将 saveAppState
+log-capture.js:47 [FuzzyMatch] 相似度匹配: "好奇" -> "惊讶" (相似度: 50.0%)
+log-capture.js:47 [FuzzyMatch] 未找到匹配: "委屈" (最佳相似度: 0.0%)
+log-capture.js:47 [Pipeline] 提交完成
+log-capture.js:47 [Storage] 存档创建: save_1784946192519 ([自动]第1年第5月第3周_所在地月牙泉)
+log-capture.js:47 [Storage] 存档删除: save_1784944364644
+log-capture.js:47 [AutoSave] 自动存档完成: [自动]第1年第5月第3周_所在地月牙泉，当前自动存档数: 3
+log-capture.js:47 [EventRunner] maybeSchedule → 点火 (uiConv=2372, watermark=2359, step=20, diff=13)
+embedding-service.js:125  POST https://api.openai.com/v1/embeddings 400 (Bad Request)
+embed @ embedding-service.js:125
+(anonymous) @ pipeline.js:982
+_commitResponse @ pipeline.js:1014
+runTurn @ pipeline.js:668
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+log-capture.js:47 [EventRunner] 触发条件已不满足，跳过 (len=2372, watermark=2359, step=20)
+embedding-service.js:160 [EmbeddingService] embed 失败: HTTP 400: {
+  "error": {
+    "message": "Invalid 'input': maximum request size is 300000 tokens per request.",
+    "type": "invalid_request_error",
+    "param": null,
+    "code": null
+  }
+}
+embed @ embedding-service.js:160
+await in embed
+(anonymous) @ pipeline.js:982
+_commitResponse @ pipeline.js:1014
+runTurn @ pipeline.js:668
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+pipeline.js:1009 [Pipeline] embedding 存储失败: Cannot read properties of null (reading '0')
+(anonymous) @ pipeline.js:1009
+await in (anonymous)
+_commitResponse @ pipeline.js:1014
+runTurn @ pipeline.js:668
+await in runTurn
+_confirmRegenerate @ index.html:5032
+onclick @ index.html:1
+content-all.js:8 Uncaught NotFoundError: Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node.
+    at ldr (content-all.js:8:26341)
+    at yL (content-all.js:8:26043)
+    at ldr (content-all.js:8:27139)
+    at yL (content-all.js:8:26043)
+    at ldr (content-all.js:8:26813)
+    at yL (content-all.js:8:26043)
+    at ldr (content-all.js:8:26582)
+    at yL (content-all.js:8:26043)
+    at ldr (content-all.js:8:26813)
+    at VA (content-all.js:8:27672)
+ldr @ content-all.js:8
+yL @ content-all.js:8
+ldr @ content-all.js:8
+yL @ content-all.js:8
+ldr @ content-all.js:8
+yL @ content-all.js:8
+ldr @ content-all.js:8
+yL @ content-all.js:8
+ldr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+VA @ content-all.js:8
+cdr @ content-all.js:8
+Eho @ content-all.js:8
+Vq @ content-all.js:8
+ddr @ content-all.js:8
+npt @ content-all.js:1
+Ydt @ content-all.js:1
+postMessage
+wge @ content-all.js:1
+opt @ content-all.js:1
+Fp.unstable_scheduleCallback @ content-all.js:1
+bdr @ content-all.js:8
+F4 @ content-all.js:8
+WA @ content-all.js:8
+dho @ content-all.js:6
+l @ content-all.js:3451
+(anonymous) @ all-frames.js:1540
+emit @ all-frames.js:325
+onCanInsert @ all-frames.js:325
+$m.leading @ all-frames.js:325
+h @ all-frames.js:289
+g @ all-frames.js:289
+S @ all-frames.js:289
+$m.leading @ all-frames.js:325
+h @ all-frames.js:289
+g @ all-frames.js:289
+S @ all-frames.js:289

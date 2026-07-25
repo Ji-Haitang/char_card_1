@@ -1,0 +1,102 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: zh-CN
+branch: main
+nodes_managed: true
+exported_at: "2026-07-22T12:16:30Z"
+modules:
+    "":
+        dir_name: 姬侠传_瀚海 网页版游戏根目录
+        title: 姬侠传/瀚海 网页版游戏根目录
+        scope:
+            - ReadMe.md
+            - index - SR.html
+            - start-screen.html
+            - start-screen-noST.html
+            - turn-based-battle.html
+            - turn-based-battle-new.html
+            - world_map.html
+            - blackjack.html
+            - farm.html
+            - alchemy.html
+            - 打包APK.ps1
+            - .gitignore
+            - .nojekyll
+            - index.html
+            - 姬侠传开局界面.jpg
+            - 游戏宣传介绍.md
+            - 游戏指南.md
+        source_files: []
+        children:
+            - apk_build
+            - char_card_data
+            - dev_tools
+            - development_docs
+            - game_engine
+            - history_versions
+        depends_on: []
+        related_to: []
+    apk_build:
+        dir_name: Capacitor Android APK 构建工程
+        title: Capacitor Android APK 构建工程
+        scope:
+            - apk/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: game_engine
+            - path: history_versions
+    char_card_data:
+        dir_name: 角色卡与SLG叙事数据（天山派背景）
+        title: 角色卡与SLG叙事数据（天山派背景）
+        scope:
+            - char_card_information/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: dev_tools
+    dev_tools:
+        dir_name: 提示词与存档转换开发工具集
+        title: 提示词与存档转换开发工具集
+        scope:
+            - tools/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: char_card_data
+            - path: game_engine
+    development_docs:
+        dir_name: 开发文档与测试辅助脚本
+        title: 开发文档与测试辅助脚本
+        scope:
+            - 开发文档/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: game_engine
+    game_engine:
+        dir_name: 游戏引擎核心（回合流水线与持久化）
+        title: 游戏引擎核心（回合流水线与持久化）
+        scope:
+            - module/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: apk_build
+            - path: dev_tools
+            - path: development_docs
+    history_versions:
+        dir_name: 姬侠传_活侠传项目历史版本归档
+        title: 姬侠传/活侠传项目历史版本归档
+        scope:
+            - history_version/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: apk_build

@@ -54,6 +54,7 @@ const ACTION_FILES = [
     { varSuffix: 'EXPLORE', file: '100行动选择-探索.txt', keys: ['行动选择：探索'] },
     { varSuffix: 'REPORT', file: '100行动选择-汇报.txt', keys: ['行动选择：汇报'] },
     { varSuffix: 'DESCEND', file: '100行动选择-下山.txt', keys: ['行动选择：下山', '行动选择：下山游历'] },
+    { varSuffix: 'BOUNTY', file: '100行动选择-悬赏缉拿.txt', keys: ['行动选择：悬赏缉拿'] },
     { varSuffix: 'RETURN', file: '100行动选择-回山.txt', keys: ['回山', '你结束了山下的游历，回到了天山派'] },
     { varSuffix: 'SKIP', file: '100行动选择-跳过一周.txt', keys: ['行动选择:新的一周开始了', '行动选择：跳过一周'] },
 ];

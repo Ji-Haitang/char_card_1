@@ -495,6 +495,11 @@
             animation: blink 1s infinite;
         }
 
+        .event-bounty {
+            color: #d4af37;  /* 金色，区别于随机战斗事件的红色 */
+            text-shadow: 0 0 3px rgba(212, 175, 55, 0.8);
+        }
+
         @keyframes blink {
             0%, 100% { opacity: 1; }
             50% { opacity: 0.6; }
@@ -992,6 +997,7 @@
 
         let currentLocation = '';
         let selectedNPCs = [];
+        let bountyLocation = null;  // 悬赏目标地点（由 index.html 传入，SR 链路永远为 null）
 
         const idToName = {
         'A': '破阵子','B': '洞庭君','C': '钱塘君','D': '萧白瑚','E': '姬姒','F': '施延年',
@@ -1018,9 +1024,14 @@
             const be = parseInt(q.get('battleEvent'), 10);
             if (!Number.isNaN(be)) battleEvent = be;
 
+            // 悬赏：目标地点（只有 index.html 的 showWorldMap() 会传这个参数，SR 链路不传时保持 null）
+            const bl = q.get('bountyLocation');
+            if (bl) bountyLocation = bl;
+
             // 3) 随行NPC（可选，用于默认勾选）
+            // 优先读 localStorage（index.html 同源传递，避免URL过长），找不到再回退URL参数（兼容跨域/旧链路）
             try {
-                const comp = JSON.parse(q.get('companionNPC') || '[]');
+                const comp = JSON.parse(localStorage.getItem('worldmap_companionNPC') || q.get('companionNPC') || '[]');
                 if (Array.isArray(comp)) {
                 window._incomingCompanions = comp; // 可在 showNPCList 里用来默认勾选
                 }
@@ -1028,7 +1039,7 @@
 
             // 4) 好感度：父页传的是以ID为键的对象，这里转成“中文名”为键
             try {
-                const favorRaw = JSON.parse(q.get('npcFavorability') || '{}');
+                const favorRaw = JSON.parse(localStorage.getItem('worldmap_npcFavorability') || q.get('npcFavorability') || '{}');
                 const favorByName = {};
                 Object.entries(favorRaw).forEach(([id, val]) => {
                 const name = idToName[id] || id;
@@ -1042,7 +1053,7 @@
             // 浅合并覆盖 locationDangerInfo，只影响有数据的地点，其它地点保持硬编码默认值；
             // index - SR.html 的 showWorldMap() 不传这个参数，收不到参数时这里直接跳过，行为和现在完全一样
             try {
-                const overridesRaw = q.get('locationOverrides');
+                const overridesRaw = localStorage.getItem('worldmap_locationOverrides') || q.get('locationOverrides');
                 if (overridesRaw) {
                     const overrides = JSON.parse(overridesRaw);
                     Object.keys(overrides).forEach(function(loc) {
@@ -1082,12 +1093,20 @@
                         hasEventClass = 'has-event';
                     }
                 }
+
+                // 悬赏标记：若当前地点为悬赏目标地点，叠加 ⚔ 图标（bountyLocation 为 null 时天然不命中，无副作用）
+                let bountyIndicator = '';
+                if (bountyLocation && locationName === bountyLocation) {
+                    bountyIndicator = '<span class="event-indicator event-bounty">\u2694</span>';
+                    hasEventClass = 'has-event';
+                }
                 
                 marker.innerHTML = `
                     <div class="marker-pin"></div>
                     <div class="marker-label ${hasEventClass}">
                         ${locationName}
                         ${eventIndicator}
+                        ${bountyIndicator}
                     </div>
                 `;
                 
@@ -1327,6 +1346,10 @@
             } else if (events && events.hasRandomEvent) {
                 eventWarning = '<p style="color: #FFD700; font-weight: bold;">✦ 此地有特殊事件！</p>';
             }
+            // 悬赏警告（与普通随机事件互斥，只要目的地命中就提示）
+            if (bountyLocation && currentLocation === bountyLocation) {
+                eventWarning += '<p style="color: #d4af37; font-weight: bold;">⚔ 此地有悬赏目标！</p>';
+            }
 
             const message = `
                 <div class="result-message">
@@ -1349,7 +1372,8 @@
                     mapLocation: currentLocation,
                     companionNPC: selectedNPCs,
                     randomEvent: randomEvent,
-                    battleEvent: battleEvent
+                    battleEvent: battleEvent,
+                    bountyBattle: (bountyLocation && currentLocation === bountyLocation) ? 1 : 0
                 }, '*');
             }
         }
