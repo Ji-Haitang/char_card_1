@@ -991,6 +991,7 @@ const defaultGameData = {
     companionNPC: [],     // 随行NPC数组
     mapLocation: '天山派', // 地图位置
     activeBounty: null,   // 新增：当前进行中的悬赏任务（null=无任务）
+    currentBattleType: null, // 新增：当前战斗类型（'npc'/'event'/'bounty'/null）
     cgContentEnabled: false,  // 新增：CG内容开关（默认关）
     compressSummary: false,    // 新增：强力总结（默认关）
     haveEvent: 1,              // 新增：随机事件开关（1=开，0=关）

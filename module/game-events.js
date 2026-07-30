@@ -610,19 +610,19 @@ function parseLLMResponse(response, mainTextContent) {
     if (response.随机事件) {
         currentRandomEvent = response.随机事件;
 
-        // 悬赏战斗：忽略 SIDENOTE 里 LLM 自行生成的敌方数据，统一以 activeBounty 为准，
-        // 保证奖励/难度与议事厅接取时展示的一致
+        // 悬赏战斗：保留 SIDENOTE 中 LLM 生成的长版剧情描述，
+        // 只以 activeBounty 为准覆盖敌方数据和报酬（保证数值与议事厅一致）
         if (currentBattleType === 'bounty' && currentRandomEvent.事件类型 === '战斗事件' && typeof activeBounty !== 'undefined' && activeBounty) {
-            currentRandomEvent = {
-                事件描述: `悬赏缉拿：${activeBounty.enemyName}`,
-                事件类型: '战斗事件',
-                敌方信息: {
-                    名称: activeBounty.enemyName,
-                    类别: '悬赏目标',
-                    属性: { 攻击力: '中', 生命力: '中', 武学: activeBounty.level },
-                    战斗报酬: { 类型: '金钱', 数值: activeBounty.goldReward }
-                }
+            currentRandomEvent.敌方信息 = {
+                名称: activeBounty.enemyName,
+                类别: '悬赏目标',
+                属性: { 攻击力: '中', 生命力: '中', 武学: activeBounty.level },
+                战斗报酬: { 类型: '金钱', 数值: activeBounty.goldReward }
             };
+            // 如果 LLM 没有给事件描述或描述为空，兜底为精简版
+            if (!currentRandomEvent.事件描述 || currentRandomEvent.事件描述.trim() === '') {
+                currentRandomEvent.事件描述 = `悬赏缉拿：${activeBounty.enemyName}`;
+            }
         }
         
         // 有随机事件时禁用输入
@@ -944,6 +944,7 @@ function setupMessageListeners() {
                     }
 
                     activeBounty = null;
+                    currentBattleType = null;
                     checkAllValueRanges();
                     updateAllDisplays();
                     syncGameDataFromVariables();
@@ -961,7 +962,10 @@ function setupMessageListeners() {
                         showModal(modalLines);
                     }
                 } else if (result === 'defeat' || result === 'quit') {
-                    // 悬赏失败/放弃：不清空 activeBounty，玩家可再次前往挑战
+                    // 悬赏失败/放弃：清空任务，不可重复挑战
+                    activeBounty = null;
+                    currentBattleType = null;
+                    syncGameDataFromVariables();
                     hideBattleEvent();
                     await handleMessageOutput(
                         `时间：第${_boYear}年第${_boMonth}月第${_boWeek}周<br>` +

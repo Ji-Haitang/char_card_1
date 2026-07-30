@@ -121,7 +121,7 @@ let currentInteractionNpc = null;
 let currentInteractionLocation = null;
 let currentRandomEvent = null;
 let currentBattleEvent = null;
-let currentBattleType = null;
+// let currentBattleType = null;
 let currentBattleReward = null;
 let currentBattleNpcName = null;
 let currentStoryText = "";
@@ -140,6 +140,7 @@ let battleEvent = 0;
 let companionNPC = [];
 let mapLocation = '天山派';
 let activeBounty = null;  // 悬赏任务：{ enemyName, locationName, level, description, reputationReward, goldReward } | null
+let currentBattleType = null;  // 当前战斗类型：'npc' | 'event' | 'bounty' | null，随 gameData 存档
 let inventory = {
     "肉包子": 5,
     "制式铁剑": 1
@@ -214,6 +215,7 @@ function syncVariablesFromGameData() {
     companionNPC,     // 新增
     mapLocation,      // 新增
     activeBounty,     // 新增：悬赏任务
+    currentBattleType, // 新增：当前战斗类型
     cgContentEnabled,  // 新增
     compressSummary,
     haveEvent,         // 新增：随机事件开关
@@ -289,6 +291,7 @@ function syncGameDataFromVariables() {
     gameData.companionNPC = companionNPC;
     gameData.mapLocation = mapLocation;
     gameData.activeBounty = activeBounty;  // 新增：悬赏任务
+    gameData.currentBattleType = currentBattleType;  // 新增：当前战斗类型
     gameData.cgContentEnabled = cgContentEnabled;  // 新增：写回存档
     gameData.compressSummary = compressSummary;    // 新增：写回存档
     gameData.haveEvent = haveEvent;                // 新增：随机事件开关
