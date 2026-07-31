@@ -1,9 +1,0 @@
-schema_version: 1
-module_path: development_docs
-title: 开发文档与测试辅助脚本
-scope:
-    - 开发文档/
-source_files: []
-depends_on: []
-related_to:
-    - path: game_engine

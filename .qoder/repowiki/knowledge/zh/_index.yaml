@@ -3,11 +3,11 @@ schema_version: 1
 locale: zh-CN
 branch: main
 nodes_managed: true
-exported_at: "2026-07-22T12:16:30Z"
+exported_at: "2026-07-27T06:41:23Z"
 modules:
     "":
-        dir_name: 姬侠传_瀚海 网页版游戏根目录
-        title: 姬侠传/瀚海 网页版游戏根目录
+        dir_name: 姬侠传纯前端武侠 RPG 项目根
+        title: 姬侠传纯前端武侠 RPG 项目根
         scope:
             - ReadMe.md
             - index - SR.html
@@ -48,8 +48,8 @@ modules:
             - path: game_engine
             - path: history_versions
     char_card_data:
-        dir_name: 角色卡与SLG叙事数据（天山派背景）
-        title: 角色卡与SLG叙事数据（天山派背景）
+        dir_name: 天山派SLG角色卡与剧情数据
+        title: 天山派SLG角色卡与剧情数据
         scope:
             - char_card_information/
         source_files: []
@@ -58,8 +58,8 @@ modules:
         related_to:
             - path: dev_tools
     dev_tools:
-        dir_name: 提示词与存档转换开发工具集
-        title: 提示词与存档转换开发工具集
+        dir_name: 姬侠传前端提示词生成与存档转换工具集
+        title: 姬侠传前端提示词生成与存档转换工具集
         scope:
             - tools/
         source_files: []
@@ -68,19 +68,19 @@ modules:
         related_to:
             - path: char_card_data
             - path: game_engine
+            - path: history_versions
     development_docs:
-        dir_name: 开发文档与测试辅助脚本
-        title: 开发文档与测试辅助脚本
+        dir_name: 开发期技术文档与仿真脚本集
+        title: 开发期技术文档与仿真脚本集
         scope:
             - 开发文档/
         source_files: []
         children: []
         depends_on: []
-        related_to:
-            - path: game_engine
+        related_to: []
     game_engine:
-        dir_name: 游戏引擎核心（回合流水线与持久化）
-        title: 游戏引擎核心（回合流水线与持久化）
+        dir_name: 游戏引擎核心流水线与持久化子系统
+        title: 游戏引擎核心流水线与持久化子系统
         scope:
             - module/
         source_files: []
@@ -89,7 +89,6 @@ modules:
         related_to:
             - path: apk_build
             - path: dev_tools
-            - path: development_docs
     history_versions:
         dir_name: 姬侠传_活侠传项目历史版本归档
         title: 姬侠传/活侠传项目历史版本归档
@@ -100,3 +99,4 @@ modules:
         depends_on: []
         related_to:
             - path: apk_build
+            - path: dev_tools

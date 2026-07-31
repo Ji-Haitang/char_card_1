@@ -13,5 +13,9 @@ apk/android/.idea/caches/
 # 打包暂存目录
 apk/www/
 
+#vibe相关
+.qoder/
+.workbuddy/
+
 # APK 输出
 *.apk
