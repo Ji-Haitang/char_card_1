@@ -944,6 +944,7 @@ function setupMessageListeners() {
                     }
 
                     activeBounty = null;
+                    lastBountyAcceptWeek = currentWeek;  // 兜底：战斗跨周结算时按结算周记额度
                     currentBattleType = null;
                     checkAllValueRanges();
                     updateAllDisplays();
@@ -964,6 +965,7 @@ function setupMessageListeners() {
                 } else if (result === 'defeat' || result === 'quit') {
                     // 悬赏失败/放弃：清空任务，不可重复挑战
                     activeBounty = null;
+                    lastBountyAcceptWeek = currentWeek;  // 兜底：战斗跨周结算时按结算周记额度
                     currentBattleType = null;
                     syncGameDataFromVariables();
                     hideBattleEvent();
