@@ -270,6 +270,18 @@
             uiConversation:  uiConversation,
         };
 
+        // 优先读取游戏导出的 jxz_extra（事件层/地点层），酒馆会原样保留这些数据，
+        // 回导游戏时可直接恢复，无需从 watermark=0 重建；读不到则回退（eventWatermark→0）
+        var jxzExtra = meta && meta.chat_metadata && meta.chat_metadata.jxz_extra;
+        if (jxzExtra && typeof jxzExtra === 'object') {
+            if (Array.isArray(jxzExtra.eventHistory))   payload.eventHistory   = jxzExtra.eventHistory;
+            if (jxzExtra.eventMeta)                     payload.eventMeta      = jxzExtra.eventMeta;
+            if (typeof jxzExtra.eventWatermark === 'number') payload.eventWatermark = jxzExtra.eventWatermark;
+            if (typeof jxzExtra.eventStep === 'number') payload.eventStep      = jxzExtra.eventStep;
+            if (jxzExtra.locationMemory)                payload.locationMemory = jxzExtra.locationMemory;
+            if (Array.isArray(jxzExtra.locationBuff))   payload.locationBuff   = jxzExtra.locationBuff;
+        }
+
         return { success: true, payload: payload, saveName: saveName, warnings: warnings };
     }
 

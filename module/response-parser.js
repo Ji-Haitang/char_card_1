@@ -136,9 +136,18 @@ var responseParser = (function() {
         try {
             return JSON.parse(jsonText.trim());
         } catch (e) {
-            console.error('SIDE_NOTE parse fail:', e.message);
-            console.error('SIDE_NOTE raw jsonText (first 200 chars):', JSON.stringify(jsonText.trim().substring(0, 200)));
-            return null;
+            // 第二层容错：修复字符串值内部的裸 ASCII 双引号（LLM 用其表示中文引用）。
+            // 仅当引号两侧都是 CJK/中文标点时才视为字符串内引用（结构引号一侧必是 {:,[])} 等非中文字符，不会误伤）
+            var INNER = '[一-鿿＀-￯　-〿，。、：；！？…—～]';
+            var fixed = jsonText.trim()
+                .replace(new RegExp('(' + INNER + ')"(' + INNER + ')', 'g'), '$1」$2');
+            try {
+                return JSON.parse(fixed);
+            } catch (e2) {
+                console.error('SIDE_NOTE parse fail:', e2.message);
+                console.error('SIDE_NOTE raw jsonText (first 200 chars):', JSON.stringify(jsonText.trim().substring(0, 200)));
+                return null;
+            }
         }
     }
 

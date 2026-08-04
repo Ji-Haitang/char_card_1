@@ -167,10 +167,20 @@ var bountyService = (function() {
             '请依据上述信息生成三个敌人的名称和描述，直接输出JSON，不加任何markdown代码块';
     }
 
-    // 提取 JSON 字符串（容错 markdown 代码块包裹的情况）
+    // 提取 JSON 字符串（容错 markdown 代码块包裹 + LLM 字符串值内裸 ASCII 双引号）
     function _parseBountyResponse(text) {
         var cleaned = String(text || '').replace(/```json|```/g, '').trim();
-        var data = JSON.parse(cleaned);
+        var data;
+        try {
+            data = JSON.parse(cleaned);
+        } catch (e) {
+            // 第二层容错：修复字符串值内部的裸 ASCII 双引号（LLM 用其表示中文引用）。
+            // 仅当引号两侧都是 CJK/中文标点时才视为字符串内引用（结构引号一侧必是非中文字符，不会误伤）
+            var INNER = '[一-鿿＀-￯　-〿，。、：；！？…—～]';
+            var fixed = cleaned
+                .replace(new RegExp('(' + INNER + ')"(' + INNER + ')', 'g'), '$1」$2');
+            data = JSON.parse(fixed);
+        }
         if (!Array.isArray(data.bounties) || data.bounties.length === 0) throw new Error('格式无效');
         return data.bounties;
     }

@@ -1236,6 +1236,7 @@
     <script src="module/storage-service.js"></script>
     <script src="module/event-history-service.js"></script>
     <script src="module/st-converter.js"></script>
+    <script src="module/st-exporter.js"></script>
     <script src="module/sync-utils.js"></script>
     <script src="module/memory-recall.js"></script>
     <script src="module/event-runner.js"></script>
@@ -3312,6 +3313,7 @@ function showLoadModal() {
         + '<input type="checkbox" id="export-include-vectors-chk" checked style="width:15px;height:15px;cursor:pointer;">'
         + '导出时附带历史向量</label>'
         + '<button class="modal-btn" style="width:100%;" onclick="exportSave();closeLoadModal();">导出存档文件 (JSON)</button>'
+        + '<button class="modal-btn" style="width:100%;" onclick="exportToSTJsonl();closeLoadModal();">导出 SillyTavern 存档 (.JSONL)</button>'
         + '<button class="modal-btn" style="width:100%;" onclick="importSaveFromLoadModal()">导入存档文件 (JSON)</button>'
         + '<button class="modal-btn" style="width:100%;" onclick="importSTSaveFromLoadModal()">导入 SillyTavern 存档 (.JSONL)</button>'
         + '<button class="modal-btn cancel" style="width:100%;" onclick="closeLoadModal()">关闭</button>'
