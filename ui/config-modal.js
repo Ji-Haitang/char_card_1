@@ -93,13 +93,14 @@ function showConfigModal() {
         '<option value="non-stream"' + (config.streamMode === 'non-stream' ? ' selected' : '') + '>非流式</option>' +
         '</select></div></div>' +
 
-        // CORS 代理地址（仅 web 环境显示）
-        (apiService.getRunEnv() === 'web' ?
-            '<div class="cfg-field" id="cors-proxy-field"><label class="cfg-label">CORS 代理地址</label>' +
-            '<input id="api-cors-proxy-input" type="text" placeholder="https://your-worker.your-name.workers.dev" value="' + _escapeHtml(config.corsProxyUrl || '') + '" class="cfg-input">' +
-            (config.corsProxyUrl ? '' : '<div class="cfg-notice" style="margin-top:4px">⚠️ 线上部署时需填写 CORS 代理地址，否则 API 请求会被浏览器拦截。本地 file:// 运行无需填写。</div>') +
-            '</div>'
-        : '') +
+        // CORS 代理地址（网页与 APK 均显示；勾选启用后才生效，默认 web 勾 / APK 不勾）
+        '<div class="cfg-field" id="cors-proxy-field"><label class="cfg-label">CORS 代理</label>' +
+        '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px">' +
+        '<input type="checkbox" id="api-cors-proxy-enabled"' + (config.corsProxyEnabled ? ' checked' : '') + '>' +
+        '<span style="font-size:12px;color:rgba(55,55,55,0.7)">启用 CORS 代理（勾选后通过代理中转 API 请求）</span></label>' +
+        '<input id="api-cors-proxy-input" type="text" placeholder="https://your-worker.your-name.workers.dev" value="' + _escapeHtml(config.corsProxyUrl || '') + '" class="cfg-input">' +
+        '<div class="cfg-notice" style="margin-top:4px">勾选后通过代理中转。线上部署且 API 不支持 CORS（如 OpenAI 官方）时需启用；本地 file:// 与 APK 通常直连即可（APK 默认不勾）。</div>' +
+        '</div>' +
 
         // 测试消息
         '<div class="cfg-field">' +
@@ -193,10 +194,14 @@ function saveConfigAndClose() {
         presencePenalty: parseFloat(document.getElementById('api-pres-penalty-input').value),
         presencePenaltyEnabled: !!(document.getElementById('api-pres-penalty-enabled') && document.getElementById('api-pres-penalty-enabled').checked)
     };
-    // CORS 代理地址（仅 web 环境有此输入框）
+    // CORS 代理（网页与 APK 均有此输入框与勾选框）
     var corsInput = document.getElementById('api-cors-proxy-input');
     if (corsInput) {
         newConfig.corsProxyUrl = corsInput.value.trim();
+    }
+    var corsEnabledInput = document.getElementById('api-cors-proxy-enabled');
+    if (corsEnabledInput) {
+        newConfig.corsProxyEnabled = !!corsEnabledInput.checked;
     }
     if (!newConfig.endpoint || !newConfig.apiKey || !newConfig.model) {
         alert('请填写完整的 API 信息（地址、Key、模型名）');
@@ -414,6 +419,8 @@ function _applyPreset(indexStr) {
     el = document.getElementById('api-pres-penalty-input');   if (el) el.value = preset.presencePenalty != null ? preset.presencePenalty : 0.2;
     el = document.getElementById('api-pres-penalty-enabled'); if (el) el.checked = !!preset.presencePenaltyEnabled;
     el = document.getElementById('api-cors-proxy-input'); if (el && preset.corsProxyUrl) el.value = preset.corsProxyUrl;
+    // 勾选框：preset 含该字段才回填，否则保留首次渲染按环境给的默认值（web勾/APK不勾）
+    el = document.getElementById('api-cors-proxy-enabled'); if (el && typeof preset.corsProxyEnabled === 'boolean') el.checked = preset.corsProxyEnabled;
     // 回填完成后收起下拉
     var container = document.getElementById('api-preset-container');
     if (container) container.style.display = 'none';

@@ -21,7 +21,17 @@ var apiService = (function() {
         maxOutputTokens: 18000,
         maxContextTokens: 500000,
         streamMode: 'stream',  // 'stream' 流式 | 'non-stream' 非流式（正文与总结统一遵循）
-        corsProxyUrl: 'https://jxz-cors-proxy.nicholaswuai.workers.dev/'  // 部署后替换为你的 Worker 地址
+        corsProxyUrl: 'https://jxz-cors-proxy.nicholaswuai.workers.dev/',  // 部署后替换为你的 Worker 地址
+        // 是否启用 CORS 代理。默认按环境：web 默认开启，本地 file:// / APK(webview) / Electron 默认关闭。
+        // 用户在配置页勾选后可覆盖（APK 勾选后也能走代理）。
+        corsProxyEnabled: (function() {
+            try {
+                if (typeof process !== 'undefined' && process.versions && process.versions.electron) return false;
+                if (typeof window !== 'undefined' && window.Android) return false;
+                if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') return false;
+                return true; // web
+            } catch (e) { return true; }
+        })()
     };
 
     function loadConfig() {
@@ -76,14 +86,13 @@ var apiService = (function() {
     }
 
     /**
-     * 根据运行环境决定实际请求 URL
-     * web 环境且配置了 corsProxyUrl 时，通过代理中转
+     * 根据启用开关决定实际请求 URL
+     * 勾选启用且配置了 corsProxyUrl 时，通过代理中转（不再限定环境，APK 勾选后也可走代理）
      * @param {string} url - 原始 API URL
      * @returns {string}
      */
     function _resolveUrl(url) {
-        var env = _getRunEnv();
-        if (env === 'web' && config.corsProxyUrl) {
+        if (config.corsProxyEnabled && config.corsProxyUrl) {
             var proxy = config.corsProxyUrl.replace(/\/+$/, '');
             return proxy + '?target=' + encodeURIComponent(url);
         }
