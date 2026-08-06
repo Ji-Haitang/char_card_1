@@ -27,10 +27,11 @@ var locationRunner = (function() {
     // =========================================================================
 
     var LOCATION_SYSTEM_PROMPT = [
-        '你是游戏"瀚海归义录"的地点记录官。你会拿到【当前地点信息】（含结构化的危险度/友善度/行动建议 + 各子场景描述）和【本次访问期间发生的剧情摘要】，任务是输出一个更新后的完整地点信息 JSON。',
+        '你是游戏"瀚海归义录"的地点记录官。你会拿到【当前地点信息】（含结构化的危险度/友善度/行动建议 + 各子场景描述）和【本次访问期间发生的剧情摘要】，任务是输出一个更新后的完整地点信息。',
         '',
         '【一、输出格式（最重要，严格遵守）】',
-        '只输出一个合法 JSON 对象，不要 markdown 代码围栏，不要任何解释文字。结构必须是：',
+        '用 <LOCATION> 和 </LOCATION> 标签包裹一个合法 JSON 对象输出，除了JSON对象和标签外不输出任何文字，不要 markdown 代码围栏。结构必须是：',
+        '<LOCATION>',
         '{',
         '  "危险度": { "评级": "低|较低|中|较高|高", "说明": "string" },',
         '  "友善度": { "评级": "低|较低|中|较高|高", "说明": "string" },',
@@ -40,6 +41,7 @@ var locationRunner = (function() {
         '    "...": { "..." }',
         '  }',
         '}',
+        '</LOCATION>',
         '"危险度"/"友善度"的"评级"必须严格是"低/较低/中/较高/高"这五档之一，不得自造新档位。',
         '字符串值内部禁止出现英文双引号 ""，会破坏 JSON 结构；需要引用称呼、地名、物件名等场合一律使用「」书名号代替，不得使用 ""。',
         '',
@@ -124,7 +126,10 @@ var locationRunner = (function() {
      */
     function parseLocationJson(raw) {
         if (!raw) return null;
-        var text = String(raw).trim();
+        // 先拆 <LOCATION> XML 包裹（严格模式：没找到标签/未闭合就当失败）
+        var block = responseParser.extractXmlBlock(String(raw), 'LOCATION');
+        if (!block.found || !block.closed) return null;
+        var text = block.content.trim();
         text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
         try { return JSON.parse(text); } catch (e) {}
         var first = text.indexOf('{');
@@ -226,13 +231,36 @@ var locationRunner = (function() {
             // 这样后一次访问处理时，locationMemory 里必然已经是前一次访问处理完的最新结果
             var memoryBefore = storageService.loadLocationMemory();
             var prevData = memoryBefore[location];
-            var prevText = prevData
-                ? ((typeof renderLocationText === 'function') ? renderLocationText(location, prevData) : '')
-                : ((typeof getPromptLocationDefault === 'function') ? getPromptLocationDefault(location) : '');
 
-            var userPrompt = '【当前地点信息】\n' + prevText +
+            // 当前地点信息统一预处理成 <LOCATION> 包裹的 JSON 格式，让 LLM 照样子输出：
+            // - 有历史数据：直接用 prevData 拼
+            // - 无历史数据（首次访问）：用 parseLocationText 把 YAML 默认模板解析成结构化对象再拼（对齐格式）
+            var currentLocationObj = null;
+            if (prevData) {
+                currentLocationObj = {
+                    危险度: prevData['危险度'] || null,
+                    友善度: prevData['友善度'] || null,
+                    行动建议: prevData['行动建议'] || [],
+                    子场景: prevData['子场景'] || {}
+                };
+            } else if (typeof getPromptLocationDefault === 'function' && typeof parseLocationText === 'function') {
+                var yamlText = getPromptLocationDefault(location);
+                if (yamlText) {
+                    var parsed = parseLocationText(yamlText);
+                    // 解析出至少一个字段才算成功，否则退回 YAML 原文
+                    if (parsed && (parsed['危险度'] || parsed['友善度'] || (parsed['行动建议'] && parsed['行动建议'].length) || (parsed['子场景'] && Object.keys(parsed['子场景']).length))) {
+                        currentLocationObj = parsed;
+                    }
+                }
+            }
+
+            var currentLocationJson = currentLocationObj
+                ? '<LOCATION>\n' + JSON.stringify(currentLocationObj, null, 2) + '\n</LOCATION>'
+                : ((typeof getPromptLocationDefault === 'function') ? getPromptLocationDefault(location) : ''); // 兜底：parseLocationText 失败时退回 YAML 原文
+
+            var userPrompt = '【当前地点(' + location + ')信息】\n' + currentLocationJson +
                 '\n\n【本次访问期间发生的剧情摘要】\n' + (buff.text || '') +
-                '\n\n请严格按 system prompt 的规则，重写一份更新后的完整地点信息 JSON。';
+                '\n\n请严格按 system prompt 的规则，重写一份更新后的，由<LOCATION> 和 </LOCATION> 标签包裹的完整地点信息 JSON。';
 
             var messages = [
                 { role: 'system', content: LOCATION_SYSTEM_PROMPT },

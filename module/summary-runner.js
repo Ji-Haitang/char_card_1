@@ -151,14 +151,15 @@ var summaryRunner = (function() {
             console.log('[SummaryRunner] 原始回复 (' + result.length + ' chars):\n' + result);
             console.groupEnd();
 
-            // 截断检测：</SUMMARY> 缺失则视为失败，走 catch 重试
-            if (!result || !result.includes('</SUMMARY>')) {
+            // 截断检测：用统一鲁棒 XML 提取（容忍大小写/空格/下划线），未闭合视为截断
+            var block = responseParser.extractXmlBlock(result, 'SUMMARY');
+            if (!block.found) {
+                throw new Error('SUMMARY 输出缺少 <SUMMARY> 标签（实际长度=' + (result ? result.length : 0) + '）');
+            }
+            if (!block.closed) {
                 throw new Error('SUMMARY 输出被截断，缺少 </SUMMARY>（实际长度=' + (result ? result.length : 0) + '）');
             }
-
-            // 提取 <SUMMARY>...</SUMMARY> 内层正文
-            var summaryMatch = result.match(/<SUMMARY>([\s\S]*?)<\/SUMMARY>/);
-            var summaryText = summaryMatch ? summaryMatch[1].trim() : '';
+            var summaryText = block.content;
             if (!summaryText) {
                 throw new Error('SUMMARY 内容为空，提取失败');
             }

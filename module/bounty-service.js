@@ -51,7 +51,7 @@ var bountyService = (function() {
         '- 人名/绰号有江湖气息，绰号可从外貌特征、所用兵器、行事作风等方向着意，3人之间风格各异\n' +
         '- 罪行描述简洁有画面感，不超过50字\n' +
         '- 3人的罪行性质互有区分，劫财、害命、叛门、窃宝等不同方向错开，避免雷同\n' +
-        '严格按 JSON 格式输出，不输出任何其他文字。';
+        '严格按 JSON 格式输出，并用 <BOUNTY> 和 </BOUNTY> 标签将整个 JSON 对象完整包裹，除了标签和JSON 对象以外不输出任何其他文字。';
 
     // =========================================================================
     // API 调用（按 apiService.getConfig().streamMode 动态选择流式/非流式，同 summary-runner.js）
@@ -152,24 +152,29 @@ var bountyService = (function() {
             '  敌人信息:\n' +
             enemyLines + '\n' +
             '格式要求:\n' +
-            '  直接输出JSON，不加任何markdown代码块，结构如下：\n' +
+            '  用 <BOUNTY> 和 </BOUNTY> 标签包裹完整 JSON，结构如下：\n' +
+            '  <BOUNTY>\n' +
             '  {"bounties":[\n' +
             '    {"enemyName":"...","description":"..."},\n' +
             '    {"enemyName":"...","description":"..."},\n' +
             '    {"enemyName":"...","description":"..."}\n' +
             '  ]}\n' +
+            '  </BOUNTY>\n' +
             '  bounties数组顺序须与敌人A/B/C一一对应，只需输出敌人的名称与罪行描述\n' +
             '内容要求:\n' +
             '  - 风格贴近北宋初期西域武侠风格\n' +
             '  - enemyName为目标的人名/绰号，须有江湖气息；绰号可从外貌特征、所用兵器、行事作风等方向着意，3人风格各异\n' +
             '  - description为目标的罪行描述，简洁有画面感，50字以内；3人的罪行性质互有区分，劫财、害命、叛门、窃宝等不同方向错开，富有创意，避免雷同\n' +
             '  - 每个目标的enemyName与description应结合其所在地与武学境界，输出合理自洽的内容\n\n' +
-            '请依据上述信息生成三个敌人的名称和描述，直接输出JSON，不加任何markdown代码块';
+            '请依据上述信息生成三个敌人的名称和描述，用 <BOUNTY> 和 </BOUNTY> 标签包裹完整 JSON 输出，不加任何 markdown 代码块';
     }
 
-    // 提取 JSON 字符串（容错 markdown 代码块包裹 + LLM 字符串值内裸 ASCII 双引号）
+    // 先拆 <BOUNTY> XML 包裹（严格模式：没找到标签/未闭合就当失败），再解析内层 JSON（容错 markdown 围栏 + 裸双引号 + jsonrepair 兜底）
     function _parseBountyResponse(text) {
-        var cleaned = String(text || '').replace(/```json|```/g, '').trim();
+        var block = responseParser.extractXmlBlock(String(text || ''), 'BOUNTY');
+        if (!block.found) throw new Error('缺少 <BOUNTY> 标签');
+        if (!block.closed) throw new Error('缺少 </BOUNTY>，输出被截断');
+        var cleaned = block.content.replace(/```json|```/g, '').trim();
         var data;
         try {
             data = JSON.parse(cleaned);

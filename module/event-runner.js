@@ -47,7 +47,7 @@ var eventRunner = (function() {
     // =========================================================================
 
     var EVENT_SYSTEM_PROMPT = [
-        '你是游戏“瀚海归义录”的剧情事件记录官。你的任务是把游戏对话原文拆解为结构化「剧情事件」，并维护角色弧光与世界事实，最终只输出一个合法 JSON 对象。',
+        '你是游戏“瀚海归义录”的剧情事件记录官。你的任务是把游戏对话原文拆解为结构化「剧情事件」，并维护角色弧光与世界事实，最终只输出一个xml标签包裹的合法 JSON 对象。',
         '',
         '【一、事件粒度与白描骨架（最重要）】',
         '事件是原文的叙事骨架，不是逐楼实录。一个事件 = 一个有起承转合的完整叙事单元，以“目标/冲突的展开→收束”为边界，可横跨多个楼层。',
@@ -78,7 +78,8 @@ var eventRunner = (function() {
         '- 谓词复用、不造同义词；只输出 NEW/CHANGED 的事实',
         '- o 值要短、原子化、带标点：一条事实只承载一个要点（建议 ≤20 字），多个要点拆成多条 fact；写成带标点的完整短句，禁止长串无标点的叙事流水或省略号堆叠',
         '',
-        '【五、输出 JSON 结构（严格遵守，只输出一个 JSON 对象）】',
+        '【五、输出结构（严格遵守，用 <EVENT> 和 </EVENT> 标签包裹一个完整 JSON 对象，除了JSON对象和标签外不写任何文字）】',
+        '<EVENT>',
         '{',
         '  "mindful_prelude": { "dedup_analysis": "已有X个事件；按叙事线梳理本批：①线A(#a-#b)…②线B(#c-#d)…；据此识别出Y条新事件", "fact_changes": "关系/事实变化概述" },',
         '  "events": [',
@@ -99,6 +100,7 @@ var eventRunner = (function() {
         '  "factUpdates": [ { "s": "主角", "p": "对萧白瑚的看法", "o": "心存好奇又愧疚", "isState": true, "trend": "投缘" } ],',
         '  "aliasUpdates": [ { "alias": "药酒", "canonical": "鹿茸酒" } ]',
         '}',
+        '</EVENT>',
         '',
         '【字段规则】',
         '- id：从注入的 {$nextEventId} 起依次 +1；title：短标题「地点·事件」（8~12字）',
@@ -112,7 +114,7 @@ var eventRunner = (function() {
         '',
         '【数量与取舍】按叙事线聚合：一条完整叙事线（含起承转合）对应一条事件，宁合勿拆，通常每轮 2~4 条；纯过场水（查背包/刷商店/无实质互动的过场、门派内参/武林动态等八卦）可省略，给空 events:[]。',
         '',
-        '【最终约束】直接输出单个合法 JSON，勿加解释、勿加 markdown 代码围栏，字符串内避免英文双引号；引用对话原句、专有名称、物件名等需要加引号时，一律使用「」书名号，不得使用英文双引号 ""。'
+        '【最终约束】直接输出<EVENT> 和 </EVENT> 标签包裹的单个合法 JSON，勿加解释、勿加 markdown 代码围栏，字符串内避免英文双引号；引用对话原句、专有名称、物件名等需要加引号时，一律使用「」书名号，不得使用英文双引号 ""。'
     ].join('\n');
 
     // =========================================================================
@@ -202,11 +204,14 @@ var eventRunner = (function() {
     }
 
     /**
-     * 从 LLM 原始回复中提取单个 JSON 对象（容错：去 code fence、取首尾大括号切片）
+     * 从 LLM 原始回复中提取单个 JSON 对象（先拆 <EVENT> XML 包裹，再去 code fence、取首尾大括号切片）
      */
     function _parseEventJson(raw) {
         if (!raw) return null;
-        var text = String(raw).trim();
+        // 先拆 <EVENT> XML 包裹（严格模式：没找到标签/未闭合就当失败）
+        var block = responseParser.extractXmlBlock(String(raw), 'EVENT');
+        if (!block.found || !block.closed) return null;
+        var text = block.content.trim();
         // 去掉 ```json ... ``` 围栏
         text = text.replace(/^```(?:json)?\s*/i, '').replace(/\s*```\s*$/i, '');
         // 直接尝试
@@ -639,7 +644,7 @@ var eventRunner = (function() {
         }
 
         parts.push('【起始事件号】本批 events[0].id 从 evt-' + nextEventId + ' 起依次 +1。');
-        parts.push('【提醒】先在 mindful_prelude 自检本批边界与新增项，再产出 events/arcUpdates/factUpdates；每条事件必带 3~6 个 keywords；无新增弧光/事实则给 []。直接输出单个合法 JSON。');
+        parts.push('【提醒】先在 mindful_prelude 自检本批边界与新增项，再产出 events/arcUpdates/factUpdates；每条事件必带 3~6 个 keywords；无新增弧光/事实则给 []。用 <EVENT> 和 </EVENT> 标签包裹完整 JSON 输出。');
 
         return parts.join('\n');
     }

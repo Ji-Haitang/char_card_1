@@ -159,6 +159,38 @@ var responseParser = (function() {
         }
     }
 
+    /**
+     * 鲁棒提取 XML 标签块（容忍大小写、标签内外空格/下划线）
+     * @param {string} text 原始文本
+     * @param {string} tagName 标签名（如 'SUMMARY' / 'BOUNTY'，大小写不敏感）
+     * @returns {{found:boolean, closed:boolean, content:string}}
+     *   found: 是否找到开标签；closed: 是否找到闭合标签（false=截断）；content: 闭合时标签内文本
+     */
+    function extractXmlBlock(text, tagName) {
+        if (!text || !tagName) return { found: false, closed: false, content: '' };
+        // 把 tagName 拆成逐字符的大小写不敏感字符类，字符间允许空格/下划线
+        // 例如 SUMMARY → [Ss][\s_]*[Uu][\s_]*[Mm]...
+        var chars = String(tagName).split('').map(function (ch) {
+            var lower = ch.toLowerCase(), upper = ch.toUpperCase();
+            if (lower === upper) return ch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); // 非字母转义
+            return '[' + lower + upper + ']';
+        });
+        var tagPattern = chars.join('[\\s_]*');
+        var openRe = new RegExp('<[\\s_]*' + tagPattern + '[\\s_]*>');
+        var closeRe = new RegExp('<[\\s_]*\\/[\\s_]*' + tagPattern + '[\\s_]*>');
+
+        var openMatch = openRe.exec(text);
+        if (!openMatch) return { found: false, closed: false, content: '' };
+
+        var contentStart = openMatch.index + openMatch[0].length;
+        var closeMatch = closeRe.exec(text.substring(contentStart));
+        if (!closeMatch) {
+            // 开标签在、闭合缺失 → 截断
+            return { found: true, closed: false, content: '' };
+        }
+        return { found: true, closed: true, content: text.substring(contentStart, contentStart + closeMatch.index).trim() };
+    }
+
     function run(rawText) {
         var cleaned = removeThinkingContent(rawText || '');
         return {
@@ -170,5 +202,5 @@ var responseParser = (function() {
         };
     }
 
-    return { removeThinkingContent: removeThinkingContent, extractMainText: extractMainText, extractSummaries: extractSummaries, extractSideNoteJson: extractSideNoteJson, run: run };
+    return { removeThinkingContent: removeThinkingContent, extractMainText: extractMainText, extractSummaries: extractSummaries, extractSideNoteJson: extractSideNoteJson, extractXmlBlock: extractXmlBlock, run: run };
 })();
