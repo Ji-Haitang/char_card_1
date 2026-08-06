@@ -144,6 +144,14 @@ var responseParser = (function() {
             try {
                 return JSON.parse(fixed);
             } catch (e2) {
+                // 第三层兜底：jsonrepair 尽力修复（处理截断/未闭合/全角括号等结构性残缺）
+                var repaired = window.safeParseLLMJson ? window.safeParseLLMJson(jsonText.trim(), {
+                    lastKey: '剧情基调',
+                    onRepaired: function (layer) {
+                        console.warn('SIDE_NOTE json repaired (layer ' + layer + '), 但是最后字段校验通过');
+                    }
+                }) : null;
+                if (repaired !== null) return repaired;
                 console.error('SIDE_NOTE parse fail:', e2.message);
                 console.error('SIDE_NOTE raw jsonText (first 200 chars):', JSON.stringify(jsonText.trim().substring(0, 200)));
                 return null;

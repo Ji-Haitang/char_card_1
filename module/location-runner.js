@@ -140,6 +140,15 @@ var locationRunner = (function() {
             fixed = fixed.replace(new RegExp('"(' + SURR + ')', 'g'), '\u300d$1');
             try { return JSON.parse(fixed); } catch (e3) {}
         }
+        // jsonrepair 兜底：处理截断/未闭合/全角括号等结构性残缺
+        if (window.safeParseLLMJson) {
+            return window.safeParseLLMJson(text, {
+                lastKey: '子场景',
+                onRepaired: function (layer) {
+                    console.warn('[location] json repaired (layer ' + layer + '), 但是最后字段校验通过');
+                }
+            });
+        }
         return null;
     }
 

@@ -179,7 +179,21 @@ var bountyService = (function() {
             var INNER = '[一-鿿＀-￯　-〿，。、：；！？…—～]';
             var fixed = cleaned
                 .replace(new RegExp('(' + INNER + ')"(' + INNER + ')', 'g'), '$1」$2');
-            data = JSON.parse(fixed);
+            try {
+                data = JSON.parse(fixed);
+            } catch (e2) {
+                // 第三层兜底：jsonrepair 尽力修复（截断/未闭合/全角括号等结构性残缺）
+                data = window.safeParseLLMJson ? window.safeParseLLMJson(cleaned, {
+                    lastKeyCheck: function (d) {
+                        return d && Array.isArray(d.bounties) && d.bounties.length === 3 &&
+                            d.bounties.every(function (t) { return t && t.enemyName && t.description; });
+                    },
+                    onRepaired: function (layer) {
+                        console.warn('[bounty] json repaired (layer ' + layer + '), 但是最后字段校验通过');
+                    }
+                }) : null;
+                if (data === null) throw e2;
+            }
         }
         if (!Array.isArray(data.bounties) || data.bounties.length === 0) throw new Error('格式无效');
         return data.bounties;
