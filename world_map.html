@@ -1029,17 +1029,18 @@
             if (bl) bountyLocation = bl;
 
             // 3) 随行NPC（可选，用于默认勾选）
-            // 优先读 localStorage（index.html 同源传递，避免URL过长），找不到再回退URL参数（兼容跨域/旧链路）
+            // URL 参数优先（父页实时传入的当前值），localStorage 兜底（index.html 同源传递，避免URL过长）
             try {
-                const comp = JSON.parse(localStorage.getItem('worldmap_companionNPC') || q.get('companionNPC') || '[]');
+                const comp = JSON.parse(q.get('companionNPC') || localStorage.getItem('worldmap_companionNPC') || '[]');
                 if (Array.isArray(comp)) {
                 window._incomingCompanions = comp; // 可在 showNPCList 里用来默认勾选
                 }
             } catch (e) {}
 
             // 4) 好感度：父页传的是以ID为键的对象，这里转成“中文名”为键
+            // URL 参数优先（父页实时传入的当前值），localStorage 兜底（index.html 同源传递）
             try {
-                const favorRaw = JSON.parse(localStorage.getItem('worldmap_npcFavorability') || q.get('npcFavorability') || '{}');
+                const favorRaw = JSON.parse(q.get('npcFavorability') || localStorage.getItem('worldmap_npcFavorability') || '{}');
                 const favorByName = {};
                 Object.entries(favorRaw).forEach(([id, val]) => {
                 const name = idToName[id] || id;
