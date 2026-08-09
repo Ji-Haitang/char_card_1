@@ -8,8 +8,8 @@
  * 关键词留空则只看启用开关。
  *
  * 支持两个独立分类（slot）：
- *   slot '1'：插入位置为 </UserInfo> 与 ] 之间（主角信息之后）
- *   slot '2'：插入位置为 </fresh> 与 <user_input> 之间（防止重复要求之后）
+ *   slot '1'：插入位置为 [Details...] 段内、地点信息之后
+ *   slot '2'：插入位置为 <fresh> 与 <user_input> 之间（防止重复要求之后）
  * 两个分类的条目各自独立存储、独立排序，互不影响。
  *
  * 依赖：storage-service.js

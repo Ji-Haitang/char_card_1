@@ -289,8 +289,7 @@
     - 杂役、商人、工匠、其他门客等
 <TianshanSectNPCs>
 
-<!-- <AdditionalSettings> is additional settings in story-->
-<AdditionalSettings>
+<Kemonomimi‌Settings>
 兽化设定:
   基本说明:
     - 为了增加叙事的趣味性并凸显该故事的架空历史性质，本世界观中的所有人物都带有轻微的动物特征，叙述时不要对此大惊小怪
@@ -307,5 +306,4 @@
   描写原则:
     - 自然融入人物描写
     - 不对角色的动物特征进行强调
-    - 偶尔用于情绪表现（如猫尾炸毛）
-</AdditionalSettings>
+</Kemonomimi‌Settings>

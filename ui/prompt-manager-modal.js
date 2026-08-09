@@ -45,37 +45,37 @@ var promptManagerModal = (function() {
             _pmBtn('CORE_010', '故事背景', true)
         ]);
 
-        // 分组3：地点信息 / 主要NPC信息 / 主角信息
+        // 分组3：地点信息
         html += _pmSection([
-            _pmLocationDropdown(),
+            _pmLocationDropdown()
+        ]);
+
+        // 世界书大类No.1（插入位置：地点信息之后、] 之前）
+        html += _pmWorldbookCategory('1');
+
+        // 分组4a：文笔风格 / 对话历史 / 主要NPC信息 / 主角信息（后两者位于 history 内 PreviousMemories 之后、召回记忆之前）
+        html += _pmSection([
+            _pmBtn('WRITING_STYLE', '文笔风格', true),
+            _pmDisabledBtn('对话历史'),
             _pmNpcDropdown(),
             _pmBtn('CORE_040', '主角信息', true)
         ]);
 
-        // 世界书大类No.1（插入位置：</UserInfo> 与 ] 之间，即主角信息之后）
-        html += _pmWorldbookCategory('1');
-
-        // 分组4a：文笔风格 / 对话历史 / 防止重复要求
-        html += _pmSection([
-            _pmBtn('WRITING_STYLE', '文笔风格', true),
-            _pmDisabledBtn('对话历史'),
-            _pmBtn('FRESH', '防止重复要求', false)
-        ]);
-
-        // 世界书大类No.2（插入位置：</fresh> 与 <user_input> 之间）
+        // 世界书大类No.2（插入位置：<fresh> 与 <user_input> 之间）
         html += _pmWorldbookCategory('2');
 
-        // 分组4b：本次用户输入 / 行动指导 / 信息列表 / 输出格式规范
+        // 分组4b：防止重复要求 / 本次用户输入 / 行动指导 / 信息列表
         html += _pmSection([
+            _pmBtn('FRESH', '防止重复要求', false),
             _pmDisabledBtn('本次用户输入'),
             _pmActionDropdown(),
-            _pmBtn('CORE_105', '信息列表', false),
-            _pmBtn('CORE_110', '输出格式规范', false)
+            _pmBtn('CORE_105', '信息列表', false)
         ]);
 
-        // 分组5：剧情生成要求 / 思维链
+        // 分组5：剧情生成要求 / 输出格式规范（位于 Order 内 </request> 之后）/ 思维链
         html += _pmSection([
             _pmBtn('ORDER', '剧情生成要求', true),
+            _pmBtn('CORE_110', '输出格式规范', false),
             _pmThinkGuidanceDropdown()
         ]);
 
