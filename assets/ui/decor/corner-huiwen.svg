@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 原创回纹边角：由外至内的方形螺旋，传统雷纹的简化几何表达 -->
+  <g fill="none" stroke="#595959" stroke-width="2.6" stroke-linecap="square">
+    <path d="M60 3 H3 V60"/>
+    <path d="M52 11 H11 V52"/>
+    <path d="M44 19 H19 V44"/>
+    <path d="M36 27 H27 V36"/>
+    <path d="M34 34 H30 V30 H33"/>
+  </g>
+</svg>

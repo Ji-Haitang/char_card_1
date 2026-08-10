@@ -1,0 +1,29 @@
+/*
+ * ============================================================
+ * 姬侠传 字体注册（game-styles-fonts.css）
+ * ------------------------------------------------------------
+ * 由 index.html 中的条件脚本加载：file:// 协议下跳过
+ * （浏览器 CORS 会拦截 file:// 字体子资源，且 3 个 TTF 约 19.5MB
+ * 不适合内联），此时自动回退本地楷体/衬线字体。
+ * http/https/Capacitor WebView 环境正常加载。
+ * ============================================================
+ */
+
+@font-face {
+    font-family: 'ZCOOL XiaoWei';
+    src: url('../assets/fonts/zcool-xiaowei.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'Ma Shan Zheng';
+    src: url('../assets/fonts/ma-shan-zheng.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'ZCOOL QingKe HuangYou';
+    src: url('../assets/fonts/zcool-qingke-huangyou.ttf') format('truetype');
+    font-display: swap;
+}
+

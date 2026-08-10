@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- 原创回纹边角（右下角版本）：corner-huiwen.svg 旋转 180° -->
+  <g fill="none" stroke="#595959" stroke-width="2.6" stroke-linecap="square">
+    <path d="M4 61 H61 V4"/>
+    <path d="M12 53 H53 V12"/>
+    <path d="M20 45 H45 V20"/>
+    <path d="M28 37 H37 V28"/>
+    <path d="M30 30 H34 V34 H31"/>
+  </g>
+</svg>

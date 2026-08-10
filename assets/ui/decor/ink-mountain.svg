@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 480 140" preserveAspectRatio="xMidYMax meet">
+  <!-- 原创淡墨远山：剧情区右下角水印 -->
+  <defs>
+    <linearGradient id="inkFar" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2c2c2c" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#2c2c2c" stop-opacity="0.01"/>
+    </linearGradient>
+    <linearGradient id="inkNear" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1a1a1a" stop-opacity="0.16"/>
+      <stop offset="1" stop-color="#1a1a1a" stop-opacity="0.02"/>
+    </linearGradient>
+  </defs>
+  <path fill="url(#inkFar)" d="M0 140 L48 72 Q60 56 74 70 L112 108 L168 44 Q182 26 198 44 L244 100 L298 58 Q312 46 326 60 L372 104 L420 78 Q434 70 446 82 L480 112 L480 140 Z"/>
+  <path fill="url(#inkNear)" d="M0 140 L36 100 Q50 86 66 98 L104 124 L152 74 Q166 58 182 74 L226 118 L272 88 Q286 78 300 90 L344 124 L392 96 Q406 88 420 100 L480 140 Z"/>
+  <g fill="#1a1a1a" opacity="0.14">
+    <path d="M350 34 q6 -8 12 0 q-6 -3 -12 0 Z"/>
+    <path d="M370 26 q5 -7 10 0 q-5 -2.5 -10 0 Z"/>
+    <path d="M332 26 q5 -7 10 0 q-5 -2.5 -10 0 Z"/>
+  </g>
+</svg>

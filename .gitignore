@@ -16,6 +16,7 @@ apk/www/
 #vibe相关
 .qoder/
 .workbuddy/
+badscreenshot/
 
 # APK 输出
 *.apk

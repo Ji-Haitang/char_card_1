@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 28">
+  <!-- 原创祥云连续纹样：横向平铺分隔带 -->
+  <g fill="none" stroke="#8c8c8c" stroke-width="1.8" stroke-linecap="round">
+    <path d="M0 21 H18"/>
+    <path d="M18 21 Q14 21 14 17 Q14 13 19 13 Q19 8 25 8 Q29 3 35 6 Q41 2 45 8 Q51 8 51 14 Q51 19 46 19"/>
+    <path d="M25 14 Q25 11 28 11 Q31 11 31 14 Q31 17 28 17"/>
+    <path d="M51 19 H63"/>
+    <path d="M63 21 Q67 21 67 17 Q67 13 72 13 Q72 8 78 8 Q82 3 88 6 Q94 2 98 8 Q104 8 104 14 Q104 19 99 19"/>
+    <path d="M78 14 Q78 11 81 11 Q84 11 84 14 Q84 17 81 17"/>
+    <path d="M104 19 H120"/>
+  </g>
+</svg>

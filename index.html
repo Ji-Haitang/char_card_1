@@ -80,6 +80,17 @@
     </script> -->
     <link rel="stylesheet" href="module/game-styles.css">
     <link rel="stylesheet" href="module/game-styles-theme.css" id="theme-css">
+    <!-- UI美化层：图标/装饰/动效（纯表现层，按 body.ui-style-* 自动适配两套主题） -->
+    <link rel="stylesheet" href="module/game-styles-beautify.css" id="beautify-css">
+    <!-- 字体文件较大且 file:// 协议下会被浏览器 CORS 拦截，故仅在线/WebView 环境加载（双击打开时回退本地楷体） -->
+    <script>
+        if (location.protocol !== 'file:') {
+            var beFontLink = document.createElement('link');
+            beFontLink.rel = 'stylesheet';
+            beFontLink.href = 'module/game-styles-fonts.css';
+            document.head.appendChild(beFontLink);
+        }
+    </script>
 </head>
 <body>
     <div class="container">

@@ -475,6 +475,7 @@ function displayNpcs(location) {
     npcsAtLocation.forEach((npc, index) => {
         const portrait = document.createElement('div');
         portrait.className = 'npc-portrait';
+        portrait.dataset.npcId = npc.id; // 供点击穿透时识别身份
         
         // 新增：如果是SLG模式，添加禁用样式
         if (GameMode === 1) {
@@ -509,15 +510,50 @@ function displayNpcs(location) {
             portrait.addEventListener('click', function(e) {
                 e.stopPropagation();
                 
-                // 检测点击位置是否在非透明区域
-                if (isClickOnOpaquePixel(e, img)) {
-                    showNpcInfo(npc.id, location, e);
+                // 多NPC同场时立绘容器互相重叠，点击可能被上层NPC的透明区截获。
+                // 自上而下查找第一个在点击处像素不透明的立绘，它就是本次点击的目标。
+                const hit = findOpaqueNpcAtPoint(container, e.clientX, e.clientY);
+                if (hit) {
+                    showNpcInfo(hit.dataset.npcId, location, e);
                 }
+            });
+            
+            // 悬停高亮与点击判定保持一致：高亮“点击会触发”的那个NPC，
+            // 而非 CSS :hover 命中的最上层容器（其透明区会挡住下层NPC，导致高亮错人）
+            portrait.addEventListener('mousemove', function(e) {
+                const hit = findOpaqueNpcAtPoint(container, e.clientX, e.clientY);
+                container.querySelectorAll('.npc-portrait.npc-hover').forEach(p => {
+                    if (p !== hit) p.classList.remove('npc-hover');
+                });
+                if (hit) hit.classList.add('npc-hover');
+            });
+            portrait.addEventListener('mouseleave', function() {
+                container.querySelectorAll('.npc-portrait.npc-hover').forEach(p => p.classList.remove('npc-hover'));
             });
         }
         
         container.appendChild(portrait);
     });
+}
+
+// 立绘像素检测的离屏canvas缓存：hover会高频触发检测，避免每帧重画整图
+const _npcOpaqueCanvasCache = new WeakMap();
+
+// 在指定点位自上而下查找第一个像素不透明的NPC立绘（解决立绘容器重叠时的遮挡/误判）
+function findOpaqueNpcAtPoint(container, clientX, clientY) {
+    const stack = document.elementsFromPoint(clientX, clientY);
+    for (const el of stack) {
+        const portrait = el.classList && el.classList.contains('npc-portrait')
+            ? el
+            : (el.closest ? el.closest('.npc-portrait') : null);
+        if (!portrait || !container.contains(portrait)) continue;
+        const pimg = portrait.querySelector('img');
+        if (pimg && portrait.dataset.npcId &&
+            isClickOnOpaquePixel({ clientX: clientX, clientY: clientY }, pimg)) {
+            return portrait;
+        }
+    }
+    return null;
 }
 
 // 检测点击位置是否在图片的非透明区域
@@ -565,12 +601,16 @@ function isClickOnOpaquePixel(event, img) {
         const pixelX = Math.floor((clickX - offsetX) / displayWidth * img.naturalWidth);
         const pixelY = Math.floor((clickY - offsetY) / displayHeight * img.naturalHeight);
         
-        // 使用canvas读取像素alpha值
-        const canvas = document.createElement('canvas');
-        canvas.width = img.naturalWidth;
-        canvas.height = img.naturalHeight;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0);
+        // 使用canvas读取像素alpha值（canvas按img缓存，hover高频检测时避免重复绘制）
+        let canvas = _npcOpaqueCanvasCache.get(img);
+        if (!canvas) {
+            canvas = document.createElement('canvas');
+            canvas.width = img.naturalWidth;
+            canvas.height = img.naturalHeight;
+            canvas.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
+            _npcOpaqueCanvasCache.set(img, canvas);
+        }
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         
         // 获取该像素的数据
         const pixelData = ctx.getImageData(pixelX, pixelY, 1, 1).data;
@@ -632,10 +672,12 @@ function showNpcSelectionOverlay(npcId, location, event) {
         giftDisabledReason = '金钱不足';
     }
     
-    // 获取NPC立绘容器
-    const portrait = event.currentTarget;
-    const container = portrait.closest('.npc-container');
+    // 获取目标NPC的立绘容器：按npcId反查，而非event.currentTarget——
+    // 点击穿透转交时currentTarget是上层其他NPC的容器，会导致框选位置错位
+    const container = document.getElementById(location + '-npcs');
     if (!container) return;
+    const portrait = container.querySelector(`.npc-portrait[data-npc-id="${npcId}"]`) || event.currentTarget;
+    if (!portrait) return;
     
     // 隐藏场景交互按钮
     const scene = container.closest('.scene');
@@ -894,7 +936,9 @@ function showNpcInfoPopup(npcId, location, event) {
     
     popup.classList.add('show');
     
-    const portrait = event.currentTarget;
+    // 按npcId反查立绘定位弹窗（点击穿透转交时currentTarget是上层其他NPC的容器）
+    const npcContainer = document.getElementById(location + '-npcs');
+    const portrait = (npcContainer && npcContainer.querySelector(`.npc-portrait[data-npc-id="${npcId}"]`)) || event.currentTarget;
     const portraitRect = portrait.getBoundingClientRect();
     
     const popupRect = popup.getBoundingClientRect();

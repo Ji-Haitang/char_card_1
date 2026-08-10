@@ -544,7 +544,9 @@ body {
     transition: filter 0.3s ease;
 }
 
-.npc-portrait:hover {
+/* 高亮由 JS 按像素命中结果驱动（.npc-hover），不再用 :hover——
+   多 NPC 立绘重叠时 :hover 命中的最上层容器可能是透明区，会高亮错人 */
+.npc-portrait.npc-hover {
     filter: brightness(1.1);
 }
 
@@ -3332,12 +3334,12 @@ body {
     max-height: none !important;
 }
 
-/* 多边形高亮样式：仅扁平化UI时生效 */
+/* 多边形高亮样式：仅扁平化UI时生效（亮蓝，与发送按钮 --f-primary 一致） */
 body.ui-style-flat #map-hit-areas polygon:hover,
 body.ui-style-flat #map-hit-areas polygon.active {
-    stroke: #4ecdc4;
+    stroke: #5b8cff;
     fill: transparent;
-    filter: drop-shadow(0 0 6px rgba(78,205,196,0.55)) drop-shadow(0 0 12px rgba(78,205,196,0.35));
+    filter: drop-shadow(0 0 6px rgba(91,140,255,0.55)) drop-shadow(0 0 12px rgba(91,140,255,0.35));
     cursor: pointer;
 }
 
