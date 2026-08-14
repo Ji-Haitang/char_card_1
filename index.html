@@ -483,11 +483,12 @@
             </div>
         </div>
               
-        <!-- 中间控制按钮 -->
+        <!-- 底部面板：中间控制按钮 + 自由行动输入（合并一圈外框，古风下统一米黄底枯笔框） -->
+        <div class="bottom-panel">
         <div class="control-buttons">
             <!-- 属性查看下拉菜单 -->
             <div class="dropdown-wrapper">
-                <button class="control-btn dropdown-toggle" onclick="toggleDropdown('attribute-dropdown')">
+                <button class="control-btn dropdown-toggle be-seal be-seal-attr" onclick="toggleDropdown('attribute-dropdown')">
                     属性查看 ▲
                 </button>
                 <div id="attribute-dropdown" class="dropdown-menu">
@@ -502,7 +503,7 @@
             
             <!-- 系统设置下拉菜单 -->
             <div class="dropdown-wrapper">
-                <button class="control-btn dropdown-toggle" onclick="toggleDropdown('system-dropdown')">
+                <button class="control-btn dropdown-toggle be-seal be-seal-system" onclick="toggleDropdown('system-dropdown')">
                     系统设置 ▲
                 </button>
                 <div id="system-dropdown" class="dropdown-menu">
@@ -515,7 +516,7 @@
             
             <!-- 新增：历史信息下拉菜单 -->
             <div class="dropdown-wrapper">
-                <button class="control-btn dropdown-toggle" onclick="toggleDropdown('history-dropdown')">
+                <button class="control-btn dropdown-toggle be-seal be-seal-history" onclick="toggleDropdown('history-dropdown')">
                     历史管理 ▲
                 </button>
                 <div id="history-dropdown" class="dropdown-menu">
@@ -530,8 +531,8 @@
                 </div>
             </div>
             
-            <button class="control-btn" id="skip-week-btn" onclick="skipWeek()">跳过这一周</button>
-            <button class="control-btn" id="slg-return-btn" onclick="returnFromSLG()" style="display: none;">返回天山派</button>
+            <button class="control-btn be-seal be-seal-skip" id="skip-week-btn" onclick="skipWeek()">跳过这一周</button>
+            <button class="control-btn be-seal be-seal-return" id="slg-return-btn" onclick="returnFromSLG()" style="display: none;">返回天山派</button>
         </div>
 
         <!-- 自由行动输入框 -->
@@ -544,6 +545,7 @@
             ></textarea>
             <button class="free-action-send-btn" id="regenerate-btn" onclick="handleRegenerate()">重生成</button>
             <button class="free-action-send-btn" id="free-action-send-btn" onclick="sendFreeAction()">发送</button>
+        </div>
         </div>
 
         <!-- 难度设置弹窗 -->
@@ -4969,6 +4971,26 @@ function buildSaveName() {
             const btn = document.getElementById('toggle-ui-btn');
             const style = (typeof uiStyle !== 'undefined') ? uiStyle : 0;
             if (btn) btn.textContent = `风格(${style === 0 ? '古风' : '扁平'})`;
+            applyAncientLeadWrap(); // textContent 重写会移除字牌 span，需重新包裹
+        }
+
+        // ========== 古风「首字牌」系统 ==========
+        // 按钮文字拆为：首字（书法体 + 枯笔边框包裹） + 其余字（同字体小一号）。
+        // 样式由 game-styles-beautify.css 的 .be-lead/.be-rest 承载，仅古风生效。
+        function wrapAncientLeadChar(btn) {
+            if (!btn || btn.querySelector('.be-lead')) return; // 幂等：已包裹跳过
+            // 只处理纯文本按钮（含元素子节点的不动，避免破坏内部结构）
+            const hasElementChild = [...btn.childNodes].some(n => n.nodeType === 1);
+            if (hasElementChild) return;
+            const text = btn.textContent.trim();
+            if (text.length < 2) return;
+            btn.innerHTML = `<span class="be-lead">${text[0]}</span><span class="be-rest">${text.slice(1)}</span>`;
+        }
+        function applyAncientLeadWrap() {
+            const targets = document.querySelectorAll(
+                '.scene-btn[onclick], .control-btn[onclick], .dropdown-item[onclick], .back-btn, .free-action-send-btn, #regenerate-btn'
+            );
+            targets.forEach(wrapAncientLeadChar);
         }
 
         // 切换UI风格
@@ -4996,7 +5018,10 @@ function buildSaveName() {
                     document.body.classList.add('ui-style-flat');
                 }
             }
+            applyAncientLeadWrap(); // 风格切换后确保字牌包裹（扁平下无样式，包裹无害）
         }
+        // 首次加载即执行一次（脚本位于 body 尾部，DOM 已就绪）
+        applyAncientLeadWrap();
 
         // 打开玩法说明
         function openPlayGuide() {

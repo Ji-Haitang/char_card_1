@@ -642,8 +642,9 @@ function showNpcInfo(npcId, location, event) {
     const reward = npcSparRewards[npcId];
     const rewardText = reward ? `(${reward.type}+${reward.value})` : '';
     
-    // 判断UI风格：古风UI(uiStyle=0) 使用框选叠加层，扁平化UI(uiStyle=1) 使用原有弹窗
-    if (typeof uiStyle !== 'undefined' && uiStyle === 0) {
+    // 判断UI风格：古风UI使用框选叠加层，扁平化UI使用原有弹窗
+    // 以 body 实际类名为准（uiStyle 变量可能与实际显示风格脱节）
+    if (document.body.classList.contains('ui-style-ancient')) {
         // ========== 古风UI：框选叠加层效果 ==========
         showNpcSelectionOverlay(npcId, location, event);
     } else {

@@ -116,11 +116,10 @@
  * 用法：宿主元素声明 --be-icon: url(...)，::before 统一以 mask 着色为 currentColor，
  * 悬停变色时图标自动跟随。仅对明确列出图标的宿主生效，无图标宿主不受影响。
  */
+/* 古风按钮已改用「首字牌」（见 4.5a），剪影图标仅保留状态栏与事件标题 */
 body.ui-style-ancient :is(
     .date-display, .mood-display, .action-points-display,
-    .scene-btn[onclick], .control-btn[onclick], .back-btn,
-    #free-action-send-btn, #regenerate-btn,
-    .dropdown-item[onclick], .event-title, .battle-event-title
+    .event-title, .battle-event-title
 )::before,
 body.ui-style-flat :is(
     .date-display, .mood-display, .action-points-display,
@@ -188,9 +187,66 @@ body.ui-style-ancient .status-display::before {
     margin-right: 0.15em;
 }
 
+/* 状态栏容器：去米黄渐变底、下边框线、投影（年月日/体力/行动点的墨团字直接浮在页面背景上） */
+body.ui-style-ancient .status-display {
+    background: none !important;
+    border-bottom: none !important;
+    box-shadow: none !important;
+}
+
 body.ui-style-ancient .date-display           { --be-icon: var(--be-i-icons-ancient-calendar); }
 body.ui-style-ancient .mood-display           { --be-icon: var(--be-i-icons-ancient-meditate); }
 body.ui-style-ancient .action-points-display  { --be-icon: var(--be-i-icons-ancient-run); }
+
+/* 年月日/行动点：去图标，水墨笔触为底 + 白描边黑字（镂空拓片，与装备名同款）
+   日期→水墨笔触3（横刷），行动点→水墨笔触1（墨团）；体力保留图标不动 */
+body.ui-style-ancient .date-display::before,
+body.ui-style-ancient .action-points-display::before { display: none !important; }
+body.ui-style-ancient .date-display,
+body.ui-style-ancient .action-points-display {
+    background-color: transparent !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-blend-mode: multiply !important;
+    color: #000000 !important;
+    text-shadow:
+        1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff,
+        1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff !important;
+    padding: 3px 12px !important;
+}
+body.ui-style-ancient .date-display          { background-image: url('../assets/image/static/水墨笔触3.png') !important; }
+body.ui-style-ancient .action-points-display { background-image: url('../assets/image/static/水墨笔触1.png') !important; }
+/* 行动点字号对齐体力：theme 1294 的统一规则写的是 .action-points 子元素，但行动点 DOM 是裸文本永远命中不了，
+   导致体力 0.9rem 起而行动点只继承 0.8rem——这里直接补在容器上 */
+body.ui-style-ancient .action-points-display {
+    font-size: clamp(0.9rem, 2vw, 1.1rem) !important;
+    font-weight: 600 !important;
+}
+/* 行动点数字若被子元素标红，在黑墨底上不可读——一并恢复拓片字 */
+body.ui-style-ancient .action-points-display strong,
+body.ui-style-ancient .action-points-display .action-value {
+    color: #000000 !important;
+    text-shadow:
+        1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff,
+        1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff !important;
+}
+
+/* 体力文字：与行动点同款墨团底拓片字（只包 .mood-text 文字，不影响同行的 mood-bar 进度条） */
+body.ui-style-ancient .mood-display::before { display: none !important; }
+body.ui-style-ancient .mood-text {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/水墨笔触1.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-blend-mode: multiply !important;
+    color: #000000 !important;
+    text-shadow:
+        1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff,
+        1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff !important;
+    padding: 3px 10px !important;
+}
 
 /* --- 4.3 场景按钮图标（按动作语义精确匹配，不动 HTML） --- */
 body.ui-style-ancient .scene-btn[onclick*="练武"]       { --be-icon: var(--be-i-icons-ancient-sword); }
@@ -236,51 +292,409 @@ body.ui-style-ancient #regenerate-btn        { --be-icon: var(--be-i-icons-ancie
 body.ui-style-ancient .event-title           { --be-icon: var(--be-i-icons-ancient-dice); }
 body.ui-style-ancient .battle-event-title    { --be-icon: var(--be-i-icons-ancient-battle); }
 
-/* 抵消主题原有的墨水扩散 ::before（与图标伪元素冲突），按压改由位移/阴影反馈 */
-body.ui-style-ancient .control-btn:active::before,
-body.ui-style-ancient .scene-btn:active:not(:disabled)::before,
-body.ui-style-ancient .back-btn:active::before,
-body.ui-style-ancient .free-action-send-btn:active:not(:disabled)::before {
-    position: static;
-    top: auto;
-    left: auto;
-    display: inline-block;
-    width: 1.05em;
-    height: 1.05em;
-    margin-right: 0.38em;
-    vertical-align: -0.15em;
-    background-color: currentColor;
-    border-radius: 0;
-    transform: none;
-    animation: none;
+/* 事件标题前缀：剪影图标 → 溅墨点（mix-blend 融白底，适应任意底色） */
+body.ui-style-ancient .event-title::before,
+body.ui-style-ancient .battle-event-title::before {
+    -webkit-mask-image: none;
+    mask-image: none;
+    background-color: transparent;
+    background-image: url('../assets/image/static/水墨墨迹.png');
+    background-size: contain;
+    background-position: center;
+    background-repeat: no-repeat;
+    mix-blend-mode: multiply;
+    width: 1.3em;
+    height: 1.3em;
 }
 
-/* --- 4.6 弹窗：回纹角饰 + 标题祥云分隔 --- */
-body.ui-style-ancient .modal-content,
-body.ui-style-ancient .cfg-panel {
-    background-image:
-        var(--be-i-decor-corner-huiwen),
-        var(--be-i-decor-corner-huiwen-br),
-        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.1'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E") !important;
-    background-repeat: no-repeat, no-repeat, repeat !important;
-    background-position: 7px 7px, right 7px bottom 7px, 0 0 !important;
-    background-size: 34px 34px, 34px 34px, auto !important;
+/* --- 4.5a 字牌 span（JS 的 applyAncientLeadWrap() 生成） ---
+   2.2 版起首字放大样式退役：按钮视觉改由印章图/框图承载（见 4.5b/4.5c），
+   span 全部回归与按钮正文一致（字体随按钮规则，统一 Ma Shan Zheng 朱砂红）。 --- */
+body.ui-style-ancient .be-lead,
+body.ui-style-ancient .be-rest {
+    display: inline;
+    font-family: inherit;
+    font-size: inherit;
+    line-height: inherit;
+    letter-spacing: inherit;
+    background: none;
+    padding: 0;
+    margin: 0;
+    vertical-align: baseline;
 }
 
-body.ui-style-ancient .modal-content h2,
-body.ui-style-ancient .modal-content h3 {
-    color: var(--ink-black);
-    padding-bottom: 14px;
-    margin-bottom: 12px;
-    background: var(--be-i-decor-cloud-divider) center bottom / auto 12px repeat-x;
-}
+/* --- 4.5b 二级按钮：透明底手绘墨框 + 米黄圆角内底 + 墨色 Ma Shan Zheng ---
+   适用：二级菜单项 / 场景互动 / 返回 / 弹窗按钮 / 配置按钮 / 发送与重生成。
+   框图实为透明底 PNG（alpha 即形状，RGB 已转墨），直接叠加即可；
+   米黄填充收到 ::before 圆角内底（inset/border-radius 贴合框线内缘），避免矩形直角外露。
+   长按钮（场景/下拉）框图整体拉伸；短按钮统一框5-fill
+   用 border-image 三段式：左右 33% 不拉伸、中段横拉拼接（小按钮中段自然收窄，不撑宽）。
+   注意：主题按钮的 background 是带 !important 的 shorthand（会连带重置 image），
+   长按钮常态与 hover 均需用 longhand 显式恢复全部背景子属性。 --- */
+body.ui-style-ancient .scene-btn { --be-frame: url('../assets/image/static/框1-fill.png'); }            /* 山纹 */
+body.ui-style-ancient .dropdown-item { --be-frame: url('../assets/image/static/框4-fill.png'); }         /* 祥云 */
 
-/* --- 4.7 剧情区：淡墨远山水印 --- */
-body.ui-style-ancient .story-area {
-    background-image: var(--be-i-decor-ink-mountain) !important;
+/* 长按钮：透明框图整体拉伸 */
+body.ui-style-ancient .scene-btn,
+body.ui-style-ancient .dropdown-item {
+    clip-path: none !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    background-image: var(--be-frame) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
     background-repeat: no-repeat !important;
-    background-position: right 10px bottom 8px !important;
-    background-size: min(42%, 320px) auto !important;
+    color: var(--ink-black, #1a1a1a) !important;
+    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    transform: none; /* P5 斜切/倾斜已移除 */
+    position: relative;
+    filter: drop-shadow(1px 2px 0 rgba(20, 20, 20, 0.16));
+}
+/* 场景互动按钮统一 4 字宽，短名居中（如“探索”与“秘密赌场”对齐） */
+body.ui-style-ancient .scene-btn {
+    min-width: 7.8em;
+    text-align: center;
+}
+
+/* 短按钮：框5-短.png 整图皮肤（用户定制短框素材，米黄内填已做进图里）
+   background-size 100% 100% 直接拉伸，左右卷草纹位于两端，文字坐中段米黄区。
+   收紧 padding、不设 min-width、flex 不拉伸——小按钮紧凑贴合文字。 */
+body.ui-style-ancient .back-btn,
+body.ui-style-ancient .modal-btn,
+body.ui-style-ancient .cfg-btn,
+body.ui-style-ancient .free-action-send-btn,
+body.ui-style-ancient #regenerate-btn,
+body.ui-style-ancient .location-go-btn,
+body.ui-style-ancient .reset-combat-btn,
+body.ui-style-ancient .gift-btn,
+body.ui-style-ancient .trading-btn,
+body.ui-style-ancient .npc-info-btn,
+body.ui-style-ancient .skill-action-btn,
+body.ui-style-ancient .event-option-btn,
+body.ui-style-ancient .battle-action-btn {
+    clip-path: none !important;
+    border: none !important;
+    border-image: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框5-短.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: var(--ink-black, #1a1a1a) !important;
+    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    transform: none; /* P5 斜切/倾斜已移除 */
+    position: relative;
+    min-width: 0;
+    padding-left: 1em !important;
+    padding-right: 1em !important;
+    flex: 0 0 auto !important;
+    text-align: center;
+    filter: drop-shadow(1px 2px 0 rgba(20, 20, 20, 0.16));
+}
+
+/* 米黄填充已像素级做进 -fill 图（行扫描贴合框形），::before 内底退役；
+   display:none 一并压住主题的按压墨点 ::before */
+body.ui-style-ancient .scene-btn::before,
+body.ui-style-ancient .dropdown-item::before,
+body.ui-style-ancient .back-btn::before,
+body.ui-style-ancient .modal-btn::before,
+body.ui-style-ancient .cfg-btn::before,
+body.ui-style-ancient .free-action-send-btn::before,
+body.ui-style-ancient #regenerate-btn::before,
+body.ui-style-ancient .location-go-btn::before,
+body.ui-style-ancient .reset-combat-btn::before,
+body.ui-style-ancient .gift-btn::before,
+body.ui-style-ancient .trading-btn::before,
+body.ui-style-ancient .npc-info-btn::before,
+body.ui-style-ancient .skill-action-btn::before,
+body.ui-style-ancient .event-option-btn::before,
+body.ui-style-ancient .battle-action-btn::before { display: none; }
+
+/* 下拉菜单容器：剥掉主题的米黄底+矩形边框，只留一排框图按钮 */
+body.ui-style-ancient .dropdown-menu {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 6px;
+}
+body.ui-style-ancient .dropdown-item {
+    border-bottom: none !important; /* 框图自带边缘，项间虚线分隔退役 */
+    margin: 3px 0;
+}
+
+/* hover：米黄内底下沉 + 焦墨字 */
+body.ui-style-ancient .scene-btn:hover:not(:disabled),
+body.ui-style-ancient .dropdown-item:hover {
+    background-color: transparent !important;
+    background-image: var(--be-frame) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: #000000 !important; /* 焦墨 */
+    transform: scale(1.03);
+}
+body.ui-style-ancient .back-btn:hover,
+body.ui-style-ancient .modal-btn:hover,
+body.ui-style-ancient .cfg-btn:hover,
+body.ui-style-ancient .free-action-send-btn:hover:not(:disabled),
+body.ui-style-ancient #regenerate-btn:hover:not(:disabled),
+body.ui-style-ancient .location-go-btn:hover,
+body.ui-style-ancient .reset-combat-btn:hover,
+body.ui-style-ancient .gift-btn:hover:not(:disabled),
+body.ui-style-ancient .trading-btn:hover:not(:disabled),
+body.ui-style-ancient .npc-info-btn:hover:not(:disabled),
+body.ui-style-ancient .skill-action-btn:hover:not(:disabled),
+body.ui-style-ancient .event-option-btn:hover,
+body.ui-style-ancient .battle-action-btn:hover {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框5-短.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: #000000 !important; /* 焦墨 */
+    transform: scale(1.03);
+}
+/* 主题的矩形内饰线与古框冲突，隐藏 */
+body.ui-style-ancient .control-btn::after,
+body.ui-style-ancient .scene-btn::after,
+body.ui-style-ancient .back-btn::after { display: none; }
+
+/* --- 4.5c 主按钮：朱砂印章整图皮肤（图自带文字与纹样，原文字透明） --- */
+body.ui-style-ancient .be-seal-attr { --seal-img: url('../assets/image/static/属性查看-ink.png'); }
+body.ui-style-ancient .be-seal-system { --seal-img: url('../assets/image/static/系统设置-ink.png'); }
+body.ui-style-ancient .be-seal-history { --seal-img: url('../assets/image/static/历史管理-ink.png'); }
+body.ui-style-ancient .be-seal-skip { --seal-img: url('../assets/image/static/跳过一周-ink.png'); }
+body.ui-style-ancient .be-seal-return { --seal-img: url('../assets/image/static/返回门派-ink.png'); }
+
+body.ui-style-ancient .be-seal {
+    background-color: transparent !important;
+    background-image: var(--seal-img) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: transparent !important; /* 图自带文字 */
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    clip-path: none !important;
+    transform: none;
+    min-height: 3.1em;
+    filter: none !important; /* 去掉 drop-shadow：四枚印章的投影在底缘连成横线、右缘竖线加剧分断感 */
+    margin: 0 !important; /* 4.7b 黑衬底容器下章间缺口透黑，无需重叠 */
+}
+/* 印章图自带图标与文字，桌面端同样清掉叠加的前置图标（1630 行图标规则只清了 480 窄屏） */
+body.ui-style-ancient .control-btn.be-seal::before { display: none !important; }
+body.ui-style-ancient .be-seal:hover {
+    background-color: transparent !important;
+    background-image: var(--seal-img) !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: transparent !important;
+    transform: scale(1.05);
+}
+
+/* --- 4.6 弹窗：枯笔手绘框（border-image） + 反色笔锋标题牌 --- */
+body.ui-style-ancient .modal-content,
+body.ui-style-ancient .cfg-panel,
+body.ui-style-ancient .location-info-popup {
+    border: 26px solid transparent !important;
+    /* 水墨粗方框 border-image 九宫格：四角 24% 墨团固定、边线中段拉伸，
+       任意弹窗尺寸/宽高比下边带厚度一致，不再随整体拉伸变形 */
+    border-image: url('../assets/image/static/水墨粗方框.png') 24% / 26px / 4px stretch !important;
+    border-radius: 0 !important;
+    /* 水墨粗方框 multiply 铺底：白底融掉只留四边狂草框线（四边不均正是其笔意） */
+    background-image:
+        url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23d6d2c4' fill-opacity='0.1'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z'/%3E%3C/g%3E%3C/svg%3E") !important;
+    background-repeat: repeat !important;
+    background-position: 0 0 !important;
+    background-size: auto !important;
+}
+
+/* --- 4.6b 面板/卡片：边框-fill 枯笔方框（border-image 九宫格 + fill 米黄铺底） ---
+   边框.png 原图透明底、枯笔框偏居左上，已像素处理成紧贴裁剪的 边框-fill.png：
+   min 灰度转墨 + 行扫描内填米黄 + alpha 包围盒裁剪（597×602）。
+   slice 4% 含住框线带波动；fill 中央米黄取代主题 239 组的纸色+纸纹与 2px 墨线直角。 */
+body.ui-style-ancient .stats-group,
+body.ui-style-ancient .inventory-item,
+body.ui-style-ancient .relationship-card,
+body.ui-style-ancient .equipment-stats,
+body.ui-style-ancient .item-info,
+body.ui-style-ancient .shop-item-info,
+body.ui-style-ancient .shop-item-price-info,
+body.ui-style-ancient .equipment-slot,
+body.ui-style-ancient .trading-list,
+body.ui-style-ancient .trading-item-row,
+body.ui-style-ancient .random-event-container,
+body.ui-style-ancient .battle-event-container,
+body.ui-style-ancient .skill-panel,
+body.ui-style-ancient .bounty-card,
+body.ui-style-ancient .cheat-section,
+body.ui-style-ancient .difficulty-option {
+    border: 10px solid transparent !important;
+    border-image: url('../assets/image/static/边框-fill.png') 4% fill / 10px / 1px stretch !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+}
+/* fill 米黄会盖住元素 background，选中/悬停态改用 inset 大阴影轻罩以资区分
+  （box-shadow 绘制于背景之上、内容之下） */
+body.ui-style-ancient .difficulty-option.selected,
+body.ui-style-ancient .bounty-card-active {
+    box-shadow: inset 0 0 0 999px rgba(44, 44, 44, 0.10) !important;
+}
+body.ui-style-ancient .difficulty-option:hover {
+    box-shadow: inset 0 0 0 999px rgba(44, 44, 44, 0.05) !important;
+}
+body.ui-style-ancient .difficulty-option input[type="radio"] {
+    accent-color: var(--ink-black, #1a1a1a);
+}
+
+/* 技能等级徽标/标签（Lv1/已装备/当前已装备等浅蓝色块）：框5-短整图小皮肤 */
+body.ui-style-ancient .skill-badge,
+body.ui-style-ancient .skill-tag {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框5-短.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: var(--ink-black, #1a1a1a) !important;
+    padding: 2px 0.9em !important;
+}
+
+/* 技能空态提示区：边框-fill 枯笔细框（虚线框退役） */
+body.ui-style-ancient .skill-empty-state {
+    background: transparent !important;
+    border: 8px solid transparent !important;
+    border-image: url('../assets/image/static/边框-fill.png') 4% fill / 8px / 1px stretch !important;
+    border-radius: 0 !important;
+    color: var(--ink-medium, #5a5a5a) !important;
+}
+
+/* 装备槽内已装备物品名：水墨笔触1 墨团为底（multiply 融白）+ 白描边黑字（镂空拓片感） */
+body.ui-style-ancient .equipped-item {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/水墨笔触1.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    background-blend-mode: multiply !important;
+    border: none !important;
+    border-radius: 0 !important;
+    color: #000000 !important;
+    text-shadow:
+        1px 0 0 #fff, -1px 0 0 #fff, 0 1px 0 #fff, 0 -1px 0 #fff,
+        1px 1px 0 #fff, -1px -1px 0 #fff, 1px -1px 0 #fff, -1px 1px 0 #fff !important;
+    padding: 6px 16px !important;
+}
+
+/* 战斗/随机事件内部：敌人信息区与奖励条套边框-fill 枯笔细框（虚线分隔退役） */
+body.ui-style-ancient .battle-enemy-info,
+body.ui-style-ancient .battle-reward {
+    background: transparent !important;
+    border: 6px solid transparent !important;
+    border-image: url('../assets/image/static/边框-fill.png') 4% fill / 6px / 1px stretch !important;
+    border-radius: 0 !important;
+    padding: 6px 10px !important;
+}
+
+/* 游戏设置/AI配置弹窗：内容面板透出弹窗纸色，消灭「狂草框里再套白框」 */
+body.ui-style-ancient .gs-panel-wrap { background: transparent !important; }
+body.ui-style-ancient .gs-tabs { background: transparent !important; }
+
+/* 输入控件：边框-fill 枯笔细框 + fill 米黄铺底（6px 窄边带适配小高度输入行）
+   覆盖自由行动/总结轮次/AI配置/金手指等全部文本与数字输入框、下拉框 */
+body.ui-style-ancient textarea,
+body.ui-style-ancient input[type="text"],
+body.ui-style-ancient input[type="password"],
+body.ui-style-ancient input[type="number"],
+body.ui-style-ancient select.cfg-input,
+body.ui-style-ancient .cfg-input {
+    background-color: transparent !important;
+    background-image: none !important;
+    color: var(--ink-black, #1a1a1a) !important;
+    border: 6px solid transparent !important;
+    border-image: url('../assets/image/static/边框-fill.png') 4% fill / 6px stretch !important;
+    border-radius: 0 !important;
+    font-family: var(--font-serif, 'Kaiti', serif) !important;
+}
+
+/* 汗青集/日志查看内容区：内联 #f5f5f5 白底改为边框-fill 枯笔框（fill 米黄） */
+body.ui-style-ancient #history-summary-content,
+body.ui-style-ancient #pipeline-log-content {
+    background: transparent !important;
+    border: 8px solid transparent !important;
+    border-image: url('../assets/image/static/边框-fill.png') 4% fill / 8px stretch !important;
+    border-radius: 0 !important;
+}
+
+/* 标题牌：弧形浓墨笔触（水墨笔触2）+ 纸色字反白 + 微斜探出
+   弹窗标题 + 属性页/金手指分组标题共用。笔触左浓右枯，文字坐左部浓墨区，
+   右侧枯笔处纸色字渐隐——代替纯色块与几何斜切，去 P5 感、增写意。 */
+body.ui-style-ancient .modal-content h2,
+body.ui-style-ancient .modal-content h3,
+body.ui-style-ancient .stats-group h3,
+body.ui-style-ancient .cheat-section h4 {
+    display: inline-block;
+    border-bottom: none; /* 覆盖主题的下边框线 */
+    background-color: var(--paper-base, #f4f0e6);
+    background-image: url('../assets/image/static/水墨笔触2.png');
+    background-size: 100% 100%;
+    background-repeat: no-repeat;
+    background-blend-mode: multiply; /* 白底融掉，弧形笔触浮现 */
+    color: var(--paper-base, #f4f0e6) !important; /* 对抗主题 stats-group h3 的墨色 !important */
+    padding: 5px 2.4em 9px 1.1em;
+    margin: -4px 0 14px -0.6em;
+    transform: rotate(-1.6deg);
+    letter-spacing: 3px;
+}
+
+/* --- 4.7 剧情区：边框.png 枯笔框 + 山水背景层贴底 ---
+   山水用预淡化 fade 图（alpha×0.3）直接作元素背景：天然衬在边框与文字之下、无伪元素、不遮挡任何元素；
+   background-origin: border-box 让定位区含 border 带——山贴元素外缘底，边带透明处透出山=贴框无缝 */
+body.ui-style-ancient .story-area {
+    background-color: var(--paper-light, #faf8f2) !important;
+    background-image: url('../assets/image/static/文字框or弹窗底部的水墨背景建议加透明度使用-fade.png') !important;
+    background-repeat: no-repeat !important;
+    background-position: center bottom !important;
+    background-size: 100% auto !important;
+    background-origin: border-box !important;
+    background-blend-mode: normal !important;
+    border: 10px solid transparent !important;
+    border-image: url('../assets/image/static/边框.png') 4% / 10px / 1px stretch !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+/* 展开全文按钮：框3-fill 长框（比例≈4.3 与按钮吻合，整图微拉伸），hover 需 longhand 恢复 */
+body.ui-style-ancient .story-expand-btn {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框3-fill.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: var(--ink-black, #1a1a1a) !important;
+    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    padding: 4px 1.6em !important;
+}
+body.ui-style-ancient .story-expand-btn:hover {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框3-fill.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: #000000 !important;
+    box-shadow: none !important;
 }
 
 body.ui-style-ancient .page-indicator {
@@ -288,6 +702,38 @@ body.ui-style-ancient .page-indicator {
     font-family: var(--font-serif);
     letter-spacing: 1px;
 }
+
+/* --- 4.7b 底部合并面板：.bottom-panel 一圈边框-fill 枯笔框（DOM 合并，根除拼接缝横线）；
+       印章行近黑衬底贴框内缘（章间圆角缺口透黑=连续黑带，各屏宽一致）；
+       按钮行与输入区之间留 ~1/3 按钮高空隙（1em≈13px，按钮 min-height 3.1em） --- */
+body.ui-style-ancient .bottom-panel {
+    border: 10px solid transparent !important;
+    /* slice 3%（源图 ~18px）≈ 只取枯笔框线带：4% 会把框线内侧 ~14px 米黄一起取进边带，框内侧留出一条米黄空带 */
+    border-image: url('../assets/image/static/边框-fill.png') 3% fill / 10px / 1px stretch !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+body.ui-style-ancient .control-buttons {
+    background: transparent !important; /* 不要黑衬底：4 枚独立印章铺在米黄底上 */
+    border: none !important;
+    border-image: none !important;
+    padding: 0 !important;
+    /* 上左右三向负 margin 吃进边带内残余米黄（slice 3% 后约 5px），章缘贴到枯笔框线内缘而不压框线 */
+    margin: -5px -5px 0 -5px !important;
+    width: auto !important; /* 压掉 base 的 width:100%：定宽会让右侧负 margin 无法外扩 */
+    max-width: none !important; /* 同理压掉 base 的 max-width:100% 钳制 */
+}
+body.ui-style-ancient .free-action-container {
+    background: transparent !important;
+    border: none !important;
+    border-image: none !important;
+    box-shadow: none !important;
+    margin: 0 !important;
+    padding-top: 1em !important;
+}
+/* 输入区顶端对齐：textarea 上缘与重生成/发送按钮上缘齐平 */
+body.ui-style-ancient .free-action-send-btn { align-self: flex-start; }
 
 /* --- 4.8 配置弹窗（cfg-panel）：纸色覆盖（主题原包遗漏的暗色弹窗） --- */
 body.ui-style-ancient .cfg-panel {
@@ -324,9 +770,29 @@ body.ui-style-ancient .cfg-panel::-webkit-scrollbar-track { background: var(--pa
 body.ui-style-ancient .cfg-panel::-webkit-scrollbar-thumb { background: var(--ink-light); }
 body.ui-style-ancient .cfg-panel { scrollbar-color: var(--ink-light) var(--paper-dark); }
 
-/* --- 4.9 动效挂载：场景标题/按钮入场、地图墨点漂浮 --- */
+/* --- 4.9 动效挂载：一笔刷开 / 挥入回正 / 场景标题与地图墨点 --- */
+/* 弹窗入场：从左到右一笔「刷」开 */
+@keyframes be-brush-in {
+    from { clip-path: inset(0 100% 0 0); opacity: 0.35; }
+    to { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+body.ui-style-ancient .modal .modal-content { animation: be-brush-in 0.3s cubic-bezier(0.2, 0.7, 0.3, 1); }
+
+/* 菜单项与场景按钮：挥入后回正（结束不填充，回到常态倾斜） */
+@keyframes be-swing-in {
+    from { opacity: 0; transform: translateY(-7px) rotate(-3.5deg); }
+    to { opacity: 1; transform: none; }
+}
+body.ui-style-ancient .dropdown-menu.show .dropdown-item { animation: be-swing-in 0.26s cubic-bezier(0.2, 0.7, 0.3, 1) backwards; }
+body.ui-style-ancient .dropdown-menu.show .dropdown-item:nth-child(1) { animation-delay: 0.02s; }
+body.ui-style-ancient .dropdown-menu.show .dropdown-item:nth-child(2) { animation-delay: 0.05s; }
+body.ui-style-ancient .dropdown-menu.show .dropdown-item:nth-child(3) { animation-delay: 0.08s; }
+body.ui-style-ancient .dropdown-menu.show .dropdown-item:nth-child(4) { animation-delay: 0.11s; }
+body.ui-style-ancient .dropdown-menu.show .dropdown-item:nth-child(5) { animation-delay: 0.14s; }
+body.ui-style-ancient .dropdown-menu.show .dropdown-item:nth-child(6) { animation-delay: 0.17s; }
+
 body.ui-style-ancient .scene.active .scene-title { animation: be-fade-down 0.5s ease-out; }
-body.ui-style-ancient .scene.active .scene-actions .scene-btn { animation: be-fade-up 0.45s ease-out both; }
+body.ui-style-ancient .scene.active .scene-actions .scene-btn { animation: be-swing-in 0.38s cubic-bezier(0.2, 0.7, 0.3, 1) backwards; }
 body.ui-style-ancient .scene.active .scene-actions .scene-btn:nth-child(2) { animation-delay: 0.07s; }
 body.ui-style-ancient .scene.active .scene-actions .scene-btn:nth-child(3) { animation-delay: 0.14s; }
 
@@ -1186,12 +1652,32 @@ body.ui-style-flat .dropdown-item {
     }
 }
 
-/* 超小屏：弹窗角饰缩小，避免压住内容 */
+/* 超小屏：弹窗框线减薄、内边距收紧，把宽度还给内容区；背包格子同步缩小 */
 @media (max-width: 480px) {
     body.ui-style-ancient .modal-content,
-    body.ui-style-ancient .cfg-panel {
-        background-size: 24px 24px, 24px 24px, auto !important;
-        background-position: 5px 5px, right 5px bottom 5px, 0 0 !important;
+    body.ui-style-ancient .cfg-panel,
+    body.ui-style-ancient .location-info-popup {
+        border-width: 14px !important;
+        border-image: url('../assets/image/static/水墨粗方框.png') 24% / 14px / 2px stretch !important;
+        padding: 12px !important;
+    }
+    body.ui-style-ancient .gs-panel-wrap { padding: 10px !important; }
+
+    /* 背包：格子与图标缩小，一屏能看更多物品 */
+    body.ui-style-ancient .inventory-grid {
+        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)) !important;
+        gap: 6px !important;
+        padding: 10px 0 !important;
+    }
+    body.ui-style-ancient .inventory-item {
+        padding: 5px !important;
+        border-width: 8px !important;
+        border-image: url('../assets/image/static/边框-fill.png') 4% fill / 8px / 1px stretch !important;
+    }
+    body.ui-style-ancient .inventory-item .item-icon {
+        width: 30px !important;
+        height: 30px !important;
+        font-size: 1.4rem !important;
     }
 
     /* 底部控制按钮：文字优先——隐藏前置图标、收紧字号字距，
@@ -1209,5 +1695,167 @@ body.ui-style-flat .dropdown-item {
 @media (min-width: 1200px) {
     body.ui-style-ancient .story-area {
         background-size: min(38%, 420px) auto !important;
+    }
+}
+
+/* ============================== */
+/* 4.10 进度条统一换「进度条.png」 */
+/* ============================== */
+/* track 铺原色进度条.png 整图；fill 仅作宽度锚点（JS 内联 width:N%）自身透明；
+   fill::after 从 fill 右缘（=实际进度位置）起向右铺 100vw，overflow 裁到 track 内，
+   用 backdrop-filter grayscale 把右侧未填充段灰化——红色整图保持原始比例、右段置灰 */
+body.ui-style-ancient .mood-bar,
+body.ui-style-ancient .stat-bar,
+body.ui-style-ancient .relationship-bar,
+body.ui-style-ancient .skill-memory-bar {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/进度条.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    overflow: hidden;
+    position: relative;
+}
+body.ui-style-ancient .mood-fill,
+body.ui-style-ancient .stat-fill,
+body.ui-style-ancient .relationship-fill,
+body.ui-style-ancient .skill-memory-fill {
+    background: none !important;
+    border-radius: 0 !important;
+    position: relative;
+}
+body.ui-style-ancient .mood-fill::after,
+body.ui-style-ancient .stat-fill::after,
+body.ui-style-ancient .relationship-fill::after,
+body.ui-style-ancient .skill-memory-fill::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 100%;
+    width: 100vw;
+    background: rgba(255, 255, 255, 0.001); /* 激活 backdrop-filter 所需的可绘制层 */
+    backdrop-filter: grayscale(1);
+    -webkit-backdrop-filter: grayscale(1);
+    pointer-events: none;
+}
+
+/* ============================== */
+/* 4.9 窄屏统一·长框·虚线清扫      */
+/* ============================== */
+
+/* 技能卸下/装备/学习按钮：任何屏宽都保持左下角小按钮（压过 base 700px 断点的 width:100%） */
+body.ui-style-ancient .skill-card-actions,
+body.ui-style-ancient .skill-equip-actions {
+    justify-content: flex-start !important;
+    align-items: center !important;
+}
+body.ui-style-ancient .skill-action-btn { width: auto !important; }
+
+/* 技能学习条件标签：长框（框5-fill 944x220 比例≈4.3 与标签比例吻合，整图微拉伸）
+   满足=黑框黑字；不满足=框5-红fill 红框红字 */
+body.ui-style-ancient .skill-requirement {
+    border: none !important;
+    border-radius: 0 !important;
+    background-color: transparent !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    padding: 5px 14px !important;
+    font-family: 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    font-size: 12px !important;
+    filter: drop-shadow(1px 1px 0 rgba(20,20,20,0.10));
+}
+body.ui-style-ancient .skill-requirement.ok {
+    background-image: url('../assets/image/static/框5-fill.png') !important;
+    color: var(--ink-black, #1a1a1a) !important;
+}
+body.ui-style-ancient .skill-requirement.failed {
+    background-image: url('../assets/image/static/框5-红fill.png') !important;
+    color: var(--accent-red, #a93226) !important;
+}
+
+/* 存档管理弹窗（#load-modal；旧动态生成路径 id 为 save-list-modal 一并覆盖）：按钮宽度≈弹窗宽，框5-短 横向狂拉失真——换回框5-fill 长框三段式（角纹保真、中段纯色拉伸） */
+body.ui-style-ancient #load-modal .modal-btn,
+body.ui-style-ancient #save-list-modal .modal-btn {
+    background-image: none !important;
+    background-color: transparent !important;
+    border: 16px solid transparent !important;
+    border-image: url('../assets/image/static/框5-fill.png') 52 fill / 16px / 1px stretch !important;
+    border-radius: 0 !important;
+    padding: 4px 1.2em !important;
+}
+
+/* 虚线/点线清扫：弹窗文本分隔、技能等级详情、下拉项分隔 全部改细实线 */
+body.ui-style-ancient .modal-text { border-bottom: 1px solid var(--ink-light, #999) !important; }
+body.ui-style-ancient .skill-level-details { border-top: 1px solid var(--ink-light, #999) !important; }
+body.ui-style-ancient .dropdown-item { border-bottom: 1px solid rgba(0,0,0,0.14) !important; }
+
+/* 存档弹窗按钮小屏等比缩小（必须位于 4.9 基础规则之后才能胜出）：边带 16→10、字号收紧 */
+@media (max-width: 480px) {
+    body.ui-style-ancient #load-modal .modal-btn,
+    body.ui-style-ancient #save-list-modal .modal-btn {
+        border-width: 10px !important;
+        border-image: url('../assets/image/static/框5-fill.png') 52 fill / 10px / 1px stretch !important;
+        font-size: 12px !important;
+        padding: 2px 0.8em !important;
+    }
+}
+
+/* ============================== */
+/* 4.11 停止生成按钮：框5-红fill 红框红字（内联 linear-gradient 红底全部压掉） */
+/* ============================== */
+body.ui-style-ancient #stream-stop-btn {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框5-红fill.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: var(--accent-red, #a93226) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    text-shadow: none !important;
+    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    padding: 6px 1.8em !important;
+}
+
+/* ============================== */
+/* 4.12 发送/重生成按钮：换黑底章图（定高 + aspect-ratio 锁定原图比例，零拉伸失真） */
+/* ============================== */
+body.ui-style-ancient #free-action-send-btn,
+body.ui-style-ancient #regenerate-btn {
+    background-color: transparent !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: transparent !important; /* 图自带文字 */
+    padding: 0 !important;
+    min-width: 0 !important;
+    width: auto !important;
+    height: 2.4em !important; /* ≈原按钮高（字号行高+padding），随断点字号缩放 */
+}
+body.ui-style-ancient #free-action-send-btn {
+    background-image: url('../assets/image/static/发送按钮.png') !important;
+    aspect-ratio: 1215 / 452; /* 原图比例 2.69，宽由高度等比推出 */
+}
+body.ui-style-ancient #regenerate-btn {
+    background-image: url('../assets/image/static/重生成按钮.png') !important;
+    aspect-ratio: 1213 / 446; /* 原图比例 2.72 */
+}
+
+/* 小屏（≤480px）：解除 base 的 32px min-height 钳制，高定 28px = 输入框高(37.4px)×0.75（参考截图的合理比例），
+   与桌面端比例（2.4em≈38px / 输入框≈47px≈0.8）近乎一致；宽度由 aspect-ratio 等比跟随 */
+@media (max-width: 480px) {
+    body.ui-style-ancient #free-action-send-btn,
+    body.ui-style-ancient #regenerate-btn {
+        height: 28px !important;
+        min-height: 0 !important;
     }
 }

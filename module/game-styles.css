@@ -2931,11 +2931,13 @@ body {
     }
 }
 
-/* 移动端进一步优化 - 改为纵向布局 */
-@media (max-width: 480px) {
+/* 窄屏进一步优化 - 改为纵向布局（≤640px 即生效：两列在 500px 级宽度已挤压显示不全） */
+@media (max-width: 640px) {
     .trading-content {
         max-height: 85vh;  /* 增加最大高度 */
         padding: 10px;
+        width: 94vw;       /* 约束弹窗不超视口，防止两列溢出被截 */
+        max-width: 94vw;
     }
     
     .trading-container {

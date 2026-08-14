@@ -347,7 +347,7 @@ function updateRelationshipsDisplay() {
                     <button class="gift-btn ${!canGift ? 'disabled' : ''}" 
                             onclick="giveGift('${npcId}')" 
                             ${!canGift ? 'disabled' : ''}>
-                        送礼 (500金)
+                        送礼
                     </button>
                 </div>
             </div>
