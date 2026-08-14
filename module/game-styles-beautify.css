@@ -168,23 +168,10 @@ body.ui-style-ancient .location-info-name {
     letter-spacing: 2px;
 }
 
-/* --- 4.2 状态栏：朱砂印章 + 三项图标 --- */
+/* --- 4.2 状态栏：三项图标 ---
+   2.14：红底「侠」字徽章按用户要求全屏去除（2.0 轮的状态栏朱砂印章装饰） */
 body.ui-style-ancient .status-display::before {
-    content: '侠';
-    flex: 0 0 auto;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.7em;
-    height: 1.7em;
-    background: var(--accent-red, #a93226);
-    color: var(--paper-light, #faf8f2);
-    font-family: 'ZCOOL QingKe HuangYou', 'ZCOOL XiaoWei', serif;
-    font-size: 0.95em;
-    border-radius: 3px;
-    box-shadow: 1px 1px 0 rgba(0, 0, 0, 0.25);
-    transform: rotate(-4deg);
-    margin-right: 0.15em;
+    display: none !important;
 }
 
 /* 状态栏容器：去米黄渐变底、下边框线、投影（年月日/体力/行动点的墨团字直接浮在页面背景上） */
@@ -1691,10 +1678,22 @@ body.ui-style-flat .dropdown-item {
     }
 }
 
-/* 宽屏 PC：剧情区水印略大，增强氛围 */
+/* 宽屏 PC（≥1200px）三项修正：
+   ① 山水背景满宽贴底：旧规则 min(38%,420px) 是「水印」时代的遗留，导致大屏山纹缩在中间一截
+   ② 印章按钮锁原图比例 3.68（实测 3.56~3.77 取中）：宽仍 flex 均分满行，高按比例推出，图零拉伸不扁
+   ③ 发送/重生成按钮随屏增大：2.8vw 平滑插值，4em 封顶 */
 @media (min-width: 1200px) {
     body.ui-style-ancient .story-area {
-        background-size: min(38%, 420px) auto !important;
+        background-size: 100% auto !important;
+    }
+    body.ui-style-ancient .control-btn.be-seal {
+        aspect-ratio: 3.68;
+        height: auto !important;
+        min-height: 0 !important;
+    }
+    body.ui-style-ancient #free-action-send-btn,
+    body.ui-style-ancient #regenerate-btn {
+        height: clamp(2.4em, 2.8vw, 4em) !important;
     }
 }
 
