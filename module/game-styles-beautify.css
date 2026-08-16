@@ -149,10 +149,8 @@ body.ui-style-flat :is(
  * 4. 古风主题增强（body.ui-style-ancient）
  * ============================================================ */
 
-/* --- 4.1 字体系统：本地书法字体，修复安卓无楷体问题 --- */
-body.ui-style-ancient {
-    --font-serif: 'ZCOOL XiaoWei', 'Kaiti', 'STKaiti', 'AR PL UKai CN', 'KaiTi_GB2312', 'SimSun', serif;
-}
+/* --- 4.1 字体系统：统一本地楷体（站酷小薇 Web 字体已全栈移除，线上/线下渲染一致；
+   --font-serif 不再重定义，直接沿用 theme.css :root 的楷体栈） --- */
 
 /* 标题类：毛笔行书 */
 body.ui-style-ancient .scene-title,
@@ -164,7 +162,7 @@ body.ui-style-ancient .stats-group h3,
 body.ui-style-ancient .cheat-section h4,
 body.ui-style-ancient .cfg-title,
 body.ui-style-ancient .location-info-name {
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', 'STKaiti', serif !important;
+    font-family: 'Ma Shan Zheng', 'Kaiti', 'STKaiti', serif !important;
     letter-spacing: 2px;
 }
 
@@ -334,7 +332,7 @@ body.ui-style-ancient .dropdown-item {
     background-position: center !important;
     background-repeat: no-repeat !important;
     color: var(--ink-black, #1a1a1a) !important;
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
     transform: none; /* P5 斜切/倾斜已移除 */
     position: relative;
     filter: drop-shadow(1px 2px 0 rgba(20, 20, 20, 0.16));
@@ -372,7 +370,7 @@ body.ui-style-ancient .battle-action-btn {
     background-position: center !important;
     background-repeat: no-repeat !important;
     color: var(--ink-black, #1a1a1a) !important;
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
     transform: none; /* P5 斜切/倾斜已移除 */
     position: relative;
     min-width: 0;
@@ -671,7 +669,7 @@ body.ui-style-ancient .story-expand-btn {
     border-radius: 0 !important;
     box-shadow: none !important;
     color: var(--ink-black, #1a1a1a) !important;
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
     padding: 4px 1.6em !important;
 }
 body.ui-style-ancient .story-expand-btn:hover {
@@ -1549,7 +1547,7 @@ body.ui-style-flat .shop-item-price-info { background: rgba(45, 212, 191, 0.12);
    书法字体、白字黑描边、右上角竖排、背景图底部淡出。
    （古风样式原本在 theme.css 里，但扁平模式下该文件被禁用，故在此复刻一份） */
 body.ui-style-flat .scene-title {
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', 'STKaiti', serif;
+    font-family: 'Ma Shan Zheng', 'Kaiti', 'STKaiti', serif;
     color: #fff;
     font-size: 3.5vw;
     text-shadow:
@@ -1764,7 +1762,7 @@ body.ui-style-ancient .skill-requirement {
     background-position: center !important;
     background-repeat: no-repeat !important;
     padding: 5px 14px !important;
-    font-family: 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
     font-size: 12px !important;
     filter: drop-shadow(1px 1px 0 rgba(20,20,20,0.10));
 }
@@ -1818,7 +1816,7 @@ body.ui-style-ancient #stream-stop-btn {
     border-radius: 0 !important;
     box-shadow: none !important;
     text-shadow: none !important;
-    font-family: 'Ma Shan Zheng', 'ZCOOL XiaoWei', 'Kaiti', serif !important;
+    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
     padding: 6px 1.8em !important;
 }
 

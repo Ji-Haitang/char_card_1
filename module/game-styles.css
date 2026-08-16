@@ -3435,7 +3435,7 @@ body.ui-style-flat #map-hit-areas polygon.active {
     overflow-y: auto;
     flex-shrink: 0;
     padding: clamp(16px, 3vw, 28px);
-    font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
+    font-family: 'Microsoft YaHei', sans-serif;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     box-sizing: border-box;
 }
