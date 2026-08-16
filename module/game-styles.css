@@ -3445,7 +3445,7 @@ body.ui-style-flat #map-hit-areas polygon.active {
 .cfg-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
 .cfg-panel { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.22) rgba(255,255,255,0.06); }
 .cfg-title {
-    font-family: 'Ma Shan Zheng', cursive;
+    font-family: 'Kaiti', 'STKaiti', serif;
     font-size: clamp(20px, 3vw, 32px);
     text-align: center;
     margin: 0 0 4px 0;

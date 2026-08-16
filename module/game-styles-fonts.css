@@ -3,17 +3,11 @@
  * 姬侠传 字体注册（game-styles-fonts.css）
  * ------------------------------------------------------------
  * 由 index.html 中的条件脚本加载：file:// 协议下跳过
- * （浏览器 CORS 会拦截 file:// 字体子资源，且 2 个 TTF 约 13MB
+ * （浏览器 CORS 会拦截 file:// 字体子资源，且 TTF 约 6.6MB
  * 不适合内联），此时自动回退本地楷体/衬线字体。
  * http/https/Capacitor WebView 环境正常加载。
  * ============================================================
  */
-
-@font-face {
-    font-family: 'Ma Shan Zheng';
-    src: url('../assets/fonts/ma-shan-zheng.ttf') format('truetype');
-    font-display: swap;
-}
 
 @font-face {
     font-family: 'ZCOOL QingKe HuangYou';

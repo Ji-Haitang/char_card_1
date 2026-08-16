@@ -162,7 +162,7 @@ body.ui-style-ancient .stats-group h3,
 body.ui-style-ancient .cheat-section h4,
 body.ui-style-ancient .cfg-title,
 body.ui-style-ancient .location-info-name {
-    font-family: 'Ma Shan Zheng', 'Kaiti', 'STKaiti', serif !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
     letter-spacing: 2px;
 }
 
@@ -332,7 +332,7 @@ body.ui-style-ancient .dropdown-item {
     background-position: center !important;
     background-repeat: no-repeat !important;
     color: var(--ink-black, #1a1a1a) !important;
-    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
     transform: none; /* P5 斜切/倾斜已移除 */
     position: relative;
     filter: drop-shadow(1px 2px 0 rgba(20, 20, 20, 0.16));
@@ -370,7 +370,7 @@ body.ui-style-ancient .battle-action-btn {
     background-position: center !important;
     background-repeat: no-repeat !important;
     color: var(--ink-black, #1a1a1a) !important;
-    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
     transform: none; /* P5 斜切/倾斜已移除 */
     position: relative;
     min-width: 0;
@@ -425,8 +425,8 @@ body.ui-style-ancient .dropdown-item:hover {
 body.ui-style-ancient .back-btn:hover,
 body.ui-style-ancient .modal-btn:hover,
 body.ui-style-ancient .cfg-btn:hover,
-body.ui-style-ancient .free-action-send-btn:hover:not(:disabled),
-body.ui-style-ancient #regenerate-btn:hover:not(:disabled),
+/* 发送/重生成两按钮（仅有的两个 .free-action-send-btn 实例）不列入本组：4.12 已换章图，
+   hover 换框5-短图/scale 放大均被 4.12 尾的 ID 级 hover 锁定规则统一接管（图不动、无变换） */
 body.ui-style-ancient .location-go-btn:hover,
 body.ui-style-ancient .reset-combat-btn:hover,
 body.ui-style-ancient .gift-btn:hover:not(:disabled),
@@ -669,7 +669,7 @@ body.ui-style-ancient .story-expand-btn {
     border-radius: 0 !important;
     box-shadow: none !important;
     color: var(--ink-black, #1a1a1a) !important;
-    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
     padding: 4px 1.6em !important;
 }
 body.ui-style-ancient .story-expand-btn:hover {
@@ -1547,7 +1547,7 @@ body.ui-style-flat .shop-item-price-info { background: rgba(45, 212, 191, 0.12);
    书法字体、白字黑描边、右上角竖排、背景图底部淡出。
    （古风样式原本在 theme.css 里，但扁平模式下该文件被禁用，故在此复刻一份） */
 body.ui-style-flat .scene-title {
-    font-family: 'Ma Shan Zheng', 'Kaiti', 'STKaiti', serif;
+    font-family: 'Kaiti', 'STKaiti', serif;
     color: #fff;
     font-size: 3.5vw;
     text-shadow:
@@ -1816,7 +1816,7 @@ body.ui-style-ancient #stream-stop-btn {
     border-radius: 0 !important;
     box-shadow: none !important;
     text-shadow: none !important;
-    font-family: 'Ma Shan Zheng', 'Kaiti', serif !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
     padding: 6px 1.8em !important;
 }
 
@@ -1845,6 +1845,12 @@ body.ui-style-ancient #free-action-send-btn {
 body.ui-style-ancient #regenerate-btn {
     background-image: url('../assets/image/static/重生成按钮.png') !important;
     aspect-ratio: 1213 / 446; /* 原图比例 2.72 */
+}
+/* hover 统一：与印章按钮 .be-seal:hover 一致的微放大 scale(1.05)；图不换、无投影（ID 级 specificity 压过 theme/beautify 所有 class 级 hover 组） */
+body.ui-style-ancient #free-action-send-btn:hover:not(:disabled),
+body.ui-style-ancient #regenerate-btn:hover:not(:disabled) {
+    transform: scale(1.05) !important;
+    box-shadow: none !important;
 }
 
 /* 小屏（≤480px）：解除 base 的 32px min-height 钳制，高定 28px = 输入框高(37.4px)×0.75（参考截图的合理比例），
