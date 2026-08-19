@@ -551,6 +551,13 @@ function updateStoryText(text) {
                 loading.appendChild(text);
                 viewport.insertBefore(loading, viewport.firstChild);
             }
+            // 新文本到达=新场景数据：旧图层（连容器）与交互遮罩一并作废，
+            // 由 updateStoryDisplay 按当前模式重建/补建（修复展开状态下 GameMode 0→1 永远"场景加载中"）
+            if (viewport) {
+                viewport.querySelectorAll('.slg-layer-container').forEach(el => el.remove());
+                const staleMask = viewport.querySelector('.slg-interaction-mask');
+                if (staleMask) staleMask.remove();
+            }
         } else {
             try { document.body.classList.remove('slg-global'); } catch (e) {}
             const old = viewport ? viewport.querySelector('.slg-loading-layer') : null;
@@ -561,6 +568,116 @@ function updateStoryText(text) {
 }
 
  // emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}_${pageData.emotion}.webp`;
+// 创建一帧 SLG 图层（场景/NPC表情/CG + 交互遮罩）并挂到 viewport。
+// pageData 为 slgModeData 的某一页；分页分支与展开补建分支复用本函数。
+function _appendSlgLayers(viewport, pageData) {
+    if (!viewport || !pageData) return;
+    // 检查当前场景，只在需要遮罩的场景添加遮罩
+    const activeScene = document.querySelector('.scene.active');
+    const needsMask = activeScene && 
+                    activeScene.id !== 'player-stats-scene' && 
+                    activeScene.id !== 'relationships-scene';
+    
+    if (needsMask) {
+        // 添加遮罩层，阻止场景互动
+        const interactionMask = document.createElement('div');
+        interactionMask.className = 'slg-interaction-mask';
+        viewport.appendChild(interactionMask);
+    }
+    
+    const dayNightCN = (dayNightStatus === 'night') ? '夜' : '昼';
+    const locName = mapLocation || '天山派外堡'; // 当前地图位置（如 天山派） [[11],[14]]
+    const layerContainer = document.createElement('div');
+    layerContainer.className = 'slg-layer-container';
+
+    // 1) 场景图层
+    if (pageData.scene && pageData.scene !== 'none') {
+        const sceneLayer = document.createElement('div');
+        sceneLayer.className = 'slg-layer slg-scene-layer';
+        const sceneImg = document.createElement('img');
+
+        const sceneName = pageData.scene; // 例如 演武场 / 山门 / 公田…
+        // 兜底：命中旧版（普通模式）地点名时，走旧的 img/location/{name}_{昼|夜}.webp 规则
+        const isLegacyScene = (typeof legacySceneOptions !== 'undefined') && legacySceneOptions.includes(sceneName);
+        // https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene_webp/{{当前mapLocation}}/{{昼or夜}}/{{pageData.scene}}.webp
+        const sceneUrl = isLegacyScene
+            ? _assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
+            : _assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
+        sceneImg.src = sceneUrl;
+        sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
+        try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {}
+
+        // // 发生 404 时回退到旧的本地背景规则
+        // sceneImg.onerror = function () {
+        //     this.onerror = null;
+        //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${sceneName}_${dayNightCN}.webp`;
+        // };
+
+        sceneLayer.appendChild(sceneImg);
+        layerContainer.appendChild(sceneLayer);
+    }
+
+    // 2) NPC表情图层
+    if (pageData.npc && pageData.npc !== 'none') {
+        const npcId = npcNameToId[pageData.npc]; // 名字->ID 映射已在配置里 [[14]]
+        if (npcId) {
+            const emotionLayer = document.createElement('div');
+            emotionLayer.className = 'slg-layer slg-emotion-layer';
+            const emotionImg = document.createElement('img');
+
+            const emotion = (pageData.emotion && pageData.emotion !== 'none') ? pageData.emotion : '平静';
+            
+            // 检查是否为特殊CG格式（特殊CG1、特殊CG15等），添加对应CSS类
+            if (/^特殊CG\d+$/.test(emotion)) {
+                emotionLayer.classList.add('slg-emotion-special-cg');
+            }
+            // 触发 enamor：首次遇到“发情”
+            if (emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) {
+                enamor = 1;
+            }
+            // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/表情差分/{{pageData.emotion}}.png
+            const emoUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/表情差分/${emotion}.webp`);
+            emotionImg.src = emoUrl;
+            emotionImg.alt = `${pageData.npc}-${emotion}`;
+            try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {}
+
+            // // 404 回退：用原始 NPC 立绘
+            // emotionImg.onerror = function () {
+            //     this.onerror = null;
+            //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.webp`;
+            // };
+
+            emotionLayer.appendChild(emotionImg);
+            layerContainer.appendChild(emotionLayer);
+        }
+    }
+
+    // 3) 特殊CG图层
+    if (cgContentEnabled && pageData.cg && pageData.cg !== 'none' && pageData.npc && pageData.npc !== 'none') {
+        const cgLayer = document.createElement('div');
+        cgLayer.className = 'slg-layer slg-cg-layer';
+        const cgImg = document.createElement('img');
+
+        // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/色图/{{pageData.cg + 随机1~4的数字后缀}}.png
+        // const randIdx = Math.floor(Math.random() * 4) + 1; // 1~4
+        const cgUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/色图/${pageData.cg}${randIdx}.webp`);
+        cgImg.src = cgUrl;
+        cgImg.alt = `${pageData.npc}-${pageData.cg}${randIdx}`;
+        try { window.__lastValidCgUrl = cgUrl; } catch (e) {}
+
+        // // 404 时直接隐藏本层
+        // cgImg.onerror = function () {
+        //     cgLayer.remove();
+        // };
+
+        cgLayer.appendChild(cgImg);
+        layerContainer.appendChild(cgLayer);
+    }
+
+    // 将图层容器添加到viewport
+    viewport.appendChild(layerContainer);
+}
+
 // 修改 updateStoryDisplay 函数
 function updateStoryDisplay() {
     const storyElement = document.getElementById('story-text');
@@ -572,8 +689,8 @@ function updateStoryDisplay() {
     
     // 只在非展开模式或非SLG模式时清除图层
     if (!isStoryExpanded || GameMode !== 1) {
-        // 清除之前的SLG图层
-        const existingLayers = viewport.querySelectorAll('.slg-layer');
+        // 清除之前的SLG图层（连容器一起，避免空容器壳累积）
+        const existingLayers = viewport.querySelectorAll('.slg-layer-container');
         existingLayers.forEach(layer => layer.remove());
         
         // 清除之前的SLG遮罩层
@@ -588,11 +705,15 @@ function updateStoryDisplay() {
     
     if (isStoryExpanded) {
         // 展开模式
-        if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
-            storyElement.innerHTML = storyPages.join('');
-            // 在SLG模式展开时，保持当前页的图片显示
-        } else {
-            storyElement.innerHTML = storyPages.join('');
+        storyElement.innerHTML = storyPages.join('');
+        // SLG模式展开：无现存图层容器时按当前页（展开时通常为第0页）补建图层——
+        // 修复展开状态下 GameMode 0→1 切换、或展开中收到新回复时永远"场景加载中"；
+        // 有现存图层（toggle 切入展开）则不重建，保持"展开保持当前页图"的原设计
+        if (GameMode === 1 && slgModeData && slgModeData.length > 0
+            && viewport && !viewport.querySelector('.slg-layer-container')) {
+            const expandIndex = Math.min(currentPage, slgModeData.length - 1);
+            try { window.__lastValidSlgIndex = expandIndex; } catch (e) {}
+            _appendSlgLayers(viewport, slgModeData[expandIndex]);
         }
         storyElement.classList.add('expanded');
         if (expandBtn) expandBtn.innerHTML = '▲ 收起';
@@ -611,110 +732,7 @@ function updateStoryDisplay() {
             const pageData = slgModeData[effectiveIndex];
             // 记录最后一次有效的图层索引，供其他模块使用（如战斗背景）
             try { window.__lastValidSlgIndex = effectiveIndex; } catch (e) {}
-            // 检查当前场景，只在需要遮罩的场景添加遮罩
-            const activeScene = document.querySelector('.scene.active');
-            const needsMask = activeScene && 
-                            activeScene.id !== 'player-stats-scene' && 
-                            activeScene.id !== 'relationships-scene';
-            
-            if (needsMask) {
-                // 添加遮罩层，阻止场景互动
-                const interactionMask = document.createElement('div');
-                interactionMask.className = 'slg-interaction-mask';
-                viewport.appendChild(interactionMask);
-            }
-            
-            const dayNightCN = (dayNightStatus === 'night') ? '夜' : '昼';
-            const locName = mapLocation || '天山派外堡'; // 当前地图位置（如 天山派） [[11],[14]]
-            const layerContainer = document.createElement('div');
-            layerContainer.className = 'slg-layer-container';
-
-            // 1) 场景图层
-            if (pageData.scene && pageData.scene !== 'none') {
-                const sceneLayer = document.createElement('div');
-                sceneLayer.className = 'slg-layer slg-scene-layer';
-                const sceneImg = document.createElement('img');
-
-                const sceneName = pageData.scene; // 例如 演武场 / 山门 / 公田…
-                // 兜底：命中旧版（普通模式）地点名时，走旧的 img/location/{name}_{昼|夜}.webp 规则
-                const isLegacyScene = (typeof legacySceneOptions !== 'undefined') && legacySceneOptions.includes(sceneName);
-                // https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene_webp/{{当前mapLocation}}/{{昼or夜}}/{{pageData.scene}}.webp
-                const sceneUrl = isLegacyScene
-                    ? _assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
-                    : _assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
-                sceneImg.src = sceneUrl;
-                sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
-                try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {}
-
-                // // 发生 404 时回退到旧的本地背景规则
-                // sceneImg.onerror = function () {
-                //     this.onerror = null;
-                //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${sceneName}_${dayNightCN}.webp`;
-                // };
-
-                sceneLayer.appendChild(sceneImg);
-                layerContainer.appendChild(sceneLayer);
-            }
-
-            // 2) NPC表情图层
-            if (pageData.npc && pageData.npc !== 'none') {
-                const npcId = npcNameToId[pageData.npc]; // 名字->ID 映射已在配置里 [[14]]
-                if (npcId) {
-                    const emotionLayer = document.createElement('div');
-                    emotionLayer.className = 'slg-layer slg-emotion-layer';
-                    const emotionImg = document.createElement('img');
-
-                    const emotion = (pageData.emotion && pageData.emotion !== 'none') ? pageData.emotion : '平静';
-                    
-                    // 检查是否为特殊CG格式（特殊CG1、特殊CG15等），添加对应CSS类
-                    if (/^特殊CG\d+$/.test(emotion)) {
-                        emotionLayer.classList.add('slg-emotion-special-cg');
-                    }
-                    // 触发 enamor：首次遇到“发情”
-                    if (emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) {
-                        enamor = 1;
-                    }
-                    // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/表情差分/{{pageData.emotion}}.png
-                    const emoUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/表情差分/${emotion}.webp`);
-                    emotionImg.src = emoUrl;
-                    emotionImg.alt = `${pageData.npc}-${emotion}`;
-                    try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {}
-
-                    // // 404 回退：用原始 NPC 立绘
-                    // emotionImg.onerror = function () {
-                    //     this.onerror = null;
-                    //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.webp`;
-                    // };
-
-                    emotionLayer.appendChild(emotionImg);
-                    layerContainer.appendChild(emotionLayer);
-                }
-            }
-
-            // 3) 特殊CG图层
-            if (cgContentEnabled && pageData.cg && pageData.cg !== 'none' && pageData.npc && pageData.npc !== 'none') {
-                const cgLayer = document.createElement('div');
-                cgLayer.className = 'slg-layer slg-cg-layer';
-                const cgImg = document.createElement('img');
-
-                // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/色图/{{pageData.cg + 随机1~4的数字后缀}}.png
-                // const randIdx = Math.floor(Math.random() * 4) + 1; // 1~4
-                const cgUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/色图/${pageData.cg}${randIdx}.webp`);
-                cgImg.src = cgUrl;
-                cgImg.alt = `${pageData.npc}-${pageData.cg}${randIdx}`;
-                try { window.__lastValidCgUrl = cgUrl; } catch (e) {}
-
-                // // 404 时直接隐藏本层
-                // cgImg.onerror = function () {
-                //     cgLayer.remove();
-                // };
-
-                cgLayer.appendChild(cgImg);
-                layerContainer.appendChild(cgLayer);
-            }
-     
-            // 将图层容器添加到viewport
-            viewport.appendChild(layerContainer);
+            _appendSlgLayers(viewport, pageData);
         }
         
         // 翻页控件逻辑
