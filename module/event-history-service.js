@@ -295,7 +295,7 @@ var eventHistoryService = (function() {
         return m ? m[1] : '';
     }
 
-    var ARC_TOKEN_BUDGET = 800;    // 弧光基线 token 预算
+    var ARC_TOKEN_BUDGET = 1500;    // 弧光基线 token 预算
     var FACT_TOKEN_BUDGET = 1500;  // 事实基线 token 预算
 
     /**
@@ -343,18 +343,30 @@ var eventHistoryService = (function() {
         var arcLines = [], arcUsed = 0;
         for (var ac = 0; ac < arcCandidates.length; ac++) {
             var c = arcCandidates[ac];
-            var prg = (typeof c.arc.progress === 'number' ? c.arc.progress : 0).toFixed(2);
+            var prgNum = typeof c.arc.progress === 'number' ? c.arc.progress : 0;
+            var prg = prgNum.toFixed(2);
             // trajectory 可能是 FIFO 数组（新）或字符串（老存档兼容）
             var trajArr = Array.isArray(c.arc.trajectory) ? c.arc.trajectory
                 : (c.arc.trajectory ? [String(c.arc.trajectory)] : []);
             var trajStr = trajArr.join(' → ');
-            var ln = '- ' + c.name + '：' + (trajStr || '') + '（progress=' + prg + '）';
+            // 多行结构化条目：把当前阶段从演进链中单独拆出（最新trajectory），消除 → 链的读法歧义；
+            // 备注与 system prompt【二、角色弧光追踪】的 progress 规则呼应：
+            // progress < 0.9 只能累加进度；>= 0.9 允许输出新 trajectory 并重置计数
+            var latestTraj = trajArr.length > 0 ? trajArr[trajArr.length - 1] : '';
+            var ruleHint = prgNum >= 0.9
+                ? '本轮输出新的trajectory，progress从0.00重新计数'
+                : '本轮仅可累加 progress，不可更新 trajectory';
+            var ln = '- ' + c.name + '：\n'
+                + '  人物弧光: ' + (trajStr || '') + '\n'
+                + '  最新trajectory: ' + latestTraj + '\n'
+                + '  progress: ' + prg + '\n'
+                + '  备注: ' + ruleHint;
             var t = _estimateTokens(ln);
             if (arcUsed + t > ARC_TOKEN_BUDGET) break;
             arcLines.push(ln); arcUsed += t;
         }
         if (arcLines.length > 0) {
-            lines.push('【角色弧光基线】（仅本批在场、进行中）');
+            lines.push('【角色弧光基线】（仅本批在场、进行中；→ 为阶段演进顺序，最右为当前阶段）');
             lines = lines.concat(arcLines);
         }
 

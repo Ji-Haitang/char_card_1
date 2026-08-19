@@ -73,6 +73,18 @@
             if (typeof showModal === 'function') showModal('存储服务未就绪，请稍后重试');
             return;
         }
+        var defaultName = (typeof buildSaveName === 'function') ? buildSaveName() : ('第' + (gameData.currentWeek||1) + '周');
+        // 先弹窗让用户自定义文件名（确认=以输入内容命名，跳过/留空=默认命名）
+        if (typeof promptExportSaveName === 'function') {
+            promptExportSaveName(defaultName, '.jsonl', function(customName) {
+                _doExportSTJsonl(customName, defaultName);
+            });
+        } else {
+            _doExportSTJsonl(null, defaultName);
+        }
+    }
+
+    function _doExportSTJsonl(customName, defaultName) {
         // 同步独立运行时变量回 gameData，并挂当前活跃事件（与 exportSave 一致）
         if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
         gameData._activeEvent = (typeof currentRandomEvent !== 'undefined' ? currentRandomEvent : null)
@@ -80,7 +92,7 @@
 
         try {
             var now = Date.now();
-            var saveName = (typeof buildSaveName === 'function') ? buildSaveName() : ('第' + (gameData.currentWeek||1) + '周');
+            var saveName = customName || defaultName;
 
             var uiConv  = storageService.loadUIConversation() || [];
             var summary = (typeof summaryHistoryService !== 'undefined' && summaryHistoryService.getAll)
@@ -199,7 +211,10 @@
             }
 
             var jsonl = lines.join('\n');
-            var filename = 'jxz_st_' + saveName.replace(/[^a-zA-Z0-9一-龥]/g, '_') + '.jsonl';
+            // 用户自定义名：消毒后直接作为文件名主体；消毒后为空（全是特殊字符）则回退默认命名
+            var stFileBase = customName ? customName.replace(/[^a-zA-Z0-9一-龥]/g, '_') : '';
+            if (!stFileBase) stFileBase = 'jxz_st_' + saveName.replace(/[^a-zA-Z0-9一-龥]/g, '_');
+            var filename = stFileBase + '.jsonl';
             var p = storageService.downloadJson(filename, jsonl);
             if (p && typeof p.then === 'function') {
                 p.then(function(result) {

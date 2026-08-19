@@ -359,7 +359,12 @@ function _saveConfigHistory(cfg) {
     } catch (e) {
         domain = cfg.type || 'OpenAI';
     }
-    var label = (cfg.model || '未知模型') + ' · ' + domain;
+    // 标签加保存时间：同 endpoint+model 重复保存时只更新不新增条目，
+    // 时间戳让「已更新」在下拉框中可见（否则 label 不变，用户会误以为历史没更新）
+    var _now = new Date();
+    var _pad = function(n) { return (n < 10 ? '0' : '') + n; };
+    var timeStr = (_now.getMonth() + 1) + '-' + _pad(_now.getDate()) + ' ' + _pad(_now.getHours()) + ':' + _pad(_now.getMinutes());
+    var label = (cfg.model || '未知模型') + ' · ' + domain + ' · ' + timeStr;
     // 移除相同 endpoint+model 的旧记录（去重）
     history = history.filter(function(h) {
         return !(h.endpoint === cfg.endpoint && h.model === cfg.model);
@@ -370,7 +375,10 @@ function _saveConfigHistory(cfg) {
     if (history.length > 3) history = history.slice(0, 3);
     try {
         localStorage.setItem('jxz_apiConfigHistory', JSON.stringify(history));
-    } catch (e) {}
+    } catch (e) {
+        // 写入失败（localStorage 已满/不可用）时历史会冻结在旧数据，必须留日志便于排查
+        console.warn('[ConfigModal] 历史配置写入失败：', e);
+    }
 }
 
 function _togglePresetDropdown() {

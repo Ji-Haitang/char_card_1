@@ -357,7 +357,6 @@ body.ui-style-ancient .gift-btn,
 body.ui-style-ancient .trading-btn,
 body.ui-style-ancient .npc-info-btn,
 body.ui-style-ancient .skill-action-btn,
-body.ui-style-ancient .event-option-btn,
 body.ui-style-ancient .battle-action-btn {
     clip-path: none !important;
     border: none !important;
@@ -379,6 +378,32 @@ body.ui-style-ancient .battle-action-btn {
     flex: 0 0 auto !important;
     text-align: center;
     filter: drop-shadow(1px 2px 0 rgba(20, 20, 20, 0.16));
+}
+
+/* 事件选项按钮：宽横条+多行内容，框5-短 整图拉伸后卷草纹糊边（2026-08-19 用户截图反馈）；
+   改 边框-fill.png 九宫格（与 4.6b 面板同族），框线厚度固定、不随按钮宽高拉伸变形。
+   theme 层 513/523 行对它有 !important shorthand 覆盖，此处 longhand+!important 逐条压回。 */
+body.ui-style-ancient .event-option-btn {
+    clip-path: none !important;
+    border: 10px solid transparent !important;
+    border-image: url('../assets/image/static/边框-fill.png') 4% fill / 10px / 1px stretch !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    background-color: transparent !important;
+    background-image: none !important;
+    color: var(--ink-black, #1a1a1a) !important;
+    font-family: 'Kaiti', 'STKaiti', serif !important;
+    text-align: center;
+    transform: none;
+    position: relative;
+    filter: drop-shadow(1px 2px 0 rgba(20, 20, 20, 0.16));
+}
+body.ui-style-ancient .event-option-btn:hover {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+    color: #000000 !important; /* 焦墨 */
+    transform: scale(1.03);
 }
 
 /* 米黄填充已像素级做进 -fill 图（行扫描贴合框形），::before 内底退役；
@@ -433,7 +458,6 @@ body.ui-style-ancient .gift-btn:hover:not(:disabled),
 body.ui-style-ancient .trading-btn:hover:not(:disabled),
 body.ui-style-ancient .npc-info-btn:hover:not(:disabled),
 body.ui-style-ancient .skill-action-btn:hover:not(:disabled),
-body.ui-style-ancient .event-option-btn:hover,
 body.ui-style-ancient .battle-action-btn:hover {
     background-color: transparent !important;
     background-image: url('../assets/image/static/框5-短.png') !important;

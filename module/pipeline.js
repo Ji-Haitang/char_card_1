@@ -890,6 +890,19 @@ var pipeline = (function() {
                         }
                         var _buffSlice = _uiConvNow.slice(_oldIdx).filter(function(m) { return m.role === 'assistant'; });
                         var _turnCount = _buffSlice.length;
+
+                        // 楼层 → 摘要映射：按 UIid 把 summaryHistory 分组（同一楼 assistant 可能有多条摘要，全部拼接）
+                        // 周总结请求注入缩略内容替代原文，压缩 prompt 体积；找不到对应摘要的楼层回退原文
+                        var _sumByUIid = {};
+                        if (typeof summaryHistoryService !== 'undefined' && summaryHistoryService.getAll) {
+                            var _allSum = summaryHistoryService.getAll() || [];
+                            for (var _si = 0; _si < _allSum.length; _si++) {
+                                var _rec = _allSum[_si];
+                                if (!_rec || !_rec.UIid || !_rec.summaryText) continue;
+                                if (!_sumByUIid[_rec.UIid]) _sumByUIid[_rec.UIid] = [];
+                                _sumByUIid[_rec.UIid].push(_rec.summaryText);
+                            }
+                        }
                         var _buffText = _buffSlice.map(function(m, i) {
                             var _weekLine = '';
                             if (m.week) {
@@ -900,7 +913,9 @@ var pipeline = (function() {
                                 var _wk = _wr % 4 + 1;
                                 _weekLine = '\n[第' + _wy + '年第' + _wm + '月第' + _wk + '周]';
                             }
-                            return '[第' + (i + 1) + '轮]' + _weekLine + '\n' + m.content;
+                            var _sums = m.id ? _sumByUIid[m.id] : null;
+                            var _floorText = (_sums && _sums.length) ? _sums.join('\n') : m.content;
+                            return '[第' + (i + 1) + '轮]' + _weekLine + '\n' + _floorText;
                         }).join('\n\n');
 
                         // ⑪ 持久化 summaryBuff

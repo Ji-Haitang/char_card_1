@@ -396,6 +396,42 @@ function showAlchemyGame() {
     modal.style.display = 'block';
 }
 
+// ========== 后台总结类任务：同一请求连续失败达上限后的统一处置 ==========
+// 周总结/事件总结/地点更新等后台 LLM 请求失败后会自动重试；极端情况（额度耗尽/审核拦截/网络波动）
+// 下同一请求会无限「失败→重试」循环。各 runner 计数到上限后调用本函数：
+// 弹窗提示用户（参照自动存档失败的 showModal 形式，标明是哪类请求）
+// + 关闭「系统设置-游戏设置-总结管理」对应开关（实际变量置 false + 同步 checkbox UI + 立即存盘，
+//   防止刷新后开关回弹再次进入无限重试）
+var BG_SUMMARY_TASK_META = {
+    weekly:   { name: '每周总结', toggleId: 'gs-summary-weekly-toggle',   hintId: 'gs-summary-weekly-hint' },
+    event:    { name: '事件总结', toggleId: 'gs-summary-event-toggle',    hintId: 'gs-summary-event-hint' },
+    location: { name: '地点更新', toggleId: 'gs-summary-location-toggle', hintId: 'gs-summary-location-hint' }
+};
+
+function autoDisableSummarySwitch(kind, errMsg, failCount) {
+    var meta = BG_SUMMARY_TASK_META[kind];
+    if (!meta) return;
+    // ① 实际变量置 false（与各 gsOnSummary*Toggle 的手写路径一致）
+    if (typeof gameData !== 'undefined' && gameData) {
+        if (!gameData.summaryConfig) gameData.summaryConfig = {};
+        if (!gameData.summaryConfig[kind]) gameData.summaryConfig[kind] = { enabled: true };
+        gameData.summaryConfig[kind].enabled = false;
+        // 立即存盘（appState 仅承载 gameData，与 storage-service.js 快照回滚处写法一致）
+        if (typeof storageService !== 'undefined' && storageService.saveAppState) {
+            try { storageService.saveAppState({ gameData: gameData }); } catch (e) { console.warn('[BgSummaryTask] 开关状态存盘失败:', e); }
+        }
+    }
+    // ② 同步 UI（设置弹窗未打开时元素仍在 DOM，直接改无妨；打开时用户立刻能看到）
+    var toggle = document.getElementById(meta.toggleId);
+    if (toggle) toggle.checked = false;
+    var hint = document.getElementById(meta.hintId);
+    if (hint) hint.textContent = '关';
+    // ③ 弹窗提示（标明是哪类请求 + 最近失败原因）
+    if (typeof showModal === 'function') {
+        showModal('后台「' + meta.name + '」请求连续失败 ' + (failCount || '多') + ' 次，已自动关闭该功能。\n\n最近失败原因：' + (errMsg || '未知错误') + '\n\n请检查 API 额度/网络连接后，到「系统设置-游戏设置-总结管理」重新开启。');
+    }
+}
+
 // 显示互动输入弹窗
 function showInteractionInput(npcId, location) {
     currentInteractionNpc = npcId;

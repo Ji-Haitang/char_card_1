@@ -3632,16 +3632,57 @@ function returnToStartScreen() {
     location.href = 'start-screen-noST.html';
 }
 
+// ========== 导出存档：自定义文件名弹窗 ==========
+// 点导出 JSON/JSONL 存档时先弹窗：输入内容并确认 → 以该内容命名；跳过或留空 → 沿用默认命名
+var _exportNameDone = null;
+function promptExportSaveName(defaultName, fileExt, onDone) {
+    _exportNameDone = onDone;
+    var modal = document.getElementById('modal');
+    var modalText = document.getElementById('modal-text');
+    var modalButtons = document.getElementById('modal-buttons');
+    modalText.innerHTML =
+        '<div style="font-size: clamp(1.1rem, 3vw, 1.4rem); margin-bottom: clamp(10px, 2vw, 15px);">自定义存档文件名</div>' +
+        '<div class="input-area"><input type="text" class="input-field" id="export-name-input" placeholder="' + defaultName + '"></div>' +
+        '<div style="font-size:12px;color:#888;margin-top:6px">留空或点「跳过」将使用默认命名（' + defaultName + fileExt + '）</div>';
+    modalButtons.innerHTML =
+        '<button class="modal-btn" onclick="_confirmExportName()">确认</button>' +
+        '<button class="modal-btn cancel" onclick="_skipExportName()">跳过</button>';
+    modal.style.display = 'block';
+    setTimeout(function() { var el = document.getElementById('export-name-input'); if (el) el.focus(); }, 100);
+}
+function _finishExportName(name) {
+    closeModal();
+    var cb = _exportNameDone;
+    _exportNameDone = null;
+    if (cb) cb(name);
+}
+function _confirmExportName() {
+    var el = document.getElementById('export-name-input');
+    var v = el ? el.value.trim() : '';
+    _finishExportName(v || null); // 空输入等价跳过
+}
+function _skipExportName() { _finishExportName(null); }
+
 function exportSave() {
     syncGameDataFromVariables();
+    var defaultName = buildSaveName();
+    promptExportSaveName(defaultName, '.json', function(customName) {
+        _doExportSave(customName, defaultName);
+    });
+}
+
+function _doExportSave(customName, defaultName) {
     // 导出时保存当前活跃事件，供 importSave 恢复选项框
     gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
-    var saveName = buildSaveName();
+    var saveName = customName || defaultName;
     var chk = document.getElementById('export-include-vectors-chk');
     var includeVectors = chk ? chk.checked : true;
     var json = storageService.exportSaveToJson(saveName, includeVectors);
     delete gameData._activeEvent;
-    var filename = 'jxz_save_' + saveName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') + '.json';
+    // 用户自定义名：消毒后直接作为文件名主体；消毒后为空（全是特殊字符）则回退默认命名
+    var fileBase = customName ? customName.replace(/[^a-zA-Z0-9一-龥]/g, '_') : '';
+    if (!fileBase) fileBase = 'jxz_save_' + defaultName.replace(/[^a-zA-Z0-9一-龥]/g, '_');
+    var filename = fileBase + '.json';
     toggleDropdown('history-dropdown');
     var p = storageService.downloadJson(filename, json);
     if (p && typeof p.then === 'function') {
