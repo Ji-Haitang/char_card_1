@@ -3314,10 +3314,17 @@ body {
     object-position: bottom center;
 }
 
-/* 特殊CG表情差分：占满全屏高度 */
+/* 特殊CG表情差分：等比铺满整个视口，溢出部分居中裁剪（cover，与场景层/CG层一致） */
 .slg-emotion-layer.slg-emotion-special-cg img {
+    top: 0;                      /* 覆盖表情层的 bottom:0 底部锚定 */
+    bottom: auto;
+    left: 0;                     /* 覆盖表情层的 left:50% + translateX(-50%) */
+    transform: none;
+    width: 100%;                 /* 宽高拉满图层（图层=视口大小） */
     height: 100%;
-    max-width: 100%;             /* 特殊CG允许更大宽度 */
+    max-width: none;             /* 解除表情层的宽度上限 */
+    object-fit: cover;           /* 覆盖表情层的 contain：等比铺满、裁剪溢出 */
+    object-position: center;     /* 覆盖 bottom center：居中裁剪 */
 }
 
   /* 汗青集正文字号与故事正文一致 */
