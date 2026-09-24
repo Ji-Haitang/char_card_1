@@ -37,17 +37,40 @@ var embeddingService = (function() {
     function getConfig() {
         try {
             var raw = localStorage.getItem(LS_KEY);
-            if (!raw) return Object.assign({}, DEFAULT_CONFIG);
-            return Object.assign({}, DEFAULT_CONFIG, JSON.parse(raw));
+            var result = {};
+            var keys = Object.keys(DEFAULT_CONFIG);
+            if (!raw) {
+                keys.forEach(function(k) { result[k] = DEFAULT_CONFIG[k]; });
+                return result;
+            }
+            var parsed = JSON.parse(raw);
+            // apiKey 落盘时经过 Base64 编码，读取时还原，避免明文暴露在 localStorage 中
+            if (parsed.apiKey) {
+                try { parsed.apiKey = atob(parsed.apiKey); } catch (e) { parsed.apiKey = ''; }
+            }
+            // 逐字段白名单拷贝，避免存储中的任意字段混入配置对象（mass assignment）
+            keys.forEach(function(k) {
+                result[k] = Object.prototype.hasOwnProperty.call(parsed, k) ? parsed[k] : DEFAULT_CONFIG[k];
+            });
+            return result;
         } catch (e) {
-            return Object.assign({}, DEFAULT_CONFIG);
+            var fallback = {};
+            Object.keys(DEFAULT_CONFIG).forEach(function(k) { fallback[k] = DEFAULT_CONFIG[k]; });
+            return fallback;
         }
     }
 
     function updateConfig(cfg) {
         try {
-            var merged = Object.assign({}, getConfig(), cfg);
-            localStorage.setItem(LS_KEY, JSON.stringify(merged));
+            var current = getConfig();
+            var toStore = {};
+            // 逐字段白名单拷贝，避免任意字段混入配置对象（mass assignment）
+            Object.keys(DEFAULT_CONFIG).forEach(function(k) {
+                toStore[k] = (cfg && Object.prototype.hasOwnProperty.call(cfg, k)) ? cfg[k] : current[k];
+            });
+            // 避免 API Key 以明文形式存入 localStorage（降低 XSS/本地窃取的直接暴露风险）
+            if (toStore.apiKey) toStore.apiKey = btoa(toStore.apiKey);
+            localStorage.setItem(LS_KEY, JSON.stringify(toStore));
         } catch (e) {
             console.warn('[EmbeddingService] 保存配置失败:', e.message);
         }
@@ -193,8 +216,8 @@ var embeddingService = (function() {
         // 若传入临时配置，先暂存再恢复，避免影响正式配置
         var backup = null;
         if (tempCfg) {
-            backup = getConfig();
-            try { localStorage.setItem(LS_KEY, JSON.stringify(Object.assign({}, backup, tempCfg))); } catch (_) {}
+            backup = localStorage.getItem(LS_KEY);
+            try { updateConfig(tempCfg); } catch (_) {}
         }
         try {
             var result = await embed(['测试连接'], { timeout: 20000 });
@@ -205,9 +228,9 @@ var embeddingService = (function() {
         } catch (e) {
             return { ok: false, dims: 0, error: e.message };
         } finally {
-            // 恢复正式配置
+            // 恢复正式配置（backup 为原始存储字符串，已是 Base64 编码后的形式）
             if (backup !== null) {
-                try { localStorage.setItem(LS_KEY, JSON.stringify(backup)); } catch (_) {}
+                try { localStorage.setItem(LS_KEY, backup); } catch (_) {}
             }
         }
     }
