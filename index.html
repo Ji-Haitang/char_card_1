@@ -655,6 +655,15 @@
                                     <span class="gs-toggle-hint" id="gs-event-hint">开</span>
                                 </label>
                             </div>
+                            <!-- 提示词 -->
+                            <h4 class="gs-subhead">提示词</h4>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">提示词预设</span>
+                                <select id="gs-prompt-preset" class="gs-select" onchange="gsOnPromptPreset(this)">
+                                    <option value="ny">ny预设</option>
+                                    <option value="xiajin">夏瑾预设</option>
+                                </select>
+                            </div>
                             <!-- 正文字体 -->
                             <h4 class="gs-subhead">正文字体</h4>
                             <div class="gs-switch-row">
@@ -4665,6 +4674,11 @@ function buildSaveName() {
             if (evToggle) evToggle.checked = !!ev;
             if (evHint)   evHint.textContent = ev ? '开' : '关';
 
+            // 提示词预设
+            const _preset = (typeof gameData !== 'undefined' && gameData.promptPreset) ? gameData.promptPreset : 'ny';
+            const presetSel = document.getElementById('gs-prompt-preset');
+            if (presetSel) presetSel.value = _preset;
+
             // 难度
             const diff = (typeof difficulty !== 'undefined' && difficulty) ? difficulty : 'normal';
             const diffRadio = document.getElementById('gs-diff-' + diff);
@@ -4827,6 +4841,13 @@ function buildSaveName() {
             haveEvent = el.checked ? 1 : 0;
             document.getElementById('gs-event-hint').textContent = haveEvent ? '开' : '关';
             updateHaveEventLabel();
+        }
+
+        // 提示词预设：ny预设（6条消息）/ 夏瑾预设（4条消息），写入 gameData.promptPreset，下一次行动生效
+        function gsOnPromptPreset(el) {
+            if (typeof gameData === 'undefined') return;
+            gameData.promptPreset = (el.value === 'xiajin') ? 'xiajin' : 'ny';
+            showModal('提示词预设已切换为：' + (gameData.promptPreset === 'xiajin' ? '夏瑾预设' : 'ny预设') + '，下一次行动生效');
         }
 
         function gsOnSaveDifficulty() {

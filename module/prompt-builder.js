@@ -1,15 +1,31 @@
 /**
- * prompt-builder.js - Prompt 编排（6 条消息结构）
- * Phase 2.3：重构为与"整理后的log"一致的消息格式
- *   msg1: system (开场+settings+Details+background前半；MainNPCs/UserInfo 位于 history 内 </PreviousMemories> 之后)
- *   msg2: user   ([Start a new chat])
- *   msg3: assistant (LatestReply 包裹块)
- *   msg4: user   (用户输入 + MainTextGuidance + 105 + Order[内含110格式规范] + ThinkGuidance)
+ * prompt-builder.js - Prompt 编排（双预设：ny 6 条消息 / 夏瑾 4 条消息）
+ * gameData.promptPreset 选择预设（通用设置下拉框，默认 'ny'）：
+ *
+ * 【ny 预设】与“开发文档/实际的log-迭代.md”一致：
+ *   msg1: system    (PROMPT_OPENING：开头两行 + <settings> + role_user 身份说明 + <role_user>，仅此)
+ *   msg2: user      (角色行为授权 </role_user> + <tone> + <main_settings> + [Additional settings…地点+世界书1] + </settings>
+ *                    + <background> + <writing_style> + <history>([Start a new Chat] + HistorySummary，内含 MainNPCs/UserInfo) + <LatestReply> 开标签)
+ *   msg3: assistant (上一次 AI 回复的正文原文)
+ *   msg4: user      (</LatestReply></history> + <fresh> + 世界书2 + <user_input> + MainTextGuidance + 105 + </background> + Order[内含110格式规范 + ThinkGuidance])
  *   msg5: assistant (jailbreak prefill)
- *   msg6: user   (final instruction)
+ *   msg6: user      (final instruction)
+ *
+ * 【夏瑾预设】与“开发文档/夏瑾预设新log.md”一致：
+ *   msg1: system    (PROMPT_XJ_SYSTEM 整条固定文本，含内嵌假对话)
+ *   msg2: user      (任务介绍 + <第一写作指导> + <相关资料>[{{user}}设定 + 010(StoryBackground/TianshanSectNPCs/KemonomimiSettings) + 地点 + 世界书1]
+ *                    + <互动历史>(HistorySummary) + <LatestReply> 开标签 + 说明文字)
+ *   msg3: assistant (上一次 AI 回复的正文原文)
+ *   msg4: user      (</LatestReply></互动历史> + 世界书2 + <user_input> + <可用信息列表>[MainTextGuidance + 105]
+ *                    + <核心指导> + <输出模板>[110 + 输出模板说明] + 任务链)
+ *
+ * NSFW 提示词解锁（两套预设共用）：gameData.enamor==1 或当前 BGM 为暧昧清单
+ * （bgmFileManifest.暧昧）之一即解锁；BGM 触发时用 enamor=1 的 gameData 浅克隆渲染模板，
+ * 各模板的 EJS 门控（gameData.enamor）随之自动解锁，不影响真实存档数据。
+ *
  * 依赖：template-engine.js, prompt-data-core.js, prompt-data-extra.js,
  *        prompt-data-npc.js, prompt-data-actions.js, worldbook-engine.js,
- *        token-utils.js, api-service.js
+ *        token-utils.js, api-service.js, game-config.js（bgmFileManifest）
  */
 
 var promptBuilder = (function() {
@@ -652,21 +668,26 @@ var promptBuilder = (function() {
 
     /**
      * 构建消息1: SYSTEM
-     * 结构: opening + <settings>(info + character=010) + [Details...](020 + 自定义世界书No.1)
-     *       + <background>(<fresh> + <writing_style> + <history>(HistorySummary + [Start a new Chat]))
+     * 仅含 PROMPT_OPENING：开头两行 + <settings> + role_user 身份说明 + <role_user>（两个标签均在消息2中闭合）
      */
-    function _buildMsg1System(variables, wbBlocks, historySummaryBlock) {
-        var playerName = variables.user || '主角';
+    function _buildMsg1System(variables) {
+        return templateEngine.renderTemplate(PROMPT_OPENING, variables);
+    }
+
+    /**
+     * 构建消息2: USER（设定与历史）
+     * 结构: 角色行为授权(含 </role_user>) + <tone> + <main_settings>(010) + [Additional settings…](020 + 自定义世界书No.1) + </settings>
+     *       + <background> + <writing_style> + <history>([Start a new Chat] + HistorySummary) + <LatestReply> 开标签
+     *       （<LatestReply>/<history>/<background> 均跨消息闭合：前两者在消息4开头，后者在消息4 Order 之前）
+     */
+    function _buildMsg2UserSettings(variables, wbBlocks, historySummaryBlock) {
         var parts = [];
 
-        // Opening
-        parts.push(PROMPT_OPENING);
+        // 角色行为授权（承接消息1末尾的 <role_user>，在此闭合）
+        parts.push(templateEngine.renderTemplate(PROMPT_ROLE_AUTH, variables));
         parts.push('');
 
-        // <settings>
-        parts.push('<settings>');
-        parts.push('# "' + playerName + '"是role_user的角色与身份，user的言语与动作皆为' + playerName + '所为:');
-        parts.push('');
+        // <settings> 余下部分（<settings> 开标签已在消息1）
         parts.push('## `<tone>`是需参照的叙事语气和基调。');
         parts.push('<tone>');
         parts.push('');
@@ -717,39 +738,37 @@ var promptBuilder = (function() {
         parts.push('[Start a new Chat]');
         parts.push('');
 
-        // HistorySummary（含 PreviousMemories / RecalledMemories / RecentMemories 三段）
+        // HistorySummary（含 PreviousMemories / MainNPCs+UserInfo / RecalledMemories / RecentMemories）
         parts.push(historySummaryBlock);
+        parts.push('');
+
+        // <LatestReply> 开标签：正文即消息3（assistant）原文，闭标签在消息4开头
+        parts.push('<!-- <LatestReply> is the most recent complete output of this story. Please read it to determine the latest plot and refer to its literary style. -->');
+        parts.push('<LatestReply>');
 
         return parts.join('\n');
     }
 
     /**
-     * 构建消息3: ASSISTANT (LatestReply 包裹块)
+     * 构建消息3: ASSISTANT（上一次 AI 回复的正文原文，不再包裹任何说明文字）
+     * 无上一轮正文时给一句占位，避免部分 API 拒绝空 content 的 assistant 消息
      */
     function _buildMsg3LatestReply(lastAssistantReply) {
-        var parts = [];
-        parts.push('<!-- <LatestReply> is the most recent complete output of this story. Please read it to determine the latest plot and refer to its literary style. -->');
-        parts.push('');
-        parts.push('<LatestReply>');
-        parts.push('');
-        parts.push('说明: 下面的xml符号 <SLG_MODE> 和 </SLG_MODE>，以及内部的部分，是最新一次输出的故事内容。');
-        parts.push('要求: ');
-        parts.push('  - 阅读并确定最新剧情');
-        parts.push('  - 参考文学风格');
-        parts.push(lastAssistantReply || '');
-        parts.push('');
-        parts.push('</LatestReply>');
-        parts.push('</history>');
-        return parts.join('\n');
+        return lastAssistantReply || '（故事尚未开始，暂无上一轮正文）';
     }
 
     /**
      * 构建消息4: USER
-     * 结构: 用户输入 + <MainTextGuidance> + 105列表
-     *       + </history></background> + <Order>(内含110格式规范，位于</request>之后) + <ThinkGuidance> + </Order>
+     * 结构: </LatestReply></history> + <fresh> + 自定义世界书No.2 + 用户输入 + <MainTextGuidance> + 105列表
+     *       + </background> + <Order>(内含110格式规范，位于</request>之后) + <ThinkGuidance> + </Order>
      */
     function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2) {
         var parts = [];
+
+        // 闭合消息2打开的 <LatestReply> 与 <history>
+        parts.push('</LatestReply>');
+        parts.push('</history>');
+        parts.push('');
 
         // <fresh>
         parts.push(PROMPT_FRESH);
@@ -816,8 +835,279 @@ var promptBuilder = (function() {
         return parts.join('\n');
     }
 
+    // ==================== 夏瑾预设（4 条消息结构，参照“开发文档/夏瑾预设新log.md”） ====================
+
     /**
-     * 构建 messages 数组（6 条消息结构），带 token 预算管理
+     * 夏瑾预设 消息1: SYSTEM（PROMPT_XJ_SYSTEM 整条固定文本，含内嵌的假 User/Assistant 对话）
+     */
+    function _buildXjMsg1System() {
+        return _po('XJ_SYSTEM', (typeof PROMPT_XJ_SYSTEM !== 'undefined') ? PROMPT_XJ_SYSTEM : '');
+    }
+
+    /**
+     * 夏瑾预设 消息2: USER
+     * 结构: 任务介绍 + <第一写作指导>(含 EJS enamor 门控) + <相关资料>(<{{user}}设定> + 010 三块 + 地点 + 世界书1)
+     *       + <互动历史>(HistorySummary) + <LatestReply> 开标签 + 说明文字（闭标签在消息4开头）
+     */
+    function _buildXjMsg2User(variables, wbBlocks, historySummaryBlock) {
+        var parts = [];
+
+        // 任务介绍
+        parts.push(_po('XJ_TASK_INTRO', PROMPT_XJ_TASK_INTRO));
+        parts.push('');
+
+        // 第一写作指导（含 EJS enamor 门控「情色和肉体美学」）
+        parts.push(templateEngine.renderPromptTemplate(_po('XJ_WRITING_GUIDE', PROMPT_XJ_WRITING_GUIDE), variables));
+        parts.push('');
+
+        // <相关资料>
+        parts.push('<相关资料>');
+        parts.push('');
+        // <{{user}}设定> 块（{{user}} 替换为玩家名）
+        parts.push(templateEngine.renderTemplate(_po('XJ_USER_ROLE', PROMPT_XJ_USER_ROLE), variables));
+        parts.push('');
+        // 010（自带 StoryBackground / TianshanSectNPCs / KemonomimiSettings 三块）
+        parts.push(templateEngine.renderPromptTemplate(_po('CORE_010', PROMPT_CORE_010), variables));
+        parts.push('');
+        // 地点介绍（与 ny 预设共用同一选取逻辑）
+        parts.push(_renderLocationIntro(variables.gameData));
+        parts.push('');
+        // 自定义世界书No.1（插入位置：地点信息之后、</相关资料> 之前）
+        if (wbBlocks && wbBlocks.length > 0) {
+            for (var wi = 0; wi < wbBlocks.length; wi++) {
+                parts.push(templateEngine.renderPromptTemplate(wbBlocks[wi], variables));
+                parts.push('');
+            }
+        }
+        parts.push('</相关资料>');
+        parts.push('');
+
+        // <互动历史>
+        parts.push('<互动历史>');
+        parts.push('');
+        parts.push(historySummaryBlock);
+        parts.push('');
+
+        // <LatestReply> 开标签 + 说明文字：正文即消息3（assistant）原文，闭标签在消息4开头
+        parts.push('<!-- <LatestReply> is the most recent complete output of this story. Please read it to determine the latest plot and refer to its literary style. -->');
+        parts.push('');
+        parts.push('<LatestReply>');
+        parts.push('');
+        parts.push('说明: 下面的xml符号 <SLG_MODE> 和 </SLG_MODE>，以及内部的部分，是最新一次输出的故事正文内容。');
+        parts.push('要求: ');
+        parts.push('  - 阅读并确定最新剧情');
+        parts.push('  - 参考文学风格');
+
+        return parts.join('\n');
+    }
+
+    /**
+     * 夏瑾预设 消息4: USER
+     * 结构: </LatestReply></互动历史> + 世界书2 + <user_input> + <可用信息列表>(MainTextGuidance + 105)
+     *       + <核心指导>(含 EJS enamor 门控) + <输出模板>(110 + 输出模板说明) + 任务链
+     */
+    function _buildXjMsg4User(variables, userMessage, actionGuide, wbBlocks2) {
+        var parts = [];
+
+        // 闭合消息2打开的 <LatestReply> 与 <互动历史>
+        parts.push('</LatestReply>');
+        parts.push('');
+        parts.push('</互动历史>');
+        parts.push('');
+
+        // 自定义世界书No.2（插入位置：</互动历史> 与 <user_input> 之间）
+        if (wbBlocks2 && wbBlocks2.length > 0) {
+            for (var w2 = 0; w2 < wbBlocks2.length; w2++) {
+                parts.push(templateEngine.renderPromptTemplate(wbBlocks2[w2], variables));
+                parts.push('');
+            }
+        }
+
+        // 用户输入
+        parts.push('# `<user_input>`作为本次交互的用户输入，以`<user_input>`为大纲指导，丰富细节，进行扩写后输出，不得省略或跳过用户输入中的情节，并合理流畅地继续向下推进');
+        parts.push('');
+        parts.push('<user_input>');
+        parts.push(userMessage);
+        parts.push('</user_input>');
+        parts.push('');
+
+        // <可用信息列表>（MainTextGuidance + 105 的 NSFWList/ExpressionList/SceneList/NpcList）
+        parts.push('<可用信息列表>');
+        if (actionGuide) {
+            parts.push('<!-- <MainTextGuidance> is the guide for the Main Text output of the LLM model -->');
+            parts.push('<MainTextGuidance>');
+            parts.push(templateEngine.renderPromptTemplate(actionGuide, variables));
+            parts.push('</MainTextGuidance>');
+            parts.push('');
+        }
+        parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_105, variables));
+        parts.push('');
+        parts.push('</可用信息列表>');
+        parts.push('');
+
+        // <核心指导>（通用写作规范 + 核心文字风格 + 创作准则，含 EJS enamor 门控「NSFW核心/NSFW进程」）
+        parts.push(templateEngine.renderPromptTemplate(_po('XJ_CORE_GUIDE', PROMPT_XJ_CORE_GUIDE), variables));
+        parts.push('');
+
+        // <输出模板>（110 自带 <FormatGuide> 标签；其后接输出模板说明）
+        parts.push('<输出模板>');
+        parts.push('');
+        parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_110, variables).replace(/^\s+|\s+$/g, ''));
+        parts.push('');
+        parts.push(_po('XJ_OUTPUT_NOTE', PROMPT_XJ_OUTPUT_NOTE));
+        parts.push('</输出模板>');
+        parts.push('');
+
+        // 任务链（含内嵌 User/Assistant 模拟对话与隐式思考要求）
+        parts.push(_po('XJ_TASK_CHAIN', PROMPT_XJ_TASK_CHAIN));
+
+        return parts.join('\n');
+    }
+
+    // ==================== 公共：NSFW 解锁判定 + token 预算 ====================
+
+    /**
+     * 当前 BGM 是否为暧昧清单（game-config.js bgmFileManifest.暧昧）内的曲目
+     */
+    function _isAimeiBgm(bgmName) {
+        if (!bgmName) return false;
+        var manifest = (typeof bgmFileManifest !== 'undefined') ? bgmFileManifest : null;
+        var list = manifest && manifest['暧昧'];
+        return !!(list && list.indexOf(bgmName) !== -1);
+    }
+
+    /**
+     * 计算 token 预算并生成最终 HistorySummary（ny/夏瑾两套预设共用）
+     * @param {object} opts - { fixedTokens, weekHistory, recentSummaries, recalledMemories, recalledEvents, searchText, recallConfig, npcUserBlock }
+     * @returns {{ block:string, selectedPreviousCount:number, totalAvailable:number }}
+     */
+    function _buildFinalHistoryWithBudget(opts) {
+        var budget = _getBudgetConfig();
+        var totalAvailable = budget.maxContext - budget.reservedOutput;
+
+        // 先扣除 RecentMemories + RecalledMemories 占用，剩余预算给 PreviousMemories
+        // （MainNPCs/UserInfo 不计入该占用块；其所在消息已含在 fixedTokens 中）
+        var recentAndRecalledBlock = _buildHistorySummaryBlock([], opts.recentSummaries, opts.recalledMemories, opts.recalledEvents, opts.searchText, opts.recallConfig);
+        var recentAndRecalledTokens = tokenUtils.estimate(recentAndRecalledBlock);
+        // [已确立事实]之上的「每周总结」开关：控制 <PreviousMemories>（weekHistory）是否注入及其 token 上限，
+        // 由 系统设置-游戏设置-召回管理 弹窗控制（gameData.recallConfig.previous），默认 20000
+        var _previousCfg = (opts.recallConfig || {}).previous || {};
+        var _previousEnabled = _previousCfg.enabled !== false;
+        var _previousMaxTokens = (typeof _previousCfg.maxTokens === 'number') ? _previousCfg.maxTokens : 20000;
+        var previousBudget = _previousEnabled
+            ? Math.max(0, Math.min(_previousMaxTokens, totalAvailable - opts.fixedTokens - recentAndRecalledTokens))
+            : 0;
+
+        // PreviousMemories：在预算内从最新到最旧截取 weekHistory
+        var selectedPrevious = _selectPreviousWithinBudget(opts.weekHistory, previousBudget);
+        var droppedCount = opts.weekHistory.length - selectedPrevious.length;
+        if (droppedCount > 0) {
+            console.log('[PromptBuilder] PreviousMemories: 预算不足，丢弃最旧 ' + droppedCount + ' 条 weekHistory');
+        }
+
+        return {
+            block: _buildHistorySummaryBlock(selectedPrevious, opts.recentSummaries, opts.recalledMemories, opts.recalledEvents, opts.searchText, opts.recallConfig, opts.npcUserBlock),
+            selectedPreviousCount: selectedPrevious.length,
+            totalAvailable: totalAvailable
+        };
+    }
+
+    /**
+     * ny 预设组装（6 条消息）：先占位估算 fixedTokens，预算后重建承载 HistorySummary 的 msg2
+     */
+    function _assembleNy(ctx) {
+        var variables = ctx.variables;
+        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null, ctx.recallSearchText, ctx.recallConfig, ctx.npcUserBlock);
+        var msg1Content = _buildMsg1System(variables);
+        var msg2Content = _buildMsg2UserSettings(variables, ctx.wbBlocks1, historySummaryPlaceholder);
+        var msg3Content = _buildMsg3LatestReply(ctx.lastAssistantReply);
+        var msg4Content = _buildMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.isDeepSeek, ctx.wbBlocks2);
+        var msg5Content = templateEngine.renderPromptTemplate(
+            ctx.isDeepSeek ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : PROMPT_JAILBREAK_PREFILL, variables);
+        // DeepSeek 自带思维链，不声明 [thinking omitted]
+        var msg6Content = ctx.isDeepSeek
+            ? PROMPT_FINAL_INSTRUCTION.replace(/\[thinking omitted\]\n/, '')
+            : PROMPT_FINAL_INSTRUCTION;
+
+        var fixedTokens = tokenUtils.estimate(msg1Content)
+                        + tokenUtils.estimate(msg2Content)
+                        + tokenUtils.estimate(msg3Content)
+                        + tokenUtils.estimate(msg4Content)
+                        + tokenUtils.estimate(msg5Content)
+                        + tokenUtils.estimate(msg6Content)
+                        + 24; // 6 messages × ~4 tokens structure overhead
+
+        var finalHistory = _buildFinalHistoryWithBudget({
+            fixedTokens: fixedTokens,
+            weekHistory: ctx.weekHistory,
+            recentSummaries: ctx.recentSummaries,
+            recalledMemories: ctx.recalledMemories,
+            recalledEvents: ctx.recalledEvents,
+            searchText: ctx.recallSearchText,
+            recallConfig: ctx.recallConfig,
+            npcUserBlock: ctx.npcUserBlock
+        });
+        msg2Content = _buildMsg2UserSettings(variables, ctx.wbBlocks1, finalHistory.block);
+
+        return {
+            label: 'ny 6-msg',
+            selectedPreviousCount: finalHistory.selectedPreviousCount,
+            totalAvailable: finalHistory.totalAvailable,
+            messages: [
+                { role: 'system', content: msg1Content },
+                { role: 'user', content: msg2Content },
+                { role: 'assistant', content: msg3Content },
+                { role: 'user', content: msg4Content },
+                { role: 'assistant', content: msg5Content },
+                { role: 'user', content: msg6Content }
+            ]
+        };
+    }
+
+    /**
+     * 夏瑾预设组装（4 条消息）：先占位估算 fixedTokens，预算后重建承载 HistorySummary 的 msg2
+     */
+    function _assembleXiajin(ctx) {
+        var variables = ctx.variables;
+        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null, ctx.recallSearchText, ctx.recallConfig, ctx.npcUserBlock);
+        var msg1Content = _buildXjMsg1System();
+        var msg2Content = _buildXjMsg2User(variables, ctx.wbBlocks1, historySummaryPlaceholder);
+        var msg3Content = _buildMsg3LatestReply(ctx.lastAssistantReply);
+        var msg4Content = _buildXjMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.wbBlocks2);
+
+        var fixedTokens = tokenUtils.estimate(msg1Content)
+                        + tokenUtils.estimate(msg2Content)
+                        + tokenUtils.estimate(msg3Content)
+                        + tokenUtils.estimate(msg4Content)
+                        + 16; // 4 messages × ~4 tokens structure overhead
+
+        var finalHistory = _buildFinalHistoryWithBudget({
+            fixedTokens: fixedTokens,
+            weekHistory: ctx.weekHistory,
+            recentSummaries: ctx.recentSummaries,
+            recalledMemories: ctx.recalledMemories,
+            recalledEvents: ctx.recalledEvents,
+            searchText: ctx.recallSearchText,
+            recallConfig: ctx.recallConfig,
+            npcUserBlock: ctx.npcUserBlock
+        });
+        msg2Content = _buildXjMsg2User(variables, ctx.wbBlocks1, finalHistory.block);
+
+        return {
+            label: '夏瑾 4-msg',
+            selectedPreviousCount: finalHistory.selectedPreviousCount,
+            totalAvailable: finalHistory.totalAvailable,
+            messages: [
+                { role: 'system', content: msg1Content },
+                { role: 'user', content: msg2Content },
+                { role: 'assistant', content: msg3Content },
+                { role: 'user', content: msg4Content }
+            ]
+        };
+    }
+
+    /**
+     * 构建 messages 数组（双预设：ny 6 条 / 夏瑾 4 条），带 token 预算管理
      * @param {object} params - { userMessage, gameData, summaryHistory, weekHistory, lastAssistantReply, recalledMemories }
      * @returns {Array} messages 数组
      */
@@ -829,7 +1119,19 @@ var promptBuilder = (function() {
         var lastAssistantReply = params.lastAssistantReply || '';
 
         var playerName = gd.playerName || '主角';
-        var variables = { user: playerName, gameData: gd, '本次user输入': userMessage };
+
+        // --- 提示词预设：ny（默认，6条消息） / xiajin（夏瑾预设，4条消息），通用设置下拉框控制 ---
+        var preset = (gd.promptPreset === 'xiajin') ? 'xiajin' : 'ny';
+
+        // --- NSFW 提示词解锁：enamor==1 或当前 BGM 为暧昧清单之一（或逻辑，两套预设共用）---
+        // BGM 触发而 enamor 未开时，用 enamor=1 的 gameData 浅克隆渲染模板，
+        // 两套预设的 EJS 门控（gameData.enamor）随之自动解锁，不影响真实存档数据
+        var _nsfwByBgm = _isAimeiBgm(gd.bgmName);
+        var _templateGameData = ((gd.enamor == 1) || !_nsfwByBgm) ? gd : Object.assign({}, gd, { enamor: 1 });
+        if (_nsfwByBgm && gd.enamor != 1) {
+            console.log('[PromptBuilder] 检测到暧昧BGM，本轮解锁 NSFW 提示词（enamor 视同 1）: ' + gd.bgmName);
+        }
+        var variables = { user: playerName, gameData: _templateGameData, '本次user输入': userMessage };
 
         // --- 世界书触发 ---
         var npcBlocks = worldbookEngine.matchNPCs(userMessage, lastAssistantReply);
@@ -866,65 +1168,28 @@ var promptBuilder = (function() {
         // --- RecalledEvents：L2 剧情事件层（召回主干）---
         var recalledEvents = params.recalledEvents || null;
 
-        // --- 构建各条消息（先用空 HistorySummary 占位，后续注入）---
-        // MainNPCs + UserInfo 块：随 HistorySummary 一起注入 <history>（</PreviousMemories> 之后、召回记忆与 <RecentMemories> 之前）
+        // --- MainNPCs + UserInfo 块：随 HistorySummary 一起注入（两套预设共用）---
         var npcUserBlock = _buildNpcUserBlock(variables, npcBlocks);
-        var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null, _recallSearchText, _recallConfig, npcUserBlock);
-        var msg1Content = _buildMsg1System(variables, wbBlocks1, historySummaryPlaceholder);
-        var msg2Content = '[Start a new chat]';
-        var msg3Content = _buildMsg3LatestReply(lastAssistantReply);
-        var msg4Content = _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2);
-        var msg5Content = templateEngine.renderPromptTemplate(
-            isDeepSeek ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : PROMPT_JAILBREAK_PREFILL, variables);
-        var msg6Content = isDeepSeek
-            ? PROMPT_FINAL_INSTRUCTION
-            : PROMPT_FINAL_INSTRUCTION.replace(/\}$/, '\nthinking omitted}');
 
-        // --- Token 预算管理 ---
-        var budget = _getBudgetConfig();
-        var totalAvailable = budget.maxContext - budget.reservedOutput;
-
-        var fixedTokens = tokenUtils.estimate(msg1Content)
-                        + tokenUtils.estimate(msg2Content)
-                        + tokenUtils.estimate(msg3Content)
-                        + tokenUtils.estimate(msg4Content)
-                        + tokenUtils.estimate(msg5Content)
-                        + tokenUtils.estimate(msg6Content)
-                        + 24; // 6 messages × ~4 tokens structure overhead
-
-        // 先扣除 RecentMemories + RecalledMemories 占用，剩余预算给 PreviousMemories
-        // （MainNPCs/UserInfo 不计入该占用块；其所在 msg1 已含在上方 fixedTokens 中）
-        var recentAndRecalledBlock = _buildHistorySummaryBlock([], recentSummaries, recalledMemories, recalledEvents, _recallSearchText, _recallConfig);
-        var recentAndRecalledTokens = tokenUtils.estimate(recentAndRecalledBlock);
-        // [已确立事实]之上的「每周总结」开关：控制 <PreviousMemories>（weekHistory）是否注入及其 token 上限，
-        // 由 系统设置-游戏设置-召回管理 弹窗控制（gameData.recallConfig.previous），默认 20000
-        var _previousCfg = _recallConfig.previous || {};
-        var _previousEnabled = _previousCfg.enabled !== false;
-        var _previousMaxTokens = (typeof _previousCfg.maxTokens === 'number') ? _previousCfg.maxTokens : 20000;
-        var previousBudget = _previousEnabled
-            ? Math.max(0, Math.min(_previousMaxTokens, totalAvailable - fixedTokens - recentAndRecalledTokens))
-            : 0;
-
-        // PreviousMemories：在预算内从最新到最旧截取 weekHistory
-        var selectedPrevious = _selectPreviousWithinBudget(weekHistory, previousBudget);
-        var droppedCount = weekHistory.length - selectedPrevious.length;
-        if (droppedCount > 0) {
-            console.log('[PromptBuilder] PreviousMemories: 预算不足，丢弃最旧 ' + droppedCount + ' 条 weekHistory');
-        }
-
-        // --- 构建最终 HistorySummary（含全三段 + MainNPCs/UserInfo）---
-        var finalHistorySummary = _buildHistorySummaryBlock(selectedPrevious, recentSummaries, recalledMemories, recalledEvents, _recallSearchText, _recallConfig, npcUserBlock);
-        msg1Content = _buildMsg1System(variables, wbBlocks1, finalHistorySummary);
-
-        // --- 组装 messages ---
-        var messages = [
-            { role: 'system', content: msg1Content },
-            { role: 'user', content: msg2Content },
-            { role: 'assistant', content: msg3Content },
-            { role: 'user', content: msg4Content },
-            { role: 'assistant', content: msg5Content },
-            { role: 'user', content: msg6Content }
-        ];
+        // --- 按预设组装（各自内部完成 token 预算与 HistorySummary 重建）---
+        var assembleCtx = {
+            variables: variables,
+            userMessage: userMessage,
+            lastAssistantReply: lastAssistantReply,
+            actionGuide: actionGuide,
+            isDeepSeek: isDeepSeek,
+            wbBlocks1: wbBlocks1,
+            wbBlocks2: wbBlocks2,
+            npcUserBlock: npcUserBlock,
+            weekHistory: weekHistory,
+            recentSummaries: recentSummaries,
+            recalledMemories: recalledMemories,
+            recalledEvents: recalledEvents,
+            recallSearchText: _recallSearchText,
+            recallConfig: _recallConfig
+        };
+        var assembled = (preset === 'xiajin') ? _assembleXiajin(assembleCtx) : _assembleNy(assembleCtx);
+        var messages = assembled.messages;
 
         // --- 调试日志 ---
         var actualTokens = tokenUtils.estimateMessages(messages);
@@ -942,13 +1207,13 @@ var promptBuilder = (function() {
         console.log(_recallDebugText);
         console.groupEnd();
 
-        console.log('[PromptBuilder] 6-msg 结构 | NPC注入: ' + npcBlocks.length +
+        console.log('[PromptBuilder] ' + assembled.label + ' 结构 | NPC注入: ' + npcBlocks.length +
                     ' | 行动指导: ' + (actionGuide ? '是' : '否') +
                     ' | RecentSummaries: ' + recentSummaries.length +
-                    ' | PreviousWeekHistory: ' + selectedPrevious.length + '/' + weekHistory.length +
+                    ' | PreviousWeekHistory: ' + assembled.selectedPreviousCount + '/' + weekHistory.length +
                     ' | RecalledEvents: ' + _directCnt + '(前因' + _priorCnt + ')' +
                     ' | RecalledMemories: ' + recalledMemories.length +
-                    ' | Token估算: ' + actualTokens + '/' + totalAvailable);
+                    ' | Token估算: ' + actualTokens + '/' + assembled.totalAvailable);
 
         return messages;
     }

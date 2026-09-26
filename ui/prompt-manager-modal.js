@@ -1,12 +1,16 @@
 /**
  * prompt-manager-modal.js - 提示词管理面板（系统设置-游戏设置-提示词管理）
  *
- * 按 prompt-builder.js 实际拼装顺序，列出可查看/可编辑的 prompt 条目：
+ * 按当前提示词预设（gameData.promptPreset，通用设置下拉框）展示对应结构与条目：
+ *   - ny 预设（默认）：6 条消息结构，见 _renderNy
+ *   - 夏瑾预设：4 条消息结构，见 _renderXiajin
+ * 条目规则（两套预设共用）：
  *   - 可调条目：编辑后保存为 promptOverrides（全局配置，不随存档走）
  *   - 不可调条目：仅供查看原始内容
  *   - 下拉框条目（主要NPC信息/行动指导/思维链）：任选一项单独编辑，存 promptOverrides
  *   - 地点信息（v0.6 更新）：不再走 promptOverrides，直接读/写 locationMemory（随存档走），
  *     编辑器是独立的结构化表单（危险度/友善度/行动建议/子场景分开填写），不是自由文本框
+ *   - CORE_010/020/040/105/110、世界书、NPC、行动指导为两套预设共享条目，覆盖 key 相同
  *
  * 依赖：prompt-overrides.js, prompt-data-core.js, prompt-data-npc.js,
  *        prompt-data-actions.js, prompt-data-extra.js, prompt-builder.js（LOCATION_REGISTRY/renderLocationText/parseLocationText/getPromptLocationDefault）,
@@ -26,21 +30,31 @@ var promptManagerModal = (function() {
     function _npcOverrideKey(varName) { return varName.replace(/^PROMPT_/, ''); }
     function _actionOverrideKey(varName) { return varName.replace(/^PROMPT_/, ''); }
 
-    // --- 渲染整个面板 ---
+    // --- 渲染整个面板（按当前预设分支） ---
     function render(root) {
         if (!root) return;
+        var preset = (typeof gameData !== 'undefined' && gameData && gameData.promptPreset === 'xiajin') ? 'xiajin' : 'ny';
+        if (preset === 'xiajin') {
+            _renderXiajin(root);
+        } else {
+            _renderNy(root);
+        }
+    }
 
+    // --- ny 预设（6 条消息结构） ---
+    function _renderNy(root) {
         var html = '';
         html += '<style>.pm-section > .gs-switch-row:last-child { border-bottom: none; }</style>';
         // html += '<p class="cfg-hint">以下内容按实际发送给 LLM 的拼装顺序列出。"可调"条目点开后可编辑并保存，保存为全局配置（不随存档走，所有存档共用）；"只读"条目仅供查看。</p>';
 
-        // 分组1：PROMPT头部
+        // 分组1：第0条 system —— PROMPT头部（开头两行 + <settings> + role_user 身份说明 + <role_user>）
         html += _pmSection([
             _pmBtn('OPENING', 'PROMPT头部', false)
         ]);
 
-        // 分组2：叙事基调 / 故事背景
+        // 分组2：第1条 user 开头 —— 角色行为授权 / 叙事基调 / 故事背景
         html += _pmSection([
+            _pmBtn('ROLE_AUTH', '角色行为授权', false),
             _pmBtn('INFO_TONE', '叙事基调', true),
             _pmBtn('CORE_010', '故事背景', true)
         ]);
@@ -54,14 +68,16 @@ var promptManagerModal = (function() {
         html += _pmWorldbookCategory('1');
 
         // 分组4a：文笔风格 / 对话历史 / 主要NPC信息 / 主角信息（后两者位于 history 内 PreviousMemories 之后、召回记忆之前）
+        // 最新一次回复：第1条 user 以 <LatestReply> 收尾，第2条 assistant 即上一轮正文原文，第3条 user 以 </LatestReply> 开头
         html += _pmSection([
             _pmBtn('WRITING_STYLE', '文笔风格', true),
             _pmDisabledBtn('对话历史'),
             _pmNpcDropdown(),
-            _pmBtn('CORE_040', '主角信息', true)
+            _pmBtn('CORE_040', '主角信息', true),
+            _pmDisabledBtn('最新一次回复')
         ]);
 
-        // 世界书大类No.2（插入位置：<fresh> 与 <user_input> 之间）
+        // 世界书大类No.2（插入位置：第3条 user 内 <fresh> 与 <user_input> 之间）
         html += _pmWorldbookCategory('2');
 
         // 分组4b：防止重复要求 / 本次用户输入 / 行动指导 / 信息列表
@@ -79,10 +95,73 @@ var promptManagerModal = (function() {
             _pmThinkGuidanceDropdown()
         ]);
 
-        // 分组6：越狱前缀 / 最终指令
+        // 分组6：第4条 assistant 越狱前缀 / 第5条 user 最终指令
         html += _pmSection([
             _pmBtn('JAILBREAK_PREFILL', '越狱前缀', false),
             _pmBtn('FINAL_INSTRUCTION', '最终指令', false)
+        ]);
+
+        root.innerHTML = html;
+    }
+
+    // --- 夏瑾预设（4 条消息结构） ---
+    function _renderXiajin(root) {
+        var html = '';
+        html += '<style>.pm-section > .gs-switch-row:last-child { border-bottom: none; }</style>';
+
+        // 分组1：第0条 system —— 系统头部（整条固定文本，含内嵌假对话）
+        html += _pmSection([
+            _pmBtn('XJ_SYSTEM', '系统头部', false)
+        ]);
+
+        // 分组2：第1条 user 开头 —— 任务介绍 / 第一写作指导
+        html += _pmSection([
+            _pmBtn('XJ_TASK_INTRO', '任务介绍', false),
+            _pmBtn('XJ_WRITING_GUIDE', '第一写作指导', true)
+        ]);
+
+        // 分组3：相关资料 —— 主角设定说明 / 故事背景（共享 ny 预设同条目）
+        html += _pmSection([
+            _pmBtn('XJ_USER_ROLE', '主角设定说明', false),
+            _pmBtn('CORE_010', '故事背景', true)
+        ]);
+
+        // 分组4：地点信息（共享）
+        html += _pmSection([
+            _pmLocationDropdown()
+        ]);
+
+        // 世界书大类No.1（插入位置：相关资料内地点信息之后、</相关资料> 之前）
+        html += _pmWorldbookCategory('1');
+
+        // 分组5：互动历史 / 主要NPC信息 / 主角信息 / 最新一次回复（与 ny 预设同规则）
+        html += _pmSection([
+            _pmDisabledBtn('互动历史'),
+            _pmNpcDropdown(),
+            _pmBtn('CORE_040', '主角信息', true),
+            _pmDisabledBtn('最新一次回复')
+        ]);
+
+        // 世界书大类No.2（插入位置：第3条 user 内 </互动历史> 与 <user_input> 之间）
+        html += _pmWorldbookCategory('2');
+
+        // 分组6：本次用户输入 / 行动指导 / 信息列表（可用信息列表）
+        html += _pmSection([
+            _pmDisabledBtn('本次用户输入'),
+            _pmActionDropdown(),
+            _pmBtn('CORE_105', '信息列表', false)
+        ]);
+
+        // 分组7：核心指导 / 输出格式规范 / 输出模板说明
+        html += _pmSection([
+            _pmBtn('XJ_CORE_GUIDE', '核心指导', true),
+            _pmBtn('CORE_110', '输出格式规范', false),
+            _pmBtn('XJ_OUTPUT_NOTE', '输出模板说明', false)
+        ]);
+
+        // 分组8：任务链（第3条 user 尾部，含内嵌模拟对话与隐式思考要求）
+        html += _pmSection([
+            _pmBtn('XJ_TASK_CHAIN', '任务链', false)
         ]);
 
         root.innerHTML = html;
@@ -215,6 +294,7 @@ var promptManagerModal = (function() {
     // --- 固定 key -> 默认常量 / 展示名 映射（用于单按钮条目）---
     var _FIXED_MAP = {
         OPENING:            { title: 'PROMPT头部',     editable: false, get: function() { return typeof PROMPT_OPENING !== 'undefined' ? PROMPT_OPENING : ''; } },
+        ROLE_AUTH:          { title: '角色行为授权',    editable: false, get: function() { return typeof PROMPT_ROLE_AUTH !== 'undefined' ? PROMPT_ROLE_AUTH : ''; } },
         INFO_TONE:          { title: '叙事基调',        editable: true,  get: function() { return typeof PROMPT_INFO_TONE !== 'undefined' ? PROMPT_INFO_TONE : ''; } },
         CORE_010:           { title: '故事背景',        editable: true,  get: function() { return typeof PROMPT_CORE_010 !== 'undefined' ? PROMPT_CORE_010 : ''; } },
         CORE_040:           { title: '主角信息',        editable: true,  get: function() { return typeof PROMPT_CORE_040 !== 'undefined' ? PROMPT_CORE_040 : ''; } },
@@ -228,7 +308,17 @@ var promptManagerModal = (function() {
             var b = typeof PROMPT_JAILBREAK_PREFILL_DEEPSEEK !== 'undefined' ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : '';
             return '【非DeepSeek模型版本】\n' + a + '\n\n【DeepSeek模型版本】\n' + b;
         } },
-        FINAL_INSTRUCTION:  { title: '最终指令',        editable: false, get: function() { return typeof PROMPT_FINAL_INSTRUCTION !== 'undefined' ? PROMPT_FINAL_INSTRUCTION : ''; } }
+        FINAL_INSTRUCTION:  { title: '最终指令',        editable: false, get: function() {
+            var f = typeof PROMPT_FINAL_INSTRUCTION !== 'undefined' ? PROMPT_FINAL_INSTRUCTION : '';
+            return '【非DeepSeek模型版本】\n' + f + '\n\n【DeepSeek模型版本】\n' + f.replace(/\[thinking omitted\]\n/, '');
+        } },
+        XJ_SYSTEM:          { title: '系统头部（夏瑾预设）',     editable: false, get: function() { return typeof PROMPT_XJ_SYSTEM !== 'undefined' ? PROMPT_XJ_SYSTEM : ''; } },
+        XJ_TASK_INTRO:      { title: '任务介绍（夏瑾预设）',     editable: false, get: function() { return typeof PROMPT_XJ_TASK_INTRO !== 'undefined' ? PROMPT_XJ_TASK_INTRO : ''; } },
+        XJ_WRITING_GUIDE:   { title: '第一写作指导（夏瑾预设）', editable: true,  get: function() { return typeof PROMPT_XJ_WRITING_GUIDE !== 'undefined' ? PROMPT_XJ_WRITING_GUIDE : ''; } },
+        XJ_USER_ROLE:       { title: '主角设定说明（夏瑾预设）', editable: false, get: function() { return typeof PROMPT_XJ_USER_ROLE !== 'undefined' ? PROMPT_XJ_USER_ROLE : ''; } },
+        XJ_CORE_GUIDE:      { title: '核心指导（夏瑾预设）',     editable: true,  get: function() { return typeof PROMPT_XJ_CORE_GUIDE !== 'undefined' ? PROMPT_XJ_CORE_GUIDE : ''; } },
+        XJ_OUTPUT_NOTE:     { title: '输出模板说明（夏瑾预设）', editable: false, get: function() { return typeof PROMPT_XJ_OUTPUT_NOTE !== 'undefined' ? PROMPT_XJ_OUTPUT_NOTE : ''; } },
+        XJ_TASK_CHAIN:      { title: '任务链（夏瑾预设）',       editable: false, get: function() { return typeof PROMPT_XJ_TASK_CHAIN !== 'undefined' ? PROMPT_XJ_TASK_CHAIN : ''; } }
     };
 
     /**
