@@ -345,40 +345,50 @@ function generateBattleEventDrop(enemyInfo) {
     return { itemName, targetRarity };
 }
 
-// 解析LLM响应
+// ==== GAL_TIME_BEGIN ====
+// GAL 时间源：末帧有效时间 → 逆序前序帧 → SIDE_NOTE.时间（兑底）→ null（保持原值）
+// 只在 commit 阶段由 parseLLMResponse 调用；流式 renderMainText 不碰时间。
+function resolveTurnTime(frames, sideNote) {
+    const fromFrames = (typeof GalParser !== 'undefined' && GalParser && Array.isArray(frames)) ? GalParser.lastTime(frames) : null;
+    if (fromFrames) return { time: fromFrames, source: 'frame' };
+    const raw = sideNote && sideNote.时间;
+    if (raw) {
+        const m = String(raw).match(/(\d{1,2}):(\d{2})/);
+        if (m) return { time: m[0], source: 'sideNote' };
+        return { time: null, source: 'invalid', raw: String(raw) };
+    }
+    return { time: null, source: 'none' };
+}
+// 将解析出的时间写入 currentGameTime / dayNightStatus / 3D 精确光照，并刷新场景背景。
+// 跨回合回退合法（LLM 可能重述），仅 warn 不拦截。
+function applyTurnTime(resolved) {
+    if (!resolved || !resolved.time) {
+        if (resolved && resolved.source === 'invalid') console.warn(`无法解析时间格式：${resolved.raw}`);
+        return false;
+    }
+    const timeMatch = String(resolved.time).match(/(\d{1,2}):(\d{2})/);
+    if (!timeMatch) return false;
+    const hour = parseInt(timeMatch[1]);
+    const minute = parseInt(timeMatch[2]);
+    const toMinutes = (s) => { const m = /(\d{1,2}):(\d{2})/.exec(String(s || '')); return m ? (+m[1]) * 60 + (+m[2]) : null; };
+    const prev = (typeof currentGameTime !== 'undefined') ? toMinutes(currentGameTime) : null;
+    if (prev !== null && hour * 60 + minute < prev) console.warn(`[GalTime] 时间回退：${currentGameTime} → ${resolved.time}（来源 ${resolved.source}）`);
+    console.log(`当前时间：${resolved.time}（来源 ${resolved.source}）`);
+    currentGameTime = resolved.time;
+    if (typeof window !== 'undefined' && window.GameSceneBridge) GameSceneBridge.captureTime(timeMatch[0]);
+    dayNightStatus = (hour >= 6 && hour < 18) ? 'daytime' : 'night';
+    console.log(`昼夜状态更新为：${dayNightStatus}`);
+    if (typeof updateSceneBackgrounds === 'function') updateSceneBackgrounds();
+    return true;
+}
+// ==== GAL_TIME_END ====
+
+// 解析LLM响应（response 为 SIDE_NOTE 对象，可为 null；时间优先取 MAIN_TEXT 末帧）
 function parseLLMResponse(response, mainTextContent) {
-    // 在函数开头添加时间解析
     randomEvent = 0;
     battleEvent = 0;
-    if (response && response.时间) {
-        const timeStr = response.时间;
-        console.log(`当前时间：${timeStr}`);
-        
-        // 解析时间格式 "HH:MM"
-        const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
-        if (timeMatch) {
-            const hour = parseInt(timeMatch[1]);
-            const minute = parseInt(timeMatch[2]);
-
-            // 保存当前剧情时间
-            currentGameTime = timeStr;
-            if (window.GameSceneBridge) GameSceneBridge.captureTime(timeMatch[0]);
-
-            // 判断昼夜
-            if (hour >= 6 && hour < 18) {
-                dayNightStatus = 'daytime';
-            } else {
-                dayNightStatus = 'night';
-            }
-            
-            console.log(`昼夜状态更新为：${dayNightStatus}`);
-            
-            // 更新场景背景
-            updateSceneBackgrounds();
-        } else {
-            console.warn(`无法解析时间格式：${timeStr}`);
-        }
-    }
+    const galFrames = (mainTextContent && typeof parseSlgMainText === 'function') ? parseSlgMainText(mainTextContent) : [];
+    applyTurnTime(resolveTurnTime(galFrames, response));
 
     // 解析用户位置变动
     if (GameMode === 0 && response && response.用户 && response.用户.位置变动 && response.用户.位置变动 !== 'none') {
@@ -477,7 +487,7 @@ function parseLLMResponse(response, mainTextContent) {
         }
         
         // 处理当前NPC
-        if (response.当前NPC && typeof response.当前NPC === 'object') {
+        if (response && response.当前NPC && typeof response.当前NPC === 'object') {
             for (const npcName in response.当前NPC) {
                 const npcData = response.当前NPC[npcName];
                 

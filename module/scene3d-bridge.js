@@ -33,7 +33,9 @@
     let root, viewport, notice, view = null, viewToken = null, importTask = null, release = null, unloadTimer = null;
     let preferences = null, last = null, fingerprint = '', readyScene = null;
     let preciseTime = null, menu = null, settings = null, observer = null;
-    let page = null, pageAnimation = null;
+    let page = null, pageParts = null, pageAnimation = null;
+    // GAL 演出翻页纸持有中（cover 开始 → reveal 结束）：这段时间纸张归演出层，3D 的 abortTurn 不得掐掉它。
+    let curtainHeld = false;
     const tuningKeys = Object.freeze(['bloom', 'shaft', 'saturation', 'contrast', 'gamma', 'warmth', 'vignette']);
     const defaultTuning = () => ({ bloom: 1, shaft: 0.85, saturation: 1.4, contrast: 1.4, gamma: 0.88, warmth: 0.38, vignette: 0.85 });
     // Native Capacitor app (APK → phone) defaults renderScale to 2.0; plain web defaults to 1.25.
@@ -155,8 +157,9 @@
             const rule = document.createElement('div'); rule.className = 'scene3d-page-rule';
             sheet.append(seal, title, detail, rule); page.append(sheet);
             viewport.append(page);
+            pageParts = { page, sheet, seal, title, detail };
         }
-        return { page, sheet: page.firstElementChild, title: page.querySelector('.scene3d-page-title'), detail: page.querySelector('.scene3d-page-detail') };
+        return pageParts;
     }
     function cancelPageAnimation() {
         const running = pageAnimation;
@@ -165,9 +168,12 @@
     }
     function abortTurn() {
         turn = null;
+        if (viewport) delete viewport.dataset.scene3dTurning;
+        // 3D 不可见时 apply() 每次 notify 都会走到这里（setBusy('gal') / MutationObserver 皆会触发），
+        // 此时若纸张正被 GAL 演出使用，只清 3D 自己的 turn 所有权，纸张留给演出层自行 reveal。
+        if (curtainHeld) return;
         cancelPageAnimation();
         if (page) page.hidden = true;
-        if (viewport) delete viewport.dataset.scene3dTurning;
     }
     function beginTurn(next) {
         // Navigation during loading shares the already covering/covered sheet. During
@@ -175,6 +181,7 @@
         if (turn && turn.phase !== 'revealing') return turn;
         const interruptedReveal = Boolean(turn);
         cancelPageAnimation();
+        curtainHeld = false; // 3D 换房接管纸张；演出层后续的 playCurtain 会因 turn 非空直接 resolve
         const owner = { phase: interruptedReveal ? 'covered' : 'covering', covered: null };
         turn = owner;
         viewport.dataset.scene3dTurning = 'true';
@@ -205,8 +212,22 @@
     }
     function playPageTurn(cover, label, detailText) {
         if (!viewport || !preferences.enabled) return Promise.resolve();
-        const { page, sheet, title, detail } = pageSheet();
+        return runPageTurn(cover, label, detailText, '山门图志');
+    }
+    // GAL 演出的翻页纸：不受 3D 偏好门控；bridge 未 start（无 viewport）或 3D 换房正在翻页（turn 非空）时不播、直接 resolve。
+    function playCurtain(cover, label, detailText, seal) {
+        if (!viewport || turn) {
+            if (!cover) curtainHeld = false;
+            return Promise.resolve();
+        }
+        if (cover) curtainHeld = true;
+        const done = runPageTurn(cover, label, detailText, seal || '话本');
+        return cover ? done : done.finally(() => { curtainHeld = false; });
+    }
+    function runPageTurn(cover, label, detailText, sealText) {
+        const { page, sheet, seal, title, detail } = pageSheet();
         if (cover) {
+            seal.textContent = sealText || '山门图志';
             title.textContent = label || '';
             detail.textContent = detailText || '';
         }
@@ -724,6 +745,9 @@
         document.addEventListener('keydown', event => { if (menu && event.key === 'Escape') { closeMenu(true); event.preventDefault(); } });
         notify('start', true);
     }
-    window.GameSceneBridge = Object.freeze({ start, notify, invalidate, afterRestore, captureTime, publishNpcs, setBusy, setPreference, openSettings, retry, showNpcInfoAtAnchor, showLocationInfoAtAnchor,
+    window.GameSceneBridge = Object.freeze({ start, notify, invalidate, afterRestore, captureTime, publishNpcs, setBusy, setPreference, openSettings, retry, showNpcInfoAtAnchor, showLocationInfoAtAnchor, playCurtain,
+        // 仅“真正在换房”才算：turn 非空，或在飞的 apply 目标场景 ≠ 已就绪场景。普通的锁/解锁重投影
+        // （setBusy('gal') 本身就会触发一次）不应抑制演出退出时的翻页纸。
+        hasPendingApply() { return Boolean(turn || (pendingApply && pendingApply.sceneId !== readyScene)); },
         getDiagnostics() { return { started, epoch, revision, buildId: release?.buildId || null, readyScene, preferences: clone(preferences), counters: { ...counters }, snapshot: last ? clone(last) : null, errors: clone(errors), renderer: view?.getDiagnostics?.() || view?.getDebugState?.() || view?.debug || null }; } });
 })();

@@ -5,7 +5,8 @@ description: 姬侠传「GAL 演出」迭代的完整开发方案——LLM 正�
 
 # GAL 演出迭代开发方案（格式升级 + GameMode 0 演出层）
 
-> 状态：方案已定稿，**尚未开始改代码**。所有决策均已与用户逐条确认（见第二节决策表），落地时不要再重新讨论已拍板项。
+> 状态：**代码与自动化测试已完成**（Phase 0-6 的代码改动、单测、规范/提示词更新均已落地；完成情况见第四节各 Phase 验收勾选）。**待手工验收**：浏览器脚本、真机/APK、真实模型 5 轮统计、旧格式特殊事件链端到端——清单见第四节末「状态与待办」。所有决策均已与用户逐条确认（见第二节决策表），落地时不要再重新讨论已拍板项。
+> 用户补充决定：解析器与控制器**不拆独立文件**，直接写在 `module/game-ui.js` 内（见第三节）。
 > 执行顺序固定：Phase 0 → 1 → 2 → 3 → 4 → 5。每个 Phase 独立可验收、可回滚；前一阶段验收未过不进下一阶段。
 
 ## 一、动手前必读（按顺序）
@@ -44,10 +45,10 @@ description: 姬侠传「GAL 演出」迭代的完整开发方案——LLM 正�
 | T2 | 跨回合时间回退合法（LLM 可能重述），不做单调约束校验，仅 console.warn |
 | G0 | 进出演出播翻页纸（复用 3D 翻页动画）；演出内部段落切换不播 |
 | G1 | 进入条件（自动）：`GameMode===0 && 新回复 commit 完成 && frames.length ≥ 1 && !isStoryExpanded && newWeek !== 1`；同一回复只自动进入一次 |
-| G2 | 进入条件（手动）：GameMode 0 下点 story-area **中间 1/3**（左右 1/3 仍是翻页）→ 进入并显示 `min(currentPage, frames.length-1)` 对应帧；展开态不响应 |
+| G2 | 进入条件（手动）：GameMode 0 下点 story-area **中间 1/3**，或**任何翻页动作**（左右 1/3 / 箭头 / 页码点 → `doGoToPage`）→ 进入并显示 `min(currentPage, frames.length-1)` 对应帧；已在演出中则退化为 `goto`；展开态不响应 |
 | G3 | 退出：点舞台任意处（mask click）；点"展开全文"；收起全文不自动重进 |
 | G4 | 不进入：展开态收到回复、`newWeek===1`、存档加载/回滚重渲染（`renderMainText` 非 commit 路径） |
-| G5 | GameMode 0 NPC 白名单 = `npcs` 全花名册；匹配收紧为 精确名 / 精确 ID / 全名被 token 包含且 `token.length ≤ name.length+1`，**不走相似度层**；非法 NPC 逐个丢弃（console.log），其余继续 |
+| G5 | GameMode 0 NPC 白名单 = `npcs` 全花名册；匹配收紧为 精确名 / 精确 ID / 全名被 token 包含且 `token.length ≤ name.length+2`（+2 而非 +1：容“雨烛姑娘”“破阵子长老”“萧白瑚师姐”这类 2 字敬称，拒“唐沐梨的侍女”），**不走相似度层**；非法 NPC 逐个丢弃（console.log），其余继续 |
 | G6 | GameMode 0 场景不在 10 个门派地点（`locationNames` 的中文名，精确匹配）内 → 背景回退 `img/location/天山派_{seasonStatus}_{昼|夜}.webp` |
 | G7 | GameMode 0 演出 **不触发 `enamor`**、**不写 `__lastValid*`** 三个全局；场景/NPC/表情只做展示，唯一写变量的是末帧时间（T1） |
 | G8 | 翻页纸文案：进入 = **"话本 · 第n回"**（n = 进入时帧索引+1，按演出帧计，不按 storyPages 计）；退出 = **"话本 · 收卷"** |
@@ -62,35 +63,31 @@ description: 姬侠传「GAL 演出」迭代的完整开发方案——LLM 正�
 
 ```
 LLM MAIN_TEXT
-   │ parseFrames()                     ← module/gal-parser.js（新增，纯函数）
+   │ GalParser.parseFrames()           ← game-ui.js 内 `// ==== GAL_PARSER_BEGIN/END ====` 块（纯函数 IIFE）
    ▼
 frames[] = [{ text, scene, time, cast:[{npc,emotion}], cg, legacy, npc, emotion }]
    │                                    (npc/emotion = cast[0] 的镜像，兼容旧消费者)
    ├── 数据层：slgModeData / storyPages / currentPage（game-ui.js 现有）
    ├── 时间源：parseLLMResponse 读 frames 末帧时间（game-events.js）
-   └── 演出层：galPresentation 控制器            ← module/gal-presentation.js（新增）
+   └── 演出层：galPresentation 控制器  ← game-ui.js 内 `// ==== GAL_PRESENTATION_BEGIN/END ====` 块（IIFE）
           enter({source, pageIndex}) / goto(i) / exit({reason}) / isPlaying()
           渲染 .slg-layer-container（背景/立绘/CG）+ .slg-interaction-mask
-          GameMode 1：常驻，行为同现状
+          GameMode 1：不走状态机，updateStoryDisplay 直接调 renderLayers/clearLayers（行为同现状）
           GameMode 0：按 G1-G13 进出，加 gal-presenting，setBusy('gal')
 业务层：.scene / #sect-3d-root / displayNpcs / switchScene —— 不改
 ```
 
-新增两个模块文件，在 `index.html` 中于 `game-utils.js` 之后、`game-ui.js` 之前加载。拆出独立文件的目的是让解析器与控制器能在 `node:test + vm` 沙箱里单测（`game-ui.js` 依赖太多全局，无法直接加载）。
+**不新增模块文件**（用户决定）。两个 IIFE 直接写在 `game-ui.js` 顶部（`parseSlgMainText` 原位置），各用一对切片标记注释包裹；单测用 `source.slice(indexOf('// ==== GAL_PARSER_BEGIN ===='), indexOf('// ==== GAL_PARSER_END ===='))` 把块切出来在 `vm` 沙箱运行（同 `bridge-unit.mjs` 切函数体的做法）。两个块内部**只能引用**：自身参数 / `ctx` 传入项 / 明确以 `typeof x !== 'undefined'` 守卫的全局，保证在最小沙箱可加载。
 
-### 3.1 gal-parser.js 契约
+**编辑纪律**：`game-ui.js` 含 `\n` 正则字面量，`SearchReplace` 曾两次把文件写坏——本文件的所有修改一律用 node 手术脚本（Write 临时 `.js` → `node` 执行 → `node --check` → 删脚本）。
+
+### 3.1 GalParser 契约
 
 ```
-GalParser.parseFrames(mainText, ctx) → { frames: Frame[], plainTail: string }
-ctx = {
-  gameMode: 0|1,
-  allowedNpcNames: string[],        // GameMode1: companionNPC；GameMode0: 全花名册
-  npcIdToName: {A:'破阵子',...},
-  matchScene(name) → sceneId|'none', matchEmotion(name) → emotion|'none',
-  legacySceneOptions: string[],
-  streaming: boolean                // true 时末段无 | 的残文按现状 lastValidDisplay 兜底
-}
-Frame = { text, scene, time|null, cast:[{npc,emotion}](≤2), cg, legacy:boolean, npc, emotion }
+GalParser.parseFrames(mainText, ctx) → Frame[]        // 实际实现：直接返回数组；末尾无标记残文作为最后一帧 tail=true，沿用上一有效展示配置
+ctx = buildGalParseContext(gameMode)                 // game-ui.js 内的共用构造，game-events.js 也用它
+    = { gameMode, roster:[{id,name}], matchNpc, isNpcAllowed, matchScene, matchEmotion, matchCG, log }
+Frame = { text, scene, time|null, cast:[{npc,emotion}](≤2), cg, legacy:boolean, npc, emotion, tail?:true }
 ```
 - 分隔符：按行切；一行 `split('|')` 恰得 5 段才是标记行；否则累积到当前段正文（与现状一致）。
 - 新格式判定：`parts[2]` trim 后匹配 `^\d{1,2}[:：]\d{2}$`。时间归一为 `HH:MM`（补零，全角冒号转半角）。
@@ -98,7 +95,7 @@ Frame = { text, scene, time|null, cast:[{npc,emotion}](≤2), cg, legacy:boolean
 - 旧格式：`parts[1]`=NPC、`parts[2]`=场景、`parts[3]`=表情、`parts[4]`=CG，cast 最多 1 个，`legacy=true`，`time=null`。
 - 纯函数、无 DOM、无全局读写。
 
-### 3.2 gal-presentation.js 契约
+### 3.2 galPresentation 契约
 
 ```
 galPresentation = {
@@ -106,23 +103,32 @@ galPresentation = {
   enter({ source:'commit'|'page', pageIndex, curtain }) → Promise<void>,
   goto(pageIndex),                    // 演出中翻页，只换图层，不播翻页纸
   exit({ reason, curtain }) → Promise<void>,
-  isPlaying(), markCommit(commitId),  // 同一 commitId 只自动进入一次
+  isPlaying(), onCommit(commitId),    // 同一 commitId 只自动进入一次
   renderLayers(viewport, frame, opts) // 从 _appendSlgLayers 迁出的纯渲染
+  clearLayers(viewport)
 }
 ```
-- 依赖只允许：`frames[]`（由 game-ui 传入）、`currentPage`、`GameMode`、`isStoryExpanded`、`newWeek`、viewport DOM、`GameSceneBridge`（可选）。**不读业务状态**。
-- `renderLayers` 的副作用开关：`opts.allowEnamor`、`opts.recordLastValid` 仅 GameMode 1 为 true（G7）。
-- 翻页纸：调用 `GameSceneBridge.playCurtain(cover, label, detail)`（新暴露，**不受** `preferences.enabled` 门控；bridge 未加载/`turn` 非空时直接 resolve，即不播）。
+- 依赖只允许：`frames[]`（读 `slgModeData`）、`currentPage`、`GameMode`、`isStoryExpanded`、`newWeek`、viewport DOM、`GameSceneBridge`（可选，`typeof` 守卫）。**不读业务状态**。
+- `renderLayers(viewport, frame, opts)`，`opts = { mask, allowEnamor, recordLastValid, mode, portraitFallback }`：`allowEnamor`/`recordLastValid` 仅 GameMode 1 为 true（G7）；`mode===0` 时场景走 G6 路径、表情图 404 `onerror` 回退 `npcPortraits[id]`。
+- 双 NPC 站位：表情差分图是 3:2 全幅、角色居中，**不复用** `.npc-portrait.double-*`；改为给 `.slg-emotion-layer` 加 `.slg-cast-left/.slg-cast-right`，用 `transform: translateX(∓22%)` 把两张全幅图分别推到人物中心 28%/72% 位置。操作模式 `.npc-portrait.double-left/right` 用 `left: calc(50% ∓ 22%)` 对齐同一几何（translateX 按元素自身 70% 宽计，不可用）。
+- 立绘尺寸：`.slg-emotion-layer img { height: 70% }`，GameMode 0 演出与 GameMode 1 共用、无模式分支，与操作模式 `.npc-portrait` 的 70% 一致，避免退出演出时人物“变小”。特殊CG（`.slg-emotion-special-cg`）不受此限，仍满屏 cover。
+- 进出串行化：`gen` 计数 + promise 链；`enter/exit` 同步改 `state`，翻页纸只是异步装饰，不影响状态判定。
+- 翻页纸：调用 `GameSceneBridge.playCurtain(cover, label, detail, seal)`（新暴露，**不受** `preferences.enabled` 门控；bridge 未 `start()`（无 viewport）或 `turn` 非空时直接 resolve，即不播）。seal 传 `'话本'`，label 传 `'第n回'`（中文数字）/`'收卷'`，detail 传 `time · scene`。
 
 ## 四、阶段划分
 
 每个阶段收尾都执行：
 ```powershell
-node -e "const fs=require('fs');for(const f of ['module/gal-parser.js','module/gal-presentation.js','module/game-ui.js','module/game-events.js','module/pipeline.js','module/scene3d-bridge.js','module/game-helpers.js']){try{new Function(fs.readFileSync(f,'utf8'))}catch(e){console.error(f,e.message);process.exit(1)}}console.log('syntax OK')"
-node --test tests/gal/
+node --check module/game-ui.js; node --check module/game-events.js; node --check module/pipeline.js; node --check module/scene3d-bridge.js; node --check module/game-helpers.js; node --check module/storage-service.js
+node --test "tests/gal/*.unit.mjs"     # 必须 glob；传目录会 MODULE_NOT_FOUND
 npm.cmd --prefix scene3d run test:unit
 ```
 浏览器证据目录统一用 `.scene3d-work/gal-<phase>-<序号>/`（必须是尚不存在的绝对路径）。
+
+**编辑纪律**（实施中总结，详见 `tests/gal/README.md`）：
+- `game-ui.js` 只用 node 手术脚本改：读 → `\r\n` 归一 `\n` → `replaceOnce` 唯一锚点校验 → 写 → `node --check` → 删脚本。文件现为纯 LF。编辑器工具整段替换会写坏链式 `\n` 正则。
+- `char_card_information/*.txt` 为 CRLF，改后脚本核对 CRLF 行数与关键词计数；工具参数里不要用 `\uXXXX` 转义中文（曾误写「暧昧」为「暖昧」）。
+- PowerShell 下 `node -e` 内联含中文/正则会编码错乱，改写临时 `.cjs`。
 
 ---
 
@@ -139,17 +145,17 @@ npm.cmd --prefix scene3d run test:unit
 - 新建 `tests/gal/legacy-baseline.unit.mjs`：把 `game-ui.js` 中 `parseSlgMainText` 函数体切片（`source.slice(indexOf('function parseSlgMainText'), indexOf('// 下一个函数注释'))`，方式同 bridge-unit 切 `showLocationInfo`）在沙箱运行，对 `legacy-gm1.txt` 生成快照 JSON 存入 `tests/gal/fixtures/legacy-gm1.expected.json`。
 
 **验收标准**
-- [ ] `node --test tests/gal/` 通过，快照文件生成且人工核对：段数、每段 npc/scene/emotion/cg 与当前游戏内表现一致。
-- [ ] 未修改任何 `module/*.js`。
+- [x] `node --test "tests/gal/*.unit.mjs"` 通过，快照 `fixtures/legacy-gm1.expected.json` 生成并核对。
+- [x] 未修改任何 `module/*.js`。
 
 ---
 
-### Phase 1 — 解析层统一（gal-parser.js）
+### Phase 1 — 解析层统一（GalParser 块）
 
 **目标**：新旧格式同一入口解析出 `frames[]`；去掉 GameMode 门控；GameMode 1 对旧格式的输出与 Phase 0 快照逐字节一致。
 
 **改动点**
-- 新建 `module/gal-parser.js`，实现 3.1 契约；`index.html` 加载顺序：`game-utils.js` → `gal-parser.js` → `game-ui.js`。
+- 在 `game-ui.js` 原 `parseSlgMainText` 位置写入 `GAL_PARSER_BEGIN/END` 块，实现 3.1 契约（不新增文件、不改 `index.html`）。
 - `game-ui.js` `parseSlgMainText` 改为薄包装：构造 ctx（GameMode 1 → `companionNPC`；GameMode 0 → `Object.values(npcs).map(n=>n.name)`），调用 `GalParser.parseFrames`，返回 frames（保留 `npc/emotion` 字段镜像 cast[0]，`slgModeData` 现有消费者零改动）。
 - `updateStoryText`：**两种 GameMode 都**调用解析；GameMode 0 的 `storyPages` 仍按帧正文分页（等价于现在"剥离 `|` 后内容"的效果，但页与帧一一对应）。GameMode 0 解析不到任何帧时保持现有自然段分页回退。
 - GameMode 0 白名单匹配按 G5 实现在 parser 内（不调 `matchNPC`），GameMode 1 保持调 `matchNPC`（行为不变）。
@@ -158,12 +164,13 @@ npm.cmd --prefix scene3d run test:unit
 - [ ] `tests/gal/parser.unit.mjs`：
   - 旧格式 GameMode 1 样本 → 输出与 `legacy-gm1.expected.json` 深等；
   - 新格式：双 NPC 顺序与焦点正确；3 个 NPC 只取前 2 个有效；全角 `：；` 等价半角；缺表情 → `none`；`none` cast 为空数组；时间 `8:05`→`08:05`；
-  - GameMode 0："路过的百姓" 被丢弃、同段另一合法 NPC 保留；"雨烛姑娘" 命中雨烛（长度≤名字+1），"雨烛姑娘和众人" 不命中；无相似度误判（构造 `stringSimilarity≥0.6` 但非包含的名字，断言丢弃）；
+  - GameMode 0："路过的百姓" 被丢弃、同段另一合法 NPC 保留；"雨烛姑娘" 命中雨烛（长度≤名字+2），"雨烛姑娘和众人" 不命中；无相似度误判（构造 `stringSimilarity≥0.6` 但非包含的名字，断言丢弃）；
   - GameMode 0 旧格式（special-event 样本）能解析，`legacy=true`，`time=null`；
-  - 流式：末行无 `|` 的残文按现状挂到 `plainTail`/兜底显示；
+  - 流式：末行无 `|` 的残文作为 `tail=true` 末帧（沿用上一有效展示配置）兜底显示；
   - 不含标记的纯文本 → `frames=[]`。
-- [ ] 手工回归：GameMode 1 游戏内跑一轮旧格式特殊事件与一轮新格式正常回复，图层显示与改前一致。
-- [ ] `updateStoryText` 在 GameMode 0 下渲染的分页文本不再含任何 `|` 残留（浏览器脚本断言 `#story-text` innerText 无 `|`）。
+  - **状态：已完成**（`parser.unit.mjs`）。
+- [ ] 手工回归：GameMode 1 游戏内跑一轮旧格式特殊事件与一轮新格式正常回复，图层显示与改前一致。（待手工）
+- [ ] `updateStoryText` 在 GameMode 0 下渲染的分页文本不再含任何 `|` 残留（浏览器脚本断言 `#story-text` innerText 无 `|`）。（待浏览器脚本）
 
 ---
 
@@ -177,7 +184,7 @@ npm.cmd --prefix scene3d run test:unit
 - 确认流式路径（pipeline L732/L774 的 `renderMainText`）不触碰时间——它们本来就不调 `parseLLMResponse`，加一条单测断言防回归。
 
 **验收标准**
-- [ ] `tests/gal/time.unit.mjs`：末帧有时间取末帧；末帧无时间取前序最近一帧；全部无时间取 SIDE_NOTE；两者皆无则不变；`23:30` 与 `05:59` 的 `dayNightStatus` 分别为 night；旧格式全文（time 全 null）+ SIDE_NOTE 有时间 → 行为与改前完全一致。
+- [x] `tests/gal/time.unit.mjs`：末帧有时间取末帧；末帧无时间取前序最近一帧；全部无时间取 SIDE_NOTE；两者皆无则不变；`23:30` 与 `05:59` 的 `dayNightStatus` 分别为 night；旧格式全文（time 全 null）+ SIDE_NOTE 有时间 → 行为与改前完全一致。实现放在 `game-events.js` `GAL_TIME_BEGIN/END` 块；`pipeline._applyParsedSideNote` 在无 SIDE_NOTE 时也会单独应用末帧时间（与原方案的差异点）。
 - [ ] `summaryHistoryService` 写入的 `gameTime`、`prompt-builder` `[当天时间 HH:MM]` 注入、`st-exporter` gameTime 对齐——三处只读 `currentGameTime`，不需改动；用一轮真实回复核对 `summaryHistory` 最新条 `gameTime` 等于末帧时间。
 - [ ] 3D：一轮新格式回复后 `GameSceneBridge.getDiagnostics()` 中 `preciseTime.hour` 等于末帧小时且 epoch 匹配。
 
@@ -185,22 +192,22 @@ npm.cmd --prefix scene3d run test:unit
 
 ### Phase 3 — 演出控制器抽取（GameMode 1 回归）
 
-**目标**：把 `_appendSlgLayers`/`updateStoryDisplay` 中的图层渲染迁入 `gal-presentation.js`，GameMode 1 行为不变，同时支持双 NPC 站位。此阶段 GameMode 0 **仍不进演出**。
+**目标**：把 `_appendSlgLayers`/`updateStoryDisplay` 中的图层渲染迁入 `GAL_PRESENTATION` 块，GameMode 1 行为不变，同时支持双 NPC 站位。此阶段 GameMode 0 **仍不进演出**。
 
 **改动点**
-- 新建 `module/gal-presentation.js`，实现 3.2 契约；`renderLayers(viewport, frame, opts)` 为 `_appendSlgLayers` 逻辑平移，差异点：
-  - 立绘按 `cast.length` 选站位类：1 → `.single`；2 → `.double-left`/`.double-right`（复用 `game-styles.css` 现有类，与 `displayNpcs` 一致）；每个 NPC 各自取 `npcPortraits`/表情图。
+- 在 `game-ui.js` `GAL_PARSER_END` 之后写入 `GAL_PRESENTATION_BEGIN/END` 块，实现 3.2 契约；`renderLayers(viewport, frame, opts)` 为 `_appendSlgLayers` 逻辑平移，差异点：
+  - 立绘按 `cast.length` 选站位类：1 → 无附加类（居中，同现状）；2 → `.slg-cast-left`/`.slg-cast-right`（新 CSS，见 3.2）；每个 NPC 各自取表情图。
   - `opts.allowEnamor` 为 true 时才执行 `emotion==='发情' && enamor===0 → enamor=1`（对 cast 任一成员命中即触发，与现状单 NPC 语义对齐）；`opts.recordLastValid` 为 true 时才写 `__lastValid*`。
   - 场景图选择逻辑不变（SLG 路径 / `legacySceneOptions` 分支）。
-- `game-ui.js`：`_appendSlgLayers` 改为调用 `galPresentation.renderLayers(viewport, pageData, {allowEnamor:GameMode===1, recordLastValid:GameMode===1})`；`updateStoryDisplay` 中 GameMode 1 分支改为 `galPresentation.goto(currentPage)`，清图层逻辑改为 `galPresentation.exit({curtain:false})`。GameMode 1 下控制器 state 常驻 `playing`（`updateStoryText` 时 enter，切到 GameMode 0 时 exit）。
-- `scene3d-bridge.js`：暴露 `playCurtain(cover, label, detail)`——与 `playPageTurn` 同一 DOM/动画，但不检查 `preferences.enabled`；若 `turn` 非空或 `pageAnimation` 正在进行则直接 resolve。返回对象需仍 `Object.freeze`。
+- `game-ui.js`：删除 `_appendSlgLayers`，`updateStoryDisplay` 中 GameMode 1 分支改为直接调 `galPresentation.renderLayers(viewport, pageData, {mask:needsMask, allowEnamor:true, recordLastValid:true, mode:1})`，清图层改为 `galPresentation.clearLayers(viewport)`。GameMode 1 **不走** enter/exit 状态机（状态机只服务 GameMode 0）。
+- `scene3d-bridge.js`：暴露 `playCurtain(cover, label, detail, seal)`——与 `playPageTurn` 共用内部 `runPageTurn`，但不检查 `preferences.enabled`；`!viewport || turn` 时直接 resolve；`playPageTurn` 保持原签名与行为（seal 恒 `山门图志`）。返回对象需仍 `Object.freeze`。
 - `tests/scene3d/bridge-unit.mjs` 追加：`playCurtain` 在 `preferences.enabled=false` 时仍创建翻页纸；`turn` 非空时不创建、立即 resolve。
 
 **验收标准**
-- [ ] `tests/gal/presentation.unit.mjs`（沙箱 viewport）：单 NPC 帧生成 1 个 `.npc-portrait.single`；双 NPC 生成 `.double-left` + `.double-right` 且顺序 = cast 顺序；`allowEnamor=false` 时"发情"不改 `enamor`；`recordLastValid=false` 时 `__lastValid*` 保持 undefined；`goto` 幂等（连续两次同页不重复创建节点）；`exit` 后 viewport 内无 `.slg-layer-container/.slg-interaction-mask`。
+- [x] `tests/gal/presentation.unit.mjs`（沙箱 viewport）：单 NPC 帧生成 1 个无站位类的 `.slg-emotion-layer`；双 NPC 生成 `.slg-cast-left` + `.slg-cast-right` 且顺序 = cast 顺序；`allowEnamor=false` 时"发情"不改 `enamor`；`recordLastValid=false` 时 `__lastValid*` 保持 undefined；`goto` 幂等（连续两次同页不重复创建节点）；`exit` 后 viewport 内无 `.slg-layer-container/.slg-interaction-mask`。`bridge-unit.mjs` 已追加 `playCurtain` 两例。
 - [ ] GameMode 1 手工回归清单：旧格式特殊事件全程；新格式双 NPC 回复；`none` 场景；CG 段；展开全文/收起；分页左右点击；战斗进入时背景取 `__lastValidSceneUrl` 正常；表情"发情"仍置 enamor。
-- [ ] 浏览器脚本 `tests/gal/gm1-regression.browser.mjs`（用 `fixtures/manifest.json` 中 Gal 夹具启动）：注入 `new-gm1.txt` 走 `renderMainText`，断言图层 DOM 结构；截图存证据目录。
-- [ ] `npm.cmd --prefix scene3d run test:unit` 全绿。
+- [ ] 浏览器脚本 `tests/gal/gm1-regression.browser.mjs`（用 `fixtures/manifest.json` 中 Gal 夹具启动）：注入 `new-gm1.txt` 走 `renderMainText`，断言图层 DOM 结构；截图存证据目录。（未编写）
+- [x] `npm.cmd --prefix scene3d run test:unit`：除 4 个预存失败（`apk-unit` ×2 版本不匹配、`npc-selection.unit` ×2 `raf is not defined`，与本迭代无关）外全绿。
 
 ---
 
@@ -213,7 +220,7 @@ npm.cmd --prefix scene3d run test:unit
 *进入*
 - `pipeline.js` `_commitResponse` 第 5 步 `renderMainText(parsed.mainText)` 之后追加：`if (typeof galPresentation !== 'undefined') galPresentation.onCommit({ commitId })`。控制器内部判定 G1（`GameMode===0 && frames.length≥1 && !isStoryExpanded && newWeek!==1 && commitId 未进入过`）后 `enter({source:'commit', pageIndex:0, curtain:true})`。`handleSpecialEvent` 也经 `_commitResponse`，自动覆盖特殊事件。
 - 流式 `renderMainText`（L732/L774）与回滚 `renderMainText`（L1068）不调用 `onCommit`（G4）。
-- `game-ui.js` `updateStoryDisplay`：story-area 点击处理增加中间 1/3 区域：`GameMode===0 && !isStoryExpanded && !galPresentation.isPlaying() && frames.length>0 → enter({source:'page', pageIndex:min(currentPage, frames.length-1), curtain:true})`（G2）。演出中左右 1/3 翻页照常，并同步 `galPresentation.goto(currentPage)`。
+- `game-ui.js` `updateStoryDisplay`：story-area 点击处理增加中间 1/3 区域；`doGoToPage` 在 `GameMode===0 && !isStoryExpanded && frames.length>0` 时同样 `enter({source:'page', pageIndex:min(currentPage, frames.length-1), curtain:true})`（G2，翻页即进入；演出中 enter 退化为 goto，不播翻页纸）。控制台可按 `[GAL]` 前缀过滤 enter/exit/onCommit/story click 日志。
 
 *渲染*
 - `enter` 时 `document.body.classList.add('gal-presenting')`；`GameSceneBridge.setBusy('gal', true)`；恒加 `.slg-interaction-mask`（不走 `needsMask` 排除）；mask `click` → `exit({reason:'stage-click', curtain:true})`（G3）。
@@ -245,7 +252,8 @@ npm.cmd --prefix scene3d run test:unit
   - `exit` 幂等；`enter` 期间 3D `turn` 非空 → `playCurtain` 未创建 DOM；
   - 非法场景 → 背景 URL 为 `天山派_{季}_{昼夜}.webp`；合法场景 → `{地点}_{昼夜}.webp`；
   - `emotion='发情'` 全程 `enamor===0`；`__lastValid*` 保持 undefined。
-- [ ] `tests/gal/gm0.browser.mjs`（用地图/藏经阁夹具，分别在 3D 开/关两种偏好下）：
+  - **状态：已完成**（10 例）。实现细节：`switchScene` 特殊场景用 `exit({reason:'special-scene', curtain:false})`；GM0→1 在 `updateStoryText` GM1 分支调 `galPresentation.reset()`；存档还原钩子放在 `storage-service` 快照还原处（`reset()`）。已知小瑕疵：`doToggleStoryExpand` 展开时 `exit` 的翻页纸尚在异步播放，`updateStoryDisplay` 已同步清层，图层先消失再盖纸，可接受。
+- [ ] `tests/gal/gm0.browser.mjs`（未编写）（用地图/藏经阁夹具，分别在 3D 开/关两种偏好下）：
   1. 注入 `new-gm0.txt` 走完整 `_commitResponse` 模拟（或直接 `renderMainText`+`onCommit`）→ 断言 `.slg-layer-container` 出现、翻页纸 DOM 出现过、`body.gal-presenting`、`.scene.active` 仍 `display` 非 none、3D diagnostics `busy` 含 `gal`；截图。
   2. 点 mask → 全部清除、busy 解除；截图。
   3. 点 story-area 中央 → 再次进入且帧 = currentPage；点右 1/3 → 帧切换、无翻页纸 DOM 新增。
@@ -253,7 +261,7 @@ npm.cmd --prefix scene3d run test:unit
   5. 演出中程序性调用 `switchScene('houshan')` → 仍 playing，退出后 `#houshan-scene.active`。
   6. 演出中调用 `switchScene('player-stats')` → idle。
   7. `newWeek=1` 提交 → 不进入。
-  8. 双 NPC 帧 → `.double-left/.double-right` 各 1；含路人 NPC 帧 → 仅 1 个 `.single`。
+  8. 双 NPC 帧 → `.slg-cast-left/.slg-cast-right` 各 1；含路人 NPC 帧 → 仅 1 个 `.slg-emotion-layer`。
 - [ ] 手工：真机/桌面各跑 3 轮真实 LLM 回复（2D 与 3D 各一组），观察翻页纸文案、遮罩、退出后底层状态；APK 横竖屏各一次。
 - [ ] GameMode 1 回归（Phase 3 清单）复跑通过。
 
@@ -275,23 +283,35 @@ npm.cmd --prefix scene3d run test:unit
 - `开发文档/special-event-writing/SKILL.md` 第三节段尾格式说明追加一行：新写事件可用新格式，旧格式仍兼容。
 
 **验收标准**
-- [ ] 用真实模型各跑 5 轮 GameMode 0 / GameMode 1 回复，统计：段尾解析成功率 ≥ 90%（每段 5 字段且时间合法）；非法 NPC 出现次数；时间倒退次数（console.warn 计数）。不达标则回调规范措辞后重测。
-- [ ] SIDE_NOTE 不含时间时，`currentGameTime` 仍随每轮更新（Phase 2 链路）。
-- [ ] 跑一条完整旧格式特殊事件链（如洞庭君链）到收尾，GameMode 0 段落背景回退主场景、无报错。
-- [ ] `prompt-data-*.js` 重新生成后 `node -e new Function` 语法通过；`worldbook-engine`/`prompt-builder` 注入后的最终 prompt 里能看到新段尾示例。
+- [ ] 用真实模型各跑 5 轮 GameMode 0 / GameMode 1 回复，统计：段尾解析成功率 ≥ 90%（每段 5 字段且时间合法）；非法 NPC 出现次数；时间倒退次数（console.warn 计数）。不达标则回调规范措辞后重测。（待真实 API）
+- [x] SIDE_NOTE 不含时间时，`currentGameTime` 仍随每轮更新（Phase 2 链路，`time.unit.mjs` 覆盖）。
+- [ ] 跑一条完整旧格式特殊事件链（如洞庭君链）到收尾，GameMode 0 段落背景回退主场景、无报错。（待手工）
+- [x] `prompt-data-*.js` 重新生成后语法通过；用 vm 渲染 `PROMPT_CORE_110` 四分支核对：GM0 主线 / GM1 普通 / GM1 战斗 含新段尾且 SIDE_NOTE 无「时间」；GM0 newWeek 分支保留 SIDE_NOTE「时间」、无新段尾（MAIN_TEXT 无标记，时间靠 SIDE_NOTE 兜底，属有意保留）；105 GM0 NpcList 含 `none`；两版 COT 含「演出时间轴」。
+
+实际改动文件：`110格式规范_精简版.txt`、`110格式规范_精简版_独立前端.txt`、`105列表.txt`、`200COT思考引导.txt`、`200COT思考引导 - 鲸鱼版.txt`、`开发文档/special-event-writing/SKILL.md`、重生成 `module/prompt-data-core.js` / `prompt-data-extra.js`。
 
 ---
 
 ### Phase 6 — 收尾
 
-- `tests/scene3d/README.md` 或新建 `tests/gal/README.md` 记录命令、夹具、证据目录约定。
-- `开发文档/` 本 SKILL 更新"状态"行为已完成，并把验收证据目录名回填到各 Phase。
-- `打包APK.ps1` 打一次 APK 走 Phase 4 真机手工项。
-- 清理 `.scene3d-work/gal-*` 中失败的中间证据，只保留最终通过的一组。
+- [x] 新建 `tests/gal/README.md` 记录命令、夹具、沙箱与编辑纪律。
+- [x] 本 SKILL 状态行与各 Phase 勾选回填。
+- [ ] `打包APK.ps1` 打一次 APK 走 Phase 4 真机手工项。
+- [ ] 清理 `.scene3d-work/gal-*`（本轮未产生浏览器证据目录，暂无需清理）。
+
+### 状态与待办
+
+**已完成（自动化）**：`tests/gal` 5 个单测文件 44 例全通过；`bridge-unit` 含 `playCurtain` 新增例通过；全量 `test:unit` 仅 4 个预存无关失败。
+
+**待手工/真实环境验收**（按优先级）：
+1. 真实模型 GM0 / GM1 各 5 轮，统计段尾解析成功率、非法 NPC、时间倒退（Phase 5）。
+2. GM1 手工回归清单（Phase 3）+ 旧格式特殊事件链端到端（Phase 5）。
+3. GM0 演出 2D/3D 手工 3 轮 + 浏览器脚本 `gm0.browser.mjs` / `gm1-regression.browser.mjs`（Phase 4/3，脚本未编写）。
+4. APK 打包 + 真机横竖屏。
 
 ## 五、测试方法约定
 
-- **单测**：`node:test` + `node:assert/strict` + `vm.createContext` 沙箱，文件放 `tests/gal/*.unit.mjs`；直接 `readFile` 模块源码 `runInContext`，全局用 `let` 预声明（见 `bridge-unit.mjs` L46）。`gal-parser.js`/`gal-presentation.js` 必须能在无 DOM 的最小沙箱中加载（DOM 只在调用 `renderLayers/enter` 时才需要）。
+- **单测**：`node:test` + `node:assert/strict` + `vm.createContext` 沙箱，文件放 `tests/gal/*.unit.mjs`；从 `game-ui.js` 按 `GAL_*_BEGIN/END` 标记切片后 `runInContext`，全局用 `let` 预声明（见 `bridge-unit.mjs` L46）。两个块必须能在无 DOM 的最小沙箱中加载（DOM 只在调用 `renderLayers/enter` 时才需要）。
 - **浏览器**：复用 `scene3d/scripts/run-browser.mjs` 的启动方式（只读静态 server、夹具注入、等待原 `window.onload` resolve），脚本放 `tests/gal/*.browser.mjs`，输出目录必须是新建绝对路径；断言优先 DOM/计算样式，截图作证据不作断言。
 - **手工**：每阶段的手工清单写在验收标准里，执行时逐项打勾并在证据目录留 `manual.md`。
 - 不连真实 API 的自动化一律用夹具正文；Phase 5 的真实模型统计单独记录。

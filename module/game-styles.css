@@ -563,14 +563,15 @@ body {
     transform: translateX(-50%);
 }
 
-/* 两个NPC时的位置 - 修改为30%和70% */
+/* 两个NPC时的位置 - 与 GAL 演出的 .slg-cast-left/right（translateX(∓22%)，人物中心 28%/72%）对齐；
+   translateX 百分比按元素自身宽度（70%）计，无法承担 22% 视窗偏移，故用 left 实现 */
 .npc-portrait.double-left {
-    left: 30%;  /* 从33%改为30% */
+    left: calc(50% - 22%);
     transform: translateX(-50%);
 }
 
 .npc-portrait.double-right {
-    left: 70%;  /* 从66%改为70% */
+    left: calc(50% + 22%);
     transform: translateX(-50%);
 }
 
@@ -1771,6 +1772,21 @@ body {
 /* NPC表情图层（中层） */
 .slg-emotion-layer {
     z-index: 2;
+}
+
+/* 双 NPC 站位（GameMode 0 演出与 GameMode 1 共用）：表情差分图是全幅居中立绘，用 transform 分别推到人物中心 28% / 72% 位置，
+   与操作模式 .npc-portrait.double-*（left: calc(50% ∓ 22%)）同一几何 */
+.slg-emotion-layer.slg-cast-left {
+    transform: translateX(-22%);
+}
+
+.slg-emotion-layer.slg-cast-right {
+    transform: translateX(22%);
+}
+
+/* GameMode 0 演出中（GAL 叠层）：不隐藏 .scene，不出现白底加载层；图层容器 z:10 已在 3D root 与遮罩之上 */
+body.gal-presenting .slg-loading-layer {
+    display: none !important;
 }
 
 /* 特殊CG图层（最顶层） */
@@ -3307,7 +3323,7 @@ body {
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    height: 85%;
+    height: 70%;                 /* GameMode 0 演出与 GameMode 1 共用：与操作模式 .npc-portrait 的 70% 一致 */
     width: auto;
     max-width: 90%;              /* 可选：防止极端宽图超出 */
     object-fit: contain;         /* 覆盖全局的 cover */

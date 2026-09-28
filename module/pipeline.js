@@ -858,6 +858,10 @@ var pipeline = (function() {
             if (typeof updateAllDisplays === 'function') {
                 updateAllDisplays();
             }
+            // 5.5 GAL 演出自动进入（仅 commit 路径；流式/回滚的 renderMainText 不调），控制器内部按 G1 判定
+            if (typeof galPresentation !== 'undefined' && galPresentation && typeof galPresentation.onCommit === 'function') {
+                try { galPresentation.onCommit({ commitId: 'commit-' + (++_galCommitSequence) }); } catch (e) { console.warn('[Gal] onCommit 失败', e); }
+            }
 
             // 6+7. 仅在摘要成功解析时，才保存 AI 回复到 UI 历史并标记本轮已提交
             // 若在 <SUMMARY> 之前截断，parsed.summaries 为空，跳过此块，
@@ -1192,7 +1196,18 @@ var pipeline = (function() {
     }
 
     function _applyParsedSideNote(parsed) {
-        if (!parsed.sideNote) return;
+        if (!parsed.sideNote) {
+            // 无 SIDE_NOTE 时仍从 MAIN_TEXT 末帧取时间（GAL 时间源），其余状态不动
+            try {
+                if (parsed.mainText && typeof parseSlgMainText === 'function' &&
+                    typeof resolveTurnTime === 'function' && typeof applyTurnTime === 'function') {
+                    applyTurnTime(resolveTurnTime(parseSlgMainText(parsed.mainText), null));
+                }
+            } catch (e) {
+                console.warn('应用末帧时间失败', e);
+            }
+            return;
+        }
         try {
             if (typeof parseLLMResponse === 'function') {
                 parseLLMResponse(parsed.sideNote, parsed.mainText);
@@ -1341,9 +1356,14 @@ var pipeline = (function() {
 
     // Presentation-only guard covers recall/request/commit/failure without changing business branches.
     var _sceneTurnSequence = 0;
+    var _galCommitSequence = 0;
     async function withSceneGuard(operation, args) {
         var token = 'pipeline-' + (++_sceneTurnSequence);
         var bridge = typeof window !== 'undefined' && window.GameSceneBridge;
+        // 新回合开始：退出上一轮的 GAL 演出（不播翻页纸），业务层在流式期间保持可见
+        if (typeof galPresentation !== 'undefined' && galPresentation && galPresentation.isPlaying()) {
+            try { galPresentation.exit({ reason: 'new-turn', curtain: false }); } catch (e) {}
+        }
         if (bridge) bridge.setBusy(token, true);
         try { return await operation.apply(null, args); }
         finally {

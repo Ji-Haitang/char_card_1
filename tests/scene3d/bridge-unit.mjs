@@ -7,7 +7,7 @@ const drain = () => new Promise(resolve => setImmediate(resolve));
 const helpersSource = await readFile(new URL('../../module/game-helpers.js', import.meta.url), 'utf8');
 const legacyLocationPopup = helpersSource.slice(helpersSource.indexOf('function showLocationInfo(locationId, event)'), helpersSource.indexOf('// 设置地点事件'));
 assert.ok(legacyLocationPopup.includes('function closeLocationInfo(e)'));
-function host({ mode = 0, stored = null } = {}) {
+function host({ mode = 0, stored = null, patch = null } = {}) {
   const elements = new Map();
   class Element {
     constructor(id = '') { this.id = id; this.hidden = false; this.children = []; this.dataset = {}; this.style = {}; this.clientWidth = 500; this.clientHeight = 300; this.classes = new Set(); this.classList = { add: (...names) => names.forEach(n => this.classes.add(n)), remove: (...names) => names.forEach(n => this.classes.delete(n)), contains: n => this.classes.has(n) }; }
@@ -44,7 +44,7 @@ function host({ mode = 0, stored = null } = {}) {
   sandbox.window = sandbox;
   const context = vm.createContext(sandbox);
   vm.runInContext(`let GameMode=${mode}, inputEnable=1, userLocation='cangjingge', currentNpcLocations={A:'cangjingge',B:'cangjingge'}, npcs={A:{name:'甲'},B:{name:'乙'}}, npcVisibility={A:true,B:true}, dayNightStatus='daytime',seasonStatus='winter',npcPortraits={A:'img/NPC/a.webp',B:'img/NPC/b.webp'};`, context);
-  vm.runInContext(source, context);
+  vm.runInContext(patch ? patch(source) : source, context);
   return { context, counts, elements, document, bridge: sandbox.GameSceneBridge, run: code => vm.runInContext(code, context) };
 }
 test('classic bridge import is inert and only exposes a frozen boundary', () => {
@@ -419,4 +419,55 @@ test('special-page activation retires shared location menu even when game locati
   game.elements.get('map-scene').classList.add('active');
   await drain(); assertMenuLock(game, false);
   assert.equal(game.bridge.getDiagnostics().readyScene, 'main');
+});
+
+// GAL 演出翻页纸：playCurtain 不受 3D 偏好门控；未 start / 3D 换房中不播。
+function curtainHost(stored) {
+  const marker = '    window.GameSceneBridge =';
+  assert.ok(source.includes(marker));
+  const game = host({ stored, patch: src => src.replace(marker, '    window.__turnTest = { set(v) { turn = v; }, get() { return turn; } };\n' + marker) });
+  game.pageTurn = () => game.elements.get('main-viewport').children.find(node => node.dataset.scene3dOwned === 'page') || null;
+  return game;
+}
+test('playCurtain is exposed on the frozen boundary and resolves inertly before start', async () => {
+  const game = curtainHost('{"enabled":false}');
+  assert.equal(typeof game.bridge.playCurtain, 'function');
+  assert.equal(typeof game.bridge.hasPendingApply, 'function');
+  assert.equal(Object.isFrozen(game.bridge), true);
+  await game.bridge.playCurtain(true, '第一回', '08:00 · 藏经阁', '话本');
+  assert.equal(game.pageTurn(), null, 'no viewport yet → no sheet DOM');
+});
+test('playCurtain builds the sheet with GAL seal even when 3D preference is disabled; playPageTurn stays gated', async () => {
+  const game = curtainHost('{"enabled":false}');
+  game.bridge.start(); await drain();
+  assert.equal(game.bridge.getDiagnostics().preferences.enabled, false);
+  await game.bridge.playCurtain(true, '第一回', '08:00 · 藏经阁', '话本');
+  const page = game.pageTurn();
+  assert.ok(page, 'sheet created despite enabled=false');
+  assert.equal(page.hidden, false);
+  const [seal, title, detail] = page.children[0].children;
+  assert.equal(seal.textContent, '话本'); assert.equal(title.textContent, '第一回'); assert.equal(detail.textContent, '08:00 · 藏经阁');
+  await game.bridge.playCurtain(false);
+  assert.equal(page.hidden, true, 'reveal hides the sheet again');
+  // 默认 seal → 话本；再次 cover 复用同一张纸
+  await game.bridge.playCurtain(true, '收卷');
+  assert.equal(game.pageTurn(), page); assert.equal(seal.textContent, '话本'); assert.equal(title.textContent, '收卷'); assert.equal(detail.textContent, '');
+  await game.bridge.playCurtain(false);
+  assert.equal(game.elements.get('main-viewport').children.filter(node => node.dataset.scene3dOwned === 'page').length, 1);
+});
+test('playCurtain yields to an in-flight 3D room turn: no DOM, immediate resolve; hasPendingApply reflects it', async () => {
+  const game = curtainHost('{"enabled":false}');
+  game.bridge.start(); await drain();
+  assert.equal(game.bridge.hasPendingApply(), false);
+  game.run('window.__turnTest.set({ phase: "covering", covered: null })');
+  assert.equal(game.bridge.hasPendingApply(), true);
+  let settled = false;
+  const p = game.bridge.playCurtain(true, '第二回', '', '话本').then(() => { settled = true; });
+  await p;
+  assert.equal(settled, true);
+  assert.equal(game.pageTurn(), null, 'turn 非空时不建翻页纸');
+  game.run('window.__turnTest.set(null)');
+  assert.equal(game.bridge.hasPendingApply(), false);
+  await game.bridge.playCurtain(true, '第二回', '', '话本');
+  assert.ok(game.pageTurn());
 });

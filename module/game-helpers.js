@@ -1029,6 +1029,10 @@ function switchScene(sceneName) {
 
     // 如果切换到角色属性或人际关系场景，清除SLG元素
     if (sceneName === 'player-stats' || sceneName === 'relationships') {
+        // GAL 演出（GameMode 0）进入特殊场景时无翻页退出（G11）；GM1 图层同样一并清掉
+        if (typeof galPresentation !== 'undefined' && galPresentation && galPresentation.isPlaying()) {
+            try { galPresentation.exit({ reason: 'special-scene', curtain: false }); } catch (e) {}
+        }
         const viewport = document.getElementById('main-viewport');
         const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
         existingLayers.forEach(layer => layer.remove());

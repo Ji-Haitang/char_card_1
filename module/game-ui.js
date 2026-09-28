@@ -45,13 +45,13 @@ let currentPage = 0;  // 当前页码
 let isStoryExpanded = false;  // 是否展开显示全文
 let slgModeData = [];  // 新增：存储SLG模式的数据
 
-// 新增：将 SLG 主体文本按“正文|npc|scene|emotion|cg”解析为 slgModeData（支持流式未完文本）
-function parseSlgMainText(mainText) {
-    if (!mainText || typeof mainText !== 'string') return [];
-
-    const lines = mainText.trim().split('\n');
-    const result = [];
-
+// ==== GAL_PARSER_BEGIN ====
+// GAL 解析层：把 MAIN_TEXT 按行解析为演出帧 frames[]，新旧两种段尾格式同一入口。
+//   旧五元组：正文|NPC|场景|表情|CG                 → legacy=true, time=null, cast≤1
+//   新格式：  正文|场景|HH:MM|NPC:表情;NPC:表情|NSFW → legacy=false, cast≤2（首个为焦点）
+// 判定只看第 3 段是否形如 HH:MM。纯函数：不读 DOM、不写全局，所有匹配/白名单能力经 ctx 注入，
+// 便于在 node 沙箱按 GAL_PARSER_BEGIN/END 切片单测（见 tests/gal/）。
+const GalParser = (() => {
     const cleanToken = (str) => (str || '').replace(/[^\u4e00-\u9fff\u3400-\u4dbfa-zA-Z0-9]/g, '').trim();
     const normalizeNone = (str) => {
         const cleaned = cleanToken(str);
@@ -60,131 +60,481 @@ function parseSlgMainText(mainText) {
         if (cleaned.toLowerCase && cleaned.toLowerCase() === 'none') return 'none';
         return cleaned;
     };
-
-    // 使用模糊匹配获取标准化的NPC名称
-    const getNormalizedNpc = (npcNameOrId) => {
-        if (npcNameOrId === 'none') return 'none';
-        return (typeof matchNPC === 'function') ? matchNPC(npcNameOrId) : npcNameOrId;
+    const TIME_RE = /^(\d{1,2})[:：](\d{2})$/;
+    // 第 3 段形如 HH:MM 即视为新格式；越界（25:00）仍算新格式但 time=null
+    const parseTime = (raw) => {
+        const m = TIME_RE.exec((raw || '').trim());
+        if (!m) return undefined;
+        const h = +m[1], mi = +m[2];
+        if (h > 23 || mi > 59) return null;
+        return String(h).padStart(2, '0') + ':' + m[2];
     };
-    
-    // 使用模糊匹配获取标准化的场景名称
-    const getNormalizedScene = (scene) => {
-        if (scene === 'none') return 'none';
-        return (typeof matchScene === 'function') ? matchScene(scene) : scene;
-    };
-    
-    // 使用模糊匹配获取标准化的表情名称
-    const getNormalizedEmotion = (emo) => {
+    const normalizeEmotion = (emo, ctx) => {
         if (emo === 'none') return 'none';
-        if (/^特殊CG\d+$/.test(emo)) return emo;  // 特殊CG格式直接返回
-        return (typeof matchEmotion === 'function') ? matchEmotion(emo) : emo;
+        if (/^特殊CG\d+$/.test(emo)) return emo;
+        return ctx.matchEmotion ? ctx.matchEmotion(emo) : emo;
     };
-    
-    // 使用模糊匹配获取标准化的CG名称
-    const getNormalizedCG = (cg) => {
-        if (cg === 'none') return 'none';
-        return (typeof matchCG === 'function') ? matchCG(cg) : (slgCGOptions.includes(cg) ? cg : 'none');
+    const normalizeCG = (cg, ctx) => (cg === 'none' ? 'none' : (ctx.matchCG ? ctx.matchCG(cg) : cg));
+
+    // GameMode 0 严格白名单：精确名 / 精确 ID / 全名被 token 包含且长度 ≤ 名字+2（容“雨烛姑娘”“破阵子长老”），不走相似度
+    const strictMatchNpc = (token, roster) => {
+        if (!token || token === 'none') return 'none';
+        for (const n of roster) if (token === n.name || token === n.id) return n.name;
+        for (const n of roster) if (token.includes(n.name) && token.length <= n.name.length + 2) return n.name;
+        return null;
+    };
+    // 统一的 NPC 归一 + 准入：返回标准名，或 null 表示该 NPC 不合法（GM1：非随行；GM0：不在花名册）
+    const resolveNpc = (raw, ctx) => {
+        if (raw === 'none') return 'none';
+        if (ctx.gameMode === 0) return strictMatchNpc(raw, ctx.roster || []);
+        const normalized = ctx.matchNpc ? ctx.matchNpc(raw) : raw;
+        return (ctx.isNpcAllowed ? ctx.isNpcAllowed(normalized) : true) ? normalized : null;
+    };
+    // GameMode 0 场景不做模糊匹配，原样保留（渲染层按门派地点精确回退）；GameMode 1 沿用 matchScene
+    const resolveScene = (raw, ctx) => {
+        if (raw === 'none') return 'none';
+        if (ctx.gameMode === 0) return raw;
+        return ctx.matchScene ? ctx.matchScene(raw) : raw;
+    };
+    // 新格式第 4 段：NPC:表情;NPC:表情 → cast（去重、最多 2 个、丢弃非法者）
+    const parseCast = (raw, ctx, dropped) => {
+        const cleaned = cleanToken(raw);
+        if (!cleaned || cleaned === '无' || cleaned.toLowerCase() === 'none') return { cast: [], requested: 0 };
+        const items = (raw || '').split(/[;；]/).map(s => s.trim()).filter(Boolean);
+        const cast = [];
+        const seen = new Set();
+        for (const item of items) {
+            const [npcTok, emoTok] = item.split(/[:：]/);
+            const npcRaw = normalizeNone(npcTok);
+            if (npcRaw === 'none') continue;
+            const name = resolveNpc(npcRaw, ctx);
+            if (!name || name === 'none') { dropped.push(npcRaw); continue; }
+            if (seen.has(name)) continue;
+            seen.add(name);
+            cast.push({ npc: name, emotion: normalizeEmotion(normalizeNone(emoTok), ctx) });
+            if (cast.length >= 2) break;
+        }
+        return { cast, requested: items.length };
     };
 
-    // 检查NPC是否在随行列表中（使用标准化后的名称）
+    const makeFrame = (text, display) => ({
+        text,
+        scene: display.scene,
+        time: display.time,
+        cast: display.cast.map(c => ({ npc: c.npc, emotion: c.emotion })),
+        cg: display.cg,
+        legacy: display.legacy,
+        npc: display.npc,
+        emotion: display.emotion
+    });
+
+    /**
+     * @param {string} mainText MAIN_TEXT 原文（可为流式未完文本）
+     * @param {object} ctx { gameMode, roster:[{id,name}], matchNpc, isNpcAllowed, matchScene, matchEmotion, matchCG, log }
+     * @returns {Array} frames；末尾无标记残文作为最后一帧（tail=true），沿用上一有效展示配置
+     */
+    function parseFrames(mainText, ctx) {
+        if (!mainText || typeof mainText !== 'string') return [];
+        ctx = ctx || {};
+        const log = typeof ctx.log === 'function' ? ctx.log : () => {};
+        const lines = mainText.trim().split('\n');
+        const result = [];
+        let currentTextBlock = [];
+        let lastValidDisplay = null;
+
+        for (let i = 0; i < lines.length; i++) {
+            const rawLine = lines[i];
+            if (!rawLine || !rawLine.trim()) continue;
+            const parts = rawLine.split('|');
+            // 需要恰好 5 段才是标记行，否则累积为纯正文
+            if (parts.length !== 5) {
+                const textOnly = (parts[0] || rawLine).trim();
+                if (textOnly) currentTextBlock.push(textOnly);
+                continue;
+            }
+            const textPart = (parts[0] || '').trim();
+            const time = parseTime(parts[2]);
+            let display;
+            let accept;
+            if (time === undefined) {
+                // 旧五元组：正文|NPC|场景|表情|CG
+                const npcRaw = normalizeNone(parts[1]);
+                const sceneRaw = normalizeNone(parts[2]);
+                const emotionRaw = normalizeNone(parts[3]);
+                const cgRaw = normalizeNone(parts[4]);
+                const npc = resolveNpc(npcRaw, ctx);
+                const scene = resolveScene(sceneRaw, ctx);
+                const emotion = normalizeEmotion(emotionRaw, ctx);
+                const cg = normalizeCG(cgRaw, ctx);
+                const npcOk = npc !== null;
+                if (!npcOk && ctx.gameMode === 0) log(`[GalParser] 丢弃非花名册 NPC: "${npcRaw}"`);
+                const finalNpc = npcOk ? npc : 'none';
+                display = {
+                    scene, time: null, cg, legacy: true,
+                    cast: finalNpc !== 'none' ? [{ npc: finalNpc, emotion }] : [],
+                    npc: finalNpc, emotion
+                };
+                // GM1 沿用原规则：NPC 非随行或场景 none → 整帧拒收，文本并入下一帧；GM0 一律接受
+                accept = ctx.gameMode === 0 ? true : (npcOk && scene !== 'none');
+            } else {
+                // 新格式：正文|场景|HH:MM|NPC:表情;NPC:表情|NSFW
+                const sceneRaw = normalizeNone(parts[1]);
+                const cgRaw = normalizeNone(parts[4]);
+                const scene = resolveScene(sceneRaw, ctx);
+                const cg = normalizeCG(cgRaw, ctx);
+                const dropped = [];
+                const { cast, requested } = parseCast(parts[3], ctx, dropped);
+                if (dropped.length) log(`[GalParser] 丢弃不合法 NPC: ${dropped.map(d => `"${d}"`).join(', ')}`);
+                const focus = cast[0];
+                display = {
+                    scene, time, cg, legacy: false, cast,
+                    npc: focus ? focus.npc : 'none',
+                    emotion: focus ? focus.emotion : 'none'
+                };
+                // GM1：写了 NPC 却一个都不合法、或场景 none → 拒收（与旧规则同构）；GM0 一律接受
+                accept = ctx.gameMode === 0 ? true : (!(requested > 0 && cast.length === 0) && scene !== 'none');
+            }
+
+            if (!accept) {
+                if (textPart) currentTextBlock.push(textPart);
+                continue;
+            }
+            let mergedText = textPart;
+            if (currentTextBlock.length > 0) {
+                mergedText = currentTextBlock.join('\n\n') + (textPart ? '\n\n' + textPart : '');
+                currentTextBlock = [];
+            }
+            result.push(makeFrame(mergedText, display));
+            lastValidDisplay = display;
+        }
+
+        // 末尾残留：用上一次有效展示配置兜底，否则全 none
+        if (currentTextBlock.length > 0) {
+            const tailText = currentTextBlock.join('\n\n');
+            const frame = makeFrame(tailText, lastValidDisplay || { scene: 'none', time: null, cast: [], cg: 'none', legacy: true, npc: 'none', emotion: 'none' });
+            frame.tail = true;
+            result.push(frame);
+        }
+        return result;
+    }
+
+    /** 末帧有效时间 → 逆序前序帧 → null（时间源迁移用，见 game-events.js resolveTurnTime） */
+    function lastTime(frames) {
+        for (let i = (frames || []).length - 1; i >= 0; i--) {
+            if (frames[i] && frames[i].time) return frames[i].time;
+        }
+        return null;
+    }
+
+    return Object.freeze({ parseFrames, lastTime, strictMatchNpc, parseTime });
+})();
+
+// 由宿主全局组装解析上下文：GameMode 1 白名单 = companionNPC；GameMode 0 白名单 = npcs 全花名册
+function buildGalParseContext(mode) {
+    const gameMode = (typeof mode === 'number') ? mode : ((typeof GameMode !== 'undefined' && GameMode === 1) ? 1 : 0);
+    const table = (typeof npcs !== 'undefined' && npcs) ? npcs : {};
+    const roster = Object.keys(table).map(id => ({ id, name: table[id] && table[id].name })).filter(n => n.name);
     const isNpcAllowed = (normalizedNpc) => {
         if (normalizedNpc === 'none') return true;
-        const pool = new Set(companionNPC || []);
+        const pool = new Set((typeof companionNPC !== 'undefined' && companionNPC) || []);
         if (pool.has(normalizedNpc)) return true;
-        const id = npcNameToId[normalizedNpc];
-        if (id && (pool.has(id) || pool.has(npcs[id]?.name))) return true;
-        if (npcs[normalizedNpc]?.name && pool.has(npcs[normalizedNpc].name)) return true;
+        const id = (typeof npcNameToId !== 'undefined' && npcNameToId) ? npcNameToId[normalizedNpc] : undefined;
+        if (id && (pool.has(id) || pool.has(table[id]?.name))) return true;
+        if (table[normalizedNpc]?.name && pool.has(table[normalizedNpc].name)) return true;
         return false;
     };
-    
-    // 检查场景是否有效（标准化后的场景必须不为none）
-    const isSceneAllowed = (normalizedScene) => normalizedScene !== 'none' || normalizedScene === 'none';
-    
-    // 检查表情是否有效
-    const isEmotionAllowed = (normalizedEmo) => normalizedEmo !== 'none' || normalizedEmo === 'none';
+    return {
+        gameMode,
+        roster,
+        isNpcAllowed,
+        matchNpc: (name) => (typeof matchNPC === 'function') ? matchNPC(name) : name,
+        matchScene: (scene) => (typeof matchScene === 'function') ? matchScene(scene) : scene,
+        matchEmotion: (emo) => (typeof matchEmotion === 'function') ? matchEmotion(emo) : emo,
+        matchCG: (cg) => (typeof matchCG === 'function') ? matchCG(cg) : (((typeof slgCGOptions !== 'undefined') && slgCGOptions.includes(cg)) ? cg : 'none'),
+        log: (...args) => console.log(...args)
+    };
+}
 
-    let currentTextBlock = [];
-    let lastValidDisplay = null;
+// 将 MAIN_TEXT 解析为 slgModeData（新旧格式、两种 GameMode 通用；支持流式未完文本）
+function parseSlgMainText(mainText, mode) {
+    return GalParser.parseFrames(mainText, buildGalParseContext(mode));
+}
+// ==== GAL_PARSER_END ====
 
-    for (let i = 0; i < lines.length; i++) {
-        const rawLine = lines[i];
-        if (!rawLine || !rawLine.trim()) continue;
+// ==== GAL_PRESENTATION_BEGIN ====
+// GAL 演出控制器：渲染 .slg-layer-container（场景/立绘/CG）+ .slg-interaction-mask，并管理 GameMode 0 的进出状态机。
+// - GameMode 1：updateStoryDisplay 直接调 renderLayers/clearLayers（行为等同旧 _appendSlgLayers），不走状态机。
+// - GameMode 0：enter/goto/exit/onCommit 按 SKILL G0-G13；演出层是业务层（.scene / #sect-3d-root）之上的纯覆盖，
+//   不读业务状态、不触发 enamor、不写 __lastValid*，唯一副作用是 body.gal-presenting 与 GameSceneBridge.setBusy('gal')。
+// 块内只引用参数、document/window 与 typeof 守卫过的全局，保证可在最小沙箱加载。
+const galPresentation = (() => {
+    const CN = ['零', '一', '二', '三', '四', '五', '六', '七', '八', '九'];
+    function cnNumber(n) {
+        n = Math.max(1, Math.floor(Number(n) || 1));
+        if (n < 10) return CN[n];
+        if (n < 20) return '十' + (n % 10 ? CN[n % 10] : '');
+        if (n < 100) return CN[Math.floor(n / 10)] + '十' + (n % 10 ? CN[n % 10] : '');
+        return String(n);
+    }
+    const has = v => typeof v !== 'undefined' && v !== null;
+    const doc = () => (typeof document !== 'undefined') ? document : null;
+    const bridge = () => (typeof window !== 'undefined' && window.GameSceneBridge) ? window.GameSceneBridge : null;
+    const frames = () => (typeof slgModeData !== 'undefined' && Array.isArray(slgModeData)) ? slgModeData : [];
+    const viewportEl = () => { const d = doc(); return d ? d.getElementById('main-viewport') : null; };
+    const assetUrl = p => (typeof _assetUrl === 'function') ? _assetUrl(p) : p;
+    const SEASON_CN = { spring: '春', summer: '夏', autumn: '秋', winter: '冬' };
 
-        const parts = rawLine.split('|');
+    let state = 'idle';
+    let gen = 0;
+    let index = 0;
+    let enteredCommitId = null;
+    let chain = Promise.resolve();
 
-        // 需要恰好5段（正文|npc|scene|emotion|cg）
-        if (parts.length !== 5) {
-            const textOnly = (parts[0] || rawLine).trim();
-            if (textOnly) currentTextBlock.push(textOnly);
-            continue;
+    function clearLayers(viewport) {
+        if (!viewport) return;
+        viewport.querySelectorAll('.slg-layer-container').forEach(el => el.remove());
+        viewport.querySelectorAll('.slg-interaction-mask').forEach(el => el.remove());
+    }
+
+    // 场景图 URL：GameMode 1 沿用 SLG 路径 / legacySceneOptions 分支；GameMode 0 按 G6 只认门派地点，否则回退天山派四季图。
+    function sceneUrlFor(frame, mode) {
+        const dayNightCN = (typeof dayNightStatus !== 'undefined' && dayNightStatus === 'night') ? '夜' : '昼';
+        const sceneName = frame && frame.scene;
+        if (mode === 0) {
+            const names = (typeof locationNames !== 'undefined' && locationNames)
+                ? Object.keys(locationNames).filter(id => id !== 'none' && id !== 'tianshanpai').map(id => locationNames[id])
+                : [];
+            if (sceneName && sceneName !== 'none' && names.includes(sceneName)) {
+                return assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`);
+            }
+            const season = SEASON_CN[(typeof seasonStatus !== 'undefined') ? seasonStatus : ''] || '冬';
+            return assetUrl(`img/location/天山派_${season}_${dayNightCN}.webp`);
+        }
+        if (!sceneName || sceneName === 'none') return null;
+        const locName = (typeof mapLocation !== 'undefined' && mapLocation) || '天山派外堡';
+        const isLegacyScene = (typeof legacySceneOptions !== 'undefined') && legacySceneOptions.includes(sceneName);
+        return isLegacyScene
+            ? assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
+            : assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
+    }
+
+    // 帧的立绘成员：优先 cast（≤2），兼容只有 npc/emotion 的旧消费者；过滤掉花名册外的名字。
+    function castOf(frame) {
+        const nameToId = (typeof npcNameToId !== 'undefined' && npcNameToId) ? npcNameToId : {};
+        let list = Array.isArray(frame.cast) && frame.cast.length ? frame.cast : [];
+        if (!list.length && frame.npc && frame.npc !== 'none') list = [{ npc: frame.npc, emotion: frame.emotion }];
+        return list.filter(c => c && c.npc && c.npc !== 'none' && nameToId[c.npc]).slice(0, 2)
+            .map(c => ({ npc: c.npc, id: nameToId[c.npc], emotion: (c.emotion && c.emotion !== 'none') ? c.emotion : '平静' }));
+    }
+
+    /**
+     * 渲染一帧图层到 viewport（不清旧层，调用方决定何时 clearLayers）。
+     * opts = { mask, allowEnamor, recordLastValid, mode, portraitFallback, onMaskClick }
+     */
+    function renderLayers(viewport, frame, opts) {
+        const d = doc();
+        if (!viewport || !frame || !d) return null;
+        opts = opts || {};
+        const mode = has(opts.mode) ? opts.mode : ((typeof GameMode !== 'undefined') ? GameMode : 1);
+
+        if (opts.mask) {
+            const mask = d.createElement('div');
+            mask.className = 'slg-interaction-mask';
+            if (typeof opts.onMaskClick === 'function') mask.addEventListener('click', opts.onMaskClick);
+            viewport.appendChild(mask);
+        }
+        const container = d.createElement('div');
+        container.className = 'slg-layer-container';
+        container.dataset.galMode = String(mode);
+
+        // 1) 场景图层
+        const sceneUrl = sceneUrlFor(frame, mode);
+        if (sceneUrl) {
+            const sceneLayer = d.createElement('div');
+            sceneLayer.className = 'slg-layer slg-scene-layer';
+            const sceneImg = d.createElement('img');
+            sceneImg.src = sceneUrl;
+            sceneImg.alt = `${frame.scene || 'none'}`;
+            if (opts.recordLastValid) { try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {} }
+            sceneLayer.appendChild(sceneImg);
+            container.appendChild(sceneLayer);
         }
 
-        const textPart = (parts[0] || '').trim();
-        const npcRaw = normalizeNone(parts[1]);
-        const sceneRaw = normalizeNone(parts[2]);
-        const emotionRaw = normalizeNone(parts[3]);
-        const cgRaw = normalizeNone(parts[4]);
-
-        // 使用模糊匹配获取标准化的值
-        const normalizedNpc = getNormalizedNpc(npcRaw);
-        const normalizedScene = getNormalizedScene(sceneRaw);
-        const normalizedEmotion = getNormalizedEmotion(emotionRaw);
-        const normalizedCG = getNormalizedCG(cgRaw);
-
-        // 验证各字段
-        const npcOk = isNpcAllowed(normalizedNpc);
-        const sceneOk = normalizedScene !== 'none'; 
-        const emoOk = true;
-        //const emoOk = normalizedEmotion !== 'none' || emotionRaw === 'none' || emotionRaw === '无';  // 原始值为none时允许
-        const cgOk = cgRaw !== '';
-
-        if (!(npcOk && sceneOk && emoOk && cgOk)) {
-            if (textPart) currentTextBlock.push(textPart);
-            continue;
-        }
-
-        // 合并前面累积的正文为同一页
-        let mergedText = textPart;
-        if (currentTextBlock.length > 0) {
-            mergedText = currentTextBlock.join('\n\n') + (textPart ? '\n\n' + textPart : '');
-            currentTextBlock = [];
-        }
-
-        // 使用标准化后的值构建结果
-        result.push({
-            text: mergedText,
-            npc: normalizedNpc,
-            scene: normalizedScene,
-            emotion: normalizedEmotion,
-            cg: normalizedCG
+        // 2) NPC 表情图层：1 人居中；2 人 .slg-cast-left / .slg-cast-right（顺序 = cast 顺序，首个为焦点）
+        const members = castOf(frame);
+        members.forEach((m, i) => {
+            const emotionLayer = d.createElement('div');
+            emotionLayer.className = 'slg-layer slg-emotion-layer';
+            if (members.length === 2) emotionLayer.classList.add(i === 0 ? 'slg-cast-left' : 'slg-cast-right');
+            if (/^特殊CG\d+$/.test(m.emotion)) emotionLayer.classList.add('slg-emotion-special-cg');
+            if (opts.allowEnamor && m.emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) enamor = 1;
+            const emotionImg = d.createElement('img');
+            const emoUrl = assetUrl(`img/表情差分和CG/${m.npc}/表情差分/${m.emotion}.webp`);
+            emotionImg.src = emoUrl;
+            emotionImg.alt = `${m.npc}-${m.emotion}`;
+            if (opts.portraitFallback && typeof npcPortraits !== 'undefined' && npcPortraits && npcPortraits[m.id]) {
+                const fallback = assetUrl(npcPortraits[m.id]);
+                emotionImg.onerror = function () { this.onerror = null; this.src = fallback; };
+            }
+            if (i === 0 && opts.recordLastValid) { try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {} }
+            emotionLayer.appendChild(emotionImg);
+            container.appendChild(emotionLayer);
         });
 
-        lastValidDisplay = { npc: normalizedNpc, scene: normalizedScene, emotion: normalizedEmotion, cg: normalizedCG };
-    }
-
-    // 末尾残留：用上一次有效展示配置兜底，否则全 none
-    if (currentTextBlock.length > 0) {
-        const tailText = currentTextBlock.join('\n\n');
-        if (lastValidDisplay) {
-            result.push({
-                text: tailText,
-                npc: lastValidDisplay.npc,
-                scene: lastValidDisplay.scene,
-                emotion: lastValidDisplay.emotion,
-                cg: lastValidDisplay.cg
-            });
-        } else {
-            result.push({
-                text: tailText,
-                npc: 'none',
-                scene: 'none',
-                emotion: 'none',
-                cg: 'none'
-            });
+        // 3) 特殊CG图层（按焦点 NPC）
+        const focus = members[0];
+        const cgEnabled = (typeof cgContentEnabled !== 'undefined') && cgContentEnabled;
+        if (cgEnabled && frame.cg && frame.cg !== 'none' && focus) {
+            const idx = (typeof randIdx !== 'undefined') ? randIdx : 1;
+            const cgLayer = d.createElement('div');
+            cgLayer.className = 'slg-layer slg-cg-layer';
+            const cgImg = d.createElement('img');
+            const cgUrl = assetUrl(`img/表情差分和CG/${focus.npc}/色图/${frame.cg}${idx}.webp`);
+            cgImg.src = cgUrl;
+            cgImg.alt = `${focus.npc}-${frame.cg}${idx}`;
+            if (opts.recordLastValid) { try { window.__lastValidCgUrl = cgUrl; } catch (e) {} }
+            cgLayer.appendChild(cgImg);
+            container.appendChild(cgLayer);
         }
+
+        viewport.appendChild(container);
+        return container;
     }
 
-    return result;
+    // ---------- GameMode 0 状态机 ----------
+    function isPlaying() { return state === 'playing'; }
+    function clamp(i) { const n = frames().length; return Math.max(0, Math.min(Math.floor(Number(i) || 0), Math.max(0, n - 1))); }
+    function curtainDetail(frame) {
+        return [frame && frame.time, frame && frame.scene && frame.scene !== 'none' ? frame.scene : ''].filter(Boolean).join(' · ');
+    }
+    function playCurtain(cover, label, detail) {
+        const b = bridge();
+        if (!b || typeof b.playCurtain !== 'function') { galLog('curtain skipped: no bridge', { cover }); return Promise.resolve(); }
+        try { return Promise.resolve(b.playCurtain(cover, label, detail, '话本')); } catch (e) { galLog('curtain threw', e); return Promise.resolve(); }
+    }
+    // 演出诊断日志（统一前缀，便于在控制台按 [GAL] 过滤）
+    function galLog(msg, extra) {
+        try { console.log('[GAL] ' + msg, extra !== undefined ? extra : ''); } catch (e) {}
+    }
+    function setPresenting(on) {
+        const d = doc();
+        try { if (d && d.body) d.body.classList[on ? 'add' : 'remove']('gal-presenting'); } catch (e) {}
+        const b = bridge();
+        if (b && typeof b.setBusy === 'function') { try { b.setBusy('gal', on); } catch (e) {} }
+    }
+    // 把第 i 帧画到 viewport（恒带 mask，mask 点击 = 退出）
+    function paint(i) {
+        const list = frames();
+        const vp = viewportEl();
+        if (!vp || !list.length) return false;
+        index = clamp(i);
+        clearLayers(vp);
+        renderLayers(vp, list[index], {
+            mask: true, allowEnamor: false, recordLastValid: false, mode: 0, portraitFallback: true,
+            onMaskClick: () => { exit({ reason: 'stage-click', curtain: true }); },
+        });
+        return true;
+    }
+
+    /** enter({ source, pageIndex, curtain }) → Promise<boolean>；已在演出中则等价 goto。 */
+    function enter(opts) {
+        opts = opts || {};
+        const list = frames();
+        if (!list.length) { galLog('enter ignored: no frames', { source: opts.source }); return Promise.resolve(false); }
+        const target = clamp(has(opts.pageIndex) ? opts.pageIndex : 0);
+        if (state === 'playing') { galLog('enter → goto (already playing)', { source: opts.source, target }); return Promise.resolve(goto(target)); }
+        state = 'playing';
+        index = target;
+        const myGen = ++gen;
+        setPresenting(true);
+        const frame = list[target];
+        const curtain = !!opts.curtain;
+        const b = bridge();
+        galLog('enter', { source: opts.source, target, frames: list.length, curtain, bridgeTurn: !!(b && typeof b.hasPendingApply === 'function' && b.hasPendingApply()) });
+        const run = async () => {
+            if (curtain) await playCurtain(true, `第${cnNumber(target + 1)}回`, curtainDetail(frame));
+            if (gen !== myGen) {
+                // 封面期间被 exit/reset 抢先：纸已盖上就必须揭开，否则纸页会永久盖在视窗上
+                if (curtain) await playCurtain(false);
+                galLog('enter aborted by newer op', { target });
+                return false;
+            }
+            paint(index);
+            if (curtain) await playCurtain(false);
+            return gen === myGen;
+        };
+        chain = chain.then(run, run);
+        return chain;
+    }
+    /** 演出中翻页：只换图层，不播翻页纸；同页幂等。 */
+    function goto(i) {
+        if (state !== 'playing') return false;
+        const target = clamp(i);
+        const vp = viewportEl();
+        if (target === index && vp && vp.querySelector('.slg-layer-container')) return true;
+        return paint(target);
+    }
+    /** exit({ reason, curtain }) → Promise<boolean>；幂等。curtain:false 时同步清层。 */
+    function exit(opts) {
+        opts = opts || {};
+        if (state !== 'playing') return Promise.resolve(false);
+        state = 'idle';
+        const myGen = ++gen;
+        const b = bridge();
+        // G9/G12：3D 正在换房或有待应用的房间切换 → 不播自身翻页纸，由 3D 翻页兼作退场
+        const pending3d = !!(b && typeof b.hasPendingApply === 'function' && b.hasPendingApply());
+        const curtain = !!opts.curtain && !pending3d;
+        galLog('exit', { reason: opts.reason, curtainRequested: !!opts.curtain, curtain, pending3d });
+        if (!curtain) {
+            clearLayers(viewportEl());
+            setPresenting(false);
+            return Promise.resolve(true);
+        }
+        const run = async () => {
+            await playCurtain(true, '收卷', '');
+            clearLayers(viewportEl());
+            if (gen === myGen) setPresenting(false);
+            await playCurtain(false);
+            return true;
+        };
+        chain = chain.then(run, run);
+        return chain;
+    }
+    /** commit 完成后的自动进入判定（G1/G4）：同一 commitId 只进一次。 */
+    function onCommit(info) {
+        const id = (info && has(info.commitId)) ? info.commitId : null;
+        const mode = (typeof GameMode !== 'undefined') ? GameMode : 1;
+        const expanded = (typeof isStoryExpanded !== 'undefined') && !!isStoryExpanded;
+        const week = (typeof newWeek !== 'undefined') ? newWeek : 0;
+        if (mode !== 0 || expanded || week === 1) { galLog('onCommit: not entering', { mode, expanded, week }); return false; }
+        if (!frames().some(f => f && !f.tail)) { galLog('onCommit: no presentable frames'); return false; }
+        if (id !== null && id === enteredCommitId) return false;
+        enteredCommitId = id;
+        enter({ source: 'commit', pageIndex: 0, curtain: true });
+        return true;
+    }
+    /** GameMode 切换 / 存档恢复等硬重置：同步清层、清 commit 记忆。 */
+    function reset() {
+        exit({ reason: 'reset', curtain: false });
+        enteredCommitId = null;
+    }
+
+    return Object.freeze({
+        get state() { return state; },
+        get index() { return index; },
+        enter, goto, exit, onCommit, reset, isPlaying,
+        renderLayers, clearLayers, sceneUrlFor, cnNumber,
+    });
+})();
+// ==== GAL_PRESENTATION_END ====
+
+// GameMode 1 图层参数：只在非人物/关系页加遮罩（沿用旧 _appendSlgLayers 的判定），允许 enamor 与 __lastValid* 记录。
+function _slgLayerOptsGm1() {
+    const activeScene = document.querySelector('.scene.active');
+    const needsMask = !!(activeScene &&
+        activeScene.id !== 'player-stats-scene' &&
+        activeScene.id !== 'relationships-scene');
+    return { mask: needsMask, allowEnamor: true, recordLastValid: true, mode: 1 };
 }
 
 // 更新日期显示
@@ -522,45 +872,37 @@ function updateStoryText(text) {
     const previousPage = currentPage;
     const previousExpanded = isStoryExpanded;
     
-    // 检查是否为SLG模式
+    // 两种 GameMode 都先解析为演出帧：GameMode 1 页=帧（同现状）；GameMode 0 有标记行时页=帧一一对应，
+    // 无任何标记行（如 newWeek 周报）时回退为原自然段分页
+    const parsed = parseSlgMainText(text);
+    const hasFrames = Array.isArray(parsed) && parsed.some(f => !f.tail);
+    const md = window.markdownit({
+        html: true,
+        breaks: true,
+        linkify: true,
+        typographer: true
+    }).disable('strikethrough');
     if (GameMode === 1) {
-        // 流式：每次都根据当前 mainText 重新解析 slgModeData
-        const parsed = parseSlgMainText(text);
         if (parsed && parsed.length > 0) {
             slgModeData = parsed;
-
-            const md = window.markdownit({
-                html: true,
-                breaks: true,
-                linkify: true,
-                typographer: true
-            }).disable('strikethrough');
-
             storyPages = slgModeData.map(data => md.render(data.text || ''));
         } else {
             // 解析不到有效页时，回退到普通文本渲染，避免显示空白
-            let processedText = text.replace(/\n+/g, '\n').replace(/(\r\n)+/g, '\n').replace(/\r+/g, '\n');
-            const md = window.markdownit({
-                html: true,
-                breaks: true,
-                linkify: true,
-                typographer: true
-            }).disable('strikethrough');
-            const htmlContent = md.render(processedText);
-            storyPages = [htmlContent];
+            slgModeData = [];
+            let processedText = text.replace(/\n+/g, '\n');
+            processedText = processedText.replace(/(\r\n)+/g, '\n');
+            processedText = processedText.replace(/\r+/g, '\n');
+            storyPages = [md.render(processedText)];
         }
+    } else if (hasFrames) {
+        slgModeData = parsed;
+        storyPages = slgModeData.map(data => `<div class="story-paragraph">${md.render(data.text || '')}</div>`);
     } else {
         // 普通模式：按自然段分页，并丢弃每段“|”分隔的补充信息
+        slgModeData = [];
         let processedText = text.replace(/\n+/g, '\n');
         processedText = processedText.replace(/(\r\n)+/g, '\n');
         processedText = processedText.replace(/\r+/g, '\n');
-        
-        const md = window.markdownit({
-            html: true,
-            breaks: true,
-            linkify: true,
-            typographer: true
-        }).disable('strikethrough');
         
         const rawParagraphs = processedText.split('\n').filter(part => part.trim());
         const cleanedParagraphs = rawParagraphs.map(part => part.split('|')[0].trim()).filter(p => p.length > 0);
@@ -576,7 +918,7 @@ function updateStoryText(text) {
             storyPages = [rendered];
         }
     }
-    
+
     // 智能恢复页码：
     // 1. 如果之前是展开状态，保持展开
     if (previousExpanded) {
@@ -639,13 +981,11 @@ function updateStoryText(text) {
                 loading.appendChild(text);
                 viewport.insertBefore(loading, viewport.firstChild);
             }
+            // GameMode 0→1：GAL 演出硬重置（幂等；清 commit 记忆，演出中则同步清层）
+            galPresentation.reset();
             // 新文本到达=新场景数据：旧图层（连容器）与交互遮罩一并作废，
             // 由 updateStoryDisplay 按当前模式重建/补建（修复展开状态下 GameMode 0→1 永远"场景加载中"）
-            if (viewport) {
-                viewport.querySelectorAll('.slg-layer-container').forEach(el => el.remove());
-                const staleMask = viewport.querySelector('.slg-interaction-mask');
-                if (staleMask) staleMask.remove();
-            }
+            galPresentation.clearLayers(viewport);
         } else {
             try { document.body.classList.remove('slg-global'); } catch (e) {}
             const old = viewport ? viewport.querySelector('.slg-loading-layer') : null;
@@ -653,117 +993,6 @@ function updateStoryText(text) {
         }
     } catch (e) {}
     updateStoryDisplay();
-}
-
- // emotionImg.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}_${pageData.emotion}.webp`;
-// 创建一帧 SLG 图层（场景/NPC表情/CG + 交互遮罩）并挂到 viewport。
-// pageData 为 slgModeData 的某一页；分页分支与展开补建分支复用本函数。
-function _appendSlgLayers(viewport, pageData) {
-    if (!viewport || !pageData) return;
-    // 检查当前场景，只在需要遮罩的场景添加遮罩
-    const activeScene = document.querySelector('.scene.active');
-    const needsMask = activeScene && 
-                    activeScene.id !== 'player-stats-scene' && 
-                    activeScene.id !== 'relationships-scene';
-    
-    if (needsMask) {
-        // 添加遮罩层，阻止场景互动
-        const interactionMask = document.createElement('div');
-        interactionMask.className = 'slg-interaction-mask';
-        viewport.appendChild(interactionMask);
-    }
-    
-    const dayNightCN = (dayNightStatus === 'night') ? '夜' : '昼';
-    const locName = mapLocation || '天山派外堡'; // 当前地图位置（如 天山派） [[11],[14]]
-    const layerContainer = document.createElement('div');
-    layerContainer.className = 'slg-layer-container';
-
-    // 1) 场景图层
-    if (pageData.scene && pageData.scene !== 'none') {
-        const sceneLayer = document.createElement('div');
-        sceneLayer.className = 'slg-layer slg-scene-layer';
-        const sceneImg = document.createElement('img');
-
-        const sceneName = pageData.scene; // 例如 演武场 / 山门 / 公田…
-        // 兜底：命中旧版（普通模式）地点名时，走旧的 img/location/{name}_{昼|夜}.webp 规则
-        const isLegacyScene = (typeof legacySceneOptions !== 'undefined') && legacySceneOptions.includes(sceneName);
-        // https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/scene_webp/{{当前mapLocation}}/{{昼or夜}}/{{pageData.scene}}.webp
-        const sceneUrl = isLegacyScene
-            ? _assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
-            : _assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
-        sceneImg.src = sceneUrl;
-        sceneImg.alt = `${locName}-${dayNightCN}-${sceneName}`;
-        try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {}
-
-        // // 发生 404 时回退到旧的本地背景规则
-        // sceneImg.onerror = function () {
-        //     this.onerror = null;
-        //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/location/${sceneName}_${dayNightCN}.webp`;
-        // };
-
-        sceneLayer.appendChild(sceneImg);
-        layerContainer.appendChild(sceneLayer);
-    }
-
-    // 2) NPC表情图层
-    if (pageData.npc && pageData.npc !== 'none') {
-        const npcId = npcNameToId[pageData.npc]; // 名字->ID 映射已在配置里 [[14]]
-        if (npcId) {
-            const emotionLayer = document.createElement('div');
-            emotionLayer.className = 'slg-layer slg-emotion-layer';
-            const emotionImg = document.createElement('img');
-
-            const emotion = (pageData.emotion && pageData.emotion !== 'none') ? pageData.emotion : '平静';
-            
-            // 检查是否为特殊CG格式（特殊CG1、特殊CG15等），添加对应CSS类
-            if (/^特殊CG\d+$/.test(emotion)) {
-                emotionLayer.classList.add('slg-emotion-special-cg');
-            }
-            // 触发 enamor：首次遇到“发情”
-            if (emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) {
-                enamor = 1;
-            }
-            // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/表情差分/{{pageData.emotion}}.png
-            const emoUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/表情差分/${emotion}.webp`);
-            emotionImg.src = emoUrl;
-            emotionImg.alt = `${pageData.npc}-${emotion}`;
-            try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {}
-
-            // // 404 回退：用原始 NPC 立绘
-            // emotionImg.onerror = function () {
-            //     this.onerror = null;
-            //     this.src = `https://cdn.jsdelivr.net/gh/Ji-Haitang/char_card_1@main/img/NPC/${pageData.npc}.webp`;
-            // };
-
-            emotionLayer.appendChild(emotionImg);
-            layerContainer.appendChild(emotionLayer);
-        }
-    }
-
-    // 3) 特殊CG图层
-    if (cgContentEnabled && pageData.cg && pageData.cg !== 'none' && pageData.npc && pageData.npc !== 'none') {
-        const cgLayer = document.createElement('div');
-        cgLayer.className = 'slg-layer slg-cg-layer';
-        const cgImg = document.createElement('img');
-
-        // https://cdn.jsdelivr.net/gh/Ji-Haitang-setu/card1_setu@main/{{pageData.npc}}/色图/{{pageData.cg + 随机1~4的数字后缀}}.png
-        // const randIdx = Math.floor(Math.random() * 4) + 1; // 1~4
-        const cgUrl = _assetUrl(`img/表情差分和CG/${pageData.npc}/色图/${pageData.cg}${randIdx}.webp`);
-        cgImg.src = cgUrl;
-        cgImg.alt = `${pageData.npc}-${pageData.cg}${randIdx}`;
-        try { window.__lastValidCgUrl = cgUrl; } catch (e) {}
-
-        // // 404 时直接隐藏本层
-        // cgImg.onerror = function () {
-        //     cgLayer.remove();
-        // };
-
-        cgLayer.appendChild(cgImg);
-        layerContainer.appendChild(cgLayer);
-    }
-
-    // 将图层容器添加到viewport
-    viewport.appendChild(layerContainer);
 }
 
 // 修改 updateStoryDisplay 函数
@@ -777,16 +1006,13 @@ function updateStoryDisplay() {
     // 正文翻页点击区挂在整块故事滚动区上（横屏下文本区较高，正文只占顶部一截，光点正文下半区会点不到）
     const storyWrapper = storyElement ? storyElement.parentElement : null;
     
-    // 只在非展开模式或非SLG模式时清除图层
-    if (!isStoryExpanded || GameMode !== 1) {
-        // 清除之前的SLG图层（连容器一起，避免空容器壳累积）
-        const existingLayers = viewport.querySelectorAll('.slg-layer-container');
-        existingLayers.forEach(layer => layer.remove());
-        
-        // 清除之前的SLG遮罩层
-        const existingMask = viewport.querySelector('.slg-interaction-mask');
-        if (existingMask) existingMask.remove();
-
+    // GameMode 0 演出中：图层由 galPresentation 维护，这里不清、只同步页码（演出内翻页不播翻页纸）
+    const galPlaying = GameMode === 0 && galPresentation.isPlaying();
+    if (galPlaying) {
+        galPresentation.goto(currentPage);
+    } else if (!isStoryExpanded || GameMode !== 1) {
+        // 只在非展开模式或非SLG模式时清除图层（连容器与遮罩一起，避免空容器壳累积）
+        galPresentation.clearLayers(viewport);
         // 退出SLG相关全局标记
         try { if (GameMode !== 1) document.body.classList.remove('slg-global'); } catch (e) {}
     }
@@ -804,7 +1030,7 @@ function updateStoryDisplay() {
             && viewport && !viewport.querySelector('.slg-layer-container')) {
             const expandIndex = Math.min(currentPage, slgModeData.length - 1);
             try { window.__lastValidSlgIndex = expandIndex; } catch (e) {}
-            _appendSlgLayers(viewport, slgModeData[expandIndex]);
+            galPresentation.renderLayers(viewport, slgModeData[expandIndex], _slgLayerOptsGm1());
         }
         storyElement.classList.add('expanded');
         if (expandBtn) expandBtn.innerHTML = '▲ 收起';
@@ -823,11 +1049,14 @@ function updateStoryDisplay() {
             const pageData = slgModeData[effectiveIndex];
             // 记录最后一次有效的图层索引，供其他模块使用（如战斗背景）
             try { window.__lastValidSlgIndex = effectiveIndex; } catch (e) {}
-            _appendSlgLayers(viewport, pageData);
+            galPresentation.renderLayers(viewport, pageData, _slgLayerOptsGm1());
         }
         
+        // GameMode 0 且本轮有演出帧：正文中间 1/3 点击 = 进入 GAL 演出（G2），单页时也要挂点击
+        const galEnterable = GameMode === 0 && Array.isArray(slgModeData) && slgModeData.length > 0;
+        const multiPage = storyPages.length > 1;
         // 翻页控件逻辑
-        if (storyPages.length > 1) {
+        if (multiPage || galEnterable) {
             if (storyWrapper) storyWrapper.style.cursor = 'pointer';
             storyElement.style.cursor = 'pointer';
             if (storyWrapper) storyWrapper.onclick = function(e) {
@@ -836,14 +1065,20 @@ function updateStoryDisplay() {
                 const rect = storyWrapper.getBoundingClientRect();
                 const clickX = e.clientX - rect.left;
                 const width = rect.width;
+                const zone = clickX < width / 3 ? 'left' : (clickX > width * 2 / 3 ? 'right' : 'middle');
+                try { console.log('[GAL] story click', { zone, GameMode, multiPage, galEnterable, currentPage, playing: galPresentation.isPlaying() }); } catch (_) {}
                 
-                if (clickX < width / 3) {
-                    doPrevPage();
-                } else if (clickX > width * 2 / 3) {
-                    doNextPage();
+                if (zone === 'left') {
+                    if (multiPage) doPrevPage();
+                } else if (zone === 'right') {
+                    if (multiPage) doNextPage();
+                } else if (galEnterable) {
+                    // 演出中再点 = goto 当前页（幂等）；事件页越界由控制器 clamp 到末帧
+                    galPresentation.enter({ source: 'page', pageIndex: Math.min(currentPage, slgModeData.length - 1), curtain: true });
                 }
             };
-            
+        }
+        if (multiPage) {
             if (pageIndicator) {
                 pageIndicator.style.display = 'flex';
                 pageIndicator.innerHTML = '';
@@ -867,9 +1102,11 @@ function updateStoryDisplay() {
                 nextBtn.disabled = currentPage === storyPages.length - 1;
             }
         } else {
-            storyElement.style.cursor = 'default';
-            if (storyWrapper) storyWrapper.style.cursor = 'default';
-            if (storyWrapper) storyWrapper.onclick = null;
+            if (!galEnterable) {
+                storyElement.style.cursor = 'default';
+                if (storyWrapper) storyWrapper.style.cursor = 'default';
+                if (storyWrapper) storyWrapper.onclick = null;
+            }
             
             if (pageIndicator) pageIndicator.style.display = 'none';
             if (prevBtn) prevBtn.style.display = 'none';
@@ -915,6 +1152,11 @@ function updateStoryDisplay() {
 function doGoToPage(pageNum) {
     if (pageNum >= 0 && pageNum < storyPages.length) {
         currentPage = pageNum;
+        // GameMode 0 且本轮有演出帧：翻页（正文左右 1/3 / 箭头 / 页码点）即进入演出；已在演出中则 enter 退化为 goto，
+        // 展开态不响应。事件描述页越界由控制器 clamp 到末帧。
+        if (GameMode === 0 && !isStoryExpanded && Array.isArray(slgModeData) && slgModeData.length > 0) {
+            galPresentation.enter({ source: 'page', pageIndex: Math.min(currentPage, slgModeData.length - 1), curtain: true });
+        }
         updateStoryDisplay();
     }
 }
@@ -930,6 +1172,10 @@ function doNextPage() {
 // 切换展开/收起
 function doToggleStoryExpand() {
     isStoryExpanded = !isStoryExpanded;
+    // 展开全文 = 阅读模式：GameMode 0 演出播翻页纸退场；收起不自动进入（G3）
+    if (isStoryExpanded && GameMode === 0 && galPresentation.isPlaying()) {
+        try { galPresentation.exit({ reason: 'expand', curtain: true }); } catch (e) {}
+    }
     updateStoryDisplay();
 }
 

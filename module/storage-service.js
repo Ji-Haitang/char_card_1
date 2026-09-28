@@ -760,6 +760,10 @@ var storageService = (function() {
         setLocationBuffQueue(snap.locationBuff);
 
         console.log('[Storage] 已从快照还原状态');
+        // 存档回滚：GAL 演出硬重置（同步清层，不播翻页纸，清 commit 记忆）
+        if (typeof galPresentation !== 'undefined' && galPresentation && typeof galPresentation.reset === 'function') {
+            try { galPresentation.reset(); } catch (e) {}
+        }
         // The data is already restored. Reconcile only presentation, preserving special pages.
         if (typeof window !== 'undefined' && window.GameSceneBridge) {
             window.GameSceneBridge.afterRestore('snapshot-restored', true);
