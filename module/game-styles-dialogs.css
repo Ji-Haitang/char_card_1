@@ -1,7 +1,7 @@
-/* Last-loaded, main-game dialog presentation layer.
- * .game-dialog is an explicit JS allowlist, not every .modal (editors own theirs).
- * !important overrides legacy fitModalToViewport inline geometry and theme vw rules.
- * No descendant-wide font reset: titles / controls / prose / metadata stay distinct.
+/* 主游戏弹窗展示层，保持最后加载以覆盖旧样式。
+ * .game-dialog 由 JS 白名单显式添加，不作用于全部 .modal（各编辑器维护自己的布局）。
+ * 使用 !important 覆盖旧版 fitModalToViewport 行内几何属性和主题中的 vw 规则。
+ * 不统一重置后代字体，确保标题、控件、正文和元数据仍有清晰层级。
  */
 :root {
     --game-dialog-vh: 100vh;
@@ -11,9 +11,9 @@
     --game-dialog-title: 20px;
 }
 @supports (height: 100dvh) { :root { --game-dialog-vh: 100dvh; } }
-/* Cutout clearance belongs to controls, never to the map/camera viewport.
-   Zero insets preserve desktop geometry; split-landscape's right edge is
-   internal (next to story text), so only the outer left edge is inset there. */
+/* 刘海与挖孔安全区只作用于控件，不缩小地图或相机视口。
+   桌面端零安全边距时保持原几何；横屏分栏右侧紧邻正文、属于内部边缘，
+   因此该模式只为外侧左边缘保留安全距离。 */
 body #main-viewport .status-display {
     top: 0 !important;
     box-sizing: border-box;
@@ -48,7 +48,7 @@ body .game-frame-dialog {
     background-color: rgba(15, 18, 23, .68);
     overscroll-behavior: contain;
 }
-/* Do not override display: business code uses none/block to open and close. */
+/* 不覆盖 display：业务代码通过 none/block 控制弹窗开关。 */
 body .modal.game-dialog > .modal-content {
     position: relative !important;
     inset: auto !important;
@@ -71,7 +71,7 @@ body .modal.game-dialog > .modal-content {
     font-size: var(--game-dialog-font);
     line-height: 1.55;
     text-align: left;
-    animation: none !important; /* old transform animation overwrites centering */
+    animation: none !important; /* 旧 transform 动画会覆盖居中变换 */
 }
 body :is(#modal, #item-detail-modal, #shop-detail-modal, #difficulty-modal, #music-modal, #font-modal).game-dialog > .modal-content { max-width: 600px !important; }
 body :is(#save-list-modal, #load-modal, #last-input-modal).game-dialog > .modal-content { max-width: 760px !important; }
@@ -137,7 +137,7 @@ body .game-dialog .modal-buttons {
 }
 body .game-dialog .game-dialog-footer { border-top: 1px solid rgba(130, 130, 130, .3); }
 body .game-dialog .modal-text { margin: 0; padding: 8px 2px; font-weight: 400 !important; }
-/* Reuse ink/paper assets, but spend only 8px of each edge on decoration. */
+/* 复用水墨纸张素材，但每条边仅使用 8px 作为装饰区域。 */
 body.ui-style-ancient .game-dialog > .modal-content {
     border-width: 8px !important;
     border-image: url('../assets/image/static/水墨粗方框.png') 24% / 10px / 1px stretch !important;
@@ -150,7 +150,7 @@ body.ui-style-ancient .game-dialog :is(.modal-btn, .trading-btn, .skill-action-b
     min-width: 64px;
     color: var(--ink-black, #25251f) !important;
 }
-/* ID-scoped legacy save skin used 16px borders and 12px mobile type. */
+/* 旧版存读档 ID 样式曾使用 16px 边框和 12px 移动端字号，此处统一覆盖。 */
 body.ui-style-ancient :is(#load-modal, #save-list-modal).game-dialog .modal-btn { border: 6px solid transparent !important; border-image: url('../assets/image/static/框5-fill.png') 52 fill / 8px / 1px stretch !important; padding: 6px 10px !important; font-size: 14px !important; }
 body.ui-style-ancient .game-dialog .skill-filter-btn.active { color: var(--accent-red, #8d2925) !important; text-decoration: underline; text-underline-offset: 4px; }
 body.ui-style-ancient .game-dialog :is(.inventory-item, .equipment-slot, .skill-card, .trading-item-row, .cheat-section) { border-width: 2px !important; border-image-width: 6px !important; }
@@ -160,7 +160,7 @@ body.ui-style-flat .game-dialog :is(.trading-list, .skill-panel, .skill-empty-st
 body.ui-style-flat .game-dialog .trading-empty { color: var(--f-text-2, #b8c2d6) !important; }
 body .game-dialog :is(.skill-desc, .skill-level-effect, .skill-effect-row) { font-size: 14px !important; line-height: 1.6; }
 body .game-dialog :is(.skill-meta-row, .skill-level-meta, .skill-select-label) { font-size: 13px !important; }
-/* Inventory and equipment: readable names rather than tiny icon-only cells. */
+/* 背包与装备界面优先保证名称可读，不使用过小的纯图标格。 */
 body .game-dialog .inventory-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); max-height: none; overflow: visible; gap: 10px; padding: 4px; }
 body .game-dialog .inventory-grid > :not(.inventory-item) { grid-column: 1 / -1; }
 body .game-dialog .inventory-item { min-width: 0; padding: 10px !important; }
@@ -170,7 +170,7 @@ body .game-dialog .equipment-slots { grid-template-columns: repeat(2, minmax(0, 
 body .game-dialog .equipment-slot { padding: 10px !important; }
 body .game-dialog .slot-item { min-height: 44px; }
 body .game-dialog :is(.equipment-stats, .item-info, .shop-item-info, .shop-item-price-info) { margin: 8px 0; padding: 10px !important; }
-/* One middle scroll owner prevents nested lists from trapping mobile gestures. */
+/* 仅保留一个中层滚动容器，避免嵌套列表截获移动端手势。 */
 body .game-dialog :is(.skill-list-container, .trading-list, .bounty-modal-body, #history-summary-content, #pipeline-log-content) { max-height: none !important; height: auto !important; overflow: visible !important; min-height: 0; }
 body .game-dialog :is(#history-summary-content, #pipeline-log-content) { padding: 12px !important; margin: 0 !important; font-size: 14px !important; line-height: 1.65 !important; white-space: pre-wrap; overflow-wrap: anywhere; }
 body .game-dialog :is(#history-summary-content, #pipeline-log-content) pre { white-space: pre-wrap; overflow-wrap: anywhere; }
@@ -191,7 +191,7 @@ body .game-dialog .trading-item-info { min-width: 0; flex: 1 1 140px; }
 body .game-dialog .trading-item-name { white-space: normal; }
 body .game-dialog .pl-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 !important; }
 body .game-dialog .pl-tab { flex: 1 1 auto; }
-/* Settings retains its original tabs/panels and all change handlers. */
+/* 设置界面保留原有选项卡、面板和全部变更处理函数。 */
 body .game-dialog .gs-layout { display: grid; grid-template-columns: 150px minmax(0, 1fr); min-height: 0; overflow: visible; gap: 12px; }
 body .game-dialog .gs-tabs { width: auto !important; min-width: 0 !important; padding: 0 !important; gap: 6px; }
 body .game-dialog .gs-panel-wrap { min-width: 0; overflow: visible; padding: 0 6px !important; }
@@ -209,22 +209,22 @@ body #load-modal.game-dialog .game-dialog-footer button { width: auto !important
 body :is(#load-modal, #save-list-modal).game-dialog .game-dialog-body > div[style*="overflow"] { max-height: none !important; overflow: visible !important; }
 body :is(#load-modal, #save-list-modal).game-dialog .game-dialog-body div[style*="justify-content:space-between"] { gap: 10px; flex-wrap: wrap; }
 body :is(#load-modal, #save-list-modal).game-dialog .game-dialog-body div[style*="justify-content:space-between"] > div { min-width: 0; }
-/* Iframe games retain their documents, but no longer inherit the half-width 3D map. */
+/* iframe 小游戏保留各自文档，但不再继承 3D 地图的半宽布局。 */
 body .game-frame-dialog > :is(.worldmap-container, .blackjack-container, .battle-container, .farm-container) { position: relative !important; inset: auto !important; transform: none !important; margin: 0 !important; width: 100% !important; max-width: none !important; height: 100% !important; max-height: none !important; }
 body .game-frame-dialog iframe { display: block; width: 100% !important; height: 100% !important; border: 0; }
-/* Shared 2D/3D scene popovers: bounded type, compact assets, scrollable text. */
+/* 2D/3D 场景共用浮层：限制字号与尺寸，并允许正文内部滚动。 */
 body :is(.npc-info-popup, .location-info-popup) { box-sizing: border-box; width: 300px; min-width: 0 !important; max-width: calc(100vw - 24px) !important; max-height: calc(var(--game-dialog-vh) - 24px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)) !important; overflow-y: auto; overscroll-behavior: contain; padding: 12px !important; font-size: 14px !important; }
 body :is(.npc-info-name, .location-info-name) { font-size: 18px !important; line-height: 1.4; }
 body :is(.npc-info-desc, .location-info-npcs, .location-info-npc-item) { font-size: 14px !important; line-height: 1.5; }
 body :is(.npc-info-btn, .location-go-btn) { font-size: 14px !important; min-height: 40px; padding: 8px 14px !important; white-space: normal; }
 body.ui-style-ancient :is(.npc-info-popup, .location-info-popup) { border-width: 6px !important; border-image-width: 8px !important; }
-/* 2D ink-ring labels used to grow as 4.5vw on a wide monitor. The 3D ring
-   already has scene-measured bounds in scene3d-host.css; keep those coordinates. */
+/* 2D 水墨圆环标签过去会在宽屏按 4.5vw 过度放大。
+   3D 圆环已在 scene3d-host.css 中按场景测量边界，因此保留其原坐标。 */
 body .npc-selection-overlay:not(.scene3d-npc-selection) .npc-selection-name { font-size: clamp(20px, 3vmin, 30px) !important; top: -14px; letter-spacing: 2px; }
 body .npc-selection-overlay:not(.scene3d-npc-selection) .npc-selection-desc { font-size: 14px !important; padding: 8px 12px; max-height: 112px; overflow-y: auto; pointer-events: auto; }
 body .npc-selection-overlay:not(.scene3d-npc-selection) .npc-selection-option { font-size: 16px !important; padding: 8px 12px; min-height: 36px; }
 body .npc-selection-overlay .npc-selection-option-reward { font-size: 12px !important; }
-/* Relationships are a scene, not a modal. Do not alter pagination or hidden NPCs. */
+/* 关系界面属于场景而非弹窗，不改变分页逻辑或隐藏 NPC 的规则。 */
 body #relationships-scene .relationships-container { top: 52px; width: 96%; max-height: calc(100% - 60px); padding: 8px; box-sizing: border-box; }
 body #relationships-scene .back-btn { font-size: 14px !important; min-height: 36px; padding: 6px 12px !important; }
 body #relationships-scene .relationship-grid { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
@@ -237,8 +237,7 @@ body #relationships-scene .relationship-name { font-size: 16px !important; }
 body #relationships-scene :is(.relationship-value, .relationship-controls, .relationship-controls button) { font-size: 14px !important; }
 body #relationships-scene .relationship-controls button { min-height: 36px; padding: 6px 10px !important; }
 @media (orientation: portrait), (max-width: 600px) {
-    /* The dense panels keep a compact two-column rail on phones. Each row
-       opens its full description in the existing detail dialog. */
+    /* 信息密集的面板在手机上保留紧凑双列，每一项仍通过原详情弹窗展示完整说明。 */
     body .game-dialog .trading-container,
     body .game-dialog .skill-equipment-sections { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     body .game-dialog .equipment-slots,
@@ -251,10 +250,14 @@ body #relationships-scene .relationship-controls button { min-height: 36px; padd
     body .game-dialog .skill-memory-summary { text-align: left; }
     body #relationships-scene .relationship-grid { grid-template-columns: repeat(3, 1fr); }
 }
-/* Four compact equipment slots remain two columns on normal phones; effects
-   follow as a separate full-width block, not another tiny grid cell. */
+/* 普通手机上四个紧凑装备槽保持双列；属性效果另用整行区域展示，不挤进小网格。 */
 @media (min-width: 360px) {
     body .game-dialog .equipment-slots { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+    body #game-settings-modal.game-dialog #gs-panel-memory.active {
+        padding-top: clamp(70px, 12dvh, 130px) !important;
+    }
 }
 @media (max-width: 480px) {
     :root { --game-dialog-gap: 6px; }
@@ -279,8 +282,8 @@ body #relationships-scene .relationship-controls button { min-height: 36px; padd
     body .game-dialog .pl-tab { font-size: 13px !important; }
     body :is(.npc-info-popup, .location-info-popup) { width: 320px; padding: 8px !important; }
 }
-/* Touch targets stay usable in portrait and short landscape viewports. Keep this
-   as a hit-area rule so coarse pointer support does not depend on larger text. */
+/* 竖屏与低高度横屏都保持可用触控区域；这里只扩大点击范围，
+   让粗指针设备无需依赖放大文字也能正常操作。 */
 @media (pointer: coarse) {
     body .game-dialog :is(button, .modal-btn, .gs-tab, .pl-tab),
     body :is(.npc-info-btn, .location-go-btn) { min-height: 44px; }

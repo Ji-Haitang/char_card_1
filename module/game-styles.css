@@ -544,8 +544,7 @@ body {
     transition: filter 0.3s ease;
 }
 
-/* 高亮由 JS 按像素命中结果驱动（.npc-hover），不再用 :hover——
-   多 NPC 立绘重叠时 :hover 命中的最上层容器可能是透明区，会高亮错人 */
+/* 高亮由 JS 像素命中结果驱动，避免透明区域遮挡下方 NPC。 */
 .npc-portrait.npc-hover {
     filter: brightness(1.1);
 }
@@ -2931,12 +2930,12 @@ body {
     }
 }
 
-/* 窄屏进一步优化 - 改为纵向布局（≤640px 即生效：两列在 500px 级宽度已挤压显示不全） */
+/* 窄屏交易面板改为纵向布局，避免两列被视口截断。 */
 @media (max-width: 640px) {
     .trading-content {
         max-height: 85vh;  /* 增加最大高度 */
         padding: 10px;
-        width: 94vw;       /* 约束弹窗不超视口，防止两列溢出被截 */
+        width: 94vw;
         max-width: 94vw;
     }
     
@@ -3343,12 +3342,12 @@ body {
     max-height: none !important;
 }
 
-/* 多边形高亮样式：仅扁平化UI时生效（亮蓝，与发送按钮 --f-primary 一致） */
+/* 多边形高亮样式：仅扁平化UI时生效 */
 body.ui-style-flat #map-hit-areas polygon:hover,
 body.ui-style-flat #map-hit-areas polygon.active {
-    stroke: #5b8cff;
+    stroke: #4ecdc4;
     fill: transparent;
-    filter: drop-shadow(0 0 6px rgba(91,140,255,0.55)) drop-shadow(0 0 12px rgba(91,140,255,0.35));
+    filter: drop-shadow(0 0 6px rgba(78,205,196,0.55)) drop-shadow(0 0 12px rgba(78,205,196,0.35));
     cursor: pointer;
 }
 
@@ -3442,7 +3441,7 @@ body.ui-style-flat #map-hit-areas polygon.active {
     overflow-y: auto;
     flex-shrink: 0;
     padding: clamp(16px, 3vw, 28px);
-    font-family: 'Microsoft YaHei', sans-serif;
+    font-family: 'ZCOOL XiaoWei', 'Microsoft YaHei', sans-serif;
     box-shadow: 0 8px 32px rgba(0,0,0,0.5);
     box-sizing: border-box;
 }
@@ -3452,7 +3451,7 @@ body.ui-style-flat #map-hit-areas polygon.active {
 .cfg-panel::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.32); }
 .cfg-panel { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.22) rgba(255,255,255,0.06); }
 .cfg-title {
-    font-family: 'Kaiti', 'STKaiti', serif;
+    font-family: 'Ma Shan Zheng', cursive;
     font-size: clamp(20px, 3vw, 32px);
     text-align: center;
     margin: 0 0 4px 0;
@@ -3608,7 +3607,7 @@ body.ui-style-flat .cfg-notice {
 body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
 
 
-/* ========== ��Ϸ���õ�����game-settings-modal�� ========== */
+/* ========== 游戏设置弹窗（game-settings-modal） ========== */
 .gs-modal-content {
     display: flex;
     flex-direction: column;
@@ -3628,7 +3627,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     overflow: hidden;
 }
 
-/* ���ѡ��� */
+/* 左侧选项卡 */
 .gs-tabs {
     display: flex;
     flex-direction: column;
@@ -3704,7 +3703,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     .pl-tab { font-size: 12px; padding: 8px 4px; }
 }
 
-/* �Ҳ������� */
+/* 右侧内容区域 */
 .gs-panel-wrap {
     flex: 1;
     overflow-y: auto;
@@ -3747,7 +3746,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     .gs-recall-tokens { width: 60px; }
 }
 
-/* ������ */
+/* 设置项行 */
 .gs-switch-row {
     display: flex;
     align-items: center;
@@ -3765,7 +3764,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     min-width: 0;
 }
 
-/* Toggle ���� */
+/* Toggle 开关 */
 .gs-toggle-wrap {
     display: flex;
     align-items: center;
@@ -3824,7 +3823,7 @@ body.ui-style-flat .cfg-footer { border-top-color: #e0e0e0; }
     text-align: right;
 }
 
-/* Range ���� */
+/* Range 滑杆 */
 .gs-range {
     -webkit-appearance: none;
     width: 100%;

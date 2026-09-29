@@ -31,6 +31,18 @@ body :is(#api-config-modal, #prompt-editor-modal, #loc-label-editor-modal, #wb-e
     flex: 0 0 auto; font-size: clamp(18px, 3vmin, 23px) !important; line-height: 1.35;
     margin: 0 0 10px !important; padding: 0 0 8px !important; color: inherit;
 }
+/* 编辑类弹窗使用清晰的直线标题，不继承普通 h3 的旋转水墨标题牌。 */
+body.ui-style-ancient :is(#api-config-modal, #prompt-editor-modal, #loc-label-editor-modal, #wb-editor-modal) .cfg-title {
+    display: block !important; align-self: stretch !important; width: auto !important;
+    background: none !important; background-image: none !important;
+    color: var(--ink-black, #25251f) !important; border-bottom: 1px solid var(--accent-gold, #b49828) !important;
+    margin: 0 0 10px !important; padding: 0 0 8px !important; transform: none !important;
+    -webkit-text-stroke: 0 !important; text-shadow: none !important; letter-spacing: .08em !important;
+}
+body.ui-style-ancient :is(#api-config-modal, #prompt-editor-modal, #loc-label-editor-modal, #wb-editor-modal) .cfg-title span {
+    font-family: var(--font-serif, 'Kaiti', serif) !important; font-weight: normal !important;
+    -webkit-text-stroke: 0 !important; text-shadow: none !important; letter-spacing: 0 !important;
+}
 body :is(#api-config-modal, #prompt-editor-modal, #loc-label-editor-modal, #wb-editor-modal) :is(.cfg-btn, .modal-btn) {
     min-height: 40px !important; min-width: 0; font-size: 14px !important; line-height: 1.4 !important;
     padding: 8px 14px !important; white-space: normal; height: auto; overflow-wrap: anywhere;

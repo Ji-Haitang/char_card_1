@@ -1,49 +1,49 @@
 <!-- /**
  * index.html - 主游戏界面（本地开发版本）
- * 
+ *
  * 文件概述：
  * 游戏的主入口文件，包含HTML结构和用户交互函数。
  * 本版本使用本地CSS文件，适合本地开发和调试。
- * 
+ *
  * 这些函数保留在HTML中是为了支持onclick等内联事件调用。
  * 它们主要是对其他模块函数的封装或直接实现。
- * 
+ *
  * 界面切换函数：
  * - showPlayerStats(): 显示角色属性界面
  * - showRelationships(): 显示人际关系界面
  * - backToMap(): 返回地图界面
  * - goToLocation(locationId): 前往指定地点
- * 
+ *
  * 游戏操作函数：
  * - skipWeek(): 跳过当前周，推进游戏时间
  * - performAction(action, location): 执行地点行动
  * - refreshNpcLocations(): 刷新NPC位置
  * - sendFreeAction(): 发送自由行动内容
- * 
+ *
  * NPC交互函数：
  * - sendInteraction(): 发送NPC互动内容
  * - npcAction(npcId, action): NPC动作处理（切磋/互动）
  * - toggleNpcVisibility(npcId): 切换NPC可见性
  * - giveGift(npcId): 送礼功能
- * 
+ *
  * 战斗相关函数：
  * - addAttack(): 消耗属性点增加攻击力
  * - addHP(): 消耗属性点增加生命值
  * - startBattle(): 开始战斗事件
  * - fleeBattle(): 逃离战斗
- * 
+ *
  * 系统功能函数：
  * - closeModal(): 关闭弹窗
  * - toggleDropdown(dropdownId): 下拉菜单控制
  * - saveGame() / loadGame(): 存档/读档
  * - showDifficultySettings(): 难度设置
  * - showCheatMode(): 金手指功能
- * 
+ *
  * 背包和交易函数：
  * - showInventory() / showEquipment(): 显示背包/装备
  * - showTrading(type): 显示交易界面
  * - buyItem() / sellItem(): 买卖物品
- * 
+ *
  * 依赖关系：
  * - module/game-config.js: 游戏配置
  * - module/game-utils.js: 工具函数
@@ -67,11 +67,11 @@
             window.Android = {};
         }
     </script>
-    
+
     <!-- <script>
         // Git commit编号配置 - 修改这里即可更新所有引用
         const GIT_COMMIT_ID = 'fe3f916';
-        
+
         // 动态加载CSS
         const cssLink = document.createElement('link');
         cssLink.rel = 'stylesheet';
@@ -184,7 +184,7 @@
                                 <span class="stat-value" id="talent-meili-value">70</span>
                             </div>
                         </div>
-                        
+
                         <div class="bottom-stats-row">
                             <div class="stats-group">
                                 <h3>人物数值</h3>
@@ -205,7 +205,7 @@
                                     <span class="simple-stat-value" id="stat-jinqian-value">100</span>
                                 </div>
                             </div>
-                            
+
                             <div class="stats-group">
                                 <h3>战斗数值</h3>
                                 <div class="simple-stat-item">
@@ -463,7 +463,6 @@
 
                 <!-- 悬赏任务弹窗（结构对齐汗青集：viewport-overlay + modal-content，打开时由 JS 搬到 body 突破 mainview 限制） -->
                 <style>
-                    /* 卡片配色：默认暗色（扁平/无主题），古风主题下用宣纸变量覆盖 */
                     #bounty-modal h3 { margin: 0 20px; padding: 20px 0 12px; text-align: center; flex-shrink: 0; font-size: 1.6rem; border-bottom: 2px solid #7a6a4f; }
                     body.ui-style-ancient #bounty-modal h3 { border-bottom-color: var(--ink-dark, #2c2c2c); }
                     #bounty-modal .bounty-modal-body { flex: 1; overflow-y: auto; padding: 15px 20px; }
@@ -478,7 +477,6 @@
                     .bounty-card-info { font-size: 0.8rem; opacity: 0.7; }
                     .bounty-card-reward { font-size: 0.85rem; color: #d4af37; margin-top: 4px; }
                     .bounty-empty-tip { text-align: center; opacity: 0.6; padding: 20px 0; }
-                    /* 古风主题覆盖 */
                     body.ui-style-ancient .bounty-card { background: var(--paper-dark, #e6e2d8); border: 2px solid var(--ink-dark, #2c2c2c); }
                     body.ui-style-ancient .bounty-card:hover { background: var(--paper-light, #faf8f2); }
                     body.ui-style-ancient .bounty-card-active { border-color: var(--accent-gold, #b7950b); }
@@ -610,14 +608,22 @@
                 <div class="gs-layout">
                     <!-- 左侧选项卡列 -->
                     <div class="gs-tabs" id="gs-tabs">
+                        <button class="gs-tab" data-tab="workspace" onclick="gsSelectTab('workspace')">存档切换</button>
                         <button class="gs-tab active" data-tab="switches" onclick="gsSelectTab('switches')">通用设置</button>
                         <button class="gs-tab" data-tab="difficulty" onclick="gsSelectTab('difficulty')">难度设置</button>
                         <button class="gs-tab" data-tab="summary" onclick="gsSelectTab('summary')">总结管理</button>
                         <button class="gs-tab" data-tab="recall" onclick="gsSelectTab('recall')">召回管理</button>
+                        <button class="gs-tab" data-tab="memory" onclick="gsSelectTab('memory')">记忆编辑</button>
+                        <button class="gs-tab" data-tab="portrait" onclick="gsSelectTab('portrait')">主角立绘</button>
                         <button class="gs-tab" data-tab="prompts" onclick="gsSelectTab('prompts')">提示词管理</button>
                     </div>
                     <!-- 右侧内容区 -->
                     <div class="gs-panel-wrap">
+                        <!-- Workspace 存档切换 -->
+                        <div class="gs-panel" id="gs-panel-workspace">
+                            <h3>存档切换</h3>
+                            <div id="workspace-manager-root"></div>
+                        </div>
                         <!-- 通用设置 -->
                         <div class="gs-panel active" id="gs-panel-switches">
                             <h3>通用设置</h3>
@@ -664,6 +670,14 @@
                                     <input type="range" id="gs-font-range" class="gs-range" min="1" max="5" step="1" value="2" oninput="gsOnFontLevel(this)">
                                     <span>大</span>
                                 </div>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">正文字体</span>
+                                <select id="gs-story-font-family" class="gs-select" onchange="gsOnStoryFontFamily(this)">
+                                    <option value="sans">无衬线（原版）</option>
+                                    <option value="kai">古风楷体</option>
+                                    <option value="song">宋体 / 思源宋体</option>
+                                </select>
                             </div>
                             <!-- 音乐设置 -->
                             <h4 class="gs-subhead">音乐设置</h4>
@@ -873,6 +887,21 @@
                                 <span class="gs-switch-label">token</span>
                             </div>
                         </div>
+                        <!-- 记忆编辑 -->
+                        <div class="gs-panel" id="gs-panel-memory">
+                            <h3>记忆编辑</h3>
+                            <div style="font-size:12px;color:#aaa;margin-bottom:12px;line-height:1.7;">
+                                手动查看/修改 AI 的记忆内容（碎片日记、剧情事件、已确立事实、人物弧光、每周总结）。<br>
+                                保存后向量由系统下一轮自动重建，无需手动处理。<br>
+                                <span style="color:#e0a030;">注意：修改会立即影响后续 AI 的回忆，请谨慎操作。</span>
+                            </div>
+                            <button class="modal-btn" onclick="memoryEditor.open()">打开记忆编辑器</button>
+                        </div>
+                        <!-- 主角自定义立绘 -->
+                        <div class="gs-panel" id="gs-panel-portrait">
+                            <h3>主角立绘</h3>
+                            <div id="user-portrait-manager-root"></div>
+                        </div>
                         <!-- 提示词管理 -->
                         <div class="gs-panel" id="gs-panel-prompts">
                             <h3>提示词管理</h3>
@@ -901,7 +930,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- 天赋属性 -->
                     <div class="cheat-section">
                         <h4>天赋属性</h4>
@@ -924,7 +953,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- 人物数值 -->
                     <div class="cheat-section">
                         <h4>人物数值</h4>
@@ -947,7 +976,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- 战斗数值 -->
                     <div class="cheat-section">
                         <h4>战斗数值</h4>
@@ -962,7 +991,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- 其他数值 -->
                     <div class="cheat-section">
                         <h4>其他数值</h4>
@@ -981,7 +1010,7 @@
                             </div>
                         </div>
                     </div>
-                    
+
                     <!-- NPC好感度 -->
                     <div class="cheat-section">
                         <h4>NPC好感度</h4>
@@ -1055,7 +1084,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="modal-buttons">
                     <button class="modal-btn" onclick="saveCheatValues()">保存</button>
                     <button class="modal-btn cancel" onclick="closeCheatModal()">取消</button>
@@ -1186,16 +1215,16 @@
             <div class="story-content-wrapper">
                 <!-- 页面指示器 -->
                 <div class="page-indicator" id="page-indicator"></div>
-                
+
                 <!-- 翻页箭头 -->
                 <button class="story-nav-btn prev" id="story-prev-btn" onclick="prevPage()">◀</button>
                 <button class="story-nav-btn next" id="story-next-btn" onclick="nextPage()">▶</button>
-                
+
                 <!-- 故事文本 -->
                 <div class="story-text" id="story-text">
                     江湖路远，故事未始...
                 </div>
-                
+
                 <!-- 流式生成控件 -->
                 <div id="stream-controls" style="display:none; justify-content:center; align-items:center; padding:6px 0;">
                     <button id="stream-stop-btn" onclick="pipeline.abortCurrentTurn()" style="
@@ -1206,7 +1235,7 @@
                     ">⏹ 停止生成</button>
                 </div>
             </div>
-            
+
             <!-- 随机事件容器 -->
             <div class="random-event-container" id="random-event-container">
                 <div class="event-title">随机事件</div>
@@ -1261,7 +1290,7 @@
     <!-- 加载外部库 -->
     <script src="module/log-capture.js"></script>
     <script src="module/markdown-it.min.js"></script>
-    
+
     <!-- 动态加载游戏模块 -->
     <!-- <script>
         // 游戏模块列表
@@ -1274,7 +1303,7 @@
             'game-helpers.js',
             'game-events.js'
         ];
-        
+
         // 动态加载所有模块
         gameModules.forEach(module => {
             const script = document.createElement('script');
@@ -1293,7 +1322,7 @@
     <script src="module/game-events.js"></script>
     <script src="module/special-event.js"></script>
     <script src="module/game-skills.js"></script>
-    
+
     <!-- 独立前端新增模块 -->
     <script src="module/variable-system.js"></script>
     <script src="module/template-engine.js"></script>
@@ -1327,10 +1356,13 @@
     <script src="module/event-runner.js"></script>
     <script src="module/location-runner.js"></script>
     <script src="module/pipeline.js"></script>
-    
+
     <!-- UI 模块 -->
     <script src="ui/config-modal.js"></script>
     <script src="ui/prompt-manager-modal.js"></script>
+    <script src="ui/memory-editor.js"></script>
+    <script src="ui/user-portrait-manager.js"></script>
+    <script src="ui/workspace-manager.js"></script>
     <script src="module/bgm-manager.js"></script>
     <script src="module/scene3d-bridge.js"></script>
 
@@ -1340,18 +1372,18 @@
             hasSTscript: typeof window.STscript === 'function',
             hasTriggerSlash: typeof window.triggerSlash === 'function'
         };
-        
+
         // 兼容层
         window.triggerSlash = window.triggerSlash || window.STscript;
         window.STscript = window.STscript || window.triggerSlash;
-        
+
         // 模板变量
         // const outPut = `$1`;
 
 //         //测试用
 //         const outPut = `
 
-//         <MAIN_TEXT>   
+//         <MAIN_TEXT>
 // ## **景祐二年正月 第2周**
 // ***
 // ### **本门内参** ㊙️
@@ -1491,7 +1523,7 @@ const outPut = `
 </ANAL>
 
 <SLG_MODE>
-    
+
 <MAIN_TEXT>
 清晨，你站在外堡通往天山派总坛的石阶前，心脏扑通扑通跳个不停。今天是你正式拜入天山派的日子——一个改变命运的神圣时刻。你却想着：「要命，石阶怎么这么多，爬上去不得累死？」
 「喂！你还在那里发什么呆！」一个清脆的声音把你拉回现实。只见一个娇小的身影正叉着腰站在你面前——银白色的双髻上系着红色铃铛，随着她的动作叮当作响。最引人注目的是她头顶的白色狐耳和身后蓬松的大尾巴，正因为不耐烦而微微竖起。「我是萧白瑚！负责带你上山的！」她鼓起腮帮子，赤红色的圆眼瞪着你，「待会上山跟紧了，要是爬不动了，我可不会等你！」她顿了顿，小声嘀咕：「……虽然我自己也经常爬到一半想哭。」
@@ -1714,15 +1746,15 @@ const outPut = `
 //     "其他NPC": "无"
 // }
 // </SIDE_NOTE>`;
-      
+
         // ========== 保留在HTML中的函数（用于onclick调用） ==========
-        
+
         // 过滤thinking标签内容（鲁棒匹配：支持空格、下划线、大小写、时态变体）
         function removeThinkingContent(content) {
             if (!content) return content;
-            
+
             let result = content;
-            
+
             // 步骤1: 移除所有完整的 thinking 块
             // 循环移除，处理可能的嵌套情况
             let prevResult;
@@ -1743,7 +1775,7 @@ const outPut = `
                     }
                 );
             } while (result !== prevResult);
-            
+
             // 步骤2: 检查未闭合的 thinking 开始标签（流式场景）
             const openTagPattern = /<([^>\/]+)>/g;
             let match;
@@ -1754,13 +1786,13 @@ const outPut = `
                     lastThinkingStart = match.index;
                 }
             }
-            
+
             // 如果找到未闭合的thinking标签，截断到该标签之前
             if (lastThinkingStart !== -1) {
                 console.log('检测到未闭合的thinking标签，截断内容');
                 result = result.substring(0, lastThinkingStart);
             }
-            
+
             return result.trim();
         }
 
@@ -1837,29 +1869,29 @@ const outPut = `
                 console.log('[applyParsedInit] 同步完成, gameData.summary_Small:', (gameData.summary_Small || '').substring(0, 80));
             }
         }
-        
+
         function parseOutput(slgModeContent) {
             if (slgModeContent !== null && slgModeContent !== undefined) {
                 // 先过滤thinking标签内容
                 slgModeContent = removeThinkingContent(slgModeContent);
-                
+
                 // 提取正文：从第一个汉字、# 或 * 开始到第一个<为止
                 // 扩展的Unicode范围支持更多中文字符（包括繁体）
                 const mainTextMatch = slgModeContent.match(/[#*\u4e00-\u9fff\u3400-\u4dbf...][^<]*/);
                 if (mainTextMatch) {
                     const startIndex = slgModeContent.indexOf(mainTextMatch[0]);
                     const endIndex = slgModeContent.indexOf('<', startIndex);
-                    const mainText = endIndex > -1 
-                        ? slgModeContent.substring(startIndex, endIndex) 
+                    const mainText = endIndex > -1
+                        ? slgModeContent.substring(startIndex, endIndex)
                         : slgModeContent.substring(startIndex);
-                    
+
                     console.log(`成功捕捉到正文（通过汉字/#/*特征）`);
                     localState.currentStoryText = mainText.trim();
                 }
-                
+
                 // 新增：提取SUMMARY内容
                 // const summaryMatch = slgModeContent.match(/<SUMMARY>([\s\S]*?)<\/SUMMARY>/);
-                if (!localState.summarySmallUpdateApplied) {   
+                if (!localState.summarySmallUpdateApplied) {
                     const summaryRegex = /<[\s_]*[Ss][Uu][Mm][Mm][Aa][Rr][Yy][\s_]*>([\s\S]*?)<[\s_]*\/[\s_]*[Ss][Uu][Mm][Mm][Aa][Rr][Yy][\s_]*>/;
                     const summaryMatch = slgModeContent.match(summaryRegex);
                     if (summaryMatch && summaryMatch[1]) {
@@ -1872,15 +1904,15 @@ const outPut = `
                         const week = remainingWeeks % 4 + 1;
 
                         const timestamp = `[第${year}年第${month}月第${week}周]`;
-                        
+
                         // 构建本次要添加的完整内容（用于去重检查）
                         const contentToAdd = `${timestamp}\n${summaryContent}`;
-                        
+
                         // 检查是否已存在相同内容（防止重新渲染时重复累加）
                         const alreadyExists = summary_Small && summary_Small.includes(summaryContent);
                         const alreadyExistsInWeek = summary_Week && summary_Week.includes(summaryContent);
                         const alreadyExistsInBackup = summary_Backup && summary_Backup.includes(summaryContent);
-                        
+
                         if (alreadyExists || alreadyExistsInWeek || alreadyExistsInBackup) {
                             console.log('SUMMARY内容已存在，跳过重复添加');
                         } else {
@@ -1925,20 +1957,20 @@ const outPut = `
                                     while (summaryStartSearch >= 0 && slgModeContent[summaryStartSearch] !== '>') {
                                         summaryStartSearch--;
                                     }
-                                    
+
                                     if (summaryStartSearch >= 0) {
                                         // 找到了>符号，提取这段内容
                                         const potentialSummary = slgModeContent.substring(summaryStartSearch + 1, searchStart + 1).trim();
-                                        
+
                                         // 检查是否包含SUMMARY相关内容
                                         if (potentialSummary.length > 0 && !potentialSummary.includes('<MAIN_TEXT>')) {
                                             console.log('通过鲁棒方法捕捉到可能的SUMMARY内容：', potentialSummary);
-                                            
+
                                             // 检查是否已存在相同内容（防止重新渲染时重复累加）
                                             const alreadyExists = summary_Small && summary_Small.includes(potentialSummary);
                                             const alreadyExistsInWeek = summary_Week && summary_Week.includes(potentialSummary);
                                             const alreadyExistsInBackup = summary_Backup && summary_Backup.includes(potentialSummary);
-                                            
+
                                             if (alreadyExists || alreadyExistsInWeek || alreadyExistsInBackup) {
                                                 console.log('SUMMARY内容已存在（鲁棒方法），跳过重复添加');
                                             } else {
@@ -1983,20 +2015,20 @@ const outPut = `
                         }
                     }
                 }
-                
+
                 // 提取JSON：从第一个{开始到下一个<为止（如果没有<则到结尾）
                 const jsonStartIndex = slgModeContent.indexOf('{');
                 if (jsonStartIndex > -1 && !localState.turnUpdateApplied) {
                     const jsonEndIndex = slgModeContent.indexOf('<', jsonStartIndex);
-                    const jsonText = jsonEndIndex > -1 
+                    const jsonText = jsonEndIndex > -1
                         ? slgModeContent.substring(jsonStartIndex, jsonEndIndex)
                         : slgModeContent.substring(jsonStartIndex);
-                    
+
                     try {
                         console.log(`成功捕捉到JSON（通过{特征）`);
                         let llmResponse = jsonText.trim();
                         console.log(`提取的JSON文本：${llmResponse}`);
-                        
+
                         if (typeof llmResponse === 'string') {
                             llmResponse = JSON.parse(llmResponse);
                         }
@@ -2012,24 +2044,24 @@ const outPut = `
         function showPlayerStats() {
             // 只有当前场景不是角色属性或人际关系时才记录
             const activeScene = document.querySelector('.scene.active');
-            if (activeScene && 
-                activeScene.id !== 'player-stats-scene' && 
+            if (activeScene &&
+                activeScene.id !== 'player-stats-scene' &&
                 activeScene.id !== 'relationships-scene') {
                 previousScene = activeScene.id.replace('-scene', '');
                 wasInSLGMode = GameMode === 1;
             }
-            
+
             // 清除SLG相关元素
             const viewport = document.getElementById('main-viewport');
             const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
             existingLayers.forEach(layer => layer.remove());
             const existingMask = viewport.querySelector('.slg-interaction-mask');
             if (existingMask) existingMask.remove();
-            
+
             // 先切换场景
             switchScene('player-stats');
             updateStatsDisplay();
-            
+
             // 如果是SLG模式，移除该场景的slg-mode类
             if (GameMode === 1) {
                 const statsScene = document.getElementById('player-stats-scene');
@@ -2041,24 +2073,24 @@ const outPut = `
         function showRelationships() {
             // 只有当前场景不是角色属性或人际关系时才记录
             const activeScene = document.querySelector('.scene.active');
-            if (activeScene && 
-                activeScene.id !== 'player-stats-scene' && 
+            if (activeScene &&
+                activeScene.id !== 'player-stats-scene' &&
                 activeScene.id !== 'relationships-scene') {
                 previousScene = activeScene.id.replace('-scene', '');
                 wasInSLGMode = GameMode === 1;
             }
-            
+
             // 清除SLG相关元素
             const viewport = document.getElementById('main-viewport');
             const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
             existingLayers.forEach(layer => layer.remove());
             const existingMask = viewport.querySelector('.slg-interaction-mask');
             if (existingMask) existingMask.remove();
-            
+
             // 先切换场景
             switchScene('relationships');
             updateRelationshipsDisplay();
-            
+
             // 如果是SLG模式，移除该场景的slg-mode类
             if (GameMode === 1) {
                 const relScene = document.getElementById('relationships-scene');
@@ -2070,11 +2102,11 @@ const outPut = `
         function toggleNpcVisibility(npcId) {
             const checkbox = document.getElementById(`visibility-${npcId}`);
             npcVisibility[npcId] = checkbox.checked;
-            
+
             // 如果NPC被设置为不显示，立即将其位置设为none
             if (!npcVisibility[npcId]) {
                 currentNpcLocations[npcId] = 'none';
-                
+
                 // 更新对应的位置变量
                 switch(npcId) {
                     case 'A': npcLocationA = 'none'; break;
@@ -2094,7 +2126,7 @@ const outPut = `
                     case 'N': npcLocationN = 'none'; break;
                     case 'O': npcLocationO = 'none'; break;
                 }
-                
+
                 // 如果当前场景有该NPC，更新显示
                 const activeScene = document.querySelector('.scene.active');
                 if (activeScene && activeScene.id !== 'map-scene') {
@@ -2102,7 +2134,7 @@ const outPut = `
                     displayNpcs(locationName);
                 }
             }
-            
+
             // 保存游戏数据
             // saveGameData();
         }
@@ -2111,36 +2143,36 @@ const outPut = `
         async function giveGift(npcId) {
             const npc = npcs[npcId];
             const currentFavorability = npcFavorability[npcId];
-            
+
             // 再次检查条件
             if (npcGiftGiven[npcId]) {
                 showModal('本周已经给该NPC送过礼物了！');
                 return;
             }
-            
+
             if (currentFavorability > 40) {
                 showModal(`${npc.name}的好感度已经超过40，无需再送礼！`);
                 return;
             }
-            
+
             if (playerStats.金钱 < 500) {
                 showModal('金钱不足500，无法送礼！');
                 return;
             }
-            
+
             // 执行送礼
             playerStats.金钱 -= 500;
             npcFavorability[npcId] = Math.min(100, npcFavorability[npcId] + 5);
             npcGiftGiven[npcId] = true;
-            
+
             checkAllValueRanges();
             updateStatsDisplay();
             updateRelationshipsDisplay();
-            
+
             // 发送消息
             const message = `你花费500金钱给${npc.name}送了一份礼物<br>` +
                         `${npc.name}的好感度提升至${npcFavorability[npcId]}`;
-            
+
             await showModal(message);
         }
 
@@ -2153,59 +2185,59 @@ const outPut = `
                     currentWeek++;
                     actionPoints = 3;
                     userLocation = "tianshanpai";
-                    
+
                     // 更新季节
                     const newSeason = calculateSeason(currentWeek);
                     if (newSeason !== seasonStatus) {
                         seasonStatus = newSeason;
                         console.log(`季节更新为：${seasonStatus}`);
                     }
-                    
+
                     // 更新场景背景
                     updateSceneBackgrounds();
-                    
+
                     // 重置所有NPC的送礼状态
                     Object.keys(npcGiftGiven).forEach(npcId => {
                         npcGiftGiven[npcId] = false;
                     });
-                    
+
                     // 重置所有NPC的切磋状态
                     Object.keys(npcSparred).forEach(npcId => {
                         npcSparred[npcId] = false;
                     });
-                    
+
                     // 重置炼丹状态
                     alchemyDone = false;
-                    
+
                     // 更新本周好感度快照（用于周好感上限限制）
                     Object.keys(npcFavorability).forEach(npcId => {
                         weekStartFavorability[npcId] = npcFavorability[npcId];
                     });
-                    
+
                     checkAllValueRanges();
                     updateAllDisplays();
                     refreshNpcLocations();
-                    
+
                     // 检查特殊事件
                     const specialEvent = typeof checkSpecialEvents === 'function' ? checkSpecialEvents() : null;
                     const year = Math.floor((currentWeek - 1) / 48) + 1;
                     const remainingWeeks = (currentWeek - 1) % 48;
                     const month = Math.floor(remainingWeeks / 4) + 1;
                     const week = remainingWeeks % 4 + 1;
-                    
+
                     if (specialEvent) {
                         console.log(`[skipWeek] 触发特殊事件: ${specialEvent.name}`);
-                        
+
                         // 传递 fromSkipWeek: true 标识是由跳过一周按钮触发的
                         const result = await triggerSpecialEvent(specialEvent, { fromSkipWeek: true });
-                        
+
                         // 独立前端：委托给 pipeline 处理文本渲染
                         if (result && result.standalone && typeof pipeline !== 'undefined' && pipeline.handleSpecialEvent) {
                             const userMsg = `时间过了一周，在${year}年${month}月${week}周，${gameData.playerName || '主角'}在${mapLocation}触发特殊剧情——${specialEvent.name}`;
                             await pipeline.handleSpecialEvent(result.event, userMsg);
                             return;
                         }
-                        
+
                         // SR 链路已在 triggerSpecialEvent 内部处理完毕
                         return;
                     } else {
@@ -2231,7 +2263,7 @@ const outPut = `
                     showModal('行动点不足，无法进行此操作！');
                     return;
                 }
-                
+
                 let actionPointConsumed = true;
                 const totalTalents = getTotalTalents();
                 const mindChance = totalTalents.心性 / 2;
@@ -2242,9 +2274,9 @@ const outPut = `
                 }
                 checkAllValueRanges();
                 updateAllDisplays();
-                
+
                 showBlackjackGame();
-                
+
                 if (!actionPointConsumed) {
                     window.pendingMindMessage = true;
                 }
@@ -2256,7 +2288,7 @@ const outPut = `
                 //     showModal('行动点不足，无法进行此操作！');
                 //     return;
                 // }
-                
+
                 // let actionPointConsumed = true;
                 // const mindChance = playerTalents.心性 / 2;
                 // if (Math.random() * 100 < mindChance) {
@@ -2266,9 +2298,9 @@ const outPut = `
                 // }
                 // checkAllValueRanges();
                 // updateAllDisplays();
-                
+
                 showFarmGame();
-                
+
                 // if (!actionPointConsumed) {
                 //     window.pendingMindMessage = true;
                 // }
@@ -2295,15 +2327,15 @@ const outPut = `
             } else {
                 actionPoints--;
             }
-            
+
             const config = actionConfigs[action];
             const totalTalentsForAction = getTotalTalents();
             const talentBase = totalTalentsForAction[config.talentBonus];
             const talentBonus = talentBase / 2;
-            
+
             // 根据难度调整成功率计算
             let moodBonus = 10; // 默认普通难度
-            
+
             switch(difficulty) {
                 case 'easy':
                     moodBonus = 20;
@@ -2315,14 +2347,14 @@ const outPut = `
                     moodBonus = 0;
                     break;
             }
-            
+
             const randomRoll = Math.random() * 100;
             const moodFactor = (playerMood + moodBonus) / 100;
             const finalValue = (randomRoll + talentBonus) * moodFactor;
 
             let successLevel, successText, moodCost;
             let statChange = {};
-            
+
             if (finalValue >= 80) {
                 successLevel = '大成功';
                 successText = '成果斐然！';
@@ -2419,7 +2451,7 @@ const outPut = `
             if (action !== '休息') {
                 changeText += `<br>体力: -${moodCost}`;
             }
-            
+
             if (actionPointConsumed) {
                 changeText += '<br>行动点: -1';
             } else {
@@ -2432,7 +2464,7 @@ const outPut = `
                 seasonStatus = newSeason;
                 updateSceneBackgrounds();
             }
-            
+
             let locationInfo = '';
             if (userLocation === userLocation_old) {
                 locationInfo = `地点：${locationNames[location]}<br>`;
@@ -2453,17 +2485,17 @@ const outPut = `
 
             updateAllDisplays();
             refreshNpcLocations();
-            
+
             await handleMessageOutput(resultMessage);
         }
 
         // 刷新NPC位置
         function refreshNpcLocations() {
             // 获取用户当前位置（排除特殊场景）
-            const currentLocation = userLocation === 'tianshanpai' || 
-                                userLocation === 'player-stats' || 
+            const currentLocation = userLocation === 'tianshanpai' ||
+                                userLocation === 'player-stats' ||
                                 userLocation === 'relationships' ? null : userLocation;
-            
+
             // 保存当前位置的NPC
             const npcsAtCurrentLocation = [];
             if (currentLocation) {
@@ -2473,7 +2505,7 @@ const outPut = `
                     }
                 });
             }
-            
+
             const locationCount = {
                 yanwuchang: 0,
                 cangjingge: 0,
@@ -2487,7 +2519,7 @@ const outPut = `
                 gongtian: 0,
                 danfang: 0
             };
-            
+
             // 如果有当前位置，先统计该位置的NPC数量
             if (currentLocation && locationCount.hasOwnProperty(currentLocation)) {
                 locationCount[currentLocation] = npcsAtCurrentLocation.length;
@@ -2505,20 +2537,20 @@ const outPut = `
                     currentNpcLocations[npcId] = 'none';
                     return;
                 }
-                
+
                 let assigned = false;
                 let attempts = 0;
                 const maxAttempts = 20;
 
                 while (!assigned && attempts < maxAttempts) {
                     const location = getRandomLocation(npcId);
-                    
+
                     // 跳过用户当前位置
                     if (currentLocation && location === currentLocation) {
                         attempts++;
                         continue;
                     }
-                    
+
                     if (location === 'none') {
                         currentNpcLocations[npcId] = location;
                         assigned = true;
@@ -2527,7 +2559,7 @@ const outPut = `
                         locationCount[location]++;
                         assigned = true;
                     }
-                    
+
                     attempts++;
                 }
 
@@ -2553,7 +2585,7 @@ const outPut = `
             npcLocationM = currentNpcLocations.M;
             npcLocationN = currentNpcLocations.N;
             npcLocationO = currentNpcLocations.O;
-            
+
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id !== 'map-scene') {
                 const locationName = activeScene.id.replace('-scene', '');
@@ -2571,18 +2603,18 @@ const outPut = `
             // 移除返回按钮的偏移类
             const backBtns = document.querySelectorAll('.back-btn.slg-mode-offset');
             backBtns.forEach(btn => btn.classList.remove('slg-mode-offset'));
-            
+
             // 获取当前场景
             const activeScene = document.querySelector('.scene.active');
             const currentSceneId = activeScene ? activeScene.id : '';
-            
+
             // 如果是从角色属性或人际关系界面返回，且之前在SLG模式
-            if ((currentSceneId === 'player-stats-scene' || currentSceneId === 'relationships-scene') 
+            if ((currentSceneId === 'player-stats-scene' || currentSceneId === 'relationships-scene')
                 && wasInSLGMode && GameMode === 1) {
-                
+
                 // 直接返回到之前的SLG场景
                 switchScene(previousScene);
-                
+
                 // 如果不是地图场景，添加slg-mode类
                 if (previousScene !== 'map') {
                     const targetScene = document.getElementById(previousScene + '-scene');
@@ -2590,10 +2622,10 @@ const outPut = `
                         targetScene.classList.add('slg-mode');
                     }
                 }
-                
+
                 // 恢复SLG显示
                 updateStoryDisplay();
-                
+
                 // 重置状态
                 wasInSLGMode = false;
             } else {
@@ -2627,18 +2659,18 @@ const outPut = `
         // 发送互动内容
         async function sendInteraction() {
             const interactionContent = document.getElementById('interaction-input').value.trim();
-            
+
             if (!interactionContent) {
                 alert('请输入互动内容！');
                 return;
             }
-            
+
             const activeScene = document.querySelector('.scene.active');
             const location = activeScene.id.replace('-scene', '');
-            
+
             const npc = npcs[currentInteractionNpc];
             const npcsPresent = npc.name;
-            
+
             let locationInfo = '';
             if (userLocation === userLocation_old) {
                 locationInfo = `地点：${locationNames[location]}<br>`;
@@ -2655,12 +2687,12 @@ const outPut = `
                 `${gameData.playerName || '主角'}行动选择：NPC互动<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动对象：${npc.name}<br>` +
                 `&nbsp;&nbsp;&nbsp;&nbsp;互动内容：<span class="interaction-content">${interactionContent}</span>`;
-            
+
             closeModal();
-            
+
             currentInteractionNpc = null;
             currentInteractionLocation = null;
-            
+
             await handleMessageOutput(resultMessage);
         }
 
@@ -2862,7 +2894,7 @@ const outPut = `
             const popup = document.getElementById('npc-info-popup');
             popup.classList.remove('show');
             document.removeEventListener('click', closeNpcInfo);
-            
+
             if (action === '互动') {
                 const activeScene = document.querySelector('.scene.active');
                 const location = activeScene.id.replace('-scene', '');
@@ -2873,12 +2905,12 @@ const outPut = `
                     showModal('本周已经和该NPC切磋过了！');
                     return;
                 }
-                
+
                 const npc = npcs[npcId];
                 currentBattleType = 'npc';
                 currentBattleNpcName = npc.name;
                 currentBattleNpcId = npcId;  // 新增：记录NPC ID
-                
+
                 const battleData = {
                     player: {
                         name: '你',
@@ -2892,7 +2924,7 @@ const outPut = `
                         category: '未知'  // NPC切磋时类别默认为未知
                     }
                 };
-                
+
                 showBattleGame(battleData);
             }
         }
@@ -2903,11 +2935,11 @@ const outPut = `
             if (GameMode === 1) {
                 return;
             }
-            
+
             const popup = document.getElementById('location-info-popup');
             popup.classList.remove('show');
             document.removeEventListener('click', closeLocationInfo);
-            
+
             userLocation = locationId;
             switchScene(locationId);
         }
@@ -2921,7 +2953,7 @@ const outPut = `
             const remainingWeeks = (currentWeek - 1) % 48;
             const month = Math.floor(remainingWeeks / 4) + 1;
             const week = remainingWeeks % 4 + 1;
-            
+
             if (!actionContent) {
                 if (lastUserMessage) {
                     showConfirmModal(
@@ -2947,9 +2979,9 @@ const outPut = `
                     const dangerLevel = (_locMemForDanger[mapLocation] && _locMemForDanger[mapLocation].危险度 && _locMemForDanger[mapLocation].危险度.评级)
                         || locationDangerLevels[mapLocation] || '低';
                     const eventChance = dangerEventChance[dangerLevel];
-                    
+
                     const eventRoll = Math.random() * 100;
-                    
+
                     // 先判断战斗事件（优先级更高）
                     if (eventRoll < eventChance.battle) {
                         battleEvent = 1;
@@ -2969,13 +3001,13 @@ const outPut = `
                     randomEvent = 0;
                     battleEvent = 0;
                 }
-                
+
                 // 生成随行NPC名字列表
                 let companionNames = '无';
                 if (companionNPC && companionNPC.length > 0) {
                     companionNames = companionNPC.join('、');
                 }
-                
+
                 // 构建事件信息
                 let eventInfo = '';
                 if (randomEvent === 1) {
@@ -2984,7 +3016,7 @@ const outPut = `
                 if (battleEvent === 1) {
                     eventInfo += '<br>特殊事件：遭遇战斗';
                 }
-                
+
                 resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
                     `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                     `地点：${mapLocation}<br>` +
@@ -2995,9 +3027,9 @@ const outPut = `
                 // 原有的GameMode为0的逻辑
                 const activeScene = document.querySelector('.scene.active');
                 let currentLocation = '';
-                
+
                 const npcsPresent = getNpcsAtLocation(userLocation).map(npc => npc.name).join('、') || '无';
-                
+
                 let locationInfo = '';
                 if (activeScene.id === 'map-scene') {
                     // 地图场景特殊处理
@@ -3010,7 +3042,7 @@ const outPut = `
                 } else {
                     const sceneName = activeScene.id.replace('-scene', '');
                     const currentLocationName = locationNames[sceneName] || sceneName;
-                    
+
                     if (userLocation === userLocation_old) {
                         locationInfo = `地点：${currentLocationName}<br>`;
                     } else {
@@ -3027,27 +3059,27 @@ const outPut = `
             }
             inputElement.value = '';
             inputElement.style.height = 'auto';
-            
+
             await handleMessageOutput(resultMessage);
         }
 
         // 发起战斗
         function startBattle() {
             if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
-            
+
             // 进入战斗前关闭战斗事件框并清除战斗标志位
             // 注意：保留 currentBattleEvent，战斗结算时仍需用其敌方信息/奖励/事件描述
             const battleEventContainer = document.getElementById('battle-event-container');
             if (battleEventContainer) battleEventContainer.classList.remove('show');
             battleEvent = 0;
             if (typeof gameData !== 'undefined') gameData.battleEvent = 0;
-            
+
             const enemyInfo = currentBattleEvent.敌方信息;
             // 只防止被意外覆盖，不重新推导（worldmap-exit 悬赏分支已赋值为 'bounty' 为准）
             if (currentBattleType !== 'bounty') {
                 currentBattleType = 'event';
             }
-            
+
             const battleData = {
                 player: {
                     name: '你',
@@ -3062,14 +3094,14 @@ const outPut = `
                     category: enemyInfo.类别 || '未知'  // 从敌方信息中提取类别
                 }
             };
-            
+
             showBattleGame(battleData);
         }
 
         // 放弃战斗
         async function fleeBattle() {
             if (!currentBattleEvent) return;
-            
+
             const _fbYear = Math.floor((currentWeek - 1) / 48) + 1;
             const _fbRemaining = (currentWeek - 1) % 48;
             const _fbMonth = Math.floor(_fbRemaining / 4) + 1;
@@ -3080,9 +3112,9 @@ const outPut = `
                 `地点：${mapLocation || '天山派'}<br>` +
                 `事件描述: ${currentBattleEvent.事件描述}<br>` +
                 `战斗结果: 放弃战斗，选择避开`;
-            
+
             hideBattleEvent();
-            
+
             await handleMessageOutput(resultMessage);
         }
 
@@ -3125,7 +3157,7 @@ const outPut = `
                 `地点：${_slgLocation}<br>` +
                 `随行NPC：${_slgCompanions}<br>` +
                 `你结束了山下的游历，回到了天山派`;
-            
+
             // 重置游戏模式
             GameMode = 0;
             if (window.GameSceneBridge) GameSceneBridge.invalidate('return-from-gal');
@@ -3160,36 +3192,36 @@ const outPut = `
             battleEvent = 0;
             companionNPC = [];
             mapLocation = '天山派';
-            
+
             // 清除SLG图层
             const viewport = document.getElementById('main-viewport');
             const existingLayers = viewport.querySelectorAll('.slg-layer');
             existingLayers.forEach(layer => layer.remove());
             const existingMask = viewport.querySelector('.slg-interaction-mask');
             if (existingMask) existingMask.remove();
-            
+
             // 移除场景的SLG模式标记
             const scenes = document.querySelectorAll('.scene');
             scenes.forEach(scene => {
                 scene.classList.remove('slg-mode');
             });
-            
+
             // 设置userLocation为天山派地图
             userLocation = 'tianshanpai';
-            
+
             // 切换到地图场景
             switchScene('map');
             document.getElementById('map-scene').classList.add('active');
-            
+
             // 更新按钮显示
             updateSLGReturnButton();
-            
+
             // 刷新NPC位置
             refreshNpcLocations();
-            
+
             // 保存游戏数据
             // await saveGameData();
-            
+
             // // 根据环境处理消息输出
             // if (isInRenderEnvironment()) {
             //     const renderFunc = getRenderFunction();
@@ -3216,7 +3248,7 @@ const outPut = `
             const dropdown = document.getElementById(dropdownId);
             const allDropdowns = document.querySelectorAll('.dropdown-menu');
             const button = dropdown.previousElementSibling;
-            
+
             // 关闭其他下拉菜单
             allDropdowns.forEach(d => {
                 if (d.id !== dropdownId) {
@@ -3224,7 +3256,7 @@ const outPut = `
                     d.previousElementSibling.classList.remove('active');
                 }
             });
-            
+
             // 切换当前下拉菜单
             dropdown.classList.toggle('show');
             button.classList.toggle('active');
@@ -3253,26 +3285,28 @@ const outPut = `
             const remainingWeeks = (currentWeek - 1) % 48;
             const month = Math.floor(remainingWeeks / 4) + 1;
             const week = remainingWeeks % 4 + 1;
-            
+
             // 获取当前地点名称（SLG模式用 mapLocation，否则用 userLocation）
             const locationKey = (GameMode === 1 ? mapLocation : userLocation);
             const locationName = locationNames[locationKey] || locationKey || '未知地点';
-            
+
             // 构建存档名称
             const saveName = `第${year}年第${month}月第${week}周_所在地${locationName}`;
-            
+
             // 独立模式：使用 localStorage 存档
             if (!isInRenderEnvironment()) {
                 syncGameDataFromVariables();
                 // 独立前端专用：将当前活跃事件存入存档
                 gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
-                storageService.createSave(saveName);
+                var workspaceId = (typeof workspaceManager !== 'undefined') ? workspaceManager.getActiveId() : storageService.getActiveWorkspaceId();
+                storageService.createSave(saveName, workspaceId);
                 delete gameData._activeEvent;
-                showModal('存档成功！<br>存档名称：' + saveName);
+                if (typeof workspaceManager !== 'undefined') await workspaceManager.saveCurrentHead({ quiet: true });
+                showModal('存档成功！<br>存档位：' + workspaceId + '<br>存档名称：' + saveName);
                 toggleDropdown('system-dropdown');
                 return;
             }
-            
+
             // 调用SillyTavern的checkpoint命令
             if (isInRenderEnvironment()) {
                 const renderFunc = getRenderFunction();
@@ -3286,7 +3320,7 @@ const outPut = `
             } else {
                 showModal('当前环境不支持存档功能');
             }
-            
+
             // 关闭下拉菜单
             toggleDropdown('system-dropdown');
         }
@@ -3299,7 +3333,7 @@ const outPut = `
                 toggleDropdown('system-dropdown');
                 return;
             }
-            
+
             if (isInRenderEnvironment()) {
                 const renderFunc = getRenderFunction();
                 try {
@@ -3313,8 +3347,11 @@ const outPut = `
             }
     }
     function showSaveListModal() {
-    var saves = storageService.listSaves();
-    var html = '<div id="save-list-modal" class="modal viewport-overlay" style="display:block;"><div class="modal-content" style="max-width:500px;"><h3>存档管理</h3>';
+    var workspaceId = (typeof workspaceManager !== 'undefined') ? workspaceManager.getActiveId() : storageService.getActiveWorkspaceId();
+    var saves = storageService.listSaves(workspaceId);
+    var workspaceMeta = storageService.loadWorkspaceMeta ? storageService.loadWorkspaceMeta(workspaceId) : null;
+    var workspaceName = workspaceMeta && workspaceMeta.name ? workspaceMeta.name : workspaceId;
+    var html = '<div id="save-list-modal" class="modal viewport-overlay" style="display:block;"><div class="modal-content" style="max-width:500px;"><h3>存档管理 · ' + _escapeHtml(workspaceName) + '</h3>';
     if (saves.length === 0) {
         html += '<p style="text-align:center;color:#888;margin:20px 0;">暂无存档</p>';
     } else {
@@ -3352,11 +3389,12 @@ function autoSave() {
         syncGameDataFromVariables();
         gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
         var saveName = AUTO_SAVE_PREFIX + buildSaveName();
-        storageService.createSave(saveName);
+        var workspaceId = (typeof workspaceManager !== 'undefined') ? workspaceManager.getActiveId() : storageService.getActiveWorkspaceId();
+        storageService.createSave(saveName, workspaceId);
         delete gameData._activeEvent;
 
-        // FIFO：超出上限时删除最老的自动存档
-        var all = storageService.listSaves();
+        // FIFO：每个 Workspace 各自最多保留3个自动存档。
+        var all = storageService.listSaves(workspaceId);
         var autoSlots = all.filter(function(s) {
             return s.saveName && s.saveName.indexOf(AUTO_SAVE_PREFIX) === 0;
         }).sort(function(a, b) { return a.createdAt - b.createdAt; });
@@ -3365,7 +3403,10 @@ function autoSave() {
             storageService.deleteSave(autoSlots[0].id);
             autoSlots.shift();
         }
-        console.log('[AutoSave] 自动存档完成: ' + saveName + '，当前自动存档数: ' + Math.min(autoSlots.length, AUTO_SAVE_MAX));
+        if (typeof workspaceManager !== 'undefined') {
+            workspaceManager.saveCurrentHead({ quiet: true }).catch(function(e) { console.warn('[Workspace] 自动存档后更新 head 失败:', e); });
+        }
+        console.log('[AutoSave] ' + workspaceId + ' 自动存档完成: ' + saveName + '，当前自动存档数: ' + Math.min(autoSlots.length, AUTO_SAVE_MAX));
     } catch(e) {
         console.error('[AutoSave] 自动存档失败:', e);
         showModal('本次回复内容格式不完整，自动存档失败，建议重生成');
@@ -3374,14 +3415,22 @@ function autoSave() {
 
 // ==================== 加载存档弹窗 ====================
 function showLoadModal() {
-    var all = storageService.listSaves();
+    var activeWorkspace = (typeof workspaceManager !== 'undefined') ? workspaceManager.getActiveId() : storageService.getActiveWorkspaceId();
+    var all = storageService.listSaves(activeWorkspace);
     var autoSlots = all.filter(function(s) {
         return s.saveName && s.saveName.indexOf(AUTO_SAVE_PREFIX) === 0;
     }).sort(function(a, b) { return b.createdAt - a.createdAt; }); // 最新在前
+    var workspaceSlots = (typeof workspaceManager !== 'undefined') ? workspaceManager.getSlots() : [];
+    var workspaceGrid = workspaceSlots.map(function(slot) {
+        return '<button class="modal-btn' + (slot.current ? ' active' : '') + '" style="min-height:54px;padding:6px;white-space:normal" onclick="workspaceManager.selectFromSaveModal(\'' + slot.id + '\')"' + (slot.current ? ' disabled' : '') + '>' +
+            _escapeHtml(slot.name) + '<br><small>' + (slot.initialized ? ('自动存档 ' + slot.autoCount + '/3') : '空存档位') + '</small></button>';
+    }).join('');
+    var activeMeta = storageService.loadWorkspaceMeta ? storageService.loadWorkspaceMeta(activeWorkspace) : null;
 
     var html = '<div id="load-modal" class="modal viewport-overlay" style="display:block;">'
-        + '<div class="modal-content" style="max-width:480px;">'
-        + '<h3>自动存档</h3>';
+        + '<div class="modal-content" style="max-width:500px;">'
+        + '<h3>自动存档 · ' + _escapeHtml(activeMeta && activeMeta.name || activeWorkspace) + '</h3>'
+        + '<div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin:10px 0 14px">' + workspaceGrid + '</div>';
 
     if (autoSlots.length === 0) {
         html += '<p style="text-align:center;color:#888;margin:20px 0;">暂无自动存档</p>';
@@ -3451,14 +3500,16 @@ function importSTSaveFromLoadModal() {
         var file = e.target.files[0];
         if (!file) return;
         var reader = new FileReader();
-        reader.onload = function(ev) {
+        reader.onload = async function(ev) {
             var text = ev.target.result;
             if (typeof convertSTJsonl !== 'function') {
+                if (typeof workspaceManager !== 'undefined') workspaceManager.cancelPendingImport();
                 showModal('ST 转换模块未加载，请刷新页面后重试');
                 return;
             }
             var result = convertSTJsonl(text);
             if (!result.success) {
+                if (typeof workspaceManager !== 'undefined') workspaceManager.cancelPendingImport();
                 showModal('转换失败：' + result.error);
                 return;
             }
@@ -3467,6 +3518,7 @@ function importSTSaveFromLoadModal() {
             }
             try {
                 if (window.GameSceneBridge) GameSceneBridge.invalidate('st-import-begin');
+                if (typeof workspaceManager !== 'undefined') workspaceManager.preparePendingImport();
                 var payload = result.payload;
                 // 深拷贝隔断：下面 importSavePayload(payload) 会把这个 payload 存进 _cache[id]，
                 // mergeWithDefaults 不克隆数组字段（如 companionNPC/triggeredEvents），若不先克隆会与该存档槽共享引用
@@ -3530,30 +3582,41 @@ function importSTSaveFromLoadModal() {
                     if (gameData.bgmName) bgmManager.resume(gameData.bgmName);
                     else bgmManager.stop();
                 }
-                // 保存到本地存档槽
-                var id = storageService.importSavePayload(payload);
+                // 保存到当前 Workspace 的本地存档槽
+                var workspaceId = (typeof workspaceManager !== 'undefined') ? workspaceManager.getActiveId() : storageService.getActiveWorkspaceId();
+                var id = storageService.importSavePayload(payload, workspaceId);
                 storageService.saveAppState({ gameData: gameData });
+                if (typeof workspaceManager !== 'undefined') await workspaceManager.afterPayloadApplied();
                 // Phase L2：ST 存档无事件层，导入后从 watermark=0 起补建 L2
                 if (typeof eventRunner !== 'undefined') eventRunner.resumeOnLoad();
                 var warnText = result.warnings && result.warnings.length > 0 ? '\n提示：' + result.warnings.join('；') : '';
                 showModal('ST 存档导入成功！\n存档名：' + result.saveName + warnText);
                 if (window.GameSceneBridge) GameSceneBridge.afterRestore('st-import-complete', false);
             } catch(err) {
+                if (typeof workspaceManager !== 'undefined') workspaceManager.cancelPendingImport();
                 showModal('导入失败：' + err.message);
             }
         };
         reader.readAsText(file, 'utf-8');
     };
+    input.addEventListener('cancel', function() {
+        if (typeof workspaceManager !== 'undefined') workspaceManager.cancelPendingImport();
+    });
     input.click();
 }
 
-function loadSaveSlot(saveId) {
+function loadSaveSlot(saveId, options) {
+    options = options || {};
     // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果在切换存档后写回新存档（“串台”）
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     if (typeof locationRunner !== 'undefined') locationRunner.cancel();
     var payload = storageService.loadSave(saveId);
     if (!payload) { showModal('存档加载失败'); return; }
+    if (payload.workspaceId && storageService.setActiveWorkspaceId) storageService.setActiveWorkspaceId(payload.workspaceId);
+    if (payload.workspaceConfig && typeof promptManagerModal !== 'undefined' && promptManagerModal.applyWorkspaceConfig) {
+        promptManagerModal.applyWorkspaceConfig(payload.workspaceConfig);
+    }
     if (window.GameSceneBridge) GameSceneBridge.invalidate('load-save-begin');
     // 深拷贝隔断：payload === _cache[saveId] 的直接引用，mergeWithDefaults 不克隆数组字段，
     // 不先克隆的话合并后的 gameData 会和这个存档槽缓存对象共享引用，后续原地修改会污染旧存档
@@ -3696,10 +3759,14 @@ function loadSaveSlot(saveId) {
         if (gameData.bgmName) bgmManager.resume(gameData.bgmName);
         else bgmManager.stop();
     }
-    showModal('存档加载成功！');
+    if (!options.silent) showModal('存档加载成功！');
     // 持久化存档恢复后的状态到 localStorage
     storageService.saveAppState({ gameData: gameData });
     if (window.GameSceneBridge) GameSceneBridge.afterRestore('load-save-complete', false);
+    if (!options.skipWorkspaceHead && typeof workspaceManager !== 'undefined' && workspaceManager.afterPayloadApplied) {
+        workspaceManager.afterPayloadApplied().catch(function(e) { console.warn('[Workspace] 读档后更新 head 失败:', e); });
+    }
+    return true;
 }
 
 function deleteSaveSlot(saveId) {
@@ -3710,25 +3777,28 @@ function deleteSaveSlot(saveId) {
     });
 }
 
-function returnToStartScreen() {
-    if (!confirm('确定返回主菜单？未存档的进度将丢失。')) return;
-    location.href = 'start-screen-noST.html';
+async function returnToStartScreen() {
+    if (!confirm('确定返回主菜单？当前存档位会先自动保存。')) return;
+    if (typeof workspaceManager !== 'undefined') {
+        try { await workspaceManager.saveCurrentHead({ quiet: true }); }
+        catch (e) { showModal('存档位保存失败：' + (e && e.message || e)); return; }
+    }
+    location.href = /(?:^|\/)game\.html$/i.test(location.pathname) ? 'index.html' : 'start-screen-noST.html';
 }
 
-// ========== 导出存档：自定义文件名弹窗 ==========
-// 点导出 JSON/JSONL 存档时先弹窗：输入内容并确认 → 以该内容命名；跳过或留空 → 沿用默认命名
+// JSON 与 JSONL 共用命名入口；通过 DOM 属性写入名称，避免存档名成为 HTML。
 var _exportNameDone = null;
 function promptExportSaveName(defaultName, fileExt, onDone) {
     _exportNameDone = onDone;
     var modal = document.getElementById('modal');
     var modalText = document.getElementById('modal-text');
     var modalButtons = document.getElementById('modal-buttons');
-    modalText.innerHTML =
-        '<div style="font-size: clamp(1.1rem, 3vw, 1.4rem); margin-bottom: clamp(10px, 2vw, 15px);">自定义存档文件名</div>' +
-        '<div class="input-area"><input type="text" class="input-field" id="export-name-input" placeholder="' + defaultName + '"></div>' +
-        '<div style="font-size:12px;color:#888;margin-top:6px">留空或点「跳过」将使用默认命名（' + defaultName + fileExt + '）</div>';
-    modalButtons.innerHTML =
-        '<button class="modal-btn" onclick="_confirmExportName()">确认</button>' +
+    modalText.innerHTML = '<div style="font-size:1.2rem;margin-bottom:12px">自定义存档文件名</div>' +
+        '<div class="input-area"><input type="text" class="input-field" id="export-name-input"></div>' +
+        '<div id="export-name-hint" style="font-size:12px;color:#888;margin-top:6px"></div>';
+    document.getElementById('export-name-input').placeholder = defaultName;
+    document.getElementById('export-name-hint').textContent = '留空或点「跳过」将使用默认命名（' + defaultName + fileExt + '）';
+    modalButtons.innerHTML = '<button class="modal-btn" onclick="_confirmExportName()">确认</button>' +
         '<button class="modal-btn cancel" onclick="_skipExportName()">跳过</button>';
     modal.style.display = 'block';
     setTimeout(function() { var el = document.getElementById('export-name-input'); if (el) el.focus(); }, 100);
@@ -3741,30 +3811,28 @@ function _finishExportName(name) {
 }
 function _confirmExportName() {
     var el = document.getElementById('export-name-input');
-    var v = el ? el.value.trim() : '';
-    _finishExportName(v || null); // 空输入等价跳过
+    _finishExportName(el && el.value.trim() || null);
 }
 function _skipExportName() { _finishExportName(null); }
-
 function exportSave() {
     syncGameDataFromVariables();
     var defaultName = buildSaveName();
+    // 加载弹窗随后会关闭，必须在命名异步回调之前保留向量勾选状态。
+    var chk = document.getElementById('export-include-vectors-chk');
+    var includeVectors = chk ? chk.checked : true;
     promptExportSaveName(defaultName, '.json', function(customName) {
-        _doExportSave(customName, defaultName);
+        _doExportSave(customName, defaultName, includeVectors);
     });
 }
-
-function _doExportSave(customName, defaultName) {
+function _doExportSave(customName, defaultName, includeVectors = true) {
     // 导出时保存当前活跃事件，供 importSave 恢复选项框
     gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
     var saveName = customName || defaultName;
-    var chk = document.getElementById('export-include-vectors-chk');
-    var includeVectors = chk ? chk.checked : true;
-    var json = storageService.exportSaveToJson(saveName, includeVectors);
-    delete gameData._activeEvent;
-    // 用户自定义名：消毒后直接作为文件名主体；消毒后为空（全是特殊字符）则回退默认命名
-    var fileBase = customName ? customName.replace(/[^a-zA-Z0-9一-龥]/g, '_') : '';
-    if (!fileBase) fileBase = 'jxz_save_' + defaultName.replace(/[^a-zA-Z0-9一-龥]/g, '_');
+    var json;
+    try { json = storageService.exportSaveToJson(saveName, includeVectors); }
+    finally { delete gameData._activeEvent; }
+    var fileBase = customName ? customName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_') : '';
+    if (!fileBase || !fileBase.replace(/_/g, '')) fileBase = 'jxz_save_' + defaultName.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g, '_');
     var filename = fileBase + '.json';
     toggleDropdown('history-dropdown');
     var p = storageService.downloadJson(filename, json);
@@ -3795,6 +3863,10 @@ function importSave() {
         }
         try {
             var payload = await storageService.importSaveFromJson(file);
+            if (typeof workspaceManager !== 'undefined') workspaceManager.preparePendingImport(payload);
+            if (payload.workspaceConfig && typeof promptManagerModal !== 'undefined' && promptManagerModal.applyWorkspaceConfig) {
+                promptManagerModal.applyWorkspaceConfig(payload.workspaceConfig);
+            }
             // 深拷贝隔断：即使这里的 payload 是本次新解析出的对象，克隆一层也能保证以后无论
             // 是否有代码把它缓存进 _cache，gameData 的数组字段都不会与其它对象共享引用
             gameData = mergeWithDefaults(structuredClone(payload.gameData), defaultGameData);
@@ -3936,16 +4008,23 @@ function importSave() {
                 else bgmManager.stop();
             }
             showModal('存档导入成功！');
-            // 持久化存档恢复后的状态到 localStorage
+            // 持久化存档恢复后的状态到 localStorage，并归属当前 Workspace。
+            var importedWorkspaceId = (typeof workspaceManager !== 'undefined') ? workspaceManager.getActiveId() : storageService.getActiveWorkspaceId();
+            storageService.importSavePayload(structuredClone(payload), importedWorkspaceId);
             storageService.saveAppState({ gameData: gameData });
+            if (typeof workspaceManager !== 'undefined') await workspaceManager.afterPayloadApplied();
             if (window.GameSceneBridge) GameSceneBridge.afterRestore('json-import-complete', false);
         } catch (e) {
+            if (typeof workspaceManager !== 'undefined') workspaceManager.cancelPendingImport();
             showModal('存档导入失败：' + e.message);
         } finally {
             if (window.GameSceneBridge) GameSceneBridge.setBusy('json-import', false);
         }
         toggleDropdown('history-dropdown');
     };
+    input.addEventListener('cancel', function() {
+        if (typeof workspaceManager !== 'undefined') workspaceManager.cancelPendingImport();
+    });
     input.click();
 }
 
@@ -3965,16 +4044,16 @@ function buildSaveName() {
             closeAllSpecialModals();
             const modal = document.getElementById('difficulty-modal');
             document.getElementById(`diff-${difficulty||'normal'}`).checked = true;
-            
+
             // 先显示modal
             modal.style.display = 'block';
-            
+
             // 延迟一帧后调整位置，确保DOM更新完成
             requestAnimationFrame(() => {
                 fitModalToViewport(modal);
                 bindModalAutoFit(modal);
             });
-            
+
             toggleDropdown('system-dropdown');
         }
 
@@ -3982,10 +4061,10 @@ function buildSaveName() {
         async function saveDifficulty() {
             const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
             difficulty = selectedDifficulty;
-            
+
             // 保存到SillyTavern变量
             // await saveGameData();
-            
+
             // 显示确认信息
             const difficultyNames = {
                 'easy': '简单',
@@ -3993,7 +4072,7 @@ function buildSaveName() {
                 'hard': '困难'
             };
             showModal(`难度已设置为：${difficultyNames[selectedDifficulty]}`);
-            
+
             // 关闭弹窗
             closeDifficultyModal();
         }
@@ -4015,19 +4094,19 @@ function buildSaveName() {
             document.getElementById('cheat-wuxing').value = playerTalents.悟性;
             document.getElementById('cheat-xinxing').value = playerTalents.心性;
             document.getElementById('cheat-meili').value = playerTalents.魅力;
-            
+
             document.getElementById('cheat-wuxue').value = playerStats.武学;
             document.getElementById('cheat-xueshi').value = playerStats.学识;
             document.getElementById('cheat-shengwang').value = playerStats.声望;
             document.getElementById('cheat-jinqian').value = playerStats.金钱;
-            
+
             document.getElementById('cheat-attack').value = combatStats.攻击力;
             document.getElementById('cheat-hp').value = combatStats.生命值;
-            
+
             document.getElementById('cheat-mood').value = playerMood;
             document.getElementById('cheat-actionpoints').value = actionPoints;
             document.getElementById('cheat-week').value = currentWeek;
-            
+
             // 填充NPC好感度
             document.getElementById('cheat-npc-A').value = npcFavorability.A;
             document.getElementById('cheat-npc-B').value = npcFavorability.B;
@@ -4045,16 +4124,16 @@ function buildSaveName() {
             document.getElementById('cheat-npc-M').value = npcFavorability.M;
             document.getElementById('cheat-npc-N').value = npcFavorability.N;
             document.getElementById('cheat-npc-O').value = npcFavorability.O;
-            
+
             const modal = document.getElementById('cheat-modal');
             modal.style.display = 'block';
-            
+
             // 延迟一帧后调整位置
             requestAnimationFrame(() => {
                 fitModalToViewport(modal);
                 bindModalAutoFit(modal);
             });
-            
+
             toggleDropdown('system-dropdown');
         }
 
@@ -4068,22 +4147,22 @@ function buildSaveName() {
             playerTalents.悟性 = parseInt(document.getElementById('cheat-wuxing').value);
             playerTalents.心性 = parseInt(document.getElementById('cheat-xinxing').value);
             playerTalents.魅力 = parseInt(document.getElementById('cheat-meili').value);
-            
+
             // 更新人物数值
             playerStats.武学 = parseInt(document.getElementById('cheat-wuxue').value);
             playerStats.学识 = parseInt(document.getElementById('cheat-xueshi').value);
             playerStats.声望 = parseInt(document.getElementById('cheat-shengwang').value);
             playerStats.金钱 = parseInt(document.getElementById('cheat-jinqian').value);
-            
+
             // 更新战斗数值
             combatStats.攻击力 = parseInt(document.getElementById('cheat-attack').value);
             combatStats.生命值 = parseInt(document.getElementById('cheat-hp').value);
-            
+
             // 更新其他数值
             playerMood = parseInt(document.getElementById('cheat-mood').value);
             actionPoints = parseInt(document.getElementById('cheat-actionpoints').value);
             currentWeek = parseInt(document.getElementById('cheat-week').value);
-            
+
             // 更新NPC好感度
             npcFavorability.A = parseInt(document.getElementById('cheat-npc-A').value);
             npcFavorability.B = parseInt(document.getElementById('cheat-npc-B').value);
@@ -4103,22 +4182,22 @@ function buildSaveName() {
             npcFavorability.O = parseInt(document.getElementById('cheat-npc-O').value);
             // 检查数值范围
             checkAllValueRanges();
-            
+
             // 更新所有显示
             updateAllDisplays();
-            
+
             // 如果在关系界面，更新关系显示
             const activeScene = document.querySelector('.scene.active');
             if (activeScene && activeScene.id === 'relationships-scene') {
                 updateRelationshipsDisplay();
             }
-            
+
             // 保存到SillyTavern
             // await saveGameData();
-            
+
             // 显示确认信息
             showModal('数值已修改并保存！');
-            
+
             // 关闭弹窗
             closeCheatModal();
         }
@@ -4306,10 +4385,10 @@ function buildSaveName() {
         function showLastUserInput() {
             // 关闭下拉菜单
             toggleDropdown('history-dropdown');
-            
+
             // 关闭其他弹窗
             closeAllSpecialModals();
-            
+
             // 创建专门的弹窗（不使用普通的modal）
             const modal = document.createElement('div');
             modal.className = 'modal viewport-overlay';
@@ -4352,10 +4431,10 @@ function buildSaveName() {
                     </div>
                 </div>
             `;
-            
+
             document.body.appendChild(modal);
             modal.style.display = 'block';
-            
+
             // 延迟一帧后调整位置
             requestAnimationFrame(() => {
                 fitModalToViewport(modal);
@@ -4453,13 +4532,13 @@ function buildSaveName() {
             const editBtn = document.getElementById('edit-input-btn');
             const saveBtn = document.getElementById('save-input-btn');
             const cancelBtn = document.getElementById('cancel-edit-btn');
-            
+
             displayDiv.style.display = 'none';
             editArea.style.display = 'block';
             editBtn.style.display = 'none';
             saveBtn.style.display = 'inline-block';
             cancelBtn.style.display = 'inline-block';
-            
+
             // 自动聚焦并选中文本
             editArea.focus();
             editArea.select();
@@ -4469,7 +4548,7 @@ function buildSaveName() {
         async function saveEditedInput() {
             const editArea = document.getElementById('last-input-edit');
             const newMessage = editArea.value.trim();
-            
+
             if (newMessage) {
                 // 更新本地变量
                 lastUserMessage = newMessage;
@@ -4487,7 +4566,7 @@ function buildSaveName() {
                     newWeek = 0;
                     console.log('非新周消息，newWeek设置为0');
                 }
-                
+
                 // 保存到SillyTavern变量
                 const renderFunc = getRenderFunction();
                 if (renderFunc) {
@@ -4496,10 +4575,10 @@ function buildSaveName() {
                     await saveLastUserMessage();
                     await saveNewWeek();
                 }
-                
+
                 showModal('上轮输入内容已更新！');
             }
-            
+
             closeLastInputModal();
         }
 
@@ -4510,13 +4589,13 @@ function buildSaveName() {
             const editBtn = document.getElementById('edit-input-btn');
             const saveBtn = document.getElementById('save-input-btn');
             const cancelBtn = document.getElementById('cancel-edit-btn');
-            
+
             displayDiv.style.display = 'block';
             editArea.style.display = 'none';
             editBtn.style.display = 'inline-block';
             saveBtn.style.display = 'none';
             cancelBtn.style.display = 'none';
-            
+
             // 恢复原始值
             editArea.value = lastUserMessage || '';
         }
@@ -4535,20 +4614,27 @@ function buildSaveName() {
         function showWorldMap() {
             const modal = document.getElementById('worldmap-modal');
             const iframe = document.getElementById('worldmap-iframe');
-            
-            // 准备传递给世界地图的数据（只保留体积小的标量参数走URL，避免随游戏进度增长导致 "URI Too Long"）
+
+            // 准备传递给世界地图的数据
             const params = new URLSearchParams({
                 reputation: playerStats.声望,
                 mapLocation: mapLocation,
                 randomEvent: randomEvent,
                 battleEvent: battleEvent
             });
-
-            // 体积可能较大且随存档增长的数据改用 localStorage 传递（world_map.html 与本页同源，可直接读取）
-            try {
-                localStorage.setItem('worldmap_companionNPC', JSON.stringify(companionNPC));
-                localStorage.setItem('worldmap_npcFavorability', JSON.stringify(npcFavorability));
-            } catch (e) {}
+            // 大对象通过同源存储传递，避免地图 URL 超长；存储不可用时兼容旧参数通道。
+            const storeMapValue = (key, value) => {
+                const serialized = JSON.stringify(value);
+                try {
+                    localStorage.setItem('worldmap_' + key, serialized);
+                    params.delete(key);
+                }
+                catch (e) { params.set(key, serialized); }
+            };
+            storeMapValue('companionNPC', companionNPC);
+            storeMapValue('npcFavorability', npcFavorability);
+            // 每次打开先清空上个存档的地点覆盖，避免跨存档残留。
+            storeMapValue('locationOverrides', {});
 
             // 地点信息迭代：把 locationMemory 里已更新地点的 危险度/友善度/行动建议 转换成
             // world_map.html 原有的英文字段名结构，供其浅合并覆盖显示（未更新的地点不受影响）
@@ -4564,13 +4650,9 @@ function buildSaveName() {
                     if (Object.keys(o).length > 0) _overrides[loc] = o;
                 });
                 if (Object.keys(_overrides).length > 0) {
-                    try { localStorage.setItem('worldmap_locationOverrides', JSON.stringify(_overrides)); } catch (e) {}
-                } else {
-                    try { localStorage.removeItem('worldmap_locationOverrides'); } catch (e) {}
+                    storeMapValue('locationOverrides', _overrides);
                 }
             }
-            
-            // 悬赏：若有进行中任务，附带目标地点参数，供大地图叠加 ⚔ 标记
             if (typeof activeBounty !== 'undefined' && activeBounty) {
                 params.set('bountyLocation', activeBounty.locationName);
             }
@@ -4579,7 +4661,7 @@ function buildSaveName() {
             // const gameUrl = `https://Ji-Haitang.github.io/char_card_1/world_map.html?${params.toString()}`;
             // 本地测试时使用：
             const gameUrl = `world_map.html?${params.toString()}`;
-            
+
             iframe.src = gameUrl;
             modal.style.display = 'block';
         }
@@ -4626,6 +4708,12 @@ function buildSaveName() {
             });
             if (tabId === 'prompts' && typeof promptManagerModal !== 'undefined') {
                 promptManagerModal.render(document.getElementById('gs-prompt-manager-root'));
+            }
+            if (tabId === 'portrait' && typeof userPortraitManager !== 'undefined') {
+                userPortraitManager.render(document.getElementById('user-portrait-manager-root'));
+            }
+            if (tabId === 'workspace' && typeof workspaceManager !== 'undefined') {
+                workspaceManager.render(document.getElementById('workspace-manager-root'));
             }
         }
 
@@ -4687,6 +4775,9 @@ function buildSaveName() {
             const lvl = (typeof textFontLevel !== 'undefined' && textFontLevel) ? textFontLevel : 2;
             const fontRange = document.getElementById('gs-font-range');
             if (fontRange) fontRange.value = lvl;
+            const family = (typeof storyFontFamily !== 'undefined' && ['sans','kai','song'].includes(storyFontFamily)) ? storyFontFamily : 'sans';
+            const familySelect = document.getElementById('gs-story-font-family');
+            if (familySelect) familySelect.value = family;
 
             // 总结管理
             const _summaryCfg = (typeof gameData !== 'undefined' && gameData.summaryConfig) ? gameData.summaryConfig : {};
@@ -4860,6 +4951,13 @@ function buildSaveName() {
             applyFontLevel(lvl);
         }
 
+        function gsOnStoryFontFamily(el) {
+            const family = ['sans','kai','song'].includes(el.value) ? el.value : 'sans';
+            storyFontFamily = family;
+            if (typeof gameData !== 'undefined' && gameData) gameData.storyFontFamily = family;
+            applyStoryFontFamily(family);
+        }
+
         // ===== 3D画面设置 =====
         function gsScene3dBridge() {
             return (typeof GameSceneBridge !== 'undefined' && GameSceneBridge) ? GameSceneBridge : null;
@@ -5010,16 +5108,13 @@ function buildSaveName() {
             const btn = document.getElementById('toggle-ui-btn');
             const style = (typeof uiStyle !== 'undefined') ? uiStyle : 0;
             if (btn) btn.textContent = `风格(${style === 0 ? '古风' : '扁平'})`;
-            applyAncientLeadWrap(); // textContent 重写会移除字牌 span，需重新包裹
+            applyAncientLeadWrap();
         }
 
-        // ========== 古风「首字牌」系统 ==========
-        // 按钮文字拆为：首字（书法体 + 枯笔边框包裹） + 其余字（同字体小一号）。
-        // 样式由 game-styles-beautify.css 的 .be-lead/.be-rest 承载，仅古风生效。
+        // 古风首字牌：只包装纯文本按钮，避免破坏带图标或复杂子节点的控件。
         function wrapAncientLeadChar(btn) {
-            if (!btn || btn.querySelector('.be-lead')) return; // 幂等：已包裹跳过
-            // 只处理纯文本按钮（含元素子节点的不动，避免破坏内部结构）
-            const hasElementChild = [...btn.childNodes].some(n => n.nodeType === 1);
+            if (!btn || btn.querySelector('.be-lead')) return;
+            const hasElementChild = [...btn.childNodes].some(node => node.nodeType === 1);
             if (hasElementChild) return;
             const text = btn.textContent.trim();
             if (text.length < 2) return;
@@ -5057,9 +5152,8 @@ function buildSaveName() {
                     document.body.classList.add('ui-style-flat');
                 }
             }
-            applyAncientLeadWrap(); // 风格切换后确保字牌包裹（扁平下无样式，包裹无害）
+            applyAncientLeadWrap();
         }
-        // 首次加载即执行一次（脚本位于 body 尾部，DOM 已就绪）
         applyAncientLeadWrap();
 
         // 打开玩法说明
@@ -5172,7 +5266,7 @@ function buildSaveName() {
             const regenerateBtn = document.getElementById('regenerate-btn');
             const skipWeekBtn = document.getElementById('skip-week-btn');
             const slgReturnBtn = document.getElementById('slg-return-btn');
-            
+
             if (inputEnable === 0) {
                 // 禁用输入框和按钮（事件期间）
                 if (inputElement) {
@@ -5375,6 +5469,12 @@ function buildSaveName() {
                 if (launchIntent === 'loadSave' && loadSaveId) {
                     var savePayload = storageService.loadSave(loadSaveId);
                     if (savePayload && savePayload.gameData) {
+                        if (savePayload.workspaceId && storageService.setActiveWorkspaceId) {
+                            storageService.setActiveWorkspaceId(savePayload.workspaceId);
+                        }
+                        if (savePayload.workspaceConfig && typeof promptManagerModal !== 'undefined' && promptManagerModal.applyWorkspaceConfig) {
+                            promptManagerModal.applyWorkspaceConfig(savePayload.workspaceConfig);
+                        }
                         // 深拷贝隔断：savePayload === _cache[loadSaveId] 的直接引用，理由同 loadSaveSlot()
                         gameData = mergeWithDefaults(structuredClone(savePayload.gameData), defaultGameData);
                         hydrateVariableSystemFromGameData(gameData);
@@ -5459,6 +5559,11 @@ function buildSaveName() {
                         storageService.saveAppState({ gameData: gameData });
                     }
                 }
+
+                // Workspace：在目标新游戏/存档完全恢复后绑定当前存档位并写入最新 head。
+                if (typeof workspaceManager !== 'undefined' && workspaceManager.onGameReady) {
+                    await workspaceManager.onGameReady(launchIntent);
+                }
             }
 
             // 初始化：仅在SLG模式渲染加载图层兜底；普通模式移除SLG全局隐藏
@@ -5486,10 +5591,10 @@ function buildSaveName() {
                 }
             } catch (e) {}
             checkAllValueRanges();
-            
+
             // 初始化季节
             seasonStatus = calculateSeason(currentWeek);
-            
+
             // 更新场景背景
             updateSceneBackgrounds();
             updateAllDisplays();
@@ -5498,7 +5603,7 @@ function buildSaveName() {
                 setupMapHitAreas();
             }
             setupMessageListeners();
-            
+
             if (isInRenderEnvironment()) {
                 // 隐藏所有刷新NPC按钮（包括地图和各个场景的）
                 const refreshBtns = document.querySelectorAll('.refresh-npc-btn');
@@ -5506,7 +5611,7 @@ function buildSaveName() {
                     btn.style.display = 'none';
                 });
             }
-            
+
             if (userLocation === 'tianshanpai') {
                 document.getElementById('map-scene').classList.add('active');
             } else {
@@ -5518,7 +5623,7 @@ function buildSaveName() {
             if (_initActiveScene && _initActiveScene.id !== 'map-scene') {
                 if (typeof displayNpcs === 'function') displayNpcs(_initActiveScene.id.replace('-scene', ''));
             }
-            
+
             // parseLLMResponse(llmResponse, mainText);
             // 独立模式：使用统一解析器 responseParser + applyParsedInit
             // ST 模式：保留旧 parseOutput 逻辑
@@ -5610,7 +5715,7 @@ function buildSaveName() {
             }
             if (window.GameSceneBridge) GameSceneBridge.start();
         };
-        
+
         // 自由行动输入框事件（输入框高度由 CSS 固定，多行内容内部滚动）
         document.getElementById('free-action-input').addEventListener('keydown', function(e) {
             if (e.key === 'Enter' && !e.shiftKey) {
@@ -5618,7 +5723,7 @@ function buildSaveName() {
                 sendFreeAction();
             }
         });
-        
+
         // 弹窗背景点击事件
         document.getElementById('blackjack-modal').addEventListener('click', function(e) {
             if (e.target === this) {
@@ -5631,7 +5736,7 @@ function buildSaveName() {
                 }
             }
         });
-        
+
         document.getElementById('battle-modal').addEventListener('click', function(e) {
             if (e.target === this) {
                 if (confirm('确定要退出战斗吗？')) {
@@ -5640,11 +5745,11 @@ function buildSaveName() {
                         bgmManager.onBattleEnd();
                     }
                     document.getElementById('battle-iframe').src = '';
-                    
+
                     if (currentBattleType === 'event') {
                         hideBattleEvent();
                     }
-                    
+
                     currentBattleType = null;
                     currentBattleReward = null;
                 }
@@ -5776,7 +5881,7 @@ function buildSaveName() {
                             svg.querySelectorAll('polygon.active').forEach(n => n.classList.remove('active'));
                             p.classList.add('active');
                         }
-                        
+
                         // 调起原有地点信息弹窗
                         if (typeof showLocationInfo === 'function') {
                             showLocationInfo(b.id, e);
@@ -5792,18 +5897,18 @@ function buildSaveName() {
         function showLocationSelectionOverlay(locationId) {
             const overlay = document.getElementById('location-selection-overlay');
             const locationElement = document.getElementById(locationId);
-            
+
             if (!overlay || !locationElement) return;
-            
+
             // 获取地点标签的位置（相对于 map-scene）
             const mapScene = document.getElementById('map-scene');
             const mapRect = mapScene.getBoundingClientRect();
             const locRect = locationElement.getBoundingClientRect();
-            
+
             // 计算地点标签中心相对于 map-scene 的位置
             const centerX = locRect.left - mapRect.left + locRect.width / 2;
             const centerY = locRect.top - mapRect.top + locRect.height / 2;
-            
+
             // 设置叠加层位置
             overlay.style.left = centerX + 'px';
             overlay.style.top = centerY + 'px';
@@ -6085,12 +6190,29 @@ function buildSaveName() {
         }
 
         function applyFontLevel(level){
-            // 基于基础字号步进：14px为第二档的基准，±2px 步进
-            const base = 14; // 当前默认字号
-            const delta = (level - 2) * 2; // 每档±2px
+            // 恢复原版阅读参数：第二档14px、每档±2px、常规字重与1.8倍行高。
+            const base = 14;
+            const delta = (level - 2) * 2;
             const size = base + delta;
             const story = document.getElementById('story-text');
-            if (story) story.style.fontSize = size + 'px';
+            if (story) {
+                // 主题样式含 !important，设置层也用 important 才能确保用户选择实际生效。
+                story.style.setProperty('font-size', size + 'px', 'important');
+                story.style.setProperty('line-height', '1.8', 'important');
+                story.style.setProperty('font-weight', '400', 'important');
+                story.style.setProperty('letter-spacing', 'normal', 'important');
+            }
+            applyStoryFontFamily((typeof storyFontFamily !== 'undefined' && storyFontFamily) ? storyFontFamily : 'sans');
+        }
+
+        function applyStoryFontFamily(family){
+            const fonts = {
+                sans: '"Microsoft YaHei", "PingFang SC", "Noto Sans CJK SC", sans-serif',
+                kai: '"Ma Shan Zheng", "Kaiti", "STKaiti", "KaiTi_GB2312", "Noto Serif CJK SC", serif',
+                song: '"ZCOOL XiaoWei", "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", "SimSun", serif'
+            };
+            const story = document.getElementById('story-text');
+            if (story) story.style.setProperty('font-family', fonts[family] || fonts.sans, 'important');
         }
     </script>
     <script src="module/button-sfx.js"></script>

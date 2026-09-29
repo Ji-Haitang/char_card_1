@@ -5,16 +5,24 @@
 <%_ const randomEventforFormat = gameData.randomEvent; _%>
 <%_ const battleEventforFormat = gameData.battleEvent; _%>
 <%_ const haveEventforFormat = gameData.haveEvent; _%>
+<%_ const userPortraitforFormat = (typeof userPortraitEnabled !== 'undefined') && !!userPortraitEnabled; _%>
 无视对话历史中的格式，当用户进行游戏行动时，本回合你必须严格按照以下格式输出：
 <%_ if (GameModeforFormat == 0) { _%>
 <%_ if (newweek == 0) { _%>
 格式: 
   <SLG_MODE>
   <MAIN_TEXT>
-  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{string: 固定填"none"}}
-  {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|none
+  <%_ if (userPortraitforFormat) { _%>
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{string: 本段需要同屏显示的角色列表；填写本段实际出场并参与对话、动作或即时反应的1-3名角色，NPC从<NpcList>选择，主角{{user}}固定填写"user"，按正文出现顺序用"、"连接；仅被提及、回忆中出现或身处其他场景者不得填写；本段无人出场填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{string: 与角色列表严格等长、顺序对应的表情列表；每项从<ExpressionList>选择并用"、"连接；角色列表含"user"时也必须为user输出一个表情；无人出场填"none"}}|{{string: 固定填"none"}}
+  {{string: 第二段叙述文本}}|user、洞庭君|山门|平静、害羞|none
   ...
-  {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|none
+  {{string: 最后一段叙述文本}}|{{同屏角色名或none}}|{{场景名}}|{{对应表情或none}}|none
+  <%_ } else { _%>
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{string: 本段需要显示的NPC列表；仅填写本段实际出场并参与对话、动作或即时反应的1-3名NPC，必须从<NpcList>选择并按正文出现顺序用"、"连接；不得填写user；仅被提及、回忆中出现或身处其他场景者不得填写；本段没有NPC出场填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{string: 与NPC列表严格等长、顺序对应的表情列表；每项从<ExpressionList>选择并用"、"连接；本段没有NPC出场填"none"}}|{{string: 固定填"none"}}
+  {{string: 第二段叙述文本}}|洞庭君、洛潜幽|山门|平静、害羞|none
+  ...
+  {{string: 最后一段叙述文本}}|{{同屏NPC名或none}}|{{场景名}}|{{对应表情或none}}|none
+  <%_ } _%>
   </MAIN_TEXT>
 
   <SUMMARY>
@@ -58,7 +66,14 @@
     段落数: 8-12
     段落字数: 150-250 
     段落标记: 每段末尾用"|"分隔四个字段，每个字段代表一个标记
-    标记顺序: 段落正文|NPC名|场景名|NPC表情|none
+    标记顺序: 段落正文|同屏角色列表|场景名|对应表情列表|none
+    <%_ if (userPortraitforFormat) { _%>
+    同屏规则: 登记本段实际出场并参与对话、动作或即时反应的角色；NPC填写标准NPC名，主角{{user}}固定填写"user"；仅被提及、回忆中出现或身处其他场景者不得填写；下一段未继续出场者必须移出列表
+    多人规则: 同段有多人参与时，角色名与表情分别用"、"连接，数量和顺序必须一一对应，同屏最多3人，user也必须占用一个对应表情项
+    <%_ } else { _%>
+    同屏规则: 仅登记本段实际出场并参与对话、动作或即时反应的NPC，必须填写<NpcList>中的标准NPC名；不得填写user；下一段未继续出场的NPC必须移出列表
+    多人规则: 同段有多个NPC参与时，NPC名与表情分别用"、"连接，数量和顺序必须一一对应，同屏最多3名NPC
+    <%_ } _%>
   总结规则:
     字数: 80-120字  
   旁注规则:
@@ -215,15 +230,20 @@
 格式: 
   <SLG_MODE>
   <MAIN_TEXT>
-  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；当前NPC，即本段落中的最主要描写的NPC，仅能填写一人，若无则填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；本段落中描写的NPC和{{user}}之间的NSFW成人级色情行为，若无则填"none"}}
-  {{string: 第二段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  <%_ if (userPortraitforFormat) { _%>
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{string: 当前唯一立绘角色；正文有任一NPC实际出场、说话、行动或即时反应时，必须从<NpcList>填写其中最主要的NPC，即使user同时行动也不得填写user；只有正文完全没有NPC、主角独自行动时才填写"user"；若无人可显示填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前立绘角色的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；当前角色为NPC且与{{user}}之间存在成人级NSFW行为时输出，角色为user或无此行为时填"none"}}
+  {{string: 第二段叙述文本}}|{{优先填写实际出场NPC；无NPC时可填user}}|{{场景名}}|{{角色表情}}|{{NSFW行为}}
+  <%_ } else { _%>
+  {{string: 推进故事剧情的主要叙述文本，8-12段落，每段150-250字}}|{{enum: <NpcList>中的NPC名；填写本段实际出场、说话、行动或产生即时反应的最主要NPC，仅能填写一人；不得填写user；本段没有NPC出场填"none"}}|{{enum: <SceneList>中的场景名；本段落发生的场景，若无则填"none"}}|{{enum: <ExpressionList>中的表情；当前NPC的表情，若无则填"none"}}|{{enum: <NSFWList>中的成人级NSFW行为；当前NPC与{{user}}之间存在成人级NSFW行为时输出，无则填"none"}}
+  {{string: 第二段叙述文本}}|{{实际出场NPC名或none}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  <%_ } _%>
   ...
   <%_ if (randomEventforFormat == 1) { _%>
-  {{string: 最后一段叙述文本，合理引出后续的选项事件}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  {{string: 最后一段叙述文本，合理引出后续的选项事件}}|<%_ if (userPortraitforFormat) { _%>{{实际出场NPC优先；无NPC时可填user}}<%_ } else { _%>{{实际出场NPC名或none，不得填写user}}<%_ } _%>|{{场景名}}|{{角色表情}}|{{NSFW行为}}
   <%_ } else if (battleEventforFormat == 1) { _%>
-  {{string: 最后一段叙述文本，合理引出后续的战斗事件}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  {{string: 最后一段叙述文本，合理引出后续的战斗事件}}|<%_ if (userPortraitforFormat) { _%>{{实际出场NPC优先；无NPC时可填user}}<%_ } else { _%>{{实际出场NPC名或none，不得填写user}}<%_ } _%>|{{场景名}}|{{角色表情}}|{{NSFW行为}}
   <%_ } else { _%>
-  {{string: 最后一段叙述文本}}|{{NPC名}}|{{场景名}}|{{NPC表情}}|{{NSFW行为}}
+  {{string: 最后一段叙述文本}}|<%_ if (userPortraitforFormat) { _%>{{实际出场NPC优先；无NPC时可填user}}<%_ } else { _%>{{实际出场NPC名或none，不得填写user}}<%_ } _%>|{{场景名}}|{{角色表情}}|{{NSFW行为}}
   <%_ } _%>
   </MAIN_TEXT>
 
@@ -308,8 +328,14 @@
     段落数: 8-12
     段落字数: 150-250 
     段落标记: 每段末尾用"|"分隔四个字段，每个字段代表一个标记
-    标记顺序: 段落正文|NPC名|场景名|NPC表情|NSFW行为
-    NSFW行为规则: 回顾本段落的正文内容，如果NPC名对应的角色和{{user}}之前存在NSFW级别的成人色情行为(如接吻、前戏、性交等)，则从<NSFWList>选择一个最匹配的字段对该色情行为进行描述；如无NSFW级别的成人色情行为，则NSFW行为固定填写'none'
+    标记顺序: 段落正文|角色名|场景名|角色表情|NSFW行为
+    <%_ if (userPortraitforFormat) { _%>
+    角色规则: 每段只显示一个角色；只要有NPC实际参与该段，必须填写最主要NPC的标准名；只有该段完全没有NPC、主角独自行动时才填写"user"
+    NSFW行为规则: 角色为NPC且该NPC和{{user}}之间存在NSFW级别的成人色情行为时，从<NSFWList>选择一个最匹配字段；角色为"user"或无NSFW行为时固定填写'none'
+    <%_ } else { _%>
+    角色规则: 每段只显示一个NPC；必须填写实际参与该段的最主要NPC标准名，不得填写user；没有NPC出场时填"none"
+    NSFW行为规则: 当前NPC和{{user}}之间存在NSFW级别的成人色情行为时，从<NSFWList>选择一个最匹配字段；无此行为时固定填写'none'
+    <%_ } _%>
   总结规则:
     字数: 80-120字  
   旁注规则:

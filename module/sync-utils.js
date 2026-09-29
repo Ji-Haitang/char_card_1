@@ -24,6 +24,7 @@ function syncGameDataFromVariableSystem() {
     if ('npcVisibility' in snapshot) gameData.npcVisibility = snapshot.npcVisibility;
     if ('npcGiftGiven' in snapshot) gameData.npcGiftGiven = snapshot.npcGiftGiven;
     if ('textFontLevel' in snapshot) gameData.textFontLevel = snapshot.textFontLevel;
+    if ('storyFontFamily' in snapshot) gameData.storyFontFamily = snapshot.storyFontFamily;
     if ('npcSparred' in snapshot) gameData.npcSparred = snapshot.npcSparred;
     if ('lastFarmWeek' in snapshot) gameData.lastFarmWeek = snapshot.lastFarmWeek;
     if ('farmGrid' in snapshot) gameData.farmGrid = snapshot.farmGrid;
@@ -83,6 +84,7 @@ function syncGlobalsToTurnVars() {
     variableSystem.set('npcVisibility', npcVisibility, 'turn');
     variableSystem.set('npcGiftGiven', npcGiftGiven, 'turn');
     variableSystem.set('textFontLevel', textFontLevel, 'turn');
+    variableSystem.set('storyFontFamily', storyFontFamily, 'turn');
     variableSystem.set('npcSparred', npcSparred, 'turn');
     variableSystem.set('lastFarmWeek', lastFarmWeek, 'turn');
     variableSystem.set('farmGrid', farmGrid, 'turn');

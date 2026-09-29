@@ -111,6 +111,11 @@ function showConfigModal() {
         '<div class="cfg-notice" style="margin-top:4px">勾选后通过代理中转。线上部署且 API 不支持 CORS（如 OpenAI 官方）时需启用；本地 file:// 与 APK 通常直连即可（APK 默认不勾）。</div>' +
         '</div>' +
 
+        '<div class="cfg-field"><label class="cfg-label">自定义请求头（JSON）</label>' +
+        '<textarea id="api-custom-headers-input" class="cfg-input" rows="3" placeholder=\'{"HTTP-Referer":"https://example.com","X-Title":"JXZ"}\' style="resize:vertical;font-family:monospace;font-size:12px">' +
+        (config.customHeaders && Object.keys(config.customHeaders).length > 0 ? _escapeHtml(JSON.stringify(config.customHeaders, null, 2)) : '') +
+        '</textarea><div class="cfg-notice" style="margin-top:4px">用于需要 HTTP-Referer、X-Title 等头部的中转服务；保存与连接测试都会使用。</div></div>' +
+
         // 测试消息
         '<div class="cfg-field">' +
         '<button id="api-test-btn" onclick="_doSendTest()" class="cfg-btn cfg-btn-green">📨 发送测试消息</button>' +
@@ -191,6 +196,18 @@ function closeConfigModal() {
     }
 }
 
+function _readCustomHeadersInput() {
+    var input = document.getElementById('api-custom-headers-input');
+    if (!input || !input.value.trim()) return {};
+    var parsed;
+    try { parsed = JSON.parse(input.value.trim()); }
+    catch (e) { throw new Error('自定义请求头 JSON 解析失败：' + e.message); }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+        throw new Error('自定义请求头必须是 JSON 对象');
+    }
+    return parsed;
+}
+
 function saveConfigAndClose() {
     var newConfig = {
         type: document.getElementById('api-type-select').value,
@@ -219,6 +236,8 @@ function saveConfigAndClose() {
     if (corsEnabledInput) {
         newConfig.corsProxyEnabled = !!corsEnabledInput.checked;
     }
+    try { newConfig.customHeaders = _readCustomHeadersInput(); }
+    catch (headerError) { alert(headerError.message); return; }
     if (!newConfig.endpoint || !newConfig.apiKey || !newConfig.model) {
         alert('请填写完整的 API 信息（地址、Key、模型名）');
         return;
@@ -266,7 +285,8 @@ async function _doConnectTest() {
     var type = document.getElementById('api-type-select').value;
 
     try {
-        var models = await apiService.fetchModels(endpoint, apiKey, type);
+        var customHeaders = _readCustomHeadersInput();
+        var models = await apiService.fetchModels(endpoint, apiKey, type, customHeaders);
         status.textContent = '🟢 已连接（' + models.length + ' 个模型）';
         status.style.color = '#4CAF50';
 
@@ -334,6 +354,14 @@ async function _doSendTest() {
         model: document.getElementById('api-model-input').value.trim(),
         temperature: parseFloat(document.getElementById('api-temp-input').value) || 0.85
     };
+    try { tempConfig.customHeaders = _readCustomHeadersInput(); }
+    catch (headerError) {
+        resultDiv.className = 'cfg-test-result cfg-test-fail';
+        resultDiv.textContent = '❌ 测试失败: ' + headerError.message;
+        btn.disabled = false;
+        btn.textContent = '📨 发送测试消息';
+        return;
+    }
 
     var result = await apiService.sendTestMessage(tempConfig);
 
@@ -445,6 +473,9 @@ function _applyPreset(indexStr) {
     el = document.getElementById('api-cors-proxy-input'); if (el && preset.corsProxyUrl) el.value = preset.corsProxyUrl;
     // 勾选框：preset 含该字段才回填，否则保留首次渲染按环境给的默认值（web勾/APK不勾）
     el = document.getElementById('api-cors-proxy-enabled'); if (el && typeof preset.corsProxyEnabled === 'boolean') el.checked = preset.corsProxyEnabled;
+    el = document.getElementById('api-custom-headers-input');
+    if (el) el.value = preset.customHeaders && typeof preset.customHeaders === 'object'
+        ? JSON.stringify(preset.customHeaders, null, 2) : '';
     // 回填完成后收起下拉
     var container = document.getElementById('api-preset-container');
     if (container) container.style.display = 'none';
@@ -503,12 +534,12 @@ async function _doRebuildEmbeddingIndex() {
         return;
     }
 
-    // 找出还没有向量的条目
-    var stats = memoryRecall.getStats();
+    // 找出还没有向量的条目；getStats() 不公开内部 entries，以持久化记录为可靠数据源。
     var cachedIds = {};
-    var cached = stats && stats.entries ? stats.entries : [];
+    var cached = storageService.loadAllEmbeddings ? storageService.loadAllEmbeddings() : [];
+    var fp = embeddingService.getFingerprint();
     for (var ci = 0; ci < cached.length; ci++) {
-        cachedIds[cached[ci].id] = true;
+        if (cached[ci] && cached[ci].id && cached[ci].fingerprint === fp) cachedIds[cached[ci].id] = true;
     }
     var todo = all.filter(function(s) { return !cachedIds[s.id]; });
 
@@ -519,7 +550,6 @@ async function _doRebuildEmbeddingIndex() {
 
     var batchSize = 10;
     var done = 0;
-    var fp = embeddingService.getFingerprint();
 
     try {
         for (var i = 0; i < todo.length; i += batchSize) {

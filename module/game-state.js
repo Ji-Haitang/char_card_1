@@ -1,16 +1,16 @@
 /**
  * game-state.js - 游戏状态管理
- * 
+ *
  * 文件概述：
  * 管理游戏的所有运行时状态，包括玩家属性、NPC状态、游戏进度等。
  * 提供状态的读取、保存和同步功能，支持SillyTavern变量存储。
- * 
+ *
  * 主要功能：
  * 1. 定义和管理所有游戏状态变量
  * 2. 提供游戏数据的持久化存储（通过SillyTavern变量）
  * 3. 同步游戏数据对象与独立变量
  * 4. 流式版本的本地状态管理
- * 
+ *
  * 对外暴露的主要变量：
  * - gameData: 完整的游戏数据对象
  * - userLocation / userLocation_old: 用户当前/上一位置
@@ -36,7 +36,7 @@
  * - triggeredEvents / currentSpecialEvent: 特殊事件触发状态
  * - inputEnable: 自由行动输入框可用状态
  * - localState: 流式版本本地状态
- * 
+ *
  * 对外暴露的主要函数：
  * - loadOrInitGameData(): 加载或初始化游戏数据
  * - saveGameData(): 保存游戏数据到SillyTavern变量
@@ -46,7 +46,7 @@
  * - saveLastUserMessage() / saveNewWeek(): 局部快速持久化
  * - mergeWithDefaults(): 存档与默认数据的深度合并（版本兼容）
  * - resetLocalState() / getLocalState(): 流式状态管理
- * 
+ *
  * 依赖关系：
  * - 依赖 game-config.js 中的 defaultGameData
  * - 依赖 game-utils.js 中的渲染环境检测函数
@@ -66,7 +66,8 @@ let playerStats = { "武学": 20, "学识": 20, "声望": 20, "金钱": 500 };
 let combatStats = { "攻击力": 20, "生命值": 50, "暴击率": 10, "暴击伤害": 150, "格挡": 0, "穿甲": 0, "回转": 0, "吸血": 0, "反伤": 0 };
 let equipStats = { "攻击力": 0, "生命值": 0, "暴击率": 0, "暴击伤害": 0, "格挡": 0, "穿甲": 0, "回转": 0, "吸血": 0, "反伤": 0, "根骨": 0, "悟性": 0, "心性": 0, "魅力": 0 };
 let userBackground = "A"; // 新增：出身编码
-let textFontLevel = 2; // 新增：正文字体档位 1~5
+let textFontLevel = 2; // 正文字号档位 1~5
+let storyFontFamily = "sans"; // 正文字体（sans/kai/song）
 let uiStyle = 0; // 新增：UI风格（0=古风UI，1=扁平化UI）
 let layoutMode = 0; // 新增：屏幕方向（0=竖屏，1=横屏：视窗在左、文本区在右）
 let dayNightStatus = 'daytime';  // 新增：昼夜状况
@@ -77,8 +78,8 @@ let martialArts = {
     "太白仙迹": 0, "岱宗如何": 0, "掠风窃尘": 0, "流云飞袖": 0,
     "惊鸿照影": 0, "踏雪无痕": 0, "醉卧沙场": 0, "万剑归宗": 0
 };
-let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"I":0,"J":0,"K":0,"L":0 };
-let weekStartFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"I":0,"J":0,"K":0,"L":0 };  // 新增：本周开始时的好感度快照
+let npcFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"I":0,"J":0,"K":0,"L":0,"M":0,"N":0,"O":0 };
+let weekStartFavorability = { "A": 0,"B": 0,"C": 0,"D": 0,"E": 0,"F": 0,"G": 0,"H":0,"I":0,"J":0,"K":0,"L":0,"M":0,"N":0,"O":0 };  // 新增：本周开始时的好感度快照
 let actionPoints = 3;
 let currentWeek = 1;
 let GameMode = 0;  // 新增：游戏模式变量
@@ -86,9 +87,9 @@ let difficulty = 'normal';
 let cgContentEnabled = false;   // 新增：CG内容开关运行时变量（默认false）
 let compressSummary = false;    // 新增：强力总结运行时变量（默认false）
 let haveEvent = 1;              // 新增：随机事件开关（1=开，0=关，默认1）
-let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true};
-let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
-let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false};
+let npcVisibility = { "A": true,"B": true,"C": true,"D": true,"E": true,"F": true,"G": true,"H": true,"I": true,"J": true,"K": true,"L": true,"M": true,"N": true,"O": false};
+let npcGiftGiven = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false,"M": false,"N": false,"O": false};
+let npcSparred = { "A": false,"B": false,"C": false,"D": false,"E": false,"F": false,"G": false,"H": false,"I": false,"J": false,"K": false,"L": false,"M": false,"N": false,"O": false};
 let alchemyDone = false;  // 新增：本周是否已炼丹
 let triggeredEvents = [];  // 新增：已触发的特殊事件ID列表
 let currentSpecialEvent = "";  // 新增：当前触发的特殊事件ID
@@ -185,6 +186,7 @@ function syncVariablesFromGameData() {
     equipStats,
     userBackground,
     textFontLevel,
+    storyFontFamily,
     playerMood,
     martialArts,
     npcFavorability,
@@ -199,8 +201,8 @@ function syncVariablesFromGameData() {
     npcVisibility,
     npcGiftGiven,
     npcSparred,
-    lastFarmWeek,  
-    farmGrid,     
+    lastFarmWeek,
+    farmGrid,
     inventory,
     equipment,
     learnedSkills,
@@ -274,6 +276,7 @@ function syncGameDataFromVariables() {
     gameData.npcVisibility = npcVisibility;
     gameData.npcGiftGiven = npcGiftGiven;
     gameData.textFontLevel = textFontLevel;
+    gameData.storyFontFamily = storyFontFamily;
     gameData.npcSparred = npcSparred;
     gameData.lastFarmWeek = lastFarmWeek;
     gameData.farmGrid = farmGrid;
@@ -340,8 +343,8 @@ function mergeWithDefaults(loadedData, defaultData) {
                 // 如果key在加载的数据中不存在，添加默认值
                 console.log(`版本更新：添加缺失的字段 "${key}"`);
                 result[key] = structuredClone(defaultData[key]);
-            } else if (typeof defaultData[key] === 'object' && 
-                       defaultData[key] !== null && 
+            } else if (typeof defaultData[key] === 'object' &&
+                       defaultData[key] !== null &&
                        !Array.isArray(defaultData[key])) {
                 // 如果是嵌套对象，递归合并
                 result[key] = mergeWithDefaults(result[key], defaultData[key]);

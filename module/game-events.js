@@ -1,17 +1,17 @@
 /**
  * game-events.js - 事件处理函数
- * 
+ *
  * 文件概述：
  * 处理游戏中的各种事件，包括随机事件、战斗事件、LLM响应解析等。
  * 管理事件的显示、选择和结果处理，以及iframe游戏的消息通信。
- * 
+ *
  * 主要功能：
  * 1. 随机事件系统（选项事件的显示和处理）
  * 2. 战斗事件系统（战斗准备和结果处理）
  * 3. LLM响应解析（处理AI返回的游戏数据）
  * 4. iframe消息监听（处理21点/战斗/农场/炼丹/世界地图结果）
  * 5. 特殊事件触发（与special-event.js联动）
- * 
+ *
  * 对外暴露的主要函数：
  * - displayRandomEvent(event): 显示随机事件界面
  * - hideRandomEvent(): 隐藏随机事件界面
@@ -20,11 +20,11 @@
  * - parseLLMResponse(response, mainTextContent): 解析LLM返回的JSON响应
  * - setupMessageListeners(): 设置iframe消息监听器（21点/战斗/农场/炼丹/世界地图）
  * - applyBattleReward(reward): 应用战斗胜利奖励
- * 
+ *
  * 内部函数：
  * - handleEventOption(optionIndex, option): 处理事件选项选择（支持特殊剧情触发）
  * - applyEventReward(reward): 应用事件奖励（天赋/数值属性）
- * 
+ *
  * 依赖关系：
  * - 依赖 game-state.js 中的状态变量和更新
  * - 依赖 game-config.js 中的NPC配置
@@ -32,7 +32,7 @@
  * - 依赖 game-ui.js 中的显示更新函数
  * - 依赖 game-helpers.js 中的消息处理和游戏显示函数
  * - 依赖 special-event.js 中的特殊事件检查和触发函数
- * 
+ *
  * 特殊说明：
  * - parseLLMResponse 是与AI系统对接的核心函数；在SLG模式下联动 updateStoryText 渲染页与图层
  * - 支持处理NPC好感度变化（含魅力判定和难度调整）
@@ -45,10 +45,10 @@
 function displayRandomEvent(event) {
     const container = document.getElementById('random-event-container');
     const options = document.getElementById('event-options');
-    
+
     // 不再在事件框中显示事件描述，描述已作为最后一页附加到正文
     options.innerHTML = '';
-    
+
     const optionKeys = ['选项一', '选项二', '选项三'];
     optionKeys.forEach((key, index) => {
         if (event[key]) {
@@ -64,7 +64,7 @@ function displayRandomEvent(event) {
             options.appendChild(btn);
         }
     });
-    
+
     // 不直接显示，由 updateStoryDisplay 统一控制（翻到最后一页才显示）
     // container.classList.add('show');
 }
@@ -79,14 +79,14 @@ function hideRandomEvent() {
 // 处理事件选项
 async function handleEventOption(optionIndex, option) {
     if (!currentRandomEvent) return;
-    
+
     const successRate = parseInt(option.成功率) / 100;
     const isSuccess = Math.random() < successRate;
-    
+
     if (isSuccess && option.奖励) {
         applyEventReward(option.奖励);
     }
-    
+
     const _actorName1 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
     const _evYear = Math.floor((currentWeek - 1) / 48) + 1;
     const _evRemaining = (currentWeek - 1) % 48;
@@ -99,21 +99,21 @@ async function handleEventOption(optionIndex, option) {
         `事件描述: ${currentRandomEvent.事件描述}<br>` +
         `${_actorName1}行动选择: ${option.描述}<br>` +
         `选择结果: ${isSuccess ? '成功' : '失败'}`;
-    
+
     hideRandomEvent();
-    
+
     // 检查是否是"特殊剧情:"选项
     if (option.描述 && option.描述.startsWith('特殊剧情:')) {
         // 检查是否有满足条件的特殊事件
         const specialEvent = typeof checkSpecialEvents === 'function' ? checkSpecialEvents() : null;
-        
+
         if (specialEvent) {
             console.log(`[handleEventOption] 触发特殊事件: ${specialEvent.name}`);
-            
+
             // 构造用户消息
             const actionDesc = option.描述.replace(/^特殊剧情:\s*/, '');
             const injectMessage = `{{user}}行动选择: ${actionDesc}`;
-            
+
             // SR 环境：先 inject 用户输入
             if (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
                 const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
@@ -121,21 +121,21 @@ async function handleEventOption(optionIndex, option) {
                     await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${injectMessage}`);
                 }
             }
-            
+
             // 触发特殊事件
             const result = await triggerSpecialEvent(specialEvent);
-            
+
             // 独立前端：委托给 pipeline 处理文本渲染
             if (result && result.standalone && typeof pipeline !== 'undefined' && pipeline.handleSpecialEvent) {
                 await pipeline.handleSpecialEvent(result.event, injectMessage);
                 return;
             }
-            
+
             // SR 链路已在 triggerSpecialEvent 内部处理完毕
             return;
         }
     }
-    
+
     await handleMessageOutput(resultMessage);
 }
 
@@ -146,7 +146,7 @@ function applyEventReward(reward) {
         const attribute = rewardMatch[1];
         const operation = rewardMatch[2];
         const value = parseInt(rewardMatch[3]);
-        
+
         if (playerTalents.hasOwnProperty(attribute)) {
             if (operation === '+') {
                 playerTalents[attribute] = Math.min(100, playerTalents[attribute] + value);
@@ -176,24 +176,24 @@ function displayBattleEvent(event) {
     const enemyAttack = document.getElementById('enemy-attack-display');
     const enemyHealth = document.getElementById('enemy-health-display');
     const rewardText = document.getElementById('battle-reward-text');
-    
+
     currentBattleEvent = event;
-    
+
     // 不在事件框中显示事件描述，正文最后一页已显示
     if (description) description.textContent = '';
-    
+
     if (event.敌方信息) {
         enemyName.textContent = event.敌方信息.名称 || '未知敌人';
         enemyAttack.textContent = event.敌方信息.属性?.攻击力 || '中';
         enemyHealth.textContent = event.敌方信息.属性?.生命力 || '中';
-        
+
         if (event.敌方信息.战斗报酬) {
             const reward = event.敌方信息.战斗报酬;
             rewardText.textContent = `战斗胜利奖励：${reward.类型}+${reward.数值}`;
             currentBattleReward = reward;
         }
     }
-    
+
     // 不直接显示，由 updateStoryDisplay 统一控制（翻到最后一页才显示）
     // container.classList.add('show');
 }
@@ -208,7 +208,7 @@ function hideBattleEvent() {
 // 应用战斗奖励
 function applyBattleReward(reward) {
     if (!reward) return;
-    
+
     switch (reward.类型) {
         case '金钱':
             playerStats.金钱 += reward.数值;
@@ -353,7 +353,7 @@ function parseLLMResponse(response, mainTextContent) {
     if (response && response.时间) {
         const timeStr = response.时间;
         console.log(`当前时间：${timeStr}`);
-        
+
         // 解析时间格式 "HH:MM"
         const timeMatch = timeStr.match(/(\d{1,2}):(\d{2})/);
         if (timeMatch) {
@@ -370,9 +370,9 @@ function parseLLMResponse(response, mainTextContent) {
             } else {
                 dayNightStatus = 'night';
             }
-            
+
             console.log(`昼夜状态更新为：${dayNightStatus}`);
-            
+
             // 更新场景背景
             updateSceneBackgrounds();
         } else {
@@ -384,7 +384,7 @@ function parseLLMResponse(response, mainTextContent) {
     if (GameMode === 0 && response && response.用户 && response.用户.位置变动 && response.用户.位置变动 !== 'none') {
         const userNewLocation = response.用户.位置变动;
         console.log(`用户位置变动：${userNewLocation}`);
-        
+
         // 查找对应的地点ID
         let userLocationId = null;
         for (const [locId, locName] of Object.entries(locationNames)) {
@@ -393,21 +393,21 @@ function parseLLMResponse(response, mainTextContent) {
                 break;
             }
         }
-        
+
         if (userLocationId) {
             // 更新用户位置
             userLocation = userLocationId;
             userLocation_old = userLocation;
             // gameData.userLocation = userLocationId;
-            
+
             console.log(`用户移动到：${userNewLocation} (${userLocationId})`);
-            
+
             // 切换到新场景（如果不在特殊界面）
             const activeScene = document.querySelector('.scene.active');
-            if (activeScene && 
-                activeScene.id !== 'player-stats-scene' && 
+            if (activeScene &&
+                activeScene.id !== 'player-stats-scene' &&
                 activeScene.id !== 'relationships-scene' ) {
-                
+
                 // 如果用户位置改变，切换场景
                 const currentSceneId = activeScene.id.replace('-scene', '');
                 if (currentSceneId !== userLocationId) {
@@ -470,30 +470,30 @@ function parseLLMResponse(response, mainTextContent) {
     } else {
         // 原有的解析逻辑（普通模式）
         slgModeData = [];  // 清空SLG模式数据
-        
+
         if (mainTextContent) {
             currentStoryText = mainTextContent;
             updateStoryText(currentStoryText);
         }
-        
+
         // 处理当前NPC
         if (response.当前NPC && typeof response.当前NPC === 'object') {
             for (const npcName in response.当前NPC) {
                 const npcData = response.当前NPC[npcName];
-                
+
                 let npcId = npcNameToId[npcName];
-                
+
                 if (!npcId) {
                     console.warn(`未找到NPC "${npcName}" 的ID映射`);
                     continue;
                 }
-                
+
                 if (npcData.好感变化 && npcFavorability.hasOwnProperty(npcId)) {
                     let changeValue = 0;
-    
+
                     // 根据难度调整好感度变化值
                     const currentDifficulty = difficulty || 'normal';
-                    
+
                     switch (npcData.好感变化) {
                         case '大幅下降':
                             if (currentDifficulty === 'easy') {
@@ -504,7 +504,7 @@ function parseLLMResponse(response, mainTextContent) {
                                 changeValue = -4;  // 困难：大幅下降-4
                             }
                             break;
-                            
+
                         case '下降':
                             if (currentDifficulty === 'easy') {
                                 changeValue = -1;  // 简单：保持原状
@@ -514,11 +514,11 @@ function parseLLMResponse(response, mainTextContent) {
                                 changeValue = -2;  // 困难：下降-2
                             }
                             break;
-                            
+
                         case '不变':
                             changeValue = 0;  // 所有难度都是0
                             break;
-                            
+
                         case '上升':
                             if (currentDifficulty === 'easy') {
                                 changeValue = 2;   // 简单：保持原状
@@ -528,7 +528,7 @@ function parseLLMResponse(response, mainTextContent) {
                                 changeValue = 1;   // 困难：上升+1
                             }
                             break;
-                            
+
                         case '大幅上升':
                             if (currentDifficulty === 'easy') {
                                 changeValue = 4;   // 简单：保持原状
@@ -539,7 +539,7 @@ function parseLLMResponse(response, mainTextContent) {
                             }
                             break;
                     }
-                    
+
                     let finalChangeValue = changeValue;
                     let charmMessageShown = false;
                     if (changeValue > 0) {
@@ -552,22 +552,22 @@ function parseLLMResponse(response, mainTextContent) {
                         // 应用周好感度上限限制
                         finalChangeValue = clampFavorabilityGain(npcId, finalChangeValue);
                     }
-                    
+
                     npcFavorability[npcId] = npcFavorability[npcId] + finalChangeValue;
                     checkAllValueRanges();
-                    
+
                     if (charmMessageShown && finalChangeValue > 0) {
                         setTimeout(() => {
                             showModal(`对${npcName}的魅力属性判定成功，好感度变化加倍`);
                         }, 100);
                     }
                 }
-                
+
                 if (npcData.位置变动) {
                     // 支持多种格式："演武场|议事厅|后山" 或 "伙房"
                     const locations = npcData.位置变动.split('|').map(loc => loc.trim());
                     const toLocation = locations[locations.length - 1]; // 取最后一个位置
-                    
+
                     let toLocationId = null;
                     for (const [locId, locName] of Object.entries(locationNames)) {
                         if (locName === toLocation.trim()) {
@@ -575,10 +575,10 @@ function parseLLMResponse(response, mainTextContent) {
                             break;
                         }
                     }
-                    
+
                     if (toLocationId) {
                         currentNpcLocations[npcId] = toLocationId;
-                        
+
                         switch(npcId) {
                             case 'A': npcLocationA = toLocationId; break;
                             case 'B': npcLocationB = toLocationId; break;
@@ -597,7 +597,7 @@ function parseLLMResponse(response, mainTextContent) {
                             case 'N': npcLocationN = toLocationId; break;
                             case 'O': npcLocationO = toLocationId; break;
                         }
-                        
+
                         console.log(`${npcName} 移动到 ${toLocation}`);
                     } else {
                         console.warn(`未找到位置 "${toLocation}" 的ID映射`);
@@ -625,13 +625,13 @@ function parseLLMResponse(response, mainTextContent) {
                 currentRandomEvent.事件描述 = `悬赏缉拿：${activeBounty.enemyName}`;
             }
         }
-        
+
         // 有随机事件时禁用输入
         inputEnable = 0;
         if (typeof updateFreeActionInputState === 'function') {
             updateFreeActionInputState();
         }
-        
+
         if (currentRandomEvent.事件类型 === '战斗事件') {
             displayBattleEvent(currentRandomEvent);
             hideRandomEvent();
@@ -652,7 +652,7 @@ function parseLLMResponse(response, mainTextContent) {
         if (typeof updateFreeActionInputState === 'function') {
             updateFreeActionInputState();
         }
-        
+
         hideRandomEvent();
         hideBattleEvent();
 
@@ -700,20 +700,20 @@ function parseLLMResponse(response, mainTextContent) {
     console.log(`npcLocationN ${npcLocationN}`);
     console.log(`npcLocationO ${npcLocationO}`);
     // 更新当前场景的NPC显示
-    if (activeScene && activeScene.id !== 'map-scene' && 
-        activeScene.id !== 'player-stats-scene' && 
+    if (activeScene && activeScene.id !== 'map-scene' &&
+        activeScene.id !== 'player-stats-scene' &&
         activeScene.id !== 'relationships-scene') {
         const locationName = activeScene.id.replace('-scene', '');
         displayNpcs(locationName);
     }
-    
+
     // 同步更新地图地点标签人数显示
     try {
         if (typeof updateLocationHeadcountLabels === 'function') {
             updateLocationHeadcountLabels();
         }
     } catch (e) {}
-    
+
     checkAllValueRanges();
     updateAllDisplays();
 
@@ -732,17 +732,17 @@ function setupMessageListeners() {
             playerStats.金钱 = event.data.money;
             checkAllValueRanges();
             updateStatsDisplay();
-            
+
             document.getElementById('blackjack-modal').style.display = 'none';
             document.getElementById('blackjack-iframe').src = '';
-            
+
             let message = `赌场游戏结束<br>当前金钱：${playerStats.金钱}`;
-            
+
             if (window.pendingMindMessage) {
                 message = '【心性属性判定成功，本次行动不消耗行动点】<br><br>' + message;
                 window.pendingMindMessage = false;
             }
-            
+
             showModal(message);
         }
         else if (event.data.type === 'battle-exit') {
@@ -752,13 +752,13 @@ function setupMessageListeners() {
             }
             document.getElementById('battle-modal').style.display = 'none';
             document.getElementById('battle-iframe').src = '';
-            
+
             const result = event.data.result;
-            
+
             if (currentBattleType === 'npc') {
                 // 无论胜利还是失败，都标记本周已经切磋过
                 npcSparred[currentBattleNpcId] = true;
-                
+
                 // 先同步道具数量变化（在发送消息之前，避免saveGameData保存旧数据）
                 if (event.data.remainingItems) {
                     const remaining = event.data.remainingItems;
@@ -766,28 +766,28 @@ function setupMessageListeners() {
                     inventory['筋骨贴'] = remaining.jingutie || 0;
                     inventory['金疮药'] = remaining.jinchuangyao || 0;
                     inventory['霹雳丸'] = remaining.piliwan || 0;
-                    
+
                     // 清理数量为0的道具
                     Object.keys(inventory).forEach(key => {
                         if (inventory[key] === 0) {
                             delete inventory[key];
                         }
                     });
-                    
+
                     console.log('[战斗-NPC切磋] 道具数量已同步:', remaining);
                 }
-                
+
                 // 获取时间信息
                 const year = Math.floor((currentWeek - 1) / 48) + 1;
                 const remainingWeeks = (currentWeek - 1) % 48;
                 const month = Math.floor(remainingWeeks / 4) + 1;
                 const week = remainingWeeks % 4 + 1;
-                
+
                 // 获取当前地点
                 const activeScene = document.querySelector('.scene.active');
                 const locationId = activeScene.id.replace('-scene', '');
                 const locationName = locationNames[locationId] || '未知地点';
-                
+
                 // 构建地点信息
                 let locationInfo = '';
                 if (userLocation === userLocation_old) {
@@ -796,7 +796,7 @@ function setupMessageListeners() {
                     const oldLocationName = locationNames[userLocation_old] || userLocation_old;
                     locationInfo = `地点：从${oldLocationName}来到${locationName}<br>`;
                 }
-                
+
                 // 基础信息
                 const _actorName2 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
                 let resultMessage = `时间：第${year}年第${month}月第${week}周<br>` +
@@ -804,13 +804,13 @@ function setupMessageListeners() {
                                 locationInfo +  // 使用新的地点信息
                                 `切磋对手：${currentBattleNpcName}<br>` +
                                 `${_actorName2}行动选择：武艺切磋<br>`;
-                
+
                 if (result === 'victory') {
                     resultMessage += `比试结果：胜利<br><br>属性变化：`;
-                    
+
                     // 获取对应的奖励配置
                     const reward = npcSparRewards[currentBattleNpcId];
-                    
+
                     if (reward) {
                         // 应用奖励
                         if (playerTalents.hasOwnProperty(reward.type)) {
@@ -824,16 +824,16 @@ function setupMessageListeners() {
                         checkAllValueRanges();
                         updateStatsDisplay();
                     }
-                    
+
                 } else if (result === 'defeat' || result === 'quit') {
                     resultMessage += `比试结果：失败<br><br>属性变化：<br>无`;
                 }
-                
+
                 await handleMessageOutput(resultMessage);
-                
+
                 currentBattleNpcName = null;
                 currentBattleNpcId = null;
-                
+
             } else if (currentBattleType === 'event') {
                 // 先同步道具数量变化（在发送消息之前，避免saveGameData保存旧数据）
                 if (event.data.remainingItems) {
@@ -842,17 +842,17 @@ function setupMessageListeners() {
                     inventory['筋骨贴'] = remaining.jingutie || 0;
                     inventory['金疮药'] = remaining.jinchuangyao || 0;
                     inventory['霹雳丸'] = remaining.piliwan || 0;
-                    
+
                     // 清理数量为0的道具
                     Object.keys(inventory).forEach(key => {
                         if (inventory[key] === 0) {
                             delete inventory[key];
                         }
                     });
-                    
+
                     console.log('[战斗-事件] 道具数量已同步:', remaining);
                 }
-                
+
                 if (result === 'victory') {
                     let rewardText = '';
                     let dropText = '';
@@ -896,7 +896,7 @@ function setupMessageListeners() {
                         `事件描述: ${currentBattleEvent.事件描述}<br>` +
                         `战斗结果: ${result === 'quit' ? '放弃战斗' : `落败，败给了${currentBattleEvent.敌方信息.名称}`}`);
                 }
-                
+
                 hideBattleEvent();
             } else if (currentBattleType === 'bounty') {
                 // 悬赏战斗结算：奖励来源固定为 activeBounty（不信任 SIDENOTE 里 LLM 自行编造的数值）
@@ -985,32 +985,32 @@ function setupMessageListeners() {
                     inventory['筋骨贴'] = remaining.jingutie || 0;
                     inventory['金疮药'] = remaining.jinchuangyao || 0;
                     inventory['霹雳丸'] = remaining.piliwan || 0;
-                    
+
                     // 清理数量为0的道具
                     Object.keys(inventory).forEach(key => {
                         if (inventory[key] === 0) {
                             delete inventory[key];
                         }
                     });
-                    
+
                     console.log('[战斗-其他] 道具数量已同步:', remaining);
                 }
             }
-            
+
             currentBattleType = null;
             currentBattleReward = null;
         }
         else if (event.data.type === 'farm-exit') {
             // 更新金钱
             playerStats.金钱 = event.data.money;
-            
+
             // 更新种子数量
             if (event.data.seeds) {
                 inventory['小麦种子'] = event.data.seeds.wheat || 0;
                 inventory['茄子种子'] = event.data.seeds.eggplant || 0;
                 inventory['甜瓜种子'] = event.data.seeds.melon || 0;
                 inventory['甘蔗种子'] = event.data.seeds.sugarcane || 0;
-                
+
                 // 清理数量为0的种子
                 Object.keys(inventory).forEach(key => {
                     if (inventory[key] === 0) {
@@ -1018,22 +1018,22 @@ function setupMessageListeners() {
                     }
                 });
             }
-            
+
             // 保存农场状态
             lastFarmWeek = currentWeek;
             farmGrid = event.data.farmGrid || [];
-            
+
             checkAllValueRanges();
             updateAllDisplays();
             // await saveGameData();  // 保存游戏数据
-            
+
             document.getElementById('farm-modal').style.display = 'none';
             document.getElementById('farm-iframe').src = '';
         }
         else if (event.data.type === 'alchemy-exit') {
             // 更新金钱
             playerStats.金钱 = event.data.money;
-            
+
             // 更新药材数量
             if (event.data.herbs) {
                 inventory['丹参'] = event.data.herbs.danshen || 0;
@@ -1041,7 +1041,7 @@ function setupMessageListeners() {
                 inventory['没药'] = event.data.herbs.moyao || 0;
                 inventory['沉香'] = event.data.herbs.chenxiang || 0;
             }
-            
+
             // 更新丹药数量
             if (event.data.pills) {
                 inventory['大力丸'] = event.data.pills.daliwan || 0;
@@ -1061,21 +1061,21 @@ function setupMessageListeners() {
                 inventory['九转金丹-心性'] = event.data.pills.jiuzhuan_nature || 0;
                 inventory['九转金丹-魅力'] = event.data.pills.jiuzhuan_charm || 0;
             }
-            
+
             // 清理数量为0的物品
             Object.keys(inventory).forEach(key => {
                 if (inventory[key] === 0) {
                     delete inventory[key];
                 }
             });
-            
+
             // 标记本周已炼丹
             alchemyDone = true;
-            
+
             checkAllValueRanges();
             updateAllDisplays();
             // await saveGameData();  // 保存游戏数据
-            
+
             document.getElementById('alchemy-modal').style.display = 'none';
             document.getElementById('alchemy-iframe').src = '';
         }
@@ -1089,7 +1089,7 @@ function setupMessageListeners() {
             // 关闭世界地图弹窗
             document.getElementById('worldmap-modal').style.display = 'none';
             document.getElementById('worldmap-iframe').src = '';
-            
+
             // 更新游戏状态
             if (event.data.mapLocation) {
                 mapLocation = event.data.mapLocation;
@@ -1103,13 +1103,13 @@ function setupMessageListeners() {
             if (event.data.battleEvent !== undefined) {
                 battleEvent = event.data.battleEvent;
             }
-            
+
             // 构建返回消息
             const year = Math.floor((currentWeek - 1) / 48) + 1;
             const remainingWeeks = (currentWeek - 1) % 48;
             const month = Math.floor(remainingWeeks / 4) + 1;
             const week = remainingWeeks % 4 + 1;
-            
+
             // 生成随行NPC名字列表
             let companionNames = '无';
             if (companionNPC && companionNPC.length > 0) {
@@ -1168,16 +1168,16 @@ function setupMessageListeners() {
             if (battleEvent === 1) {
                 eventInfo += '<br>特殊事件：遭遇战斗';
             }
-            
+
             const _actorName3 = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
-            const resultMessage = 
+            const resultMessage =
                 `时间：第${year}年第${month}月第${week}周<br>` +
                 `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
                 `抵达目的地：${mapLocation}<br>` +
                 `随行NPC：${companionNames}<br>` +
                 `${_actorName3}行动选择：下山游历` +
                 eventInfo;
-            
+
             // 保存游戏数据
             checkAllValueRanges();
             updateAllDisplays();
@@ -1193,7 +1193,7 @@ function setupMessageListeners() {
                     startWeek: currentWeek
                 };
             }
-            
+
             // 发送消息
             GameMode = 1;
             if (window.GameSceneBridge) GameSceneBridge.invalidate('enter-gal');

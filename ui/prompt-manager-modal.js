@@ -26,6 +26,260 @@ var promptManagerModal = (function() {
     function _npcOverrideKey(varName) { return varName.replace(/^PROMPT_/, ''); }
     function _actionOverrideKey(varName) { return varName.replace(/^PROMPT_/, ''); }
 
+    // --- 提示词/世界书预设切换：上游默认 + 四个相互独立的本地槽位 ---
+    var _PRESET_LS_MODE = 'jxz_presetMode';
+    var _PRESET_LS_LEGACY_BACKUP = 'jxz_presetBackup'; // 旧版唯一“我的自定义”备份，自动迁移到槽位1
+    var _PRESET_LS_SLOT_PREFIX = 'jxz_presetSlot_';
+    var _PRESET_LS_NAMES = 'jxz_presetSlotNames';
+    var _PRESET_MODES = ['default', 'custom1', 'custom2', 'custom3', 'custom4'];
+    var _PRESET_DEFAULT_NAMES = {
+        default: '上游默认',
+        custom1: '本地槽位 1',
+        custom2: '本地槽位 2',
+        custom3: '本地槽位 3',
+        custom4: '本地槽位 4'
+    };
+
+    function _isPresetMode(mode) {
+        return _PRESET_MODES.indexOf(mode) !== -1;
+    }
+
+    function _normalizePresetMode(mode) {
+        // 兼容旧版 custom/default：原“我的自定义”无损映射为本地槽位1。
+        if (mode === 'custom') return 'custom1';
+        return _isPresetMode(mode) ? mode : 'custom1';
+    }
+
+    function _presetMode() {
+        var raw = localStorage.getItem(_PRESET_LS_MODE) || 'custom1';
+        var normalized = _normalizePresetMode(raw);
+        if (raw !== normalized) localStorage.setItem(_PRESET_LS_MODE, normalized);
+        return normalized;
+    }
+
+    function _presetSlotKey(mode) {
+        return _PRESET_LS_SLOT_PREFIX + mode;
+    }
+
+    function _presetBackup(mode) {
+        mode = _normalizePresetMode(mode);
+        if (mode === 'default') return null;
+        try {
+            var data = JSON.parse(localStorage.getItem(_presetSlotKey(mode)) || 'null');
+            if (data) return data;
+        } catch(e) {}
+
+        // 槽位1首次读取时兼容旧版单备份；迁移后仍保留旧 key，便于降级回旧版本。
+        if (mode === 'custom1') {
+            try {
+                var legacy = JSON.parse(localStorage.getItem(_PRESET_LS_LEGACY_BACKUP) || 'null');
+                if (legacy) {
+                    localStorage.setItem(_presetSlotKey(mode), JSON.stringify(legacy));
+                    return legacy;
+                }
+            } catch(e2) {}
+        }
+        return null;
+    }
+
+    function _savePresetBackup(mode, data) {
+        mode = _normalizePresetMode(mode);
+        if (mode === 'default') return;
+        var raw = JSON.stringify(data || _emptyPresetSnapshot());
+        localStorage.setItem(_presetSlotKey(mode), raw);
+        // 槽位1同步维护旧版备份 key，确保版本回退时仍能恢复原自定义内容。
+        if (mode === 'custom1') localStorage.setItem(_PRESET_LS_LEGACY_BACKUP, raw);
+    }
+
+    function _emptyPresetSnapshot() {
+        return { overrides: {}, wb1: [], wb2: [] };
+    }
+
+    function _snapshotCustom() {
+        var snap = {};
+        // localStorage 优先（PC），为空则回退 storageService._cache（APK/IDB-only）
+        try { snap.overrides = JSON.parse(localStorage.getItem('jxz_promptOverrides') || 'null'); } catch(e) { snap.overrides = null; }
+        if (!snap.overrides && typeof storageService !== 'undefined') {
+            try { snap.overrides = JSON.parse(JSON.stringify(storageService.loadPromptOverrides() || {})); } catch(e2) { snap.overrides = {}; }
+        }
+        if (!snap.overrides) snap.overrides = {};
+
+        try { snap.wb1 = JSON.parse(localStorage.getItem('jxz_customWorldbook') || 'null'); } catch(e) { snap.wb1 = null; }
+        if (!snap.wb1 && typeof storageService !== 'undefined') {
+            try { snap.wb1 = JSON.parse(JSON.stringify(storageService.loadCustomWorldbook('1') || [])); } catch(e2) { snap.wb1 = []; }
+        }
+        if (!snap.wb1) snap.wb1 = [];
+
+        try { snap.wb2 = JSON.parse(localStorage.getItem('jxz_customWorldbook2') || 'null'); } catch(e) { snap.wb2 = null; }
+        if (!snap.wb2 && typeof storageService !== 'undefined') {
+            try { snap.wb2 = JSON.parse(JSON.stringify(storageService.loadCustomWorldbook('2') || [])); } catch(e2) { snap.wb2 = []; }
+        }
+        if (!snap.wb2) snap.wb2 = [];
+
+        return snap;
+    }
+
+    function _restoreCustom(snap) {
+        snap = snap || _emptyPresetSnapshot();
+        // 四个槽位均恢复为独立 JSON 副本，防止数组/对象引用在槽位之间串改。
+        var copy;
+        try { copy = JSON.parse(JSON.stringify(snap)); }
+        catch(e) { copy = _emptyPresetSnapshot(); }
+
+        // 写 localStorage
+        localStorage.setItem('jxz_promptOverrides', JSON.stringify(copy.overrides || {}));
+        localStorage.setItem('jxz_customWorldbook', JSON.stringify(copy.wb1 || []));
+        localStorage.setItem('jxz_customWorldbook2', JSON.stringify(copy.wb2 || []));
+        // 同步 storageService 缓存
+        if (typeof storageService !== 'undefined') {
+            storageService.saveCustomWorldbook('1', copy.wb1 || []);
+            storageService.saveCustomWorldbook('2', copy.wb2 || []);
+            // 批量恢复 promptOverrides
+            if (typeof storageService.savePromptOverrides === 'function') {
+                storageService.savePromptOverrides(copy.overrides || {});
+            } else {
+                var overrides = copy.overrides || {};
+                for (var k in overrides) {
+                    if (overrides.hasOwnProperty(k)) storageService.savePromptOverride(k, overrides[k]);
+                }
+            }
+        }
+    }
+
+    function _clearAllCustom() {
+        // 清 localStorage
+        localStorage.removeItem('jxz_promptOverrides');
+        localStorage.removeItem('jxz_customWorldbook');
+        localStorage.removeItem('jxz_customWorldbook2');
+        // 同步 storageService 缓存
+        if (typeof storageService !== 'undefined') {
+            storageService.saveCustomWorldbook('1', []);
+            storageService.saveCustomWorldbook('2', []);
+            // 批量清空 promptOverrides
+            if (typeof storageService.savePromptOverrides === 'function') {
+                storageService.savePromptOverrides({});
+            } else {
+                var all = storageService.loadPromptOverrides();
+                var keys = [];
+                for (var k in all) { if (all.hasOwnProperty(k)) keys.push(k); }
+                keys.forEach(function(k) { storageService.resetPromptOverride(k); });
+            }
+        }
+    }
+
+    function _presetNames() {
+        var saved = {};
+        try { saved = JSON.parse(localStorage.getItem(_PRESET_LS_NAMES) || '{}') || {}; }
+        catch(e) { saved = {}; }
+        var result = {};
+        _PRESET_MODES.forEach(function(mode) {
+            var value = typeof saved[mode] === 'string' ? saved[mode].trim() : '';
+            result[mode] = value ? value.slice(0, 24) : _PRESET_DEFAULT_NAMES[mode];
+        });
+        return result;
+    }
+
+    function _presetLabel(mode) {
+        var names = _presetNames();
+        return names[mode] || _PRESET_DEFAULT_NAMES[mode] || mode;
+    }
+
+    function _openPresetNameEditor() {
+        var old = document.getElementById('pm-preset-name-modal');
+        if (old) old.remove();
+        var names = _presetNames();
+        var rows = _PRESET_MODES.map(function(mode) {
+            return '<div class="cfg-field"><label class="cfg-label">' + _escapeHtml(_PRESET_DEFAULT_NAMES[mode]) + '</label>' +
+                '<input id="pm-preset-name-' + mode + '" class="cfg-input" maxlength="24" value="' + _escapeHtml(names[mode]) + '"></div>';
+        }).join('');
+        var html = '<div id="pm-preset-name-modal" class="modal viewport-overlay" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;z-index:5200">' +
+            '<div class="modal-content" style="position:relative;left:auto;top:auto;transform:none;display:flex;align-items:center;justify-content:center;width:100%;height:100%;max-width:none;max-height:none;margin:0;background:transparent;border:none;box-shadow:none;padding:8px;box-sizing:border-box;overflow:hidden">' +
+            '<div class="cfg-panel" style="max-width:520px;width:100%;max-height:calc(100dvh - 16px);display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">' +
+            '<h3 class="cfg-title">编辑槽位名称</h3>' +
+            '<div class="cfg-scroll-body"><p class="cfg-hint">名称只影响显示，不会合并或移动各槽位中的提示词与世界书内容。</p>' + rows + '</div>' +
+            '<div class="cfg-footer">' +
+            '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._closePresetNameEditor()">取消</button>' +
+            '<button class="cfg-btn cfg-btn-green" onclick="promptManagerModal._savePresetNames()">保存名称</button>' +
+            '</div></div></div></div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    function _closePresetNameEditor() {
+        var modal = document.getElementById('pm-preset-name-modal');
+        if (modal) modal.remove();
+    }
+
+    function _savePresetNames() {
+        var next = {};
+        for (var i = 0; i < _PRESET_MODES.length; i++) {
+            var mode = _PRESET_MODES[i];
+            var input = document.getElementById('pm-preset-name-' + mode);
+            var value = input ? input.value.trim() : '';
+            if (!value) {
+                if (typeof showModal === 'function') showModal('槽位名称不能为空');
+                return;
+            }
+            next[mode] = value.slice(0, 24);
+        }
+        localStorage.setItem(_PRESET_LS_NAMES, JSON.stringify(next));
+        _closePresetNameEditor();
+        _refreshRoot();
+        if (typeof showModal === 'function') showModal('槽位名称已保存');
+    }
+
+    function _switchPreset(targetMode) {
+        if (!_isPresetMode(targetMode)) return;
+        var currentMode = _presetMode();
+        if (targetMode === currentMode) return;
+
+        // 离开本地槽位前先保存当前实时配置；上游默认不建立槽位快照，切离时丢弃其临时改动。
+        if (currentMode !== 'default') {
+            _savePresetBackup(currentMode, _snapshotCustom());
+        }
+
+        _clearAllCustom();
+        if (targetMode !== 'default') {
+            var targetSnapshot = _presetBackup(targetMode) || _emptyPresetSnapshot();
+            _restoreCustom(targetSnapshot);
+            // 首次进入空槽位也立即建档，确保四个槽位拥有彼此独立的持久化记录。
+            if (!_presetBackup(targetMode)) _savePresetBackup(targetMode, targetSnapshot);
+        }
+        localStorage.setItem(_PRESET_LS_MODE, targetMode);
+
+        if (typeof showModal === 'function') {
+            showModal('已切换到「' + _escapeHtml(_presetLabel(targetMode)) + '」');
+        }
+        _refreshRoot();
+    }
+
+    // 保留旧入口的兼容行为：本地任一槽位 ↔ 上游默认；从上游返回时进入槽位1。
+    function _togglePreset() {
+        _switchPreset(_presetMode() === 'default' ? 'custom1' : 'default');
+    }
+
+    function _presetBar() {
+        var mode = _presetMode();
+        var isDefault = mode === 'default';
+        var color = isDefault ? '#4CAF50' : '#FF9800';
+        var buttons = _PRESET_MODES.map(function(candidate) {
+            var active = candidate === mode;
+            var candidateColor = candidate === 'default' ? '#4CAF50' : '#FF9800';
+            return '<button class="cfg-btn cfg-btn-subtle" title="' + _escapeHtml(_presetLabel(candidate)) + '"' +
+                ' style="width:100%;min-width:0;height:40px;padding:5px 6px;line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-color:' + candidateColor + ';color:' + candidateColor + ';' + (active ? 'opacity:1;background:rgba(255,255,255,0.55);font-weight:bold;' : 'opacity:0.72;background:transparent;') + '"' +
+                (active ? ' disabled' : '') +
+                ' onclick="promptManagerModal._switchPreset(\'' + candidate + '\')">' + _escapeHtml(_presetLabel(candidate)) + '</button>';
+        }).join('');
+
+        return '<div style="padding:4px 0 10px;margin-bottom:10px;background:transparent;border:0;border-bottom:1px solid rgba(128,128,128,0.22);border-radius:0">' +
+            '<div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px">' +
+            '<div style="font-size:14px;color:' + color + ';font-weight:bold;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">当前：' + _escapeHtml(_presetLabel(mode)) + '</div>' +
+            '<button class="cfg-btn cfg-btn-subtle" style="flex:0 0 auto;padding:4px 9px;font-size:12px" onclick="promptManagerModal._openPresetNameEditor()">✎ 编辑名称</button>' +
+            '</div>' +
+            '<div class="pm-preset-grid" style="display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;align-items:stretch">' + buttons + '</div>' +
+            '<div style="font-size:11px;color:#999;margin-top:8px">切换时自动保存当前本地槽位；四个槽位的提示词覆盖、地点信息及两类世界书互相独立。</div>' +
+            '</div>';
+    }
+
     // --- 渲染整个面板 ---
     function render(root) {
         if (!root) return;
@@ -53,30 +307,31 @@ var promptManagerModal = (function() {
         // 世界书大类No.1（插入位置：地点信息之后、] 之前）
         html += _pmWorldbookCategory('1');
 
-        // 分组4a：文笔风格 / 对话历史 / 主要NPC信息 / 主角信息（后两者位于 history 内 PreviousMemories 之后、召回记忆之前）
+        // 分组4a：文笔风格 / 对话历史 / 防止重复要求
         html += _pmSection([
             _pmBtn('WRITING_STYLE', '文笔风格', true),
             _pmDisabledBtn('对话历史'),
             _pmNpcDropdown(),
-            _pmBtn('CORE_040', '主角信息', true)
+            _pmBtn('CORE_040', '主角信息', true),
+            _pmBtn('FRESH', '防止重复要求', false)
         ]);
 
-        // 世界书大类No.2（插入位置：<fresh> 与 <user_input> 之间）
+        // 世界书大类No.2（插入位置：</fresh> 与 <user_input> 之间）
         html += _pmWorldbookCategory('2');
 
-        // 分组4b：防止重复要求 / 本次用户输入 / 行动指导 / 信息列表
+        // 分组4b：本次用户输入 / 行动指导 / 信息列表 / 输出格式规范
         html += _pmSection([
-            _pmBtn('FRESH', '防止重复要求', false),
             _pmDisabledBtn('本次用户输入'),
             _pmActionDropdown(),
-            _pmBtn('CORE_105', '信息列表', false)
+            _pmBtn('CORE_105', '信息列表', false),
+            _pmBtn('CORE_110', '输出格式规范', false)
         ]);
 
-        // 分组5：剧情生成要求 / 输出格式规范（位于 Order 内 </request> 之后）/ 思维链
+        // 分组5：剧情生成要求 / 思维链
         html += _pmSection([
             _pmBtn('ORDER', '剧情生成要求', true),
-            _pmBtn('CORE_110', '输出格式规范', false),
-            _pmThinkGuidanceDropdown()
+            _pmThinkGuidanceDropdown(),
+            _pmThinkToggle()
         ]);
 
         // 分组6：越狱前缀 / 最终指令
@@ -169,6 +424,44 @@ var promptManagerModal = (function() {
             '<span class="gs-switch-label">思维链</span>' +
             '<select class="cfg-input" style="flex:1 1 160px;max-width:220px;min-width:0" onchange="promptManagerModal._openThink(this)">' + opts + '</select>' +
             '</div>';
+    }
+
+    /**
+     * 显示 LLM 思维链 开关（正文区实时展示 reasoning_content）
+     */
+    function _pmThinkToggle() {
+        var STORAGE_KEY = 'jxz_showThinking';
+        var enabled = false;
+        try {
+            var saved = localStorage.getItem(STORAGE_KEY);
+            if (saved !== null) enabled = saved === 'true';
+        } catch (e) {}
+        window._showThinkingEnabled = enabled;
+        return '<div class="gs-switch-row">' +
+            '<span class="gs-switch-label">显示思考过程</span>' +
+            '<label class="gs-toggle-wrap">' +
+            '<input type="checkbox" id="gs-thinking-toggle" onchange="promptManagerModal._toggleThinking(this)"' + (enabled ? ' checked' : '') + '>' +
+            '<span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>' +
+            '<span class="gs-toggle-hint" id="gs-thinking-hint">' + (enabled ? '开' : '关') + '</span>' +
+            '</label>' +
+            '<span style="font-size:11px;color:rgba(255,255,255,0.5);margin-left:8px;">正文上方的斜体思考文字</span>' +
+            '</div>';
+    }
+
+    function _toggleThinking(el) {
+        var STORAGE_KEY = 'jxz_showThinking';
+        var enabled = el.checked;
+        try { localStorage.setItem(STORAGE_KEY, String(enabled)); } catch (e) {}
+        window._showThinkingEnabled = enabled;
+        var hint = document.getElementById('gs-thinking-hint');
+        if (hint) hint.textContent = enabled ? '开' : '关';
+        if (!enabled) {
+            var display = document.getElementById('story-thinking');
+            if (display) {
+                display.style.display = 'none';
+                display.textContent = '';
+            }
+        }
     }
 
     // --- 下拉框选中后打开编辑弹窗 ---
@@ -305,7 +598,20 @@ var promptManagerModal = (function() {
 
     function _refreshRoot() {
         var root = document.getElementById('gs-prompt-manager-root');
-        if (root) render(root);
+        if (!root) return;
+        // 新版弹窗由 .game-dialog-body 滚动，旧版由 .gs-panel-wrap 滚动；重绘前保存实际滚动容器的位置。
+        var scroller = root.closest
+            ? (root.closest('.game-dialog-body') || root.closest('.gs-panel-wrap'))
+            : null;
+        var scrollTop = scroller ? scroller.scrollTop : root.scrollTop;
+        render(root);
+        var restore = function() {
+            if (scroller) scroller.scrollTop = scrollTop;
+            else root.scrollTop = scrollTop;
+        };
+        // 同步恢复一次，再在浏览器完成新布局后恢复一次，兼容横屏和字体变化造成的重排。
+        restore();
+        if (typeof requestAnimationFrame === 'function') requestAnimationFrame(restore);
     }
 
     function _save(key) {
@@ -318,10 +624,11 @@ var promptManagerModal = (function() {
     }
 
     function _resetDefault(key) {
-        if (typeof promptOverrides !== 'undefined') promptOverrides.reset(key);
-        _close();
-        _refreshRoot();
-        if (typeof showModal === 'function') showModal('已恢复默认提示词');
+        _confirm('恢复默认提示词', '确定要恢复默认提示词吗？当前自定义内容将被移除。', function() {
+            if (typeof promptOverrides !== 'undefined') promptOverrides.reset(key);
+            _close();
+            _refreshRoot();
+        });
     }
 
     // ========== 地点信息结构化编辑器（v0.6：不再走 promptOverrides，直接读写 locationMemory） ==========
@@ -624,12 +931,14 @@ var promptManagerModal = (function() {
 
     function _locResetDefault() {
         if (typeof storageService === 'undefined' || !_locState || !_locState.name) { _close(); return; }
-        var memory = storageService.loadLocationMemory();
-        delete memory[_locState.name];
-        storageService.saveLocationMemory(memory);
-        _close();
-        _refreshRoot();
-        if (typeof showModal === 'function') showModal('已恢复默认地点信息');
+        var locationName = _locState.name;
+        _confirm('恢复默认地点信息', '确定要恢复「' + locationName + '」的默认地点信息吗？当前自定义内容将被移除。', function() {
+            var memory = storageService.loadLocationMemory();
+            delete memory[locationName];
+            storageService.saveLocationMemory(memory);
+            _close();
+            _refreshRoot();
+        });
     }
 
     // ========== 自定义世界书 ==========
@@ -790,24 +1099,33 @@ var promptManagerModal = (function() {
             var list = customWorldbook.getAll(slot);
             for (var i = 0; i < list.length; i++) { if (list[i].id === id) { name = list[i].name || '(未命名世界书)'; break; } }
         }
-        _confirm('确定删除世界书「' + name + '」吗？此操作不可撤销。', function() {
+        _confirm('删除世界书', '确定删除世界书「' + name + '」吗？此操作不可撤销。', function() {
             if (typeof customWorldbook !== 'undefined') customWorldbook.remove(slot, id);
             _refreshRoot();
         });
     }
 
-    function _confirm(message, onYes) {
+    function _confirm(title, message, onYes) {
         var existing = document.getElementById('pm-confirm-modal');
         if (existing) existing.remove();
-        var html = '<div id="pm-confirm-modal" style="position:fixed;left:0;top:0;width:100%;height:100%;background:rgba(0,0,0,0.55);z-index:6000;display:flex;align-items:center;justify-content:center;">' +
-            '<div class="cfg-panel" style="max-width:420px;width:90%;box-sizing:border-box;">' +
-            '<p style="margin:0 0 16px;">' + _escapeHtml(message) + '</p>' +
-            '<div class="modal-buttons">' +
-            '<button class="cfg-btn cfg-btn-subtle" onclick="document.getElementById(\'pm-confirm-modal\').remove()">取消</button>' +
-            '<button class="cfg-btn" style="background:rgba(220,80,80,0.25);border-color:rgba(220,80,80,0.5);color:#ffb3b3" onclick="promptManagerModal._confirmYes()">确定</button>' +
-            '</div></div></div>';
-        document.body.insertAdjacentHTML('beforeend', html);
         _pendingConfirmYes = onYes;
+        // 复用 cfg-panel/cfg-title/cfg-footer，让古风主题自动应用水墨纸张、墨线边框和印章按钮。
+        var html = '<div id="pm-confirm-modal" class="modal viewport-overlay" style="display:flex;align-items:center;justify-content:center;position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;overflow:hidden;z-index:6000">' +
+            '<div class="modal-content" style="position:relative;left:auto;top:auto;transform:none;display:flex;align-items:center;justify-content:center;width:100%;height:100%;max-width:none;max-height:none;margin:0;background:transparent;border:none;box-shadow:none;padding:8px;box-sizing:border-box;overflow:hidden">' +
+            '<div class="cfg-panel" style="max-width:440px;width:100%;max-height:calc(100dvh - 16px);display:flex;flex-direction:column;overflow:hidden;box-sizing:border-box">' +
+            '<h3 class="cfg-title">' + _escapeHtml(title || '请确认') + '</h3>' +
+            '<div class="cfg-scroll-body"><p class="cfg-hint" style="font-size:14px;line-height:1.8;margin:14px 0 18px">' + _escapeHtml(message) + '</p></div>' +
+            '<div class="cfg-footer">' +
+            '<button class="cfg-btn cfg-btn-subtle" onclick="promptManagerModal._confirmCancel()">取消</button>' +
+            '<button class="cfg-btn cfg-btn-green" onclick="promptManagerModal._confirmYes()">确定</button>' +
+            '</div></div></div></div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    function _confirmCancel() {
+        var modal = document.getElementById('pm-confirm-modal');
+        if (modal) modal.remove();
+        _pendingConfirmYes = null;
     }
 
     function _confirmYes() {
@@ -836,9 +1154,19 @@ var promptManagerModal = (function() {
         _openNpc: _openNpc,
         _openAction: _openAction,
         _openThink: _openThink,
+        _toggleThinking: _toggleThinking,
         _save: _save,
         _resetDefault: _resetDefault,
         _close: _close,
+        _togglePreset: _togglePreset,
+        _switchPreset: _switchPreset,
+        _openPresetNameEditor: _openPresetNameEditor,
+        _closePresetNameEditor: _closePresetNameEditor,
+        _savePresetNames: _savePresetNames,
+        captureWorkspaceConfig: _snapshotCustom,
+        applyWorkspaceConfig: _restoreCustom,
+        emptyWorkspaceConfig: _emptyPresetSnapshot,
+        refresh: _refreshRoot,
         _wbMoveUp: _wbMoveUp,
         _wbMoveDown: _wbMoveDown,
         _onWbToggle: _onWbToggle,
@@ -846,6 +1174,7 @@ var promptManagerModal = (function() {
         _closeWorldbookEditor: _closeWorldbookEditor,
         _saveWorldbookEntry: _saveWorldbookEntry,
         _confirmDeleteWorldbook: _confirmDeleteWorldbook,
+        _confirmCancel: _confirmCancel,
         _confirmYes: _confirmYes
     };
 })();

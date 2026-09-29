@@ -86,3 +86,46 @@ body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-reset {
     #main-viewport { --viewport-corner-size: 36px; }
     body #main-viewport #viewport-dock-menu .control-btn { min-height: 0; font-size: clamp(12px, 3.2cqw, 17px); }
 }
+
+/* 竖屏 3D 扩展到约 52% 后，地点名称改为半透明水墨纸签。
+   深色中文字体不再依赖粗描边，字号随屏幕高度放大；交互按钮同步放大。 */
+@media (max-width: 600px) and (orientation: portrait) {
+    body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-location-label {
+        max-width: clamp(56px, 18cqw, 82px) !important;
+        padding: 2px 4px 3px !important;
+        border: 1px solid rgba(76, 66, 50, 0.52) !important;
+        border-radius: 3px !important;
+        color: #2f2a22 !important;
+        background: rgba(246, 240, 224, 0.72) !important;
+        box-shadow: 0 1px 4px rgba(20, 18, 14, 0.2) !important;
+        backdrop-filter: blur(1px);
+        font-family: "Noto Serif CJK SC", "Source Han Serif SC", "Songti SC", system-ui, serif !important;
+        font-size: clamp(12px, 1.45vh, 14px) !important;
+        font-size: clamp(12px, 1.45dvh, 14px) !important;
+        font-weight: 600 !important;
+        line-height: 1.2 !important;
+        letter-spacing: 0.04em;
+        -webkit-text-stroke: 0 !important;
+        paint-order: normal !important;
+        text-shadow: 0 1px 0 rgba(255,255,255,0.72) !important;
+    }
+    /* 山门与演武场投影点靠得很近：山门左移下沉；后山向左展开，避免纸签重叠或越界。 */
+    body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-location-label[data-scene-id="gate"] {
+        transform: translate(calc(-50% - 20px), calc(-100% + 9px)) !important;
+    }
+    body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-location-label[data-scene-id="back_mountain"] {
+        transform: translate(-100%, calc(-100% - 6px)) !important;
+    }
+    body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-location-label .location-label-divider {
+        border-top-width: 1px !important;
+        border-top-color: rgba(72, 62, 48, 0.66) !important;
+        box-shadow: none !important;
+        margin: 3px 0 !important;
+    }
+    body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-location-label .people-dot {
+        width: clamp(6px, 1.6cqw, 8px) !important;
+        height: clamp(6px, 1.6cqw, 8px) !important;
+        background: #4d4436 !important;
+        box-shadow: 0 0 0 1px rgba(255,255,255,0.65) !important;
+    }
+}

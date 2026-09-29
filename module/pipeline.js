@@ -2,8 +2,8 @@
  * pipeline.js - 单轮消息处理流水线（两阶段设计）
  * Phase 1 核心：请求阶段无副作用 + 提交阶段可回滚
  * Phase 2：流式 SSE 支持 + 节流渲染
- * 
- * 依赖：api-service, prompt-builder, response-parser, 
+ *
+ * 依赖：api-service, prompt-builder, response-parser,
  *        variable-system, summary-history-service, storage-service
  */
 
@@ -148,20 +148,26 @@ var pipeline = (function() {
         var summaryIds = new Set(allSummaries.map(function(s) { return s.id; }));
 
         var embRecords = storageService.loadAllEmbeddings();
-        var embIds = new Set(embRecords.map(function(r) { return r.id; }));
+        var fp = embeddingService.getFingerprint();
 
-        // 1. emb_ 有但 summaryHistory 无 → 删除
-        var toDelete = embRecords.filter(function(r) { return !summaryIds.has(r.id); });
+        // 1. 删除孤立向量与模型指纹不一致的旧向量；后者必须按当前模型重建。
+        var toDelete = embRecords.filter(function(r) {
+            return !summaryIds.has(r.id) || !r.fingerprint || r.fingerprint !== fp;
+        });
         if (toDelete.length > 0) {
             toDelete.forEach(function(r) {
                 storageService.deleteEmbedding(r.id);
                 if (typeof memoryRecall !== 'undefined') memoryRecall.removeFromCache(r.id);
             });
-            console.log('[EmbSync] 删除孤立 emb_ ' + toDelete.length + ' 条: ' + toDelete.map(function(r){ return r.id; }).join(', '));
+            console.log('[EmbSync] 删除孤立/指纹失效 emb_ ' + toDelete.length + ' 条: ' + toDelete.map(function(r){ return r.id; }).join(', '));
         }
 
-        // 2. summaryHistory 有但 emb_ 缺失 → 补生成
-        var missing = allSummaries.filter(function(s) { return s.id && !embIds.has(s.id); });
+        var validEmbIds = new Set(embRecords.filter(function(r) {
+            return summaryIds.has(r.id) && r.fingerprint === fp;
+        }).map(function(r) { return r.id; }));
+
+        // 2. summaryHistory 有但当前模型有效向量缺失 → 补生成
+        var missing = allSummaries.filter(function(s) { return s.id && !validEmbIds.has(s.id); });
         if (missing.length === 0) {
             if (toDelete.length === 0) {
                 console.log('[EmbSync] emb_ 与 summaryHistory 完全一致，共 ' + embRecords.length + ' 条');
@@ -169,8 +175,7 @@ var pipeline = (function() {
             return;
         }
 
-        console.log('[EmbSync] 发现 ' + missing.length + ' 条摘要缺少 emb_，开始补生成: ' + missing.map(function(s){ return s.id; }).join(', '));
-        var fp = embeddingService.getFingerprint();
+        console.log('[EmbSync] 发现 ' + missing.length + ' 条摘要缺少当前模型向量，开始补生成: ' + missing.map(function(s){ return s.id; }).join(', '));
         var _uiHistSync = storageService.loadUIConversation();
         for (var i = 0; i < missing.length; i++) {
             var s = missing[i];
@@ -208,28 +213,33 @@ var pipeline = (function() {
         var eventIds = new Set(allEvents.map(function(e) { return e.id; }));
 
         var l2Records = storageService.loadAllL2Embeddings();
-        var l2Ids = new Set(l2Records.map(function(r) { return r.id; }));
+        var fp = embeddingService.getFingerprint();
 
-        // 1. wevt_ 有但 eventHistory 无 → 删孤
-        var toDelete = l2Records.filter(function(r) { return !eventIds.has(r.id); });
+        // 1. 删除孤立事件向量与模型指纹不一致的旧向量。
+        var toDelete = l2Records.filter(function(r) {
+            return !eventIds.has(r.id) || !r.fingerprint || r.fingerprint !== fp;
+        });
         if (toDelete.length > 0) {
             toDelete.forEach(function(r) {
                 storageService.deleteL2Embedding(r.id);
                 if (typeof memoryRecall !== 'undefined' && memoryRecall.removeFromCacheL2) memoryRecall.removeFromCacheL2(r.id);
             });
-            console.log('[L2Sync] 删除孤立 wevt_ ' + toDelete.length + ' 条: ' + toDelete.map(function(r){ return r.id; }).join(', '));
+            console.log('[L2Sync] 删除孤立/指纹失效 wevt_ ' + toDelete.length + ' 条: ' + toDelete.map(function(r){ return r.id; }).join(', '));
         }
 
-        // 2. eventHistory 有但 wevt_ 缺失 → 补生成
-        var missing = allEvents.filter(function(e) { return e.id && !l2Ids.has(e.id); });
+        var validL2Ids = new Set(l2Records.filter(function(r) {
+            return eventIds.has(r.id) && r.fingerprint === fp;
+        }).map(function(r) { return r.id; }));
+
+        // 2. eventHistory 有但当前模型有效向量缺失 → 补生成
+        var missing = allEvents.filter(function(e) { return e.id && !validL2Ids.has(e.id); });
         if (missing.length === 0) {
             if (toDelete.length === 0) {
                 console.log('[L2Sync] wevt_ 与 eventHistory 完全一致，共 ' + l2Records.length + ' 条');
             }
             return;
         }
-        console.log('[L2Sync] 发现 ' + missing.length + ' 条事件缺少 wevt_，开始补生成: ' + missing.map(function(e){ return e.id; }).join(', '));
-        var fp = embeddingService.getFingerprint();
+        console.log('[L2Sync] 发现 ' + missing.length + ' 条事件缺少当前模型向量，开始补生成: ' + missing.map(function(e){ return e.id; }).join(', '));
         for (var i = 0; i < missing.length; i++) {
             var ev = missing[i];
             try {
@@ -702,7 +712,10 @@ var pipeline = (function() {
 
             var handle = apiService.sendMessagesStream(messages, {
                 onToken: function(delta) {
-                    if (accumulatedText === '') _setStreamLog('施延年伏案疾书');
+                    if (accumulatedText === '') {
+                        _setStreamLog('施延年伏案疾书');
+                        _collapseThinkingDisplay();
+                    }
                     accumulatedText += delta;
                     if (!throttleTimer) {
                         throttleTimer = setTimeout(function() {
@@ -712,9 +725,10 @@ var pipeline = (function() {
                     }
                 },
                 onThinking: function(delta) {
-                    // 累积思维链内容（DeepSeek/Qwen 的 reasoning_content 字段）
+                    // 累积并按设置实时展示 DeepSeek/Qwen 思维过程。
                     if (accumulatedThinking === '') _setStreamLog('施延年蹙眉沉吟');
                     accumulatedThinking += delta;
+                    _showThinkingText(delta);
                 },
                 onComplete: function(fullText, usage) {
                     _setStreamLog('施延年题尾落款');
@@ -1165,6 +1179,65 @@ var pipeline = (function() {
         el.textContent = text || '';
     }
 
+    var _thinkingVisible = false;
+    var _thinkingHideTimer = null;
+
+    function _isThinkingEnabled() {
+        try {
+            if (typeof window._showThinkingEnabled === 'boolean') return window._showThinkingEnabled;
+            var saved = localStorage.getItem('jxz_showThinking');
+            if (saved !== null) return saved === 'true';
+        } catch (e) {}
+        return false; // 新安装保持上游默认行为，由用户主动开启。
+    }
+
+    function _ensureThinkingDisplay() {
+        var el = document.getElementById('story-thinking');
+        if (el) return el;
+        var story = document.getElementById('story-text');
+        if (!story || !story.parentNode) return null;
+        el = document.createElement('div');
+        el.id = 'story-thinking';
+        el.style.cssText = 'margin:0 8px 8px;padding:6px 10px;font-size:var(--story-font-size,15px);line-height:1.8;color:var(--story-color,#ccc);font-style:italic;text-align:left;white-space:pre-wrap;word-break:break-word;display:none;transition:max-height .4s,opacity .4s;';
+        story.parentNode.insertBefore(el, story);
+        return el;
+    }
+
+    function _showThinkingText(delta) {
+        if (!_isThinkingEnabled() || !delta) return;
+        var el = _ensureThinkingDisplay();
+        if (!el) return;
+        if (!_thinkingVisible) {
+            if (_thinkingHideTimer) clearTimeout(_thinkingHideTimer);
+            _thinkingHideTimer = null;
+            el.style.display = 'block';
+            el.style.maxHeight = 'none';
+            el.style.opacity = '1';
+            el.style.overflowY = 'auto';
+            el.textContent = '';
+            _thinkingVisible = true;
+        }
+        var combined = (el.textContent || '') + delta;
+        var maxLen = 3000;
+        el.textContent = combined.length > maxLen ? '…' + combined.slice(combined.length - maxLen + 1) : combined;
+        el.scrollTop = el.scrollHeight;
+    }
+
+    function _collapseThinkingDisplay() {
+        var el = document.getElementById('story-thinking');
+        if (!el || !_thinkingVisible) return;
+        el.style.maxHeight = '4em';
+        el.style.opacity = '0.45';
+        el.style.overflow = 'hidden';
+        _thinkingVisible = false;
+        if (_thinkingHideTimer) clearTimeout(_thinkingHideTimer);
+        _thinkingHideTimer = setTimeout(function() {
+            _thinkingHideTimer = null;
+            var current = document.getElementById('story-thinking');
+            if (current && !_thinkingVisible) current.style.display = 'none';
+        }, 3000);
+    }
+
     function _setInteractionEnabled(enabled) {
         var ids = ['skip-week-btn', 'slg-return-btn', 'free-action-send-btn', 'regenerate-btn', 'free-action-input'];
         ids.forEach(function(id) {
@@ -1272,17 +1345,17 @@ var pipeline = (function() {
             console.error('[Pipeline] 特殊事件对象无效');
             return;
         }
-        
+
         console.log('[Pipeline] 处理特殊事件:', event.name);
-        
+
         try {
             _showStreamControls();
             _setStreamLog('施延年灵光乍现');
-            
+
             // 模拟思考延迟
             await new Promise(function(resolve) { setTimeout(resolve, 600); });
             _setStreamLog('施延年题尾落款');
-            
+
             // 替换 {{user}} 为主角名字
             var playerName = (typeof gameData !== 'undefined' && gameData.playerName) ? gameData.playerName : '主角';
             var eventText = event.text.replace(/\{\{user\}\}/g, playerName);
@@ -1315,7 +1388,7 @@ var pipeline = (function() {
                     (_npcNames ? '随行NPC：' + _npcNames + '<br>' : '');
                 resolvedUserMessage = _prefix + resolvedUserMessage;
             }
-            
+
             // 走完整的提交流程（解析SUMMARY、SIDE_NOTE、渲染、保存）
             // 标记本次摘要来源为特殊剧情事件
             _currentSummarySource = 'special_event';
@@ -1326,9 +1399,9 @@ var pipeline = (function() {
             if (typeof updateFreeActionInputState === 'function') {
                 updateFreeActionInputState();
             }
-            
+
             _hideStreamControls();
-            
+
             console.log('[Pipeline] 特殊事件处理完成');
         } catch (error) {
             _hideStreamControls();
@@ -1353,9 +1426,9 @@ var pipeline = (function() {
             }
         }
     }
-    return { 
+    return {
         runTurn: function() { return withSceneGuard(runTurn, arguments); },
-        abortCurrentTurn: abortCurrentTurn, 
+        abortCurrentTurn: abortCurrentTurn,
         isStreaming: isStreaming,
         handleSpecialEvent: function() { return withSceneGuard(handleSpecialEvent, arguments); }
     };

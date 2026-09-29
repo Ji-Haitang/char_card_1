@@ -23,6 +23,8 @@ const ALLOWED_HEADERS = [
   'anthropic-version',
   'anthropic-beta',
   'x-goog-api-key',
+  'http-referer',
+  'x-title',
 ];
 
 const CORS_HEADERS = {

@@ -422,6 +422,13 @@ body.layout-landscape .story-text {
         flex: 0 0 auto;
         width: 100%;
     }
+    /* 3D 激活时固定占竖屏约 52%；WebGL 相机会按新画布宽高重算投影，模型自身比例不拉伸。
+       renderScale/MSAA 等画质倍率仍完全由原设置面板手动控制。 */
+    body.layout-portrait.scene3d-active #main-viewport[data-scene3d-ready="true"] {
+        height: clamp(320px, 52vh, 480px);
+        height: clamp(320px, 52dvh, 480px);
+        aspect-ratio: auto;
+    }
     body.layout-portrait .story-area {
         flex: 1 1 0;
         min-height: 0;
@@ -440,9 +447,61 @@ body.layout-landscape .story-text {
         overflow-y: auto;
         overflow-x: hidden;
         overscroll-behavior: contain;
+        /* 页码仍清晰可见，但正文更靠近页码，压缩无效留白。 */
+        padding-top: 18px;
+        padding-bottom: 8px;
     }
     body.layout-portrait .story-area > .free-action-container {
         flex: 0 0 auto;
         margin-top: 0 !important;
+        padding-bottom: max(8px, env(safe-area-inset-bottom, 0px));
+    }
+}
+
+/* ============================================================
+ * 5. 2D 子场景交互按钮：与3D一致，返回在左上角，动作纵向排列在其下方
+ * ============================================================ */
+#main-viewport:not([data-scene3d-ready="true"]) {
+    --scene2d-left-control-left: max(12px, env(safe-area-inset-left, 0px));
+    --scene2d-left-control-top: max(12px, env(safe-area-inset-top, 0px));
+    --scene2d-left-control-width: clamp(64px, 9vw, 96px);
+    --scene2d-left-control-height: clamp(30px, 4.2vw, 38px);
+    --scene2d-left-control-gap: 7px;
+}
+#main-viewport:not([data-scene3d-ready="true"]) > .scene.active:not(#map-scene):not(#player-stats-scene):not(#relationships-scene) > .back-btn,
+#main-viewport:not([data-scene3d-ready="true"]) > .scene.active .scene-actions .scene-btn {
+    width: var(--scene2d-left-control-width) !important;
+    height: var(--scene2d-left-control-height) !important;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    padding: 0 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: clamp(10px, 1.5vw, 14px) !important;
+    line-height: 1.1 !important;
+    white-space: nowrap !important;
+}
+#main-viewport:not([data-scene3d-ready="true"]) > .scene.active:not(#map-scene):not(#player-stats-scene):not(#relationships-scene) > .back-btn {
+    left: var(--scene2d-left-control-left) !important;
+    top: var(--scene2d-left-control-top) !important;
+}
+#main-viewport:not([data-scene3d-ready="true"]) > .scene.active .scene-actions {
+    left: var(--scene2d-left-control-left) !important;
+    top: calc(var(--scene2d-left-control-top) + var(--scene2d-left-control-height) + var(--scene2d-left-control-gap)) !important;
+    bottom: auto !important;
+    transform: none !important;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--scene2d-left-control-gap) !important;
+}
+@media (max-width: 600px) and (orientation: portrait) {
+    #main-viewport:not([data-scene3d-ready="true"]) {
+        --scene2d-left-control-width: clamp(58px, 15vw, 68px);
+        --scene2d-left-control-height: clamp(28px, 7.2vw, 32px);
+        --scene2d-left-control-gap: 6px;
     }
 }

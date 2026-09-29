@@ -15,3 +15,16 @@
     font-display: swap;
 }
 
+/* 正文字体切换：APK/WebView 使用随包字体，避免不同Android系统回退结果不一致。 */
+@font-face {
+    font-family: 'Ma Shan Zheng';
+    src: url('../assets/fonts/ma-shan-zheng.ttf') format('truetype');
+    font-display: swap;
+}
+
+@font-face {
+    font-family: 'ZCOOL XiaoWei';
+    src: url('../assets/fonts/zcool-xiaowei.ttf') format('truetype');
+    font-display: swap;
+}
+

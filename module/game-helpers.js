@@ -396,39 +396,32 @@ function showAlchemyGame() {
     modal.style.display = 'block';
 }
 
-// ========== 后台总结类任务：同一请求连续失败达上限后的统一处置 ==========
-// 周总结/事件总结/地点更新等后台 LLM 请求失败后会自动重试；极端情况（额度耗尽/审核拦截/网络波动）
-// 下同一请求会无限「失败→重试」循环。各 runner 计数到上限后调用本函数：
-// 弹窗提示用户（参照自动存档失败的 showModal 形式，标明是哪类请求）
-// + 关闭「系统设置-游戏设置-总结管理」对应开关（实际变量置 false + 同步 checkbox UI + 立即存盘，
-//   防止刷新后开关回弹再次进入无限重试）
+// 后台总结类任务达到连续失败上限后统一关停，并持久化开关。
 var BG_SUMMARY_TASK_META = {
-    weekly:   { name: '每周总结', toggleId: 'gs-summary-weekly-toggle',   hintId: 'gs-summary-weekly-hint' },
-    event:    { name: '事件总结', toggleId: 'gs-summary-event-toggle',    hintId: 'gs-summary-event-hint' },
+    weekly: { name: '每周总结', toggleId: 'gs-summary-weekly-toggle', hintId: 'gs-summary-weekly-hint' },
+    event: { name: '事件总结', toggleId: 'gs-summary-event-toggle', hintId: 'gs-summary-event-hint' },
     location: { name: '地点更新', toggleId: 'gs-summary-location-toggle', hintId: 'gs-summary-location-hint' }
 };
 
 function autoDisableSummarySwitch(kind, errMsg, failCount) {
     var meta = BG_SUMMARY_TASK_META[kind];
     if (!meta) return;
-    // ① 实际变量置 false（与各 gsOnSummary*Toggle 的手写路径一致）
     if (typeof gameData !== 'undefined' && gameData) {
         if (!gameData.summaryConfig) gameData.summaryConfig = {};
         if (!gameData.summaryConfig[kind]) gameData.summaryConfig[kind] = { enabled: true };
         gameData.summaryConfig[kind].enabled = false;
-        // 立即存盘（appState 仅承载 gameData，与 storage-service.js 快照回滚处写法一致）
         if (typeof storageService !== 'undefined' && storageService.saveAppState) {
             try { storageService.saveAppState({ gameData: gameData }); } catch (e) { console.warn('[BgSummaryTask] 开关状态存盘失败:', e); }
         }
     }
-    // ② 同步 UI（设置弹窗未打开时元素仍在 DOM，直接改无妨；打开时用户立刻能看到）
     var toggle = document.getElementById(meta.toggleId);
     if (toggle) toggle.checked = false;
     var hint = document.getElementById(meta.hintId);
     if (hint) hint.textContent = '关';
-    // ③ 弹窗提示（标明是哪类请求 + 最近失败原因）
     if (typeof showModal === 'function') {
-        showModal('后台「' + meta.name + '」请求连续失败 ' + (failCount || '多') + ' 次，已自动关闭该功能。\n\n最近失败原因：' + (errMsg || '未知错误') + '\n\n请检查 API 额度/网络连接后，到「系统设置-游戏设置-总结管理」重新开启。');
+        // showModal 使用 innerHTML，失败原因可能来自远端响应，必须转义。
+        var safeErr = String(errMsg || '未知错误').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        showModal('后台「' + meta.name + '」请求连续失败 ' + (failCount || '多') + ' 次，已自动关闭该功能。\n\n最近失败原因：' + safeErr + '\n\n请检查 API 额度/网络连接后，到「系统设置-游戏设置-总结管理」重新开启。');
     }
 }
 
@@ -490,12 +483,191 @@ function getRandomLocation(npcId) {
     return 'none';
 }
 
+// 玩家上传的主角立绘使用独立虚拟ID，不写入NPC好感、位置等业务状态。
+const USER_PORTRAIT_ID = 'USER';
+
+// 按图片缓存离屏 canvas；表情换图时会主动失效，避免透明点击仍读取旧立绘。
+const _npcOpaqueCanvasCache = new WeakMap();
+
+// 记录已经确认不存在的天山派表情资源，避免翻页时反复请求同一个 404 文件。
+const _missingTianshanPortraitAssets = new Set();
+
+/**
+ * 计算天山派普通模式下某个 NPC 当前应显示的立绘。
+ * 有有效表情时优先使用“表情差分”目录；无表情、特殊CG或资源缺失时回退原始立绘。
+ */
+function getTianshanNpcPortraitChoice(npcId, emotionMap) {
+    const map = emotionMap || ((typeof getTianshanNpcEmotionMap === 'function') ? getTianshanNpcEmotionMap() : {});
+    if (npcId === USER_PORTRAIT_ID) {
+        const requestedEmotion = map.user || 'none';
+        const userSrc = (typeof userPortraitManager !== 'undefined')
+            ? userPortraitManager.getPortraitUrl(requestedEmotion) : null;
+        return { src: userSrc || '', fallback: userSrc || '', emotion: requestedEmotion, assetKey: '' };
+    }
+
+    const fallback = (typeof npcPortraits !== 'undefined' && npcPortraits[npcId]) ? npcPortraits[npcId] : '';
+    if (typeof GameMode === 'undefined' || GameMode !== 0 || !npcs[npcId]) {
+        return { src: fallback, fallback: fallback, emotion: 'none', assetKey: '' };
+    }
+
+    const npcName = npcs[npcId].name;
+    const emotion = map[npcName] || 'none';
+    if (!emotion || emotion === 'none' || /^特殊CG\d+$/.test(emotion)) {
+        return { src: fallback, fallback: fallback, emotion: 'none', assetKey: '' };
+    }
+
+    const assetKey = npcId + '|' + emotion;
+    if (_missingTianshanPortraitAssets.has(assetKey)) {
+        return { src: fallback, fallback: fallback, emotion: 'none', assetKey: '' };
+    }
+
+    return {
+        src: _assetUrl(`img/表情差分和CG/${npcName}/表情差分/${emotion}.webp`),
+        fallback: fallback,
+        emotion: emotion,
+        assetKey: assetKey
+    };
+}
+
+/**
+ * 将计算出的表情立绘应用到现有 img，并维护透明像素点击缓存。
+ * 资源不存在时自动恢复基础立绘，确保没有完整差分资源的 NPC 仍可正常显示和点击。
+ */
+function applyTianshanNpcPortraitImage(img, npcId, emotionMap) {
+    if (!img) return;
+    const choice = getTianshanNpcPortraitChoice(npcId, emotionMap);
+    if (!choice.src) return;
+
+    img.dataset.emotion = choice.emotion;
+    img.onload = function() {
+        // 同一个 img 换图后必须丢弃旧 canvas，否则透明区域点击检测会读取上一张立绘。
+        if (typeof _npcOpaqueCanvasCache !== 'undefined') _npcOpaqueCanvasCache.delete(this);
+    };
+    img.onerror = function() {
+        if (choice.assetKey) {
+            _missingTianshanPortraitAssets.add(choice.assetKey);
+            console.warn(`[天山派立绘] ${npcs[npcId] ? npcs[npcId].name : npcId} 缺少“${choice.emotion}”差分，已回退基础立绘`);
+        }
+        if (typeof _npcOpaqueCanvasCache !== 'undefined') _npcOpaqueCanvasCache.delete(this);
+        this.dataset.emotion = 'none';
+        this.onerror = null;
+        const currentSrc = this.getAttribute ? this.getAttribute('src') : this.src;
+        if (choice.fallback && currentSrc !== choice.fallback) {
+            this.src = choice.fallback;
+        }
+    };
+
+    const currentSrc = img.getAttribute ? img.getAttribute('src') : img.src;
+    if (currentSrc !== choice.src) {
+        if (typeof _npcOpaqueCanvasCache !== 'undefined') _npcOpaqueCanvasCache.delete(img);
+        img.src = choice.src;
+    }
+}
+
+/**
+ * 判断当前正文页的立绘是否属于正在查看的天山派子场景。
+ * 场景不一致或元数据缺失时必须回到该地点自己的 NPC 列表，避免跨场景残留正文人物。
+ */
+function shouldUseTianshanStoryPortraits(location, pageState) {
+    if (typeof GameMode === 'undefined' || GameMode !== 0 || !pageState || !pageState.active) return false;
+    const activeLocationName = (typeof locationNames !== 'undefined' && locationNames[location])
+        ? locationNames[location]
+        : location;
+    return pageState.scene && pageState.scene !== 'none' && pageState.scene === activeLocationName;
+}
+
+function _storySpeakerPortraitId(name) {
+    if (name === 'user') {
+        return (typeof userPortraitManager !== 'undefined' && userPortraitManager.isDisplayEnabled
+            && userPortraitManager.isDisplayEnabled()) ? USER_PORTRAIT_ID : null;
+    }
+    return (typeof npcNameToId !== 'undefined') ? npcNameToId[name] : null;
+}
+
+/**
+ * 按当前故事页同步天山派场景立绘。
+ * 同屏阵容或顺序变化时重建（最多三人）；场景切换后恢复目标地点自己的 NPC。
+ */
+function refreshTianshanNpcPortraits() {
+    if (typeof GameMode === 'undefined' || GameMode !== 0) return;
+    const activeScene = document.querySelector('.scene.active');
+    if (!activeScene || activeScene.id === 'map-scene'
+        || activeScene.id === 'player-stats-scene' || activeScene.id === 'relationships-scene') return;
+
+    const location = activeScene.id.replace(/-scene$/, '');
+    const container = document.getElementById(location + '-npcs');
+    if (!container) return;
+
+    const pageState = (typeof getTianshanCurrentPortraitState === 'function')
+        ? getTianshanCurrentPortraitState()
+        : { active: false, scene: 'none', speakers: [] };
+    const useStorySpeakers = shouldUseTianshanStoryPortraits(location, pageState);
+    const desiredNpcIds = useStorySpeakers
+        ? (pageState.speakers || []).map(speaker => _storySpeakerPortraitId(speaker.npc)).filter(Boolean).slice(0, 3)
+        : [];
+    const portraits = Array.from(container.querySelectorAll('.npc-portrait[data-npc-id]'));
+
+    if (useStorySpeakers) {
+        // 当前页只显示本页实际发言者；未再次出现在 speakers 中的人物立即退场。
+        const currentNpcIds = portraits.map(portrait => portrait.dataset.npcId);
+        const alreadyMatches = currentNpcIds.length === desiredNpcIds.length
+            && currentNpcIds.every((npcId, index) => npcId === desiredNpcIds[index]);
+        if (!alreadyMatches) {
+            displayNpcs(location);
+            return;
+        }
+    } else if (container.dataset.portraitMode === 'story-speakers') {
+        // 切换到不同场景、正文场景缺失或正文被清空时，恢复目标地点自己的 NPC。
+        displayNpcs(location);
+        return;
+    }
+
+    // 场景不一致时禁止应用正文表情，确保目标地点立绘保持自身基础资源。
+    const emotionMap = useStorySpeakers && typeof getTianshanNpcEmotionMap === 'function'
+        ? getTianshanNpcEmotionMap()
+        : {};
+    portraits.forEach(portrait => {
+        const img = portrait.querySelector('img');
+        applyTianshanNpcPortraitImage(img, portrait.dataset.npcId, emotionMap);
+    });
+}
+
 // 显示NPC立绘
 function displayNpcs(location) {
     const container = document.getElementById(location + '-npcs');
     if (!container) return;
 
-    let npcsAtLocation = getNpcsAtLocation(location);
+    // 翻页重绘前先完整关闭旧选择框，避免仅清空 DOM 后遗留全局点击监听和隐藏的场景按钮。
+    if (container.querySelector && container.querySelector('.npc-selection-overlay')
+        && typeof closeNpcSelectionOverlay === 'function') {
+        closeNpcSelectionOverlay();
+    }
+
+    let npcsAtLocation;
+    const pagePortraitState = (typeof getTianshanCurrentPortraitState === 'function')
+        ? getTianshanCurrentPortraitState()
+        : { active: false, scene: 'none', speakers: [] };
+    const usePageSpeakers = shouldUseTianshanStoryPortraits(location, pagePortraitState);
+
+    if (usePageSpeakers) {
+        // 仅当正文场景与当前场景一致时，显示本页实际发言的至多三名 NPC。
+        npcsAtLocation = (pagePortraitState.speakers || [])
+            .slice(0, 3)
+            .map(speaker => {
+                const portraitId = _storySpeakerPortraitId(speaker.npc);
+                if (!portraitId) return null;
+                if (portraitId === USER_PORTRAIT_ID) {
+                    return { id: USER_PORTRAIT_ID, name: userPortraitManager.getDisplayName(), description: '玩家主角' };
+                }
+                return npcs[portraitId] ? { id: portraitId, ...npcs[portraitId] } : null;
+            })
+            .filter(Boolean);
+    } else {
+        // 开局或尚无结构化正文时保留原有场景 NPC，保证玩家仍能点击人物发起互动。
+        npcsAtLocation = getNpcsAtLocation(location);
+    }
+
+    container.dataset.portraitMode = usePageSpeakers ? 'story-speakers' : 'location';
     container.innerHTML = '';
 
     if (npcsAtLocation.length === 0) {
@@ -503,16 +675,19 @@ function displayNpcs(location) {
         return;
     }
 
+    // 两种模式都严格限制同屏三人；正文解析已有上限，这里再做防御性截断。
     if (npcsAtLocation.length > 3) {
-        npcsAtLocation = npcsAtLocation.sort(() => Math.random() - 0.5);
-        npcsAtLocation = npcsAtLocation.slice(0, 3);
-        console.log(`${location} 有超过3个NPC，随机显示其中3个`);
+        if (!usePageSpeakers) {
+            npcsAtLocation = npcsAtLocation.sort(() => Math.random() - 0.5);
+            console.log(`${location} 有超过3个NPC，随机显示其中3个`);
+        }
+        npcsAtLocation = npcsAtLocation.slice(-3);
     }
 
     npcsAtLocation.forEach((npc, index) => {
         const portrait = document.createElement('div');
         portrait.className = 'npc-portrait';
-        portrait.dataset.npcId = npc.id; // 供点击穿透时识别身份
+        portrait.dataset.npcId = npc.id;
         
         // 新增：如果是SLG模式，添加禁用样式
         if (GameMode === 1) {
@@ -529,17 +704,19 @@ function displayNpcs(location) {
             portrait.style.width = '60%';
             portrait.style.height = '60%';
             
+            // 三人按正文标记顺序从左到右排列，保持同页多人位置稳定。
             const positions = ['25%', '50%', '75%'];
             portrait.style.left = positions[index];
             portrait.style.transform = 'translateX(-50%)';
             portrait.style.zIndex = index + 1;
         }
         
-        // 创建img元素，添加crossOrigin以支持跨域canvas操作
+        // 创建img元素，添加crossOrigin以支持跨域canvas操作。
+        // 天山派普通模式优先显示当前剧情页的表情差分，缺图时由统一函数回退基础立绘。
         const img = document.createElement('img');
         img.crossOrigin = 'anonymous';
-        img.src = npcPortraits[npc.id];
         img.alt = npc.name;
+        applyTianshanNpcPortraitImage(img, npc.id);
         portrait.appendChild(img);
         
         // 修改：只在非SLG模式下添加点击事件（带透明度检测）
@@ -547,16 +724,17 @@ function displayNpcs(location) {
             portrait.addEventListener('click', function(e) {
                 e.stopPropagation();
                 
-                // 多NPC同场时立绘容器互相重叠，点击可能被上层NPC的透明区截获。
-                // 自上而下查找第一个在点击处像素不透明的立绘，它就是本次点击的目标。
+                // 透明区域点击穿透到下层真正命中的立绘。
                 const hit = findOpaqueNpcAtPoint(container, e.clientX, e.clientY);
                 if (hit) {
+                    if (hit.dataset.npcId === USER_PORTRAIT_ID) {
+                        if (typeof showGameSettings === 'function') showGameSettings();
+                        if (typeof gsSelectTab === 'function') gsSelectTab('portrait');
+                        return;
+                    }
                     showNpcInfo(hit.dataset.npcId, location, e);
                 }
             });
-            
-            // 悬停高亮与点击判定保持一致：高亮“点击会触发”的那个NPC，
-            // 而非 CSS :hover 命中的最上层容器（其透明区会挡住下层NPC，导致高亮错人）
             portrait.addEventListener('mousemove', function(e) {
                 const hit = findOpaqueNpcAtPoint(container, e.clientX, e.clientY);
                 container.querySelectorAll('.npc-portrait.npc-hover').forEach(p => {
@@ -572,19 +750,17 @@ function displayNpcs(location) {
         container.appendChild(portrait);
     });
     // Publish the exact existing draw; projecting 3D must never draw RNG again.
-    if (window.GameSceneBridge) GameSceneBridge.publishNpcs(location, npcsAtLocation.map(npc => npc.id));
+    if (window.GameSceneBridge) {
+        GameSceneBridge.publishNpcs(location, npcsAtLocation.map(npc => npc.id).filter(id => id !== USER_PORTRAIT_ID));
+    }
 }
 
 // 立绘像素检测的离屏canvas缓存：hover会高频触发检测，避免每帧重画整图
-const _npcOpaqueCanvasCache = new WeakMap();
-
-// 在指定点位自上而下查找第一个像素不透明的NPC立绘（解决立绘容器重叠时的遮挡/误判）
 function findOpaqueNpcAtPoint(container, clientX, clientY) {
     const stack = document.elementsFromPoint(clientX, clientY);
     for (const el of stack) {
         const portrait = el.classList && el.classList.contains('npc-portrait')
-            ? el
-            : (el.closest ? el.closest('.npc-portrait') : null);
+            ? el : (el.closest ? el.closest('.npc-portrait') : null);
         if (!portrait || !container.contains(portrait)) continue;
         const pimg = portrait.querySelector('img');
         if (pimg && portrait.dataset.npcId &&
@@ -640,7 +816,7 @@ function isClickOnOpaquePixel(event, img) {
         const pixelX = Math.floor((clickX - offsetX) / displayWidth * img.naturalWidth);
         const pixelY = Math.floor((clickY - offsetY) / displayHeight * img.naturalHeight);
         
-        // 使用canvas读取像素alpha值（canvas按img缓存，hover高频检测时避免重复绘制）
+        // 使用缓存 canvas 读取像素 alpha 值。
         let canvas = _npcOpaqueCanvasCache.get(img);
         if (!canvas) {
             canvas = document.createElement('canvas');
@@ -681,8 +857,7 @@ function showNpcInfo(npcId, location, event) {
     const reward = npcSparRewards[npcId];
     const rewardText = reward ? `(${reward.type}+${reward.value})` : '';
     
-    // 判断UI风格：古风UI使用框选叠加层，扁平化UI使用原有弹窗
-    // 以 body 实际类名为准（uiStyle 变量可能与实际显示风格脱节）
+    // 以 body 实际显示类为准，避免 uiStyle 变量与界面状态脱节。
     if (document.body.classList.contains('ui-style-ancient')) {
         // ========== 古风UI：框选叠加层效果 ==========
         showNpcSelectionOverlay(npcId, location, event);
@@ -712,8 +887,7 @@ function showNpcSelectionOverlay(npcId, location, event) {
         giftDisabledReason = '金钱不足';
     }
     
-    // 获取目标NPC的立绘容器：按npcId反查，而非event.currentTarget——
-    // 点击穿透转交时currentTarget是上层其他NPC的容器，会导致框选位置错位
+    // 点击穿透时 currentTarget 仍是上层容器，按目标 npcId 定位。
     const container = document.getElementById(location + '-npcs');
     if (!container) return;
     const portrait = container.querySelector(`.npc-portrait[data-npc-id="${npcId}"]`) || event.currentTarget;
@@ -976,7 +1150,6 @@ function showNpcInfoPopup(npcId, location, event) {
     
     popup.classList.add('show');
     
-    // 按npcId反查立绘定位弹窗（点击穿透转交时currentTarget是上层其他NPC的容器）
     const npcContainer = document.getElementById(location + '-npcs');
     const portrait = (npcContainer && npcContainer.querySelector(`.npc-portrait[data-npc-id="${npcId}"]`)) || event.currentTarget;
     const portraitRect = portrait.getBoundingClientRect();

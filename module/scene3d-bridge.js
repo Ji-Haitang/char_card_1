@@ -116,6 +116,10 @@
         restoreHold = false;
         readyScene = null;
         if (viewport) viewport.removeAttribute('data-scene3d-ready');
+        // 布局层通过 body 状态区分 3D 固定分屏与 2D 内容自适应；任何回退都必须同步清理。
+        try {
+            if (document.body.classList.contains('scene3d-active')) document.body.classList.remove('scene3d-active');
+        } catch (e) {}
         if (root) root.hidden = true;
     }
     function stopDrawing(hide) {
@@ -418,6 +422,10 @@
             if (result.status === 'degraded') clearReady();
             else if (result.status === 'applied') {
                 readyScene = result.sceneId; root.hidden = false; viewport.dataset.scene3dReady = 'true'; notice.hidden = true;
+                // 仅在匹配状态真正应用后进入 3D 分屏，避免加载中或降级时提前改变正文布局。
+                try {
+                    if (!document.body.classList.contains('scene3d-active')) document.body.classList.add('scene3d-active');
+                } catch (e) {}
                 activeView.setRenderEnabled(live.renderEnabled); activeView.setInteractionEnabled(live.interactive && !turn);
             }
             if (result.status === 'applied' || result.status === 'degraded') await revealTurn(owner);

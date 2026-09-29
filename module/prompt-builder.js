@@ -829,7 +829,15 @@ var promptBuilder = (function() {
         var lastAssistantReply = params.lastAssistantReply || '';
 
         var playerName = gd.playerName || '主角';
-        var variables = { user: playerName, gameData: gd, '本次user输入': userMessage };
+        // 在模板渲染前计算最终有效状态；没有图片时即使旧配置残留开启值，也只发送 NPC-only 格式。
+        var userPortraitEnabled = (typeof userPortraitManager !== 'undefined'
+            && userPortraitManager.isDisplayEnabled && userPortraitManager.isDisplayEnabled());
+        var variables = {
+            user: playerName,
+            gameData: gd,
+            userPortraitEnabled: !!userPortraitEnabled,
+            '本次user输入': userMessage
+        };
 
         // --- 世界书触发 ---
         var npcBlocks = worldbookEngine.matchNPCs(userMessage, lastAssistantReply);

@@ -3,7 +3,7 @@
  *
  * 在"系统设置-游戏设置-提示词管理"里创建的自定义世界书条目：
  * 名称 + 关键词（可留空） + 内容 + 启用开关。
- * 全局存储（不随存档走，所有存档共用），持久化委托给 storageService。
+ * 当前 Workspace 配置：切换存档位时由 workspaceManager 保存/恢复，持久化委托给 storageService。
  * 匹配逻辑与 worldbookEngine.matchNPCs 一致：在本次用户输入 + 上一次 AI 回复中找关键词，
  * 关键词留空则只看启用开关。
  *

@@ -9,6 +9,62 @@
 #sect-3d-root .scene3d-runtime .scene3d-reset {
   bottom: calc(clamp(20px, 2.4vw, 24px) + 22px);
 }
+
+/* 3D 子场景交互统一为左上角纵向按钮栈：返回在首行，场景动作依次排列在下方。
+   热点仍调用原业务处理器，仅取消模型投影位置与连接线。 */
+#main-viewport[data-scene3d-ready="true"] {
+  --scene3d-left-control-left: max(12px, env(safe-area-inset-left, 0px));
+  --scene3d-left-control-top: max(12px, env(safe-area-inset-top, 0px));
+  --scene3d-left-control-width: clamp(64px, 9vw, 96px);
+  --scene3d-left-control-height: clamp(30px, 4.2vw, 38px);
+  --scene3d-left-control-gap: 7px;
+}
+#main-viewport[data-scene3d-ready="true"] > .scene.active .back-btn,
+#main-viewport[data-scene3d-ready="true"] #sect-3d-root .scene3d-hotspot {
+  width: var(--scene3d-left-control-width) !important;
+  height: var(--scene3d-left-control-height) !important;
+  min-width: 0 !important;
+  min-height: 0 !important;
+  aspect-ratio: auto !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 0 6px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: clamp(10px, 1.5vw, 14px) !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+}
+#main-viewport[data-scene3d-ready="true"] > .scene.active .back-btn {
+  left: var(--scene3d-left-control-left) !important;
+  top: var(--scene3d-left-control-top) !important;
+  z-index: 4 !important;
+}
+#main-viewport[data-scene3d-ready="true"] #sect-3d-root .scene3d-hotspots {
+  z-index: 3 !important;
+}
+#main-viewport[data-scene3d-ready="true"] #sect-3d-root .scene3d-hotspots svg {
+  display: none !important;
+}
+#main-viewport[data-scene3d-ready="true"] #sect-3d-root .scene3d-hotspot {
+  left: var(--scene3d-left-control-left) !important;
+  right: auto !important;
+  transform: none !important;
+}
+#main-viewport[data-scene3d-ready="true"] #sect-3d-root .scene3d-hotspot:nth-of-type(1) {
+  top: calc(var(--scene3d-left-control-top) + var(--scene3d-left-control-height) + var(--scene3d-left-control-gap)) !important;
+}
+#main-viewport[data-scene3d-ready="true"] #sect-3d-root .scene3d-hotspot:nth-of-type(2) {
+  top: calc(var(--scene3d-left-control-top) + var(--scene3d-left-control-height) + var(--scene3d-left-control-gap) + var(--scene3d-left-control-height) + var(--scene3d-left-control-gap)) !important;
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  #main-viewport[data-scene3d-ready="true"] {
+    --scene3d-left-control-width: clamp(58px, 15vw, 68px);
+    --scene3d-left-control-height: clamp(28px, 7.2vw, 32px);
+    --scene3d-left-control-gap: 6px;
+  }
+}
 #main-viewport[data-scene3d-ready="true"] > .scene.active { background:transparent !important; pointer-events:none; }
 /* 古风 3D 页眉透出场景：移除整条纸色底和纹理，保留文字及各状态的墨痕装饰。
    仅在 3D 已就绪时覆盖；2D 回退及扁平 UI 保持原样。 */
@@ -29,6 +85,7 @@ body.ui-style-ancient #main-viewport[data-scene3d-ready="true"] .status-display 
 #main-viewport[data-scene3d-ready="true"] > .scene.active .ink-decoration,
 #main-viewport[data-scene3d-ready="true"] > #map-scene .location,
 #main-viewport[data-scene3d-ready="true"] #map-hit-areas { visibility:hidden !important; pointer-events:none !important; }
+/* USER 与普通NPC的2D立绘在3D已就绪时统一隐藏，避免上传的玩家立绘压入3D场景。 */
 .scene3d-notice { position:absolute; left:10px; bottom:10px; z-index:30; max-width:calc(100% - 20px); padding:8px 12px; background:#fffae9; color:#423724; border:1px solid #b7a37b; font-size:13px; }
 .scene3d-notice[hidden], .scene3d-settings[hidden] { display:none !important; }
 .scene3d-notice button { margin-left:10px; }

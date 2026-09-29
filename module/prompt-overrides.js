@@ -2,7 +2,7 @@
  * prompt-overrides.js - 提示词自定义覆盖层
  *
  * 用户在"系统设置-游戏设置-提示词管理"里编辑保存的 prompt 内容，
- * 全局存储（不随存档走，所有存档共用），持久化委托给 storageService。
+ * 当前 Workspace 配置：切换存档位时由 workspaceManager 保存/恢复，持久化委托给 storageService。
  *
  * 依赖：storage-service.js
  */

@@ -1,7 +1,7 @@
 /**
  * api-service.js - API 调用服务
  * 支持 OpenAI 兼容格式 + Gemini，流式 / 非流式。
- * 
+ *
  * 依赖：无
  */
 
@@ -22,16 +22,16 @@ var apiService = (function() {
         maxContextTokens: 500000,
         streamMode: 'stream',  // 'stream' 流式 | 'non-stream' 非流式（正文与总结统一遵循）
         corsProxyUrl: 'https://jxz-cors-proxy.nicholaswuai.workers.dev/',  // 部署后替换为你的 Worker 地址
-        // 是否启用 CORS 代理。默认按环境：web 默认开启，本地 file:// / APK(webview) / Electron 默认关闭。
-        // 用户在配置页勾选后可覆盖（APK 勾选后也能走代理）。
+        // web 默认启用；本地、APK、Electron 默认直连，用户可手动覆盖。
         corsProxyEnabled: (function() {
             try {
                 if (typeof process !== 'undefined' && process.versions && process.versions.electron) return false;
                 if (typeof window !== 'undefined' && window.Android) return false;
                 if (typeof window !== 'undefined' && window.location && window.location.protocol === 'file:') return false;
-                return true; // web
+                return true;
             } catch (e) { return true; }
-        })()
+        })(),
+        customHeaders: {}  // 自定义请求头，JSON 对象，如 {"HTTP-Referer":"https://cline.bot","X-Title":"Cline"}
     };
 
     function loadConfig() {
@@ -39,10 +39,10 @@ var apiService = (function() {
             var saved = localStorage.getItem('jxz_apiConfig');
             if (saved) {
                 var parsed = JSON.parse(saved);
-                // corsProxyUrl 若用户从未手动改过（为空），保留代码默认值
+                // corsProxyUrl：只在从未保存过（undefined/null）时用默认值，空字符串表示用户主动清空
                 var defaultProxy = config.corsProxyUrl;
                 Object.assign(config, parsed);
-                if (!config.corsProxyUrl) config.corsProxyUrl = defaultProxy;
+                if (config.corsProxyUrl === null || config.corsProxyUrl === undefined) config.corsProxyUrl = defaultProxy;
             }
         } catch (e) {
             console.warn('加载 API 配置失败', e);
@@ -87,7 +87,7 @@ var apiService = (function() {
 
     /**
      * 根据启用开关决定实际请求 URL
-     * 勾选启用且配置了 corsProxyUrl 时，通过代理中转（不再限定环境，APK 勾选后也可走代理）
+     * 启用且配置了 corsProxyUrl 时，通过代理中转（包括 APK）
      * @param {string} url - 原始 API URL
      * @returns {string}
      */
@@ -120,6 +120,32 @@ var apiService = (function() {
         if (config.presencePenaltyEnabled) target[isGemini ? 'presencePenalty' : 'presence_penalty'] = config.presencePenalty;
     }
 
+    /**
+     * 合并自定义请求头到基础请求头中。
+     * 用于伪装 API 请求来源（如 OpenRouter 要求特定 Referer / X-Title 才放行受限模型）。
+     * @param {object} baseHeaders - 基础请求头
+     * @param {object} [customOverride] - 测试连接时传入尚未保存的自定义请求头
+     * @returns {object}
+     */
+    function _buildHeaders(baseHeaders, customOverride) {
+        var headers = {};
+        var keys = Object.keys(baseHeaders);
+        for (var i = 0; i < keys.length; i++) {
+            headers[keys[i]] = baseHeaders[keys[i]];
+        }
+        var custom = customOverride !== undefined ? customOverride : config.customHeaders;
+        if (custom && typeof custom === 'object') {
+            var customKeys = Object.keys(custom);
+            for (var j = 0; j < customKeys.length; j++) {
+                var k = customKeys[j];
+                if (custom[k] !== null && custom[k] !== undefined && custom[k] !== '') {
+                    headers[k] = custom[k];
+                }
+            }
+        }
+        return headers;
+    }
+
     async function sendMessages(messages, options) {
         if (!config.endpoint || !config.apiKey || !config.model) {
             throw new Error('请先配置 API 信息（endpoint, key, model）');
@@ -149,10 +175,10 @@ var apiService = (function() {
         _applyExtraSamplerParams(_reqBody, false);
         var fetchOptions = {
             method: 'POST',
-            headers: {
+            headers: _buildHeaders({
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + config.apiKey
-            },
+            }),
             body: JSON.stringify(_reqBody)
         };
         if (signal) fetchOptions.signal = signal;
@@ -194,7 +220,7 @@ var apiService = (function() {
         _applyExtraSamplerParams(_genConfig, true);
         var response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: _buildHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({
                 contents: contents,
                 systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -216,21 +242,21 @@ var apiService = (function() {
 
     // ========== 模型列表 ==========
 
-    async function fetchModels(endpoint, apiKey, type) {
+    async function fetchModels(endpoint, apiKey, type, customHeaders) {
         if (!endpoint || !apiKey) {
             throw new Error('请填写 API 地址和 Key');
         }
         if (type === 'gemini') {
-            return _fetchGeminiModels(endpoint, apiKey);
+            return _fetchGeminiModels(endpoint, apiKey, customHeaders);
         }
-        return _fetchOpenAIModels(endpoint, apiKey);
+        return _fetchOpenAIModels(endpoint, apiKey, customHeaders);
     }
 
-    async function _fetchOpenAIModels(endpoint, apiKey) {
+    async function _fetchOpenAIModels(endpoint, apiKey, customHeaders) {
         var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models');
         var response = await fetch(url, {
             method: 'GET',
-            headers: { 'Authorization': 'Bearer ' + apiKey }
+            headers: _buildHeaders({ 'Authorization': 'Bearer ' + apiKey }, customHeaders)
         });
         if (!response.ok) {
             var text = '';
@@ -246,10 +272,11 @@ var apiService = (function() {
         return models;
     }
 
-    async function _fetchGeminiModels(endpoint, apiKey) {
+    async function _fetchGeminiModels(endpoint, apiKey, customHeaders) {
         var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models?key=' + encodeURIComponent(apiKey));
         var response = await fetch(url, {
-            method: 'GET'
+            method: 'GET',
+            headers: _buildHeaders({}, customHeaders)
         });
         if (!response.ok) {
             var text = '';
@@ -291,10 +318,10 @@ var apiService = (function() {
         var url = cfg.endpoint.replace(/\/+$/, '') + '/chat/completions';
         var response = await fetch(url, {
             method: 'POST',
-            headers: {
+            headers: _buildHeaders({
                 'Content-Type': 'application/json',
                 'Authorization': 'Bearer ' + cfg.apiKey
-            },
+            }, cfg.customHeaders),
             body: JSON.stringify({
                 model: cfg.model,
                 messages: messages,
@@ -318,7 +345,7 @@ var apiService = (function() {
         var url = cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent?key=' + encodeURIComponent(cfg.apiKey);
         var response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: _buildHeaders({ 'Content-Type': 'application/json' }, cfg.customHeaders),
             body: JSON.stringify({
                 contents: contents,
                 generationConfig: { temperature: cfg.temperature || 0.85, maxOutputTokens: 100 }
@@ -387,10 +414,10 @@ var apiService = (function() {
         try {
             var response = await fetch(url, {
                 method: 'POST',
-                headers: {
+                headers: _buildHeaders({
                     'Content-Type': 'application/json',
                     'Authorization': 'Bearer ' + config.apiKey
-                },
+                }),
                 body: JSON.stringify(requestBody),
                 signal: controller.signal
             });
@@ -477,7 +504,7 @@ var apiService = (function() {
         try {
             var response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: _buildHeaders({ 'Content-Type': 'application/json' }),
                 body: JSON.stringify({
                     contents: contents,
                     systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,

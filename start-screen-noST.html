@@ -1119,8 +1119,12 @@
                 for (var i = saves.length - 1; i >= 0; i--) {
                     var s = saves[i];
                     var dateStr = s.createdAt ? new Date(s.createdAt).toLocaleString() : '';
+                    var wsMeta = (typeof storageService.loadWorkspaceMeta === 'function') ? storageService.loadWorkspaceMeta(s.workspaceId) : null;
+                    var wsName = wsMeta && wsMeta.name ? wsMeta.name : (s.workspaceId || '存档位 1');
+                    var displayName = '[' + wsName + '] ' + (s.saveName || '未命名存档');
+                    var safeName = String(displayName).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
                     html += '<button class="choice-btn" data-save-id="' + s.id + '">' +
-                        '<div class="choice-title">' + (s.saveName || '未命名存档') + '</div>' +
+                        '<div class="choice-title">' + safeName + '</div>' +
                         '<div class="choice-desc">' + dateStr + '</div>' +
                     '</button>';
                 }
