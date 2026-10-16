@@ -84,8 +84,8 @@ async function preflight(buildId, sourceRoot) {
   }
   assert.equal(npcManifest.version, 1); assert.equal(npcManifest.npcs.length, 15); assert.equal(heights.size, 15);
   assert.deepEqual(npcManifest.npcs.map(n => n.id).sort(), Object.values(NPC_IDS).sort());
-  assert.equal(npcManifest.npcs.reduce((sum, npc) => sum + npc.frameCount, 0), 659);
-  const sheets = npcManifest.npcs.flatMap(npc => npc.sheets); assert.equal(sheets.length, 16);
+  assert.equal(npcManifest.npcs.reduce((sum, npc) => sum + npc.frameCount, 0), 660);
+  const sheets = npcManifest.npcs.flatMap(npc => npc.sheets); assert.equal(sheets.length, 17);
   for (const npc of npcManifest.npcs) assert.equal(npc.height, heights.get(npc.label), `CSV default ${npc.label}`);
   for (const sheet of sheets) {
     assert.match(sheet.file, /^npc\/generated\/[a-z0-9_-]+\.png$/);
@@ -97,9 +97,12 @@ async function preflight(buildId, sourceRoot) {
 }
 
 function assertCamera(d, sceneId) {
-  const c = d.cameraView; assert.ok(c, 'Camera diagnostics available'); assert.equal(c.enablePan, false);
+  const c = d.cameraView; assert.ok(c, 'Camera diagnostics available'); assert.equal(c.enablePan, true);
+  assert.ok(Number.isFinite(c.panRadius) && c.panRadius > 0 && c.panRadius <= 15, `Pan clamp radius: ${c.panRadius}`);
+  assert.ok(Array.isArray(c.panOrigin) && c.panOrigin.length === 3, 'Pan clamp origin available');
+  c.panOrigin.forEach((v, i) => close(v, c.target[i], 1e-5, 'Pan origin is the scene camera target'));
   if (sceneId === 'main') {
-    close(c.zoom, 1.24); close(c.minPolarAngle, Math.PI / 4); close(c.maxPolarAngle, 5 * Math.PI / 12);
+    close(c.panRadius, 15); close(c.zoom, 1.24); close(c.minPolarAngle, Math.PI / 4); close(c.maxPolarAngle, 5 * Math.PI / 12);
     c.position.forEach((v, i) => close(v, [10.39, 44.82, 53.63][i])); c.target.forEach((v, i) => close(v, [-.19, 10.49, -4.74][i]));
   } else {
     close(c.zoom, 1.55); close(c.minPolarAngle, Math.PI / 3); close(c.maxPolarAngle, Math.PI / 3);
@@ -248,6 +251,18 @@ async function cameraInteraction(session, sceneId, label) {
   assert.ok(dragged.position.some((v, i) => Math.abs(v - before.position[i]) > .01), 'Actual native drag must orbit');
   await page.mouse.wheel({ deltaY: -250 }); await frames(page, 3);
   const zoomed = await page.evaluate(() => __proUpdate.view.getDiagnostics().cameraView); assert.notEqual(zoomed.zoom, before.zoom);
+  // Right-drag pans (OrbitControls default button mapping). Repeated diagonal overshoots
+  // must never push the target outside the pan sphere and must end pinned on its rim,
+  // vertical component included (pan delivery varies with viewport/zoom, so loop to rim).
+  let panDist = 0, rim = false;
+  for (let attempt = 0; attempt < 6 && !rim; attempt++) {
+    await page.mouse.move(x, y); await page.mouse.down({ button: 'right' }); await page.mouse.move(x + rect.width * .34, y + rect.height * .3, { steps: 12 }); await page.mouse.up({ button: 'right' }); await frames(page, 3);
+    const panned = await page.evaluate(() => __proUpdate.view.getDiagnostics().cameraView);
+    panDist = Math.hypot(...panned.target.map((v, i) => v - panned.panOrigin[i]));
+    assert.ok(panDist <= panned.panRadius + 1e-4, `Pan target stays inside the sphere: ${panDist} > ${panned.panRadius}`);
+    rim = panDist >= panned.panRadius - 1e-4;
+  }
+  assert.ok(rim, 'Pan clamp pins target to the sphere rim');
   await page.click('.scene3d-reset'); await frames(page, 3);
   const reset = await page.evaluate(() => __proUpdate.view.getDiagnostics().cameraView); assertCamera({ cameraView: reset }, sceneId);
   before.position.forEach((v, i) => close(reset.position[i], v));
@@ -342,14 +357,20 @@ async function nativeAlphaClick(session, pre) {
     const canvas = document.createElement('canvas'); canvas.width = sheet.width; canvas.height = sheet.height;
     const ctx = canvas.getContext('2d', { willReadFrequently: true }); ctx.drawImage(image, 0, 0); const data = ctx.getImageData(0, 0, sheet.width, sheet.height).data;
     const points = { opaque: [], transparent: [] }, actualCanvas = document.querySelector('.scene3d-canvas');
+    // The runtime picker raycasts against an area-averaged alpha mask capped at 512px
+    // (npcs.js loadImage), so one picker texel spans several atlas pixels and bleeds body
+    // alpha outward. Transparent candidates must clear that whole footprint, not just ±3px.
+    const texel = Math.ceil(Math.max(sheet.width, sheet.height) / 512), gap = 2 * texel + 3;
     for (let row = 1; row < 24; row++) for (let col = 1; col < 24; col++) {
       const px = Math.floor(col / 24 * meta.width), py = Math.floor(row / 24 * meta.heightPixels), alphas = [];
       for (const dy of [-3, 0, 3]) for (const dx of [-3, 0, 3]) { const x = Math.max(0, Math.min(meta.width - 1, px + dx)) + meta.padding, y = Math.max(0, Math.min(meta.heightPixels - 1, py + dy)) + meta.padding; alphas.push(data[(y * sheet.width + x) * 4 + 3]); }
+      let clear = true;
+      for (let dy = -gap; dy <= gap && clear; dy++) for (let dx = -gap; dx <= gap; dx++) { const x = Math.max(0, Math.min(meta.width - 1, px + dx)) + meta.padding, y = Math.max(0, Math.min(meta.heightPixels - 1, py + dy)) + meta.padding; if (data[(y * sheet.width + x) * 4 + 3] !== 0) { clear = false; break; } }
       const x = a.left + (px + .5) / meta.width * a.width, y = a.top + (py + .5) / meta.heightPixels * a.height;
       if (document.elementFromPoint(x, y) !== actualCanvas) continue;
       const record = { x, y, pixel: [px, py], alphas, score: Math.hypot(col / 24 - .5, row / 24 - .55) };
       if (alphas.every(alpha => alpha >= 220)) points.opaque.push(record);
-      if (alphas.every(alpha => alpha === 0)) points.transparent.push(record);
+      if (clear) points.transparent.push(record);
     }
     canvas.width = canvas.height = 0;
     points.opaque.sort((a, b) => a.score - b.score); points.transparent.sort((a, b) => a.score - b.score);
@@ -357,6 +378,14 @@ async function nativeAlphaClick(session, pre) {
   }, pre.npcManifest.npcs.find(n => n.id === 'dongting'));
   assert.ok(candidates.opaque.length && candidates.transparent.length, 'Independent actual PNG alpha candidates');
   const attempts = []; let hit = false;
+  // Transparent clicks run first: a successful opaque hit drives the NPC focus camera
+  // (emitNpcIntent reframes the card), which would invalidate these anchor-derived
+  // coordinates. Misses never move the camera, so both loops share one candidate set.
+  for (const point of candidates.transparent.slice(0, 3)) {
+    const start = await page.evaluate(() => __proUpdate.events.length); await page.mouse.click(point.x, point.y); await frames(page);
+    const events = await page.evaluate(start => __proUpdate.events.slice(start).filter(e => e.type === 'npcIntent'), start);
+    attempts.push({ kind: 'transparent', point, events }); assert.deepEqual(events, [], 'Transparent actual sprite gap must not capture NPC click');
+  }
   for (const point of candidates.opaque.slice(0, 60)) {
     const start = await page.evaluate(() => ({ events: __proUpdate.events.length, input: __proUpdate.input.length }));
     await page.mouse.click(point.x, point.y); await frames(page);
@@ -368,11 +397,6 @@ async function nativeAlphaClick(session, pre) {
     if (after.events.length) { assert.equal(after.events.length, 1); hit = true; break; }
   }
   assert.ok(hit, 'At least one actual opaque sprite pixel must deliver a native mouse NPC intent');
-  for (const point of candidates.transparent.slice(0, 3)) {
-    const start = await page.evaluate(() => __proUpdate.events.length); await page.mouse.click(point.x, point.y); await frames(page);
-    const events = await page.evaluate(start => __proUpdate.events.slice(start).filter(e => e.type === 'npcIntent'), start);
-    attempts.push({ kind: 'transparent', point, events }); assert.deepEqual(events, [], 'Transparent actual sprite gap must not capture NPC click');
-  }
   await artifact(session.directory, 'native-alpha-click.json', { source: 'published PNG alpha, independent of runtime picker/mask', candidates: { opaque: candidates.opaque.length, transparent: candidates.transparent.length }, attempts });
   await snapshot(session, 'native-alpha-click');
 }
@@ -483,7 +507,7 @@ export async function runProUpdate({ directory, buildId, sourceRoot = process.en
         assert.equal(d.hotspots.count, room.hotspots.length, `${room.id} hotspot count`); assert.equal(d.hotspots.visible, true);
         assert.deepEqual(d.hotspots.labels.map(label => label.mesh).sort(), [...room.hotspots].sort());
         const dom = await page.$$eval('.scene3d-hotspot', nodes => nodes.map(node => { const r = node.getBoundingClientRect(); return { mesh: node.dataset.mesh, hidden: node.hidden, pointerEvents: getComputedStyle(node).pointerEvents, x: r.x, y: r.y, width: r.width, height: r.height }; }));
-        assert.equal(dom.length, room.hotspots.length); assert.ok(dom.every(node => node.pointerEvents === 'none'));
+        assert.equal(dom.length, room.hotspots.length); assert.ok(dom.every(node => node.pointerEvents === 'auto'), 'Hotspot buttons stay pointer-enabled (release CSS contract; the layer alone is pointer-events:none)');
         for (const node of dom.filter(node => !node.hidden)) assert.ok(node.x >= -1 && node.y >= -1 && node.x + node.width <= width + 1 && node.y + node.height <= viewport.height + 1, 'Visible hotspot CSS bounds');
         await snapshot(session, `low-${room.id}`); cases.push({ width, quality: 'low', sceneId: room.id, hotspots: d.hotspots, dom });
         await artifact(directory, 'cases.json', cases);

@@ -256,6 +256,9 @@ var pipeline = (function() {
         options = options || {};
         var isRegenerate = options.isRegenerate || false;
 
+        // 展开态浏览历史原文时发起 LLM 请求：自动跳回最新回合（回看偏移归零）
+        if (typeof resetStoryHistoryToLatest === 'function') resetStoryHistoryToLatest();
+
         // === 请求阶段（无副作用，失败可安全重试）===
         var preprocessed = _preprocessMessage(message);
 
@@ -855,6 +858,13 @@ var pipeline = (function() {
             if (typeof renderMainText === 'function') {
                 renderMainText(parsed.mainText);
             }
+            // 5.1 操作层表情立绘统一切换（仅 GameMode 0；取本次回复各 NPC 末次表情，仅 commit 路径应用一次）
+            if (typeof updateNpcTurnEmotions === 'function' && typeof refreshNpcEmotionPortraits === 'function') {
+                try {
+                    updateNpcTurnEmotions(typeof slgModeData !== 'undefined' ? slgModeData : []);
+                    refreshNpcEmotionPortraits();
+                } catch (e) { console.warn('[NpcEmotion] commit 更新失败', e); }
+            }
             if (typeof updateAllDisplays === 'function') {
                 updateAllDisplays();
             }
@@ -958,6 +968,8 @@ var pipeline = (function() {
                     week: currentWeek,
                     createdAt: Date.now()
                 });
+                // 6.1 展开态历史页码按最新总页数补刷（renderMainText 早于本追加，标签总页数还是旧的）
+                if (typeof refreshStoryHistoryPageLabel === 'function') refreshStoryHistoryPageLabel();
 
                 // 摘要 + 正文均已写入，本轮提交完成
 
@@ -1364,6 +1376,8 @@ var pipeline = (function() {
         if (typeof galPresentation !== 'undefined' && galPresentation && galPresentation.isPlaying()) {
             try { galPresentation.exit({ reason: 'new-turn', curtain: false }); } catch (e) {}
         }
+        // 操作层表情立绘回默认「平静」（仅 GameMode 0 生效）
+        if (typeof resetNpcTurnEmotions === 'function') { try { resetNpcTurnEmotions(); } catch (e) {} }
         if (bridge) bridge.setBusy(token, true);
         try { return await operation.apply(null, args); }
         finally {

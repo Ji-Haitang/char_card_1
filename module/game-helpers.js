@@ -538,7 +538,14 @@ function displayNpcs(location) {
         // 创建img元素，添加crossOrigin以支持跨域canvas操作
         const img = document.createElement('img');
         img.crossOrigin = 'anonymous';
-        img.src = npcPortraits[npc.id];
+        // GameMode 0：操作层立绘改用表情差分（默认「平静」，commit 后按本次回复末次表情统一切换）；
+        // GameMode 1 及其他路径保持 npcPortraits 常规立绘不变。
+        // typeof 守卫：切片测试环境只截取 displayNpcs 段、无 NPC_TURN_EMOTION 块时回落原路径
+        if (GameMode === 0 && typeof setNpcEmotionPortrait === 'function') {
+            setNpcEmotionPortrait(img, npc, npcTurnEmotions[npc.name] || '平静');
+        } else {
+            img.src = npcPortraits[npc.id];
+        }
         img.alt = npc.name;
         portrait.appendChild(img);
         
@@ -577,6 +584,81 @@ function displayNpcs(location) {
 
 // 立绘像素检测的离屏canvas缓存：hover会高频触发检测，避免每帧重画整图
 const _npcOpaqueCanvasCache = new WeakMap();
+
+// ==== NPC_TURN_EMOTION_BEGIN ====
+// 回合级操作层表情立绘（仅 GameMode 0）：每回合开始默认全员「平静」，commit 后按本次回复帧中各 NPC
+// 最后出现的表情统一切换。纯展示图源替换，不写任何游戏变量；GameMode 1 与 3D 公告板不受影响。
+let npcTurnEmotions = {};
+const _npcEmotionDead = new Set(); // 已确认 404 的 "中文名|表情"，避免每次刷新重复请求
+
+function _npcEmotionCandidates(npc, emotion) {
+    const url = p => (typeof _assetUrl === 'function') ? _assetUrl(p) : p;
+    const base = `img/表情差分和CG/${npc.name}/表情差分`;
+    const list = [];
+    if (emotion && emotion !== '平静' && !_npcEmotionDead.has(`${npc.name}|${emotion}`)) {
+        list.push({ key: `${npc.name}|${emotion}`, src: url(`${base}/${emotion}.webp`) });
+    }
+    if (!_npcEmotionDead.has(`${npc.name}|平静`)) {
+        list.push({ key: `${npc.name}|平静`, src: url(`${base}/平静.webp`) });
+    }
+    if (typeof npcPortraits !== 'undefined' && npcPortraits && npcPortraits[npc.id]) {
+        list.push({ key: null, src: npcPortraits[npc.id] }); // npcPortraits 已含 _assetUrl 前缀，不可再包
+    }
+    return list;
+}
+
+// 给立绘 img 设置表情图源（404 逐级兜底：表情 → 平静 → npcPortraits 常规立绘）
+function setNpcEmotionPortrait(img, npc, emotion) {
+    const candidates = _npcEmotionCandidates(npc, emotion);
+    if (!candidates.length) return;
+    if (img.dataset.emotionSrc === candidates[0].src) return; // 已是目标图：避免重复加载与 opaque 缓存失效
+    img.dataset.emotionSrc = candidates[0].src;
+    _npcOpaqueCanvasCache.delete(img); // 不同表情剪影不同，透明度点击判定必须重画
+    let i = 0;
+    img.onerror = function () {
+        if (candidates[i].key) _npcEmotionDead.add(candidates[i].key);
+        i++;
+        if (i < candidates.length) {
+            img.dataset.emotionSrc = candidates[i].src;
+            this.src = candidates[i].src;
+        } else {
+            this.onerror = null;
+        }
+    };
+    img.src = candidates[0].src;
+}
+
+// 解析后的帧 → 回合表情表：同一 NPC 后出现覆盖先出现；花名册外的名字不记录（与演出白名单同口径）
+function updateNpcTurnEmotions(frames) {
+    if (typeof GameMode === 'undefined' || GameMode !== 0 || !Array.isArray(frames)) return;
+    frames.forEach(f => {
+        let list = Array.isArray(f && f.cast) && f.cast.length ? f.cast : [];
+        if (!list.length && f && f.npc && f.npc !== 'none') list = [{ npc: f.npc, emotion: f.emotion }];
+        list.forEach(c => {
+            if (!c || !c.npc || c.npc === 'none') return;
+            if (typeof npcNameToId !== 'undefined' && npcNameToId && !npcNameToId[c.npc]) return;
+            npcTurnEmotions[c.npc] = (c.emotion && c.emotion !== 'none') ? c.emotion : '平静';
+        });
+    });
+}
+
+// 只换当前已显示立绘的 src，不重建 DOM（displayNpcs 有 3 人随机洗牌，重建会让立绘跳动）
+function refreshNpcEmotionPortraits() {
+    if (typeof GameMode === 'undefined' || GameMode !== 0) return;
+    document.querySelectorAll('.npc-portrait').forEach(portrait => {
+        const npc = (typeof npcs !== 'undefined' && npcs) ? npcs[portrait.dataset.npcId] : null;
+        const img = portrait.querySelector('img');
+        if (!npc || !img) return;
+        setNpcEmotionPortrait(img, npc, npcTurnEmotions[npc.name] || '平静');
+    });
+}
+
+// 新回合开始：回到默认「平静」并立刻应用
+function resetNpcTurnEmotions() {
+    npcTurnEmotions = {};
+    refreshNpcEmotionPortraits();
+}
+// ==== NPC_TURN_EMOTION_END ====
 
 // 在指定点位自上而下查找第一个像素不透明的NPC立绘（解决立绘容器重叠时的遮挡/误判）
 function findOpaqueNpcAtPoint(container, clientX, clientY) {

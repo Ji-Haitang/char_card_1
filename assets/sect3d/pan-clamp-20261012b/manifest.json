@@ -1,0 +1,433 @@
+{
+  "schemaVersion": 1,
+  "buildId": "pan-clamp-20261012b",
+  "bridgeProtocol": {
+    "min": 1,
+    "max": 1
+  },
+  "entry": "entry.mjs",
+  "css": [
+    "scene3d.css"
+  ],
+  "files": {
+    "chunks/DRACOLoader-CYkkE_hg.mjs": {
+      "bytes": 1770694,
+      "sha256": "e78a2339e4f8348d4b5b15ee9e5f4518522b5d9d429592311e38aea499816c4b"
+    },
+    "chunks/GLTFLoader-DpM_B4sa.mjs": {
+      "bytes": 100972,
+      "sha256": "9bdfce4980cc1389a646ba1fe634cb00c0c7d362bbbe07c998c42347e86397d4"
+    },
+    "chunks/OrbitControls-B62UhULX.mjs": {
+      "bytes": 35841,
+      "sha256": "5146b06f153d91889fd8977037a11bf4f0aa6cd999908e0a545aeb2264d18d0b"
+    },
+    "chunks/Pass-2joK0Utu.mjs": {
+      "bytes": 4037,
+      "sha256": "fd1090834c556388054e2040d522ce5cd02aaed496ed1f42b461442b4c3331b8"
+    },
+    "chunks/atmosphere-DcOL5AbX.mjs": {
+      "bytes": 21110,
+      "sha256": "5a7a054f59ff1639d1e190a436173912cf0847ad5a01fc0766a08fb1809bd869"
+    },
+    "chunks/cinematic-CCYpChE8.mjs": {
+      "bytes": 85420,
+      "sha256": "012d1cb37683a83915acaa13a31acbd70249fd69e288774feaa3c0db9c02384e"
+    },
+    "chunks/environment-CzWESj8G.mjs": {
+      "bytes": 52610,
+      "sha256": "2c18f8f83c9ddd9b017f5319b281a0d4f7098e795b8acf71e46a355dace58aa2"
+    },
+    "chunks/interior-scenes-Lg8DtedF.mjs": {
+      "bytes": 2275,
+      "sha256": "0b16fbfa9834f28f5087c0d14cfd94b2dd7d554ba4656094191b8a44429d222c"
+    },
+    "chunks/npcs-CwSliwd8.mjs": {
+      "bytes": 53026,
+      "sha256": "6664b832878928d3c745723abecdf77f3b3b39aaefad241e450905be0e3625d5"
+    },
+    "chunks/render-defaults-BmDJN6tp.mjs": {
+      "bytes": 893,
+      "sha256": "5a33ba5f6ddc1791a41bc326320ef396870229605359f6d695e9c773fa86c9b5"
+    },
+    "chunks/three.module-DEUH6-St.mjs": {
+      "bytes": 1869121,
+      "sha256": "2b1dd8370c025b4cc6bcd3edb12a1b380506d806583055a8e825b3b049cb18e6"
+    },
+    "chunks/viewer-sky-Dg6PJ0QQ.mjs": {
+      "bytes": 8354,
+      "sha256": "0d506095fee528db5663f7aa148a10af7846072c5604ba81a3bb8190b393a736"
+    },
+    "draco/draco_decoder.wasm": {
+      "bytes": 192420,
+      "sha256": "a680d927bed9cb864ddbd63521868891af2bfbe755092761b4837487618df8ac"
+    },
+    "draco/draco_wasm_wrapper.js": {
+      "bytes": 58456,
+      "sha256": "8bb2952d2ba7d67e1414f8df819410cb0434a666be53f671fff75f68843d76f6"
+    },
+    "entry.mjs": {
+      "bytes": 83593,
+      "sha256": "9ac898b63891d7525a72f2ffd30d0f1391b9786f56bfd68fb0c7d27a6d4f417f"
+    },
+    "npc/generated/anmu-0.png": {
+      "bytes": 1755037,
+      "sha256": "9bfce9046986277196cfb25670f628a300a90593293288930da3c23708ceda48"
+    },
+    "npc/generated/dongting-0.png": {
+      "bytes": 2158013,
+      "sha256": "aab83797592b28ef0b18d6508034fec3df4da7446f4652b18ede47f655fc18a3"
+    },
+    "npc/generated/huyanxian-0.png": {
+      "bytes": 1765536,
+      "sha256": "082a39ea54fb7d8e726dbbfc78c01a8ec825e667dca1e4cad877ced802db7698"
+    },
+    "npc/generated/jisi-0.png": {
+      "bytes": 3046796,
+      "sha256": "c6487709b9dbaf0c25b1c188b6f7a94978aab3b94bd415e24bce0be8d2907230"
+    },
+    "npc/generated/jisi-1.png": {
+      "bytes": 326490,
+      "sha256": "f8b63c3ae6cee0ad361313cfebd31b18ee2d42082596bd40f38036f8ca30a7f7"
+    },
+    "npc/generated/lingxuefei-0.png": {
+      "bytes": 1763272,
+      "sha256": "27d57bc1c1264f9c41ab614cdb0bd3fc23f17e7cd8c2f93306316ef5ac5be411"
+    },
+    "npc/generated/luchunruo-0.png": {
+      "bytes": 2460684,
+      "sha256": "209a22d3e3f5cc2ab3a565ea5938a3041ecf3c90b6a7ea94bd29b0ee4e82ed60"
+    },
+    "npc/generated/luoqianyou-0.png": {
+      "bytes": 1756258,
+      "sha256": "eca18e883f93da7d2deab50d0f042c858912fba1472ddc20c0b27b98fda78a8f"
+    },
+    "npc/generated/manifest.json": {
+      "bytes": 22956,
+      "sha256": "07164aba46c2ca953e12cf8921870edea8447cfce876b6d46ea9472312a9b10d"
+    },
+    "npc/generated/pozhenzi-0.png": {
+      "bytes": 1788938,
+      "sha256": "a850596efd1f6c7f5acc81c5ed892e8ad7bfdeff93f0df09e8e10e6d5ddbcbf3"
+    },
+    "npc/generated/qiantang-0.png": {
+      "bytes": 1679066,
+      "sha256": "17b5548e85b1e93292298ce10baf14e75a8c3fb6faf4fee096d8d025b1f3f07b"
+    },
+    "npc/generated/qiantang-1.png": {
+      "bytes": 1459776,
+      "sha256": "01df29fa121e8d61be0813bf0f313568e981d02ac5b12960f28562f4e2a8ebeb"
+    },
+    "npc/generated/shenmizayi-0.png": {
+      "bytes": 1539918,
+      "sha256": "19580483f0706b2385704420434a955f0cd479326df6f5e1ade0a37dedcd44fd"
+    },
+    "npc/generated/shiyannian-0.png": {
+      "bytes": 2108311,
+      "sha256": "dc46cf55b1f864f5862647d3951b0d7f57fc802d72bb9552d0e637d08b8d599f"
+    },
+    "npc/generated/tangmuli-0.png": {
+      "bytes": 2700558,
+      "sha256": "1a2f82db9051554b27a267244d98bb71e6b753ed347d37f1340e910bfe8b6863"
+    },
+    "npc/generated/xiaobaihu-0.png": {
+      "bytes": 2599975,
+      "sha256": "829af8959f7e800cdacd3b34bb027a5a51b3152f8f237409213d1b615c84aa3c"
+    },
+    "npc/generated/xuantianqing-0.png": {
+      "bytes": 1502069,
+      "sha256": "f9c4373199e6a01e4ff6ebe85f410c97535913eca9f6fc1fc9c894950840d0f3"
+    },
+    "npc/generated/yuzhu-0.png": {
+      "bytes": 3682140,
+      "sha256": "a6bfcc7cfedc858839a6fb154123f5e1a8b6dd8832613c9f39d6b9c4fc32a165"
+    },
+    "scene3d.css": {
+      "bytes": 4604,
+      "sha256": "827724f161f28f138d985e639c598bcdc5bfda1a47725cec7bb4bf212fa749ed"
+    },
+    "sect_diorama.glb": {
+      "bytes": 3768740,
+      "sha256": "c266c9458501e49124278e2e43cbab3a9025fad93dc1340b2f3dc34ca1e92011"
+    },
+    "sub_scene/alchemy_room.glb": {
+      "bytes": 9856392,
+      "sha256": "4d879d759f6bd7bf873a238488757660051f5c474720890d57a0f1828c672222"
+    },
+    "sub_scene/back_mountain.glb": {
+      "bytes": 8973464,
+      "sha256": "de6762ecc055d880fe0777a55d1ae96ef5d829cd64666c845a68a9fac233bcc7"
+    },
+    "sub_scene/blacksmith.glb": {
+      "bytes": 6895976,
+      "sha256": "b2542b441c026bd8a8c594cd19b493cd200b68cf47223e118f520fd4c86d58b0"
+    },
+    "sub_scene/council_hall.glb": {
+      "bytes": 5675776,
+      "sha256": "745317de7020bdbcd0b8844b15204ba43fefeb8f18daab551e8dfe93278a8b4d"
+    },
+    "sub_scene/female_quarters.glb": {
+      "bytes": 4820128,
+      "sha256": "388ac26f68ab6aac6acb13e99da5d06ff70ab4834d404bea85a276c5430481f3"
+    },
+    "sub_scene/fields.glb": {
+      "bytes": 16793236,
+      "sha256": "752febb8bcc94580d0dd80a48d02fd6aa13b4dbfe97d856aec749098e0bca6ba"
+    },
+    "sub_scene/gate.glb": {
+      "bytes": 6529888,
+      "sha256": "29ee309fa54fb7795e937e29884e8b3fe44734704343e96b45db5be2fcdee3c8"
+    },
+    "sub_scene/guest_quarters.glb": {
+      "bytes": 5230060,
+      "sha256": "e28fe13c3e9e690bacb9de9d279ff6313001817e9c58fc0981be6f9655c307f0"
+    },
+    "sub_scene/kitchen_room.glb": {
+      "bytes": 5870488,
+      "sha256": "02ef3619aa4d14a97e9f3fca2a0cd74bf6bfe5011fe61388144d7d4518c31206"
+    },
+    "sub_scene/library_interior.glb": {
+      "bytes": 4836296,
+      "sha256": "08c954baa1af4d8ecc4656b2101d53127cc68d48f62bb624c0dcbc128f2eb874"
+    },
+    "sub_scene/male_quarters.glb": {
+      "bytes": 3681704,
+      "sha256": "bab8b7646fe9314788dab2e696caf8a521a84b3d02b31c95802b2c8b699a271d"
+    },
+    "sub_scene/training.glb": {
+      "bytes": 10429056,
+      "sha256": "58f66a1f8c633390468054586287f4d6c492f3acda7ee8d9e2ea845b413b8ade"
+    }
+  },
+  "resources": {
+    "sect_diorama.glb": {
+      "kind": "model",
+      "required": true,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/library_interior.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/council_hall.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/alchemy_room.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/kitchen_room.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/male_quarters.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/female_quarters.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/guest_quarters.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": false,
+      "realm": "host"
+    },
+    "sub_scene/blacksmith.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/back_mountain.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/gate.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/training.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "sub_scene/fields.glb": {
+      "kind": "model",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/manifest.json": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/dongting-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/anmu-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/qiantang-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/huyanxian-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/jisi-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/jisi-1.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/lingxuefei-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/luchunruo-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/luoqianyou-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/pozhenzi-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/shenmizayi-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/shiyannian-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/tangmuli-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/xiaobaihu-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/xuantianqing-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "npc/generated/yuzhu-0.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    },
+    "draco/draco_wasm_wrapper.js": {
+      "kind": "decoder",
+      "required": false,
+      "businessReachable": true,
+      "realm": "worker"
+    },
+    "draco/draco_decoder.wasm": {
+      "kind": "decoder",
+      "required": false,
+      "businessReachable": true,
+      "realm": "worker"
+    },
+    "npc/generated/qiantang-1.png": {
+      "kind": "npc",
+      "required": false,
+      "businessReachable": true,
+      "realm": "host"
+    }
+  },
+  "rngAudit": {
+    "schemaVersion": 1,
+    "hostChunks": [
+      "chunks/DRACOLoader-CYkkE_hg.mjs",
+      "chunks/GLTFLoader-DpM_B4sa.mjs",
+      "chunks/OrbitControls-B62UhULX.mjs",
+      "chunks/Pass-2joK0Utu.mjs",
+      "chunks/atmosphere-DcOL5AbX.mjs",
+      "chunks/cinematic-CCYpChE8.mjs",
+      "chunks/environment-CzWESj8G.mjs",
+      "chunks/interior-scenes-Lg8DtedF.mjs",
+      "chunks/npcs-CwSliwd8.mjs",
+      "chunks/render-defaults-BmDJN6tp.mjs",
+      "chunks/three.module-DEUH6-St.mjs",
+      "chunks/viewer-sky-Dg6PJ0QQ.mjs",
+      "entry.mjs"
+    ],
+    "separatelyRegisteredWorkerFiles": [
+      "draco/draco_wasm_wrapper.js",
+      "draco/draco_decoder.wasm"
+    ],
+    "separatelyRegisteredWorkerFunctions": [
+      {
+        "source": "three/examples/jsm/loaders/DRACOLoader.js#DRACOWorker",
+        "realm": "worker",
+        "sha256": "b89b1a9b128b0153a1f937aca3052e6b04c9d3b0b4afbd53dc7b2a30a62b83b7",
+        "bytes": 6075
+      }
+    ],
+    "unisolatedHostReferences": 0
+  }
+}

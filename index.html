@@ -737,6 +737,30 @@
                                         <span class="gs-toggle-hint" id="gs-scene3d-atmosphere-hint">开</span>
                                     </label>
                                 </div>
+                                <div class="gs-switch-row">
+                                    <span class="gs-switch-label">日月天空 · 白云星河</span>
+                                    <label class="gs-toggle-wrap">
+                                        <input type="checkbox" id="gs-scene3d-skyEffects" onchange="gsOnScene3dSkyEffects(this)">
+                                        <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                        <span class="gs-toggle-hint" id="gs-scene3d-skyEffects-hint">开</span>
+                                    </label>
+                                </div>
+                                <div class="gs-switch-row">
+                                    <span class="gs-switch-label">远山融入天空</span>
+                                    <label class="gs-toggle-wrap">
+                                        <input type="checkbox" id="gs-scene3d-skyBlend" onchange="gsOnScene3dSkyBlend(this)">
+                                        <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                        <span class="gs-toggle-hint" id="gs-scene3d-skyBlend-hint">关</span>
+                                    </label>
+                                </div>
+                                <div class="gs-switch-row">
+                                    <span class="gs-switch-label">物理大气散射</span>
+                                    <label class="gs-toggle-wrap">
+                                        <input type="checkbox" id="gs-scene3d-skyAnalytic" onchange="gsOnScene3dSkyAnalytic(this)">
+                                        <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                        <span class="gs-toggle-hint" id="gs-scene3d-skyAnalytic-hint">开</span>
+                                    </label>
+                                </div>
                                 <div class="gs-range-row">
                                     <div class="gs-range-head"><label>丁达尔光束</label><span id="gs-scene3d-shaft-display">0.85</span></div>
                                     <input type="range" id="gs-scene3d-shaft" class="gs-range" min="0" max="2" step="0.05" value="0.85" oninput="gsOnScene3dTuning('shaft', this)">
@@ -1196,10 +1220,6 @@
                 <!-- 页面指示器 -->
                 <div class="page-indicator" id="page-indicator"></div>
                 
-                <!-- 翻页箭头 -->
-                <button class="story-nav-btn prev" id="story-prev-btn" onclick="prevPage()">◀</button>
-                <button class="story-nav-btn next" id="story-next-btn" onclick="nextPage()">▶</button>
-                
                 <!-- 故事文本 -->
                 <div class="story-text" id="story-text">
                     江湖路远，故事未始...
@@ -1261,8 +1281,14 @@
                     <button class="free-action-send-btn" id="regenerate-btn" onclick="handleRegenerate()">重生成</button>
                     <button class="free-action-send-btn" id="free-action-send-btn" onclick="sendFreeAction()">发送</button>
                 </div>
-                <!-- 展开/收起按钮：输入行之下，文本区最底部 -->
-                <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
+                <!-- 底部按钮行：输入行之下、文本区最底部；翻页箭头分居本行最左/最右（正文两侧不再留箭头让位），中部为展开/收起按钮，展开时出现历史页码输入框+跳转按钮 -->
+                <div class="story-expand-bar">
+                    <button class="story-nav-btn prev" id="story-prev-btn" onclick="prevPage()">◀</button>
+                    <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
+                    <input type="text" class="story-history-page-input" id="story-history-page-input" inputmode="numeric" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter'){event.preventDefault();jumpToStoryHistoryPage();}">
+                    <button class="story-expand-btn story-history-jump-btn" id="story-history-jump-btn" onclick="jumpToStoryHistoryPage()" style="display:none">跳转</button>
+                    <button class="story-nav-btn next" id="story-next-btn" onclick="nextPage()">▶</button>
+                </div>
             </div>
         </div>
     </div>
@@ -3249,10 +3275,7 @@ const outPut = `
                     button.classList.remove('active');
                 });
             }
-            // 点击面板之外收起右下角控制面板
-            if (!event.target.closest('.viewport-dock')) {
-                toggleViewportDock(false);
-            }
+            // 右下角控制面板不随外部点击收起：仅齿轮按钮切换开合（演出中由 body.gal-presenting 样式盖住）
         });
 
         // 存档功能
@@ -4754,6 +4777,9 @@ function buildSaveName() {
                 _set('gs-scene3d-msaa', String(_gs3d.msaa ?? 2));
                 _chk('gs-scene3d-shadows', 'gs-scene3d-shadows-hint', _gs3d.shadows !== false, '开', '关');
                 _chk('gs-scene3d-atmosphere', 'gs-scene3d-atmosphere-hint', _gs3d.atmosphere !== false, '开', '关');
+                _chk('gs-scene3d-skyEffects', 'gs-scene3d-skyEffects-hint', _gs3d.skyEffects !== false, '开', '关');
+                _chk('gs-scene3d-skyBlend', 'gs-scene3d-skyBlend-hint', _gs3d.skyBlend === true, '开', '关');
+                _chk('gs-scene3d-skyAnalytic', 'gs-scene3d-skyAnalytic-hint', _gs3d.skyAnalytic !== false, '开', '关');
                 ['shaft', 'bloom', 'saturation', 'contrast', 'gamma', 'warmth', 'vignette'].forEach(function(k) {
                     _set('gs-scene3d-' + k, _t[k]);
                     const d = document.getElementById('gs-scene3d-' + k + '-display');
@@ -4906,6 +4932,21 @@ function buildSaveName() {
             const hint = document.getElementById('gs-scene3d-atmosphere-hint');
             if (hint) hint.textContent = el.checked ? '开' : '关';
             const bridge = gsScene3dBridge(); if (bridge) bridge.setPreference({ atmosphere: el.checked });
+        }
+        function gsOnScene3dSkyEffects(el) {
+            const hint = document.getElementById('gs-scene3d-skyEffects-hint');
+            if (hint) hint.textContent = el.checked ? '开' : '关';
+            const bridge = gsScene3dBridge(); if (bridge) bridge.setPreference({ skyEffects: el.checked });
+        }
+        function gsOnScene3dSkyBlend(el) {
+            const hint = document.getElementById('gs-scene3d-skyBlend-hint');
+            if (hint) hint.textContent = el.checked ? '开' : '关';
+            const bridge = gsScene3dBridge(); if (bridge) bridge.setPreference({ skyBlend: el.checked });
+        }
+        function gsOnScene3dSkyAnalytic(el) {
+            const hint = document.getElementById('gs-scene3d-skyAnalytic-hint');
+            if (hint) hint.textContent = el.checked ? '开' : '关';
+            const bridge = gsScene3dBridge(); if (bridge) bridge.setPreference({ skyAnalytic: el.checked });
         }
         function gsOnScene3dTuning(key, el) {
             const display = document.getElementById('gs-scene3d-' + key + '-display');

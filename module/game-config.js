@@ -794,6 +794,12 @@ const slgEmotionOptions = [
     'none'
 ];
 
+// 特殊剧情专用表情差分（仅 matchEmotion 原样放行，不进 slgEmotionOptions：
+// 不参与模糊匹配/语义兜底，也不进入任何面向 LLM 的表情枚举，避免被当成通用表情模仿）。
+// 使用前须确认对应 NPC 有素材，否则照走 404 回退：
+// - 女装：QTJ_SpyStoryline 链呼延显男扮女装段专用，素材 img/表情差分和CG/呼延显/表情差分/女装.webp
+const slgEmotionExtras = ['女装'];
+
 // 场景语义关键词兜底映射（用于处理LLM幻觉输出）
 // 当所有匹配方式都失败时，检查输入是否包含这些关键字
 // 注意：按优先级排列，多字关键词在前，遍历时先匹配到的生效

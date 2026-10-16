@@ -44,7 +44,11 @@ const noise = /* glsl */`
 export function createEnvironment({ scene, camera, renderer, sun, fill, ambient, api = {}, reducedMotion = false, onTimeChange, onPaperColor, onCloudHeight, onCloudSpeed, onCloudMotion, exposureOverride, volumeClouds = false, paperColor = DEFAULT_PAPER_COLOR }) {
   api.metrics ??= {}
   let disposed = false
-  const state = { timeOfDay: 14, season: 'spring', autoTime: false, cloudHeight: 4.4, cloudMotion: !reducedMotion, cloudSpeed: 1, clockSeconds: 0, cloudSeconds: 0, paused: false, reducedMotion: Boolean(reducedMotion), skyEffects: false, skyBlend: false, skyAnalytic: false, roomLightStrength: 1 }
+  // Starfield zoom reference: the main-scene home zoom the authored look was tuned
+  // against. createEnvironment runs before positionCamera sets camera.zoom, so this
+  // is pinned to the 'main' home zoom (1.24) instead of reading camera.zoom (still 1 here).
+  const skyZoomBase = 1.24
+  const state = { timeOfDay: 14, season: 'spring', autoTime: false, cloudHeight: 4.4, cloudMotion: !reducedMotion, cloudSpeed: 1, clockSeconds: 0, cloudSeconds: 0, paused: false, reducedMotion: Boolean(reducedMotion), skyEffects: true, skyBlend: false, skyAnalytic: true, roomLightStrength: 1 }
   const originalFog = scene.fog
   const originalFogColor = originalFog?.color.clone()
   const originalExposure = renderer.toneMappingExposure
@@ -65,7 +69,7 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
     dioramaSeason: { value: 0 },
     dioramaNight: { value: 0 },
     dioramaDayPhase: { value: 0 },
-    dioramaSkyEffects: { value: 0 },
+    dioramaSkyEffects: { value: 1 },
     dioramaSkyTime: { value: 0 },
     dioramaRoomLightStrength: { value: 1 },
     dioramaRoomTint: { value: new THREE.Color('#ffffff') },
@@ -76,12 +80,16 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
     // Scales how strongly tagged far scenery dissolves into the painted sky.
     // 0 keeps the distant mountain geometry fully intact, 1 is the authored look.
     dioramaSkyBlend: { value: 0 },
-    // Key light direction in world space. The painted sun/moon and the analytic
-    // scattering both read it, so the backdrop can never contradict the shadows.
+    // Key light direction in world space. The analytic scattering reads it, so the
+    // backdrop can never contradict the shadows.
     dioramaSunDirection: { value: new THREE.Vector3(0, 1, 0) },
+    dioramaMoonDirection: { value: new THREE.Vector3(0, -1, 0) },
     dioramaCameraAzimuth: { value: 0 },
+    // Camera zoom ratio (vs home framing) so the starfield magnifies with the
+    // scene instead of staying a fixed screen size.
+    dioramaSkyZoom: { value: 1 },
     // 0 keeps the authored two-colour gradient, 1 uses Preetham scattering.
-    dioramaSkyAnalytic: { value: 0 },
+    dioramaSkyAnalytic: { value: 1 },
   }
   const skyMaterial = new THREE.ShaderMaterial({
     name: 'Diorama_CloudSea', depthTest: false, depthWrite: false, fog: false, toneMapped: false,
@@ -108,8 +116,8 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
       uniform float dioramaCloudHeight, dioramaCloudTime, dioramaHazeStrength, dioramaVolumetric;
       uniform vec3 dioramaCloudColor, dioramaCloudShade, dioramaSkyColor, dioramaHorizonColor;
       uniform float dioramaSkyEffects, dioramaSkyTime, dioramaDayPhase, dioramaNight;
-      uniform float dioramaCameraAzimuth, dioramaSkyAnalytic;
-      uniform vec3 dioramaSunDirection, dioramaViewDirection;
+      uniform float dioramaCameraAzimuth, dioramaSkyAnalytic, dioramaSkyZoom;
+      uniform vec3 dioramaSunDirection, dioramaMoonDirection, dioramaViewDirection;
       uniform vec4 dioramaViewport;
       uniform float dioramaPaperBackground, dioramaPaperAlpha;
       uniform vec3 dioramaPaperColor;
@@ -156,22 +164,25 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
     uniforms.dioramaCameraAzimuth.value = Math.atan2(uniforms.dioramaViewDirection.value.x, uniforms.dioramaViewDirection.value.z)
     _renderer.getCurrentViewport(uniforms.dioramaViewport.value)
     uniforms.dioramaCameraNear.value = renderCamera.near
+    // Starfield magnifies with the scene: normalize against the home zoom so the
+    // authored look is unchanged at rest, then scale by the live zoom.
+    uniforms.dioramaSkyZoom.value = renderCamera.zoom / skyZoomBase
     api.metrics.environment.sky.cameraType = renderCamera.isOrthographicCamera ? 'orthographic' : 'perspective'
   }
   scene.add(sky)
 
   // Palette and haze uniforms stay linear; convert for the actual render target.
   const keys = [
-    [0, '#101c32', '#26354d', '#53637d', '#27344e', '#8fa7e5', '#7995c1', 0.8, 0.62, 0.92],
+    [0, '#2a4d82', '#26354d', '#53637d', '#27344e', '#8fa7e5', '#7995c1', 0.8, 0.62, 0.92],
     [5, '#182039', '#8a696e', '#877e92', '#444d69', '#b3bce5', '#899ac5', 0.75, 0.55, 0.90],
     [6.5, '#829ba8', '#f4be8e', '#edd9ba', '#939dae', '#ffd1a1', '#b1c8e1', 2.3, 1.20, 1.04],
     [12, '#aebfcb', '#e4ddd1', '#f3eddd', '#aabcc4', '#fff0d5', '#d2e5f4', 3.0, 1.55, 1.08],
     [16, '#a7b9c0', '#ead5b3', '#f3e5c9', '#a4b9c0', '#ffdab0', '#c5dfed', 2.8, 1.45, 1.08],
     [18, '#645e7e', '#db9474', '#d8b6ab', '#777a97', '#ffad79', '#9eacd5', 2.0, 1.0, 1.0],
     [19.5, '#17213d', '#574867', '#7b7795', '#3a415e', '#a1b4ee', '#839cc6', 0.8, 0.6, 0.90],
-    [24, '#101c32', '#26354d', '#53637d', '#27344e', '#8fa7e5', '#7995c1', 0.8, 0.62, 0.92],
+    [24, '#2a4d82', '#26354d', '#53637d', '#27344e', '#8fa7e5', '#7995c1', 0.8, 0.62, 0.92],
   ].map(([hour, ...values]) => [hour, ...values.map(value => typeof value === 'string' ? new THREE.Color(value) : value)])
-  const color = new THREE.Color(), lightPosition = new THREE.Vector3()
+  const color = new THREE.Color(), lightPosition = new THREE.Vector3(), sunPosition = new THREE.Vector3(), moonPosition = new THREE.Vector3()
   const baseMaterials = new Set()
   const patchedMaterials = new Map()
   const exteriors = new Map()
@@ -188,7 +199,7 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
   api.metrics.environment = {
     backgroundDraws: 1, shadowUpdates: 0, shadowIntervalSeconds: 0.5, taggedMaterials: {}, shaderKey: environmentProgramKey,
     interior: null, dofSceneScale: 1, roomLightCount: 0, roomLightLimit: 4, roomLightStrength: 1, roomLights: [], preparedInteriors: 0, interiorMaterials: 0,
-    sky: { ...skyBudget, enabled: false, blend: false, analytic: false, clock: 'shared environment clock; automatic motion freezes on pause/reduced motion', cameraType: camera.isOrthographicCamera ? 'orthographic' : 'perspective' },
+    sky: { ...skyBudget, enabled: true, blend: false, analytic: true, clock: 'shared environment clock; automatic motion freezes on pause/reduced motion', cameraType: camera.isOrthographicCamera ? 'orthographic' : 'perspective' },
   }
   const nightAt = hour => 1 - THREE.MathUtils.smoothstep(Math.sin((hour - 6) * Math.PI / 12), -0.12, 0.22)
   const paperDay = uniforms.dioramaPaperColor.value.clone()
@@ -224,32 +235,47 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
     uniforms.dioramaDayPhase.value = (hour - 12) * Math.PI / 12
     // Change only the backdrop palette, not the established cloud/lighting curves.
     uniforms.dioramaSkyColor.value.lerp(color.set('#368ddd'), (1 - night) * 0.82)
-    fill.groundColor.set('#7d827b').lerp(color.set('#202b48'), night)
-    ambient.color.set('#efdfc9').lerp(color.set('#718bc1'), night)
-    ambient.intensity = THREE.MathUtils.lerp(0.2, 0.12, night)
+    // Night moonlight keeps the model readable without changing the light arc.
+    sun.color.lerp(color.set('#c3d5f5'), night)
+    sun.intensity = THREE.MathUtils.lerp(sun.intensity, 1.45, night)
+    fill.color.lerp(color.set('#a5badd'), night)
+    fill.intensity = THREE.MathUtils.lerp(fill.intensity, 0.95, night)
+    fill.groundColor.set('#7d827b').lerp(color.set('#3c4b68'), night)
+    ambient.color.set('#efdfc9').lerp(color.set('#97aed5'), night)
+    ambient.intensity = THREE.MathUtils.lerp(0.2, 0.22, night)
     for (const light of lanternLights) {
       light.visible = !activeInterior
       light.intensity = activeInterior ? 0 : light.userData.nightIntensity * night
     }
     if (activeInterior && !activeInterior.landscape) {
       uniforms.dioramaRoomTint.value.copy(roomTints[seasons.indexOf(state.season)])
-      sun.color.multiply(uniforms.dioramaRoomTint.value)
-      fill.color.lerp(uniforms.dioramaRoomTint.value, 0.12)
-      ambient.color.multiply(uniforms.dioramaRoomTint.value)
+      // Moonlight is cool, so at night ease the warm seasonal tint back toward
+      // white; otherwise it neutralises the blue and the room reads lantern-warm.
+      const interiorTint = uniforms.dioramaRoomTint.value.clone().lerp(color.set('#ffffff'), night * 0.5)
+      sun.color.multiply(interiorTint)
+      fill.color.lerp(interiorTint, 0.12)
+      ambient.color.multiply(interiorTint)
       sun.intensity *= THREE.MathUtils.lerp(0.82, 0.62, night)
-      fill.intensity *= THREE.MathUtils.lerp(0.78, 0.65, night)
-      ambient.intensity *= 0.85
+      fill.intensity *= THREE.MathUtils.lerp(0.78, 0.74, night)
+      ambient.intensity *= THREE.MathUtils.lerp(0.85, 1.5, night)
       updateRoomLights(night)
     } else {
       uniforms.dioramaRoomTint.value.set('#ffffff')
       if (activeInterior) updateRoomLights(night)
     }
-    // One key light travels a continuous elevated arc; at night it becomes moonlight.
-    const phase = (hour - 12) * Math.PI / 12
-    lightPosition.set(-38 * Math.cos(phase), 46 + 24 * Math.cos(phase), 35 * Math.sin(phase) + 18)
-    // The painted sky reads the very same direction, so the drawn body and the
-    // shadows it casts are two views of one light.
-    uniforms.dioramaSunDirection.value.copy(lightPosition).sub(sun.target.position).normalize()
+    // Sun rises east (06:00), peaks south (12:00), sets west (18:00). The full moon
+    // is antipodal: it rises east at dusk, peaks south at midnight. Each body's own
+    // altitude crosses the horizon, so the inactive one hides below the cyclorama
+    // instead of two spheres sharing one always-elevated arc.
+    const sunPhase = (hour - 6) * Math.PI / 12
+    const moonPhase = sunPhase - Math.PI
+    sunPosition.set(38 * Math.cos(sunPhase), 4 + 66 * Math.sin(sunPhase), 38 * Math.sin(sunPhase))
+    moonPosition.set(38 * Math.cos(moonPhase), 4 + 66 * Math.sin(moonPhase), 38 * Math.sin(moonPhase))
+    // The shadow key light is the sun by day and the moon by night; analytic
+    // scattering and cast shadows stay two views of the same light.
+    lightPosition.copy(sunPosition).lerp(moonPosition, night)
+    uniforms.dioramaSunDirection.value.copy(sunPosition).sub(sun.target.position).normalize()
+    uniforms.dioramaMoonDirection.value.copy(moonPosition).sub(sun.target.position).normalize()
     const since = state.clockSeconds - lastShadow
     if (shadowHour === null || forceShadow || (since >= 0.5 && Math.abs(hour - shadowHour) >= 0.025)) {
       sun.position.copy(lightPosition)
@@ -469,7 +495,7 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
         const scale = THREE.MathUtils.clamp(span / 10, 0.35, 1.3)
         light.userData = { kind: source.kind, source: source.name,
           dayIntensity: (source.kind === 'window' ? 3 : source.kind === 'heat' ? 2 : 0.7) * scale,
-          nightIntensity: (source.kind === 'window' ? 0 : source.kind === 'heat' ? 12 : 10) * scale }
+          nightIntensity: (source.kind === 'window' ? 1.1 : source.kind === 'heat' ? 12 : 10) * scale }
         scene.add(light)
       }
       sun.shadow.normalBias = 0.008
@@ -559,11 +585,11 @@ export function createEnvironment({ scene, camera, renderer, sun, fill, ambient,
         uniform vec3 dioramaHazeColor, dioramaViewDirection, dioramaCloudColor, dioramaCloudShade, dioramaSkyColor, dioramaHorizonColor;
         uniform vec4 dioramaViewport;
         uniform float dioramaCameraNear;
-        uniform vec3 dioramaSunDirection;
+        uniform vec3 dioramaSunDirection, dioramaMoonDirection;
         uniform float dioramaCameraAzimuth, dioramaSkyAnalytic;
         ${noise}
         ${skyGradientFragment}
-        ${skyBackdrop ? `uniform float dioramaSkyEffects, dioramaSkyTime, dioramaDayPhase, dioramaSkyBlend;\n${skyFragment}\n${skyRevealFragment}` : ''}
+        ${skyBackdrop ? `uniform float dioramaSkyEffects, dioramaSkyTime, dioramaDayPhase, dioramaSkyBlend, dioramaSkyZoom;\n${skyFragment}\n${skyRevealFragment}` : ''}
       `).replace('#include <color_fragment>', `#include <color_fragment>
         // Seasonal pigment is linear albedo, before PBR lighting. Never edit GLB colors.
         ${material.userData.viewerWater ? 'diffuseColor.rgb *= 0.96 + 0.055 * sin(vDioramaWorld.x * 9.0 + vDioramaWorld.z * 7.0 + vDioramaWorld.y * 14.0 + dioramaSkyTime * 2.3);' : ''}

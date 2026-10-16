@@ -4,20 +4,19 @@
 // scenery materials. The atmosphere reuses the same reveal mask against its
 // already sampled depth.
 //
-// Two things changed from the illustrated version:
-//   1. The sun/moon are placed from the key light's real world direction, so the
-//      painted body and the scene's shadows can no longer disagree.
-//   2. The zenith gradient comes from an analytic scattering model instead of a
-//      two-colour lerp, so dusk carries a real colour-temperature ramp and a
-//      horizon airlight band instead of a plastic gradient.
+// The painted sun/moon discs were removed (they read as stickers duplicating the
+// key light). Lighting, shadows and analytic scattering still follow the real
+// light direction; the zenith gradient comes from an analytic scattering model
+// instead of a two-colour lerp, so dusk carries a real colour-temperature ramp
+// and a horizon airlight band instead of a plastic gradient.
 export const skyBudget = Object.freeze({
   additionalDraws: 0, additionalPasses: 0, textureSamplers: 0, cubemaps: 0,
   raymarchSteps: 0, starLayers: 2, cloudNoiseOctaves: 3, temporalAA: false,
   budgetSource: 'static code budget, not measured GPU timing',
   projection: 'camera-facing cyclorama; azimuth anchored to the camera, altitude from the light direction',
-  celestialAlignment: 'bound to the key light: the lit body sits where the shadows come from',
+  celestialAlignment: 'no painted sun/moon bodies; lighting and scattering follow the key light direction',
   analyticScattering: 'Preetham single scattering, luma matched to the authored palette',
-  cloudField: 'cirrus and the volume cloud sea share one wind and one noise frequency',
+  cloudField: 'the volume cloud sea carries its own wind and noise; no sky-texture cirrus',
   backdropMask: [0.56, 0.76],
   farSceneryRadius: [22, 28], revealBand: [0.56, 0.82],
   sceneryComposition: 'tagged exterior scenery only; foreground radius <=22m protected',
@@ -25,29 +24,20 @@ export const skyBudget = Object.freeze({
   skyEvaluations: 'background plus tagged distant surfaces; no new draw or texture',
 })
 
-// Single source of truth for every drifting cloud in the scene. The volume cloud
-// sea raymarch imports these too, so the cirrus above and the sea below can no
-// longer drift with two unrelated winds.
+// Single source of truth for the volume cloud sea's shared noise/wind constants.
+// The daytime sky-texture cirrus layer was removed (it read vertical/blurry); the
+// cloud sea below is independent and unchanged.
 export const cloudField = Object.freeze({
   windX: 0.23,
   windZ: 0.095,
   freqXZ: 0.3,
   freqY: 0.38,
-  // The cirrus backdrop samples the same field, zoomed out because it is a much
-  // more distant layer; the wind term stays in world units so both layers share
-  // one direction and one speed ratio.
-  cirrusScale: 0.39,
-  cirrusSpan: 62,
-  cirrusDistance: 240,
 })
 
 const cloudFieldGlsl = /* glsl */`
   const vec2 dioramaCloudWind = vec2(${cloudField.windX}, ${cloudField.windZ});
   const float dioramaCloudFreq = ${cloudField.freqXZ};
   const float dioramaCloudFreqY = ${cloudField.freqY};
-  const float dioramaCirrusScale = ${cloudField.cirrusScale};
-  const float dioramaCirrusSpan = ${cloudField.cirrusSpan.toFixed(1)};
-  const float dioramaCirrusDistance = ${cloudField.cirrusDistance.toFixed(1)};
 `
 
 const skyConstants = /* glsl */`
@@ -118,7 +108,8 @@ export const skyGradientFragment = /* glsl */`
   vec3 dioramaSkyGradient(vec2 uv) {
     vec3 base = mix(dioramaHorizonColor, dioramaSkyColor, smoothstep(0.1, 1.0, uv.y));
     if (dioramaSkyAnalytic <= 0.001) return base;
-    vec3 scatter = dioramaSkyScatter(dioramaSkyDirection(uv), normalize(dioramaSunDirection));
+    vec3 activeLight = normalize(mix(dioramaSunDirection, dioramaMoonDirection, clamp(dioramaNight, 0.0, 1.0)));
+    vec3 scatter = dioramaSkyScatter(dioramaSkyDirection(uv), activeLight);
     float scatterLuma = max(dot(scatter, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
     float authoredLuma = max(dot(base, vec3(0.2126, 0.7152, 0.0722)), 1e-4);
     // Keep the physical hue and its horizon ramp, but hold the authored exposure
@@ -131,46 +122,24 @@ export const skyGradientFragment = /* glsl */`
 export const skyFragment = /* glsl */`
   ${cloudFieldGlsl}
 
-  // Inverse of the backdrop mapping: where a world direction lands on screen.
-  vec2 dioramaCelestialUV(vec3 direction) {
-    float altitude = asin(clamp(direction.y, -1.0, 1.0));
-    float azimuth = atan(direction.x, direction.z) - dioramaCameraAzimuth;
-    azimuth = mod(azimuth + DIORAMA_PI, 2.0 * DIORAMA_PI) - DIORAMA_PI;
-    return vec2(0.5 + azimuth / (2.0 * DIORAMA_AZ_SPAN), 0.5 + altitude / DIORAMA_ALT_SPAN);
-  }
-
   vec3 dioramaStars(vec2 p, float scale, float seed) {
-    vec2 cell = floor(p * scale);
+    // The camera zoom magnifies the scene; the starfield must magnify with it or
+    // it reads as a pasted-on layer. Zooming the coordinate spreads the grid
+    // (fewer, wider cells) and the radius scale grows the disk so both the spacing
+    // and the star size track the camera instead of staying a fixed screen size.
+    vec2 q = p / dioramaSkyZoom;
+    vec2 cell = floor(q * scale);
     float h = dioramaHash(cell + seed);
     vec2 center = 0.15 + 0.7 * vec2(dioramaHash(cell + seed + 17.2), dioramaHash(cell + seed + 39.8));
-    float d = length(fract(p * scale) - center);
-    float aa = max(length(fwidth(p * scale)) * 0.55, 0.001);
+    float d = length(fract(q * scale) - center);
+    float aa = max(length(fwidth(q * scale)) * 0.55, 0.001);
     // A finite soft footprint survives the existing sparse cinematic DOF taps;
     // subpixel disks otherwise turn into conspicuous dotted bokeh rings.
-    float radius = max(0.05, aa * 3.4);
-    float star = exp(-d * d / (radius * radius)) * step(0.972, h);
+    float radius = max(0.05, aa * 3.4) * 0.6 * dioramaSkyZoom;
+    float star = exp(-d * d / (radius * radius)) * step(0.9832, h);
     float twinkle = 0.62 + 0.38 * sin(dioramaSkyTime * (0.8 + center.x * 1.7) + h * 213.0);
     vec3 tint = mix(vec3(0.58, 0.73, 1.0), vec3(1.0, 0.86, 0.66), dioramaHash(cell + 8.2));
     return tint * star * twinkle * (1.5 + h);
-  }
-
-  // One body on the light axis. The antipodal body is below the horizon, so its
-  // own horizon term keeps it out of frame instead of a separate day/night rule.
-  vec3 dioramaCelestialBody(vec3 base, vec2 uv, float aspect, vec3 direction, vec3 tint,
-    float coreGain, float glowGain, float glowFalloff, float maria) {
-    vec2 center = dioramaCelestialUV(direction);
-    float visible = smoothstep(-0.02, 0.10, direction.y)
-      * smoothstep(0.0, 0.10, center.x) * smoothstep(1.0, 0.90, center.x);
-    if (visible <= 0.001) return base;
-    float aa = 1.5 / max(dioramaViewport.w, 1.0);
-    vec2 delta = (uv - center) * vec2(aspect, 1.0);
-    float distance = length(delta);
-    float disk = 1.0 - smoothstep(0.017 - aa, 0.017 + aa, distance);
-    float glow = exp(-distance * glowFalloff);
-    vec3 core = tint * coreGain;
-    core *= mix(vec3(1.0), vec3(0.73 + 0.27 * dioramaNoise(delta * 390.0 + 7.1)), clamp(maria, 0.0, 1.0));
-    base += tint * glow * glowGain * visible;
-    return mix(base, core, disk * visible);
   }
 
   vec3 dioramaCelestialSky(vec3 base, vec2 uv) {
@@ -183,7 +152,8 @@ export const skyFragment = /* glsl */`
     float darkness = night * night;
     if (darkness > 0.001) {
       // Broad tilted galactic band with a broken dust lane, not a textured dome.
-      vec2 galaxy = vec2(p.x * 0.86 + p.y * 0.51, -p.x * 0.51 + p.y * 0.86);
+      vec2 sp = p / dioramaSkyZoom;
+      vec2 galaxy = vec2(sp.x * 0.86 + sp.y * 0.51, -sp.x * 0.51 + sp.y * 0.86);
       float bandOffset = (galaxy.y - 0.17) * 8.5;
       float band = exp(-bandOffset * bandOffset);
       float dust = dioramaBillow(galaxy * vec2(5.0, 19.0) + 41.3);
@@ -191,30 +161,10 @@ export const skyFragment = /* glsl */`
       result += vec3(0.11, 0.14, 0.24) * band * (0.22 + dust * 0.78) * (0.3 + lane * 0.7) * darkness;
       result += (dioramaStars(p, 45.0, 11.0) + dioramaStars(p, 89.0, 83.0) * 0.55) * darkness;
     }
-    // The key light is sunlight by day and moonlight at night, so the body that
-    // is actually lighting the scene is the one drawn at the light direction.
-    vec3 sunDirection = normalize(dioramaSunDirection);
-    vec3 sunTint = mix(vec3(1.0, 0.40, 0.10), vec3(1.0, 0.93, 0.68), max(sunDirection.y, 0.0));
-    vec3 moonTint = vec3(0.72, 0.83, 1.0);
-    result = dioramaCelestialBody(result, uv, aspect, sunDirection,
-      mix(sunTint, moonTint, night), mix(2.6, 1.5, night), mix(0.34, 0.16, night), mix(33.0, 48.0, night), night);
-    result = dioramaCelestialBody(result, uv, aspect, -sunDirection,
-      mix(moonTint, sunTint, night), mix(1.5, 2.6, night), mix(0.16, 0.34, night), mix(48.0, 33.0, night), 1.0 - night);
+    // The painted sun/moon discs were removed: they duplicated the key light and
+    // read as stickers. Lighting, shadows and scattering still follow the real
+    // light direction, so only the drawn body is gone.
 
-    // Thin cirrus above the backdrop. Same wind, same noise field and one shared
-    // frequency as the cloud sea below, so the two layers read as one sky.
-    vec3 forward = normalize(dioramaViewDirection);
-    vec3 axis = abs(forward.y) > 0.985 ? vec3(0.0, 0.0, 1.0) : vec3(0.0, 1.0, 0.0);
-    vec3 right = normalize(cross(forward, axis));
-    vec3 up = cross(right, forward);
-    vec2 offset = (uv - 0.5) * vec2(aspect, 1.0) * dioramaCirrusSpan;
-    vec3 probe = cameraPosition + forward * dioramaCirrusDistance + right * offset.x + up * offset.y;
-    vec2 cloudUV = (probe.xz - dioramaCloudWind * dioramaCloudTime) * (dioramaCloudFreq * dioramaCirrusScale);
-    float billow = dioramaBillow(cloudUV);
-    float clouds = smoothstep(0.53, 0.72, billow) * smoothstep(0.60, 0.74, uv.y) * 0.84;
-    vec3 white = mix(vec3(0.80, 0.88, 1.0), vec3(1.0), smoothstep(0.53, 0.78, billow));
-    white = mix(white, vec3(0.045, 0.065, 0.12), night);
-    result = mix(result, white, clouds * mix(1.0, 0.38, night));
     return mix(base, result, backdrop);
   }
 

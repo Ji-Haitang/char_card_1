@@ -581,6 +581,12 @@ function matchEmotion(emotionName) {
         return emotionName;
     }
     
+    // 特殊剧情专用表情差分单独放行（如呼延显「女装」）：不进枚举、不做模糊匹配，
+    // 原样保留交给素材层处理；无对应素材的 NPC 使用会照走 404 回退，与现状一致
+    if (typeof slgEmotionExtras !== 'undefined' && Array.isArray(slgEmotionExtras) && slgEmotionExtras.includes(emotionName)) {
+        return emotionName;
+    }
+    
     const result = fuzzyMatch(
         emotionName,
         slgEmotionOptions,

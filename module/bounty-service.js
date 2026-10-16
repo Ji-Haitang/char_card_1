@@ -14,6 +14,11 @@ var bountyService = (function() {
 
     var BOUNTY_LOCATIONS = ['高昌', '沙州', '龟兹', '伊州', '哈密绿洲', '月牙泉'];  // 兜底列表：声望数据缺失时使用
 
+    // 悬赏地点排除清单：声望达标也不入池。天山派外堡是自家庇护所（情报文案自称"绝对安全可靠"），刷通缉犯既出戏又与文案矛盾
+    var BOUNTY_LOCATION_EXCLUDE = ['天山派外堡'];
+
+    var BOUNTY_REPUTATION_REQUIRED = 20;  // 功能解锁门槛：声望 > 20 才开放悬赏
+
     // 地点声望门槛（低于此值无法前往），与 world_map.html 的 locationReputationThreshold 保持一致
     var LOCATION_REPUTATION_THRESHOLD = {
         '天山派外堡': 0,
@@ -40,17 +45,33 @@ var bountyService = (function() {
         var rep = (typeof playerStats !== 'undefined' && playerStats && typeof playerStats.声望 === 'number') ? playerStats.声望 : null;
         if (rep === null) return BOUNTY_LOCATIONS;
         var list = Object.keys(LOCATION_REPUTATION_THRESHOLD).filter(function(name) {
-            return rep >= LOCATION_REPUTATION_THRESHOLD[name];
+            return rep >= LOCATION_REPUTATION_THRESHOLD[name] && BOUNTY_LOCATION_EXCLUDE.indexOf(name) === -1;
         });
         return list.length >= 3 ? list : BOUNTY_LOCATIONS;
     }
 
+    // 声望门槛判定：> BOUNTY_REPUTATION_REQUIRED 解锁；声望数据缺失按未解锁处理
+    function _bountyUnlocked() {
+        var rep = (typeof playerStats !== 'undefined' && playerStats && typeof playerStats.声望 === 'number') ? playerStats.声望 : 0;
+        return rep > BOUNTY_REPUTATION_REQUIRED;
+    }
+
     var BOUNTY_SYSTEM_PROMPT =
-        '你是武侠世界的悬赏公告栏。请生成3名不同的悬赏通缉犯。要求：\n' +
-        '- 风格贴近北宋初期西域武侠风格\n' +
+        '你是武侠游戏《姬侠传》中「天山派议事厅」的悬赏公告栏，负责拟写缉拿通缉犯的悬赏榜文。\n\n' +
+        '世界观背景（北宋初年，公元1048年，西域）：\n' +
+        '- 故事舞台在天山东段至河西走廊一带，高昌—瓜州的丝绸之路要道横亘其间。\n' +
+        '- 党项西夏崛起，已据河西大半，其擒生军专捕汉民为奴，以瓜州为巢，虎视西域；吕氏伪军盘踞沙州，篡权自立、依附党项、横征暴敛；回鹘据高昌，掌控丝路贸易，中立自保，与党项时战时和；宋朝远隔玉门，无力西顾。\n' +
+        '- 天山派乃归义军正统传人，以「护民安邦、锄强扶弱」为宗，暗中组织义军对抗吕氏与党项，庇护流民。派中上下和睦团结，弟子皆忠良之辈。本榜悬赏皆由天山派自发张贴，为保百姓与残存商路而缉恶，是门派义举，并非官府海捕。\n' +
+        '- 崆峒派、昆仑派皆为西域正派，与天山派守望相助、交情深厚，同担护佑百姓之责。\n' +
+        '- 白驼山以贩奴为业、拜火教以邪术惑众，二者皆为西域邪派，与天山派及正道诸派为敌。\n' +
+        '- 为恶之徒，或为西夏擒生军的溃卒兵痞、吕氏伪军的爪牙、敌对两方遣来的细作斥候；或为白驼山贩奴的恶徒、拜火教惑众的妖人；或为丝路上劫掠的沙匪马贼、混迹商队的骗子窃贼；亦有崆峒、昆仑等友派叛出师门、流窜为祸的逆徒。\n' +
+        '- 回鹘中立，非敌非友，其治下高昌商贾云集、三教九流汇聚，亦有不法之徒潜藏其间。\n\n' +
+        '生成要求：\n' +
         '- 人名/绰号有江湖气息，绰号可从外貌特征、所用兵器、行事作风等方向着意，3人之间风格各异\n' +
         '- 罪行描述简洁有画面感，不超过50字\n' +
         '- 3人的罪行性质互有区分，劫财、害命、叛门、窃宝等不同方向错开，避免雷同\n' +
+        '- 敌人来历与罪行须贴合上述世界观，可与各方势力或丝路风物相关联；严禁出现现代元素、官府公门体系（海捕文书、捕快、六扇门等）、以及与本设定无关的朝代与势力\n' +
+        '- 悬赏目标绝不可是天山派弟子或叛离天山派之人（本派团结，无有叛徒）；涉及"叛门"罪行时，叛徒只能出自崆峒派、昆仑派等友方门派\n' +
         '严格按 JSON 格式输出，并用 <BOUNTY> 和 </BOUNTY> 标签将整个 JSON 对象完整包裹，除了标签和JSON 对象以外不输出任何其他文字。';
 
     // =========================================================================
@@ -145,7 +166,7 @@ var bountyService = (function() {
                 '      武学境界: ' + _stageLabel(p.level);
         }).join('\n');
 
-        return '当前游戏背景：北宋初期，西域陇右武林\n' +
+        return '当前游戏背景：北宋初年，西域，天山派议事厅张贴本周悬赏榜\n' +
             '参考信息:\n' +
             '  时间: 第' + year + '年第' + month + '月第' + week + '周\n' +
             '  季节: ' + seasonText + '\n' +
@@ -162,10 +183,10 @@ var bountyService = (function() {
             '  </BOUNTY>\n' +
             '  bounties数组顺序须与敌人A/B/C一一对应，只需输出敌人的名称与罪行描述\n' +
             '内容要求:\n' +
-            '  - 风格贴近北宋初期西域武侠风格\n' +
+            '  - 风格贴近北宋初年西域武侠\n' +
             '  - enemyName为目标的人名/绰号，须有江湖气息；绰号可从外貌特征、所用兵器、行事作风等方向着意，3人风格各异\n' +
             '  - description为目标的罪行描述，简洁有画面感，50字以内；3人的罪行性质互有区分，劫财、害命、叛门、窃宝等不同方向错开，富有创意，避免雷同\n' +
-            '  - 每个目标的enemyName与description应结合其所在地与武学境界，输出合理自洽的内容\n\n' +
+            '  - 每个目标的enemyName与description应结合其所在地与武学境界，输出合理自洽的内容：罪行应与所在地的势力风土相呼应（参见世界观，如沙州为吕氏伪军地盘、瓜州有擒生军、高昌乃回鹘都城）；武学境界低微者不妨以骗术、窃盗、下毒等非武力手段为恶，境界高深者则当是能震慑一方的人物，如匪首巨盗、敌军将校、白驼山或拜火教的护法长老之流\n\n' +
             '请依据上述信息生成三个敌人的名称和描述，用 <BOUNTY> 和 </BOUNTY> 标签包裹完整 JSON 输出，不加任何 markdown 代码块';
     }
 
@@ -250,6 +271,11 @@ var bountyService = (function() {
             container.innerHTML = '<div class="bounty-empty-tip">本周已接取过悬赏任务，无论成败下周再来吧</div>';
             if (genBtn) genBtn.style.display = 'none';
             if (abBtn) abBtn.style.display = 'none';
+        } else if (!_bountyUnlocked()) {
+            // 声望未达门槛：弹窗照开但按钮置灰，提示解锁条件
+            container.innerHTML = '<div class="bounty-empty-tip">暂无悬赏任务，声望&gt;20解锁该功能</div>';
+            if (genBtn) { genBtn.style.display = 'inline-block'; genBtn.disabled = true; }
+            if (abBtn) abBtn.style.display = 'none';
         } else {
             if (_currentBountyList.length === 0) {
                 container.innerHTML = '<div class="bounty-empty-tip">暂无悬赏任务，点击下方"查看悬赏"生成</div>';
@@ -263,7 +289,7 @@ var bountyService = (function() {
                     '</div>';
                 }).join('');
             }
-            if (genBtn) genBtn.style.display = 'inline-block';
+            if (genBtn) { genBtn.style.display = 'inline-block'; genBtn.disabled = false; }
             if (abBtn) abBtn.style.display = 'none';
         }
     }
@@ -299,6 +325,7 @@ var bountyService = (function() {
         if (_generating) return;
         if (_bountyWeeklyUsed()) { showModal('本周已接取过悬赏任务，下周再来吧'); _renderBountyModal(); return; }
         if (typeof activeBounty !== 'undefined' && activeBounty) { showModal('已有进行中的悬赏任务'); _renderBountyModal(); return; }
+        if (!_bountyUnlocked()) { showModal('暂无悬赏任务，声望>20解锁该功能'); _renderBountyModal(); return; }  // 防御：绕过置灰按钮直接调用时拦截
         _generating = true;
         var genBtn = document.getElementById('bounty-generate-btn');
         var container = document.getElementById('bounty-list-container');

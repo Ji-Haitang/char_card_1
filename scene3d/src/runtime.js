@@ -157,6 +157,9 @@ export function mount(container, options = {}) {
     msaa: [2, 4].includes(options.msaa) ? options.msaa : DEFAULT_MSAA,
     shadows: options.shadows !== false,
     atmosphere: options.atmosphere !== false,
+    skyEffects: options.skyEffects !== false,
+    skyBlend: options.skyBlend === true,
+    skyAnalytic: options.skyAnalytic !== false,
     tuning: {
       bloom: Number.isFinite(tuning.bloom) ? tuning.bloom : RENDER_DEFAULTS.bloom,
       shaft: Number.isFinite(tuning.shaft) ? tuning.shaft : RENDER_DEFAULTS.shaftStrength,
@@ -169,6 +172,12 @@ export function mount(container, options = {}) {
   }
   let selectionObjects = []
   let npcFocus = null, npcViewReturn = null, selectedNpcId = null, lastNpcAnchor = ''
+  // Drag-pan clamp: origin is the scene's initial controls.target; the 3D distance from it
+  // (vertical panning included) may not exceed min(width, depth)/2 capped at PAN_RADIUS_MAX.
+  // The main scene's bounds include the far mountains/cloud sea (min/2 ≈ 40m), so the 15m
+  // cap narrows it. Programmatic camera drives (NPC focus/selection/view-return) are never clamped.
+  const PAN_RADIUS_MAX = 15
+  let panOrigin = null, panRadius = PAN_RADIUS_MAX
   function canPrefetch() { return quality === 'balanced' && canInteract() && !npcViewReturn && !pointers.size && counters.pendingLoads === 0 }
   function syncPrefetch() { if (canPrefetch()) { if (activeRecord?.id === 'main') prefetch?.start(); prefetch?.resume() } else prefetch?.pause() }
   function pixelRatio() {
@@ -276,6 +285,18 @@ export function mount(container, options = {}) {
     if (patch.atmosphere !== undefined) {
       if (typeof patch.atmosphere !== 'boolean') return false
       if (settings.atmosphere !== patch.atmosphere) { settings.atmosphere = patch.atmosphere; applyAtmosphere(); applied = true }
+    }
+    if (patch.skyEffects !== undefined) {
+      if (typeof patch.skyEffects !== 'boolean') return false
+      if (settings.skyEffects !== patch.skyEffects) { settings.skyEffects = patch.skyEffects; environment?.setSkyEffects(patch.skyEffects); applied = true }
+    }
+    if (patch.skyBlend !== undefined) {
+      if (typeof patch.skyBlend !== 'boolean') return false
+      if (settings.skyBlend !== patch.skyBlend) { settings.skyBlend = patch.skyBlend; environment?.setSkyBlend(patch.skyBlend); applied = true }
+    }
+    if (patch.skyAnalytic !== undefined) {
+      if (typeof patch.skyAnalytic !== 'boolean') return false
+      if (settings.skyAnalytic !== patch.skyAnalytic) { settings.skyAnalytic = patch.skyAnalytic; environment?.setSkyAnalytic(patch.skyAnalytic); applied = true }
     }
     if (patch.tuning) {
       let tuningChanged = false
@@ -422,14 +443,27 @@ export function mount(container, options = {}) {
     if (!canInteract() || !activeRecord) return false
     clearSelection(); positionCamera(activeRecord); fit(); npc.tick?.(0, 0); return true
   }
+  // OrbitControls pans camera and target together (screen-space panning also moves Y);
+  // on clamp the overshoot is subtracted from the camera as well, so the view direction
+  // holds and the drag slides along the sphere rim.
+  function clampPanTarget() {
+    if (!panOrigin || npcFocus || npcViewReturn || selectedNpcId) return
+    const dx = controls.target.x - panOrigin.x, dy = controls.target.y - panOrigin.y, dz = controls.target.z - panOrigin.z, dist = Math.hypot(dx, dy, dz)
+    if (!(dist > panRadius)) return
+    const scale = panRadius / dist, cx = panOrigin.x + dx * scale, cy = panOrigin.y + dy * scale, cz = panOrigin.z + dz * scale
+    camera.position.x += cx - controls.target.x; camera.position.y += cy - controls.target.y; camera.position.z += cz - controls.target.z
+    controls.target.set(cx, cy, cz)
+  }
   function positionCamera(record) {
     controls.enableDamping = false; controls.update()
-    controls.autoRotate = false; controls.enablePan = false
+    controls.autoRotate = false; controls.enablePan = true
     controls.zoomToCursor = false; controls.minZoom = .5; controls.maxZoom = 5
     controls.minPolarAngle = record.id === 'main' ? Math.PI / 4 : Math.PI / 3
     controls.maxPolarAngle = record.id === 'main' ? 5 * Math.PI / 12 : Math.PI / 3
     if (record.id === 'main') { camera.position.set(10.39, 44.82, 53.63); controls.target.set(-.19, 10.49, -4.74) }
     else { camera.position.copy(record.position); controls.target.copy(record.target) }
+    panOrigin = (panOrigin || new THREE.Vector3()).copy(controls.target)
+    panRadius = record.size ? Math.min(Math.min(record.size.x, record.size.z) / 2, PAN_RADIUS_MAX) : PAN_RADIUS_MAX
     camera.zoom = record.id === 'main' ? 1.24 : 1.55; camera.updateProjectionMatrix(); controls.update(); camera.updateMatrixWorld(true)
     controls.enableDamping = !motionReduced
   }
@@ -705,6 +739,7 @@ export function mount(container, options = {}) {
       controls = new OrbitControls(camera, renderer.domElement); controls.enabled = false
       controls.target.set(0, 7.5, -3); controls.autoRotate = false
       controls.enableDamping = !motionReduced; controls.dampingFactor = .075; controls.rotateSpeed = .55; controls.zoomSpeed = .85; controls.panSpeed = .75
+      controls.addEventListener('change', clampPanTarget)
       const fill = new THREE.HemisphereLight('#dcebf4', '#8c8d82', 1.65), ambient = new THREE.AmbientLight('#efdfc9', .2)
       sun = new THREE.DirectionalLight('#ffdfb1', 3); sun.position.set(-32, 65, 38); sun.target.position.set(0, 4, -2); sun.castShadow = quality !== 'low' && settings.shadows
       Object.assign(sun.shadow.camera, { left: -42, right: 42, top: 42, bottom: -42, near: 1, far: 180 }); sun.shadow.camera.updateProjectionMatrix()
@@ -715,6 +750,9 @@ export function mount(container, options = {}) {
         paperColor: options.paperColor || DEFAULT_PAPER_COLOR, exposureOverride: quality === 'low' ? null : 1, volumeClouds: quality !== 'low',
         onPaperColor: color => { cinematic?.setPaperColor(color); applyPaperFallback(color) }, onTimeChange: hour => cinematic?.setTime(hour), onCloudHeight: value => atmosphere?.setHeight(value), onCloudSpeed: value => atmosphere?.setSpeed(value), onCloudMotion: value => atmosphere?.setMotion(value) })
       environment.setAutoTime?.(false)
+      environment.setSkyEffects(settings.skyEffects)
+      environment.setSkyBlend(settings.skyBlend)
+      environment.setSkyAnalytic(settings.skyAnalytic)
       if (quality === 'balanced') {
         try {
           const [{ createCinematic }, { createAtmospherePass }] = await Promise.all([import('./cinematic.js'), import('./atmosphere.js')])
@@ -878,10 +916,10 @@ export function mount(container, options = {}) {
     selectedNpcId, focusingNpc: Boolean(npcFocus), returningNpcView: Boolean(npcViewReturn),
     modelByteCache: diagnosticSnapshot(modelCache?.getStats() || { entries: 0, bytes: 0 }),
     prefetch: diagnosticSnapshot(prefetch?.getStats() || lastPrefetchStats || { pending: 0, timers: 0 }),
-    cameraView: camera ? Object.freeze({ position: Object.freeze(camera.position.toArray()), target: Object.freeze(controls.target.toArray()), offset: Object.freeze(camera.position.clone().sub(controls.target).toArray()), distance: camera.position.distanceTo(controls.target), roomTarget: activeRecord?.target ? Object.freeze(activeRecord.target.toArray()) : null, zoom: camera.zoom, minPolarAngle: controls.minPolarAngle, maxPolarAngle: controls.maxPolarAngle, enablePan: controls.enablePan }) : null,
+    cameraView: camera ? Object.freeze({ position: Object.freeze(camera.position.toArray()), target: Object.freeze(controls.target.toArray()), offset: Object.freeze(camera.position.clone().sub(controls.target).toArray()), distance: camera.position.distanceTo(controls.target), roomTarget: activeRecord?.target ? Object.freeze(activeRecord.target.toArray()) : null, zoom: camera.zoom, minPolarAngle: controls.minPolarAngle, maxPolarAngle: controls.maxPolarAngle, enablePan: controls.enablePan, panRadius, panOrigin: panOrigin ? Object.freeze(panOrigin.toArray()) : null }) : null,
     renderTuning: diagnosticSnapshot(cinematic?.getStats?.() || null),
     environmentState: diagnosticSnapshot(api.metrics.environment || null),
-    renderSettings: Object.freeze({ renderScale: settings.renderScale, msaa: settings.msaa, shadows: settings.shadows, atmosphere: settings.atmosphere, tuning: Object.freeze({ ...settings.tuning }), selectedObjects: selectionObjects.length }),
+    renderSettings: Object.freeze({ renderScale: settings.renderScale, msaa: settings.msaa, shadows: settings.shadows, atmosphere: settings.atmosphere, skyEffects: settings.skyEffects, skyBlend: settings.skyBlend, skyAnalytic: settings.skyAnalytic, tuning: Object.freeze({ ...settings.tuning }), selectedObjects: selectionObjects.length }),
   }) }
   // Bridge sampling is opt-in by method call; snapshots never expose live Three objects.
   const handle = { applyState, setVisible, setRenderEnabled, setInteractionEnabled, resize, retry, destroy, resetView, setNpcController, setSettings, clearSelection,

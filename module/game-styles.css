@@ -1530,6 +1530,21 @@ body {
     color: #999;
 }
 
+/* 历史页码输入框（展开态，与自由行动输入框同系列式样；尺寸见 game-styles-layout.css） */
+.story-history-page-input {
+    border: 2px solid #ddd;
+    border-radius: 5px;
+    background: #fff;
+    color: #2c2c2c;
+    font-family: "Microsoft YaHei", "SimSun", serif;
+    transition: border-color 0.3s ease;
+}
+
+.story-history-page-input:focus {
+    outline: none;
+    border-color: #4ecdc4;
+}
+
 /* 发送按钮 */
 .free-action-send-btn {
     padding: clamp(8px, 2vw, 12px) clamp(20px, 4vw, 30px);
@@ -1789,9 +1804,70 @@ body.gal-presenting .slg-loading-layer {
     display: none !important;
 }
 
+/* 演出中盖住右下角 HUD：齿轮面板（z:950；open 时菜单靠 visibility:visible 显示，visibility 盖不住，必须 display:none，
+   与观景模式 L43 的 dock 隐藏同理）与 3D 观景按钮（z:55）。只藏不动状态：dock 的 open 类保持，退出演出后原样恢复 */
+body.gal-presenting .viewport-dock-layer,
+body.gal-presenting #main-viewport > .scene3d-sightseeing {
+    display: none !important;
+}
+
 /* 特殊CG图层（最顶层） */
 .slg-cg-layer {
     z-index: 3;
+}
+
+/* 表情栏为「特殊CGn」的整幅立绘（满屏 cover）：抬到与 NSFW CG 层同级，
+   盖住 z:2 的场景标签——此类帧与 NSFW CG 帧同口径，不显示地名和时间。
+   只抬层级不改渲染：常规立绘不受影响（z:2 在标签之下）；
+   同帧若另有 NSFW CG 层，同 z:3 时 DOM 序 CG 层在后仍居上。 */
+.slg-emotion-layer.slg-emotion-special-cg {
+    z-index: 3;
+}
+
+/* 演出层场景标签：右上角地点名匾额（复用 .scene-title 类，古风 theme.css / 扁平 beautify.css 的
+   匾额样式——字体/描边/背景伪元素/竖排/字号 vw 自适应——自动生效）+ 其下小字时间。
+   定位与操作层匾额同源（top:3% right:4%）；z:2 与立绘同级、DOM 在其后（压立绘），
+   NSFW CG 层与特殊CG整幅立绘均 z:3 在其上——这两类满屏图的帧标签被盖住（看不见）。 */
+.slg-scene-tag {
+    position: absolute;
+    top: 3%;
+    right: 4%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none; /* 不挡 mask 点击退出（容器本就 pointer-events:none，显式防未来主题给子元素开事件） */
+}
+
+/* 嵌套的 .scene-title 只借匾额视觉，定位几何由 .slg-scene-tag 承担：
+   主题规则里的 absolute top/right 只服务操作层 .scene 场景（!important 压 theme/beautify 的非 important 定位；
+   基础层 484 的居中横排 transform 一并清掉）。
+   字号/padding/圆角以 vmin 计（2026-10-16 手机实测调整）：竖屏 vmin=vw 与原 3.5vw 逐像素一致；
+   横屏 vmin=vh——同一屏幕横竖朝向字号绝对一致，横屏占比向竖屏对齐
+  （原 3.5vw 按宽度计，横屏宽大使字相对视口高度的占比远超竖屏）。 */
+.slg-layer-container .scene-title {
+    position: static !important;
+    transform: none !important;
+    font-size: 3.5vmin !important;
+    padding: 1.5vmin 2vmin !important;
+    border-radius: 0.5vmin !important;
+}
+.slg-layer-container .scene-title::before {
+    border-radius: 0.5vmin !important;
+}
+
+/* 匾额下方的小字时间（HH:MM，该帧无时间不渲染此元素）：与匾额同族白字黑描边、横排，字号随视口收放（vmin：横竖屏绝对字号一致） */
+.slg-scene-time {
+    margin-top: 0.6vmin;
+    font-family: 'Kaiti', 'STKaiti', 'LiSu', serif;
+    font-size: clamp(10px, 1.3vmin, 18px);
+    letter-spacing: 0.12em;
+    color: #fff;
+    text-shadow:
+        0.05em 0 0 #000, -0.05em 0 0 #000,
+        0 0.05em 0 #000, 0 -0.05em 0 #000,
+        0.05em 0.05em 0 #000, -0.05em -0.05em 0 #000,
+        0.05em -0.05em 0 #000, -0.05em 0.05em 0 #000;
 }
 
 /* 确保故事文本在图层之上 */
@@ -1845,6 +1921,41 @@ body.gal-presenting .slg-loading-layer {
 /* 确保SLG图层容器在遮罩层之上 */
 .slg-layer-container {
     z-index: 10; /* 提高z-index */
+}
+
+/* 3D 换房持有翻页纸期间进入演出：把演出层与 mask 抬到 3D 翻页纸(z:60)之上，首段立即可见、点击可退出；
+   仅 body.gal-over-3d-turn（纸归 3D 所有）时生效，演出自己播纸的正常进出场维持原 z 序不变。 */
+body.gal-over-3d-turn #main-viewport .slg-interaction-mask {
+    z-index: 65;
+}
+
+body.gal-over-3d-turn #main-viewport .slg-layer-container {
+    z-index: 70;
+}
+
+/* 3D 显示中的 GM0 演出素材变体（仅 renderLayers 判定 use3dVer 后加 .gal-3dver 才生效）：
+   1) 3D.ver 场景图加毛玻璃朦胧感（blur + 轻微提亮降饱和；scale 抵消模糊边缘的半透明缩圈）；
+   2) 双 NPC 时左侧焦点立绘左右镜像（像素立绘双人都朝同一方向，翻转后形成对视构图）。
+   2D 模式 / GM1 / 操作层均不加此类，不受影响。 */
+.slg-layer-container.gal-3dver > .slg-scene-layer img {
+    filter: blur(3px) brightness(1.04) saturate(.96);
+    transform: scale(1.04);
+}
+
+.slg-layer-container.gal-3dver > .slg-emotion-layer.slg-cast-left:not(.slg-emotion-special-cg) img {
+    transform: translateX(-50%) scaleX(-1);
+}
+
+/* 3D 显示中的 GM0 演出立绘形体调整（仅 .gal-3dver；特殊CG 走满屏规则不受影响）：
+   1) 高度缩到基础值 70% 的 80% → 56%（width:auto 保持等比）；
+   2) 整体上移 viewport 高度的 20%（bottom: 0 → 20%，图层=视口高）；
+   3) 脚底阴影借 img 自身 background 绘制：透过立绘透明像素显在人物脚下，层级天然在人物之后；
+      百分比按 img 盒解析（height:56% + width:auto 时盒恰好=立绘渲染宽/高）——
+      水平半径 11.5% → 直径 23% 立绘宽，垂直半径 2.5% 的扁椭圆，底边与立绘底边相切。 */
+.slg-layer-container.gal-3dver > .slg-emotion-layer:not(.slg-emotion-special-cg) img {
+    height: 56%;
+    bottom: 20%;
+    background: radial-gradient(ellipse 13% 2.5% at 50% 97.5%, rgba(0, 0, 0, .4) 0%, rgba(0, 0, 0, .18) 55%, rgba(0, 0, 0, 0) 72%);
 }
 
 /* SLG加载图层（位于场景图层之下，用于遮挡非SLG场景） */

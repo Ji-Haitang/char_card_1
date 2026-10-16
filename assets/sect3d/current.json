@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "buildId": "regen-resize-20260922",
+  "buildId": "pan-clamp-20261012b",
   "bridgeProtocol": {
     "min": 1,
     "max": 1
   },
-  "manifest": "regen-resize-20260922/manifest.json",
-  "manifestSha256": "622c53c20acc3165019c1ae1d8941f5bd380678eb468cac7e660beffef4b3de2"
+  "manifest": "pan-clamp-20261012b/manifest.json",
+  "manifestSha256": "9a7dc3e201f9869130b5ef76c0473b051d3116447224b648ea0f951ee947c0ea"
 }

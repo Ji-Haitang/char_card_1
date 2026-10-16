@@ -399,7 +399,7 @@ test('classic bridge visual projection maps every ID but does not encode authore
   }
 })
 
-test('frozen CSV and manifest prove the current 15 heights, 659 frames and 16 actual PNG headers', async t => {
+test('frozen CSV and manifest prove the current 15 heights, 660 frames and 17 actual PNG headers', async t => {
   // Optional real provenance gate. Set to a Git-owned freeze of Pro, not a live release
   // or arbitrary synthetic fixtures. This test never generates or modifies assets.
   const root = process.env.SCENE3D_NPC_SOURCE_ROOT
@@ -416,7 +416,7 @@ test('frozen CSV and manifest prove the current 15 heights, 659 frames and 16 ac
   }
   assert.equal(heights.size, 15); assert.equal(manifest.version, 1); assert.equal(manifest.npcs.length, 15)
   assert.deepEqual(manifest.npcs.map(n => n.id).sort(), Object.values(identities).sort())
-  assert.equal(manifest.npcs.reduce((sum, n) => sum + n.frameCount, 0), 659)
+  assert.equal(manifest.npcs.reduce((sum, n) => sum + n.frameCount, 0), 660)
   const files = new Set()
   for (const npc of manifest.npcs) {
     assert.equal(npc.height, heights.get(npc.label)); assert.deepEqual(npc.anchor, [.5, 0])
@@ -432,9 +432,9 @@ test('frozen CSV and manifest prove the current 15 heights, 659 frames and 16 ac
     }
     assert.equal(frames, npc.frameCount)
   }
-  assert.equal(files.size, 16)
+  assert.equal(files.size, 17)
   const tang = manifest.npcs.find(n => n.id === 'tangmuli')
   assert.equal(tang.frameCount, 54); assert.equal(tang.durationMs, 4500)
   assert.equal(tang.sourceSha256, 'ffb5d6bb22e5c27916bb65b6ce08b5dd254cd50d87d1a5f3dce9ea1f1cd2299b')
-  t.diagnostic(JSON.stringify({ sourceRoot: root, csvSha256: createHash('sha256').update(raw).digest('hex'), npcCount: 15, frameCount: 659, sheetCount: files.size }))
+  t.diagnostic(JSON.stringify({ sourceRoot: root, csvSha256: createHash('sha256').update(raw).digest('hex'), npcCount: 15, frameCount: 660, sheetCount: files.size }))
 })

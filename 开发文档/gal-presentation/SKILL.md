@@ -43,7 +43,7 @@ description: 姬侠传「GAL 演出」迭代的完整开发方案——LLM 正�
 | F3 | 时间字段为该幕演出时间；LLM 规则：单调不倒退、单回合跨度 ≤ 2h、末段 ≤ 23:00、回忆/闪回段一律填主线当前时间 |
 | T1 | 引擎只在 **commit 阶段** 取时间，流式不更新；兜底链：末帧有效时间 → 逆序前序帧 → SIDE_NOTE `时间`（字段保留读取，规范里删除输出要求）→ 原值不变 |
 | T2 | 跨回合时间回退合法（LLM 可能重述），不做单调约束校验，仅 console.warn |
-| G0 | 进出演出播翻页纸（复用 3D 翻页动画）；演出内部段落切换不播 |
+| G0 | 进出演出播翻页纸（复用 3D 翻页动画）；演出内部段落切换按 G19 判定播纸 |
 | G1 | 进入条件（自动）：`GameMode===0 && 新回复 commit 完成 && frames.length ≥ 1 && !isStoryExpanded && newWeek !== 1`；同一回复只自动进入一次 |
 | G2 | 进入条件（手动）：GameMode 0 下点 story-area **中间 1/3**，或**任何翻页动作**（左右 1/3 / 箭头 / 页码点 → `doGoToPage`）→ 进入并显示 `min(currentPage, frames.length-1)` 对应帧；已在演出中则退化为 `goto`；展开态不响应 |
 | G3 | 退出：点舞台任意处（mask click）；点"展开全文"；收起全文不自动重进 |
@@ -58,6 +58,11 @@ description: 姬侠传「GAL 演出」迭代的完整开发方案——LLM 正�
 | G12 | 退出时若 3D 有待切换房间（busy 解除后会 apply 并自播翻页），跳过演出自身翻页，由 3D 换房翻页兼作退场 |
 | G13 | GameMode 0 演出用 body class `gal-presenting`，**不用** `slg-global`（后者会 `display:none` 掉 `.scene`）；**不用**白底 `.slg-loading-layer`；恒加 mask |
 | G14 | GameMode 1 现有演出行为保持不变（回归基准），只是改为经过统一的解析层与控制器 |
+| G15 | 纸归 3D 换房所有时（与 G9 同一判定 `hasPendingApply()`），`enter`/`paint` 经 `syncOver3dTurn()` 给 body 加 `gal-over-3d-turn`：`.slg-layer-container`/`.slg-interaction-mask` 抬到 z:70/65（3D 翻页纸 z:60 之上），首段立即可见、mask 可点退出；演出自己播纸时不加此类，正常进出场 z 序（层 10/纸 60）与逐帧时序不变。`exit`/`setPresenting(false)` 同步移除该类，保证 `curtain:true` 的盖纸能盖住演出层。`paint` 后补同步一次，覆盖 enter 时刻 3D turn 尚未创建的 observer/微任务竞态 |
+| G16 | 3D 显示中的 GM0 演出素材变体：`use3dVer()`（bridge `getDiagnostics()` 的 `preferences.enabled && snapshot.visible`，visible 内含 `protocol!=='file:'`）为真时——场景图走 `img/location/3D.ver/<场景>-<季>-<昼夜>.webp`（连字符命名，G6 回退口径不变：非门派场景回退 `天山派-<季>-<昼夜>`）；表情立绘走 `img/表情差分和CG/像素/<npc>/<表情>.webp`（扁平目录，15 NPC 全齐）；容器加 `gal-3dver` 类，CSS 承担毛玻璃（`blur(3px)` 场景图）与左侧焦点立绘镜像（`.slg-cast-left` 加 `scaleX(-1)`）。特殊 CG 色图路径不动。判定为假（2D/GM1/file:///沙箱）时所有路径与结构与现状逐字节一致。【2026-10 形体补充】`.gal-3dver` 内非特殊CG立绘另作形体调整：高 56%（基础 70%×0.8）、`bottom: 20%`（整体上移视口高 20%）、并借 img 自身 `background` 的 `radial-gradient(ellipse 11.5% 2.5% at 50% 97.5%, …)` 画脚底扁椭圆阴影（透过透明像素显示、层级在人物后，水平直径=立绘宽 23%，底边与立绘底边相切） |
+| G17 | GM0 操作层表情立绘（不变量 3 的登记例外）：`displayNpcs` 在 `GameMode===0` 时把 `.npc-portrait` img 源换成 `img/表情差分和CG/<npc>/表情差分/<表情>.webp`（404 逐级兜底 表情→平静→npcPortraits），表情来自 `npcTurnEmotions` 回合表——每回合开始 `withSceneGuard` 调 `resetNpcTurnEmotions()` 回默认「平静」，**仅 commit 路径**（`_commitResponse` renderMainText 后）调 `updateNpcTurnEmotions(slgModeData)`+`refreshNpcEmotionPortraits()` 按本次回复各 NPC 末次表情统一切换（流式/回滚不切）。纯展示图源替换，不写任何游戏变量；换 src 时 `_npcOpaqueCanvasCache.delete(img)` 作透明度缓存失效；只换 src 不重建 DOM（避免 3 人随机洗牌重 roll）。GM1 与 3D 公告板（bridge `renderedNpcs` 的 `portraitUrl`）不受影响 |
+| G19 | 演出**内部**翻页播纸判定（`goto`，2026-10 用户要求）：① CG 身份变化播——CG 身份键 = `焦点NPC:cg标记`（与色图层实际内容同源，`cgContentEnabled` 关闭或 `cg===none` 或无焦点均视为无 CG；`randIdx` 随机变体不计入），前后键不同即播（无↔有 / 前后都有但不一致，含同标记换焦点 NPC）；② 前后都无 CG 时 NPC 阵容集合变化播——阵容键 = 出场成员名字排序拼接，**单纯主次互换、表情变化不算**；其余换帧（含纯场景切换）不播。封面文案同 enter（`第n回`+时间·场景）。所有换帧经 `chain` 串行保持点击序；`goto` 不递增 `gen`（不抢占进行中的 enter），封面期间被 `exit/reset` 抢先（`gen` 变化或 `state!=='playing'`）时补揭开纸张后放弃换帧（与 enter 同一兜底）；3D 换房持纸时 bridge `playCurtain` 自动 no-op，退化为无纸换帧。【2026-10 连播修复】`goto` 的**同目标合并检查与幕布判定推迟到 chain 串行执行时刻**（不能在调用时刻算）：`doGoToPage` 一次翻页会同帧连发 `enter({curtain:true})`（playing 退化为 goto）+ `updateStoryDisplay` 的 `goto(currentPage)` 两个换帧，调用时刻 `index` 还是旧值（paint 在前序 run 内才更新），同步段判不出来；执行时刻目标已被前序 run 画过（`target===index`）则合并跳过返回 true，幕布不连播第二次；abort 预检也提前到盖纸之前（排队期被 exit 的 goto 静默放弃、不留纸）。真机探针 `.scene3d-work/gal-double-goto-verify.mjs` 以 `.scene3d-page-turn` hidden 序列断言（修复前 `[false,true,false,true]`，修复后 `[false,true]`） |
+| G20 | 演出层场景标签（右上角地点名匾额+小字时间，2026-10-15 用户要求）：`renderLayers` 在立绘层与 CG 层之间插 `.slg-scene-tag`（div > `.scene-title` + 可选 `.slg-scene-time`）。地点名 `sceneLabelFor(frame, mode)`：GM0 与 G6 场景图判定同源（`sectSceneNames()` 抽出共用）——命中门派子场景显子场景名，否则（回退天山派图的帧）显「天山派」；GM1 恒显当前 `mapLocation`（与帧 scene 无关，scene=none 也显）。时间仅 `frame.time` 非空才渲染（旧格式帧无）。复用 `.scene-title` 类名嵌入新容器，古风 theme.css / 扁平 beautify.css 匾额样式（竖排/隶楷体/背景.png 伪元素/top:3% right:4%）零复制自动命中——嵌套定位用 `.slg-layer-container .scene-title { position:static!important; transform:none!important }` 压主题规则（主题定位无 !important）；注意 beautify.css 165 `body.ui-style-ancient .scene-title` 的 `font-family:'Kaiti','STKaiti'!important` 特异性压过 theme.css 的 LiSu/KaiTi，古风实际计算字体是 Kaiti 族（与操作层匾额一致）。tag z:2 与立绘同级、DOM 在其后（压立绘），CG 层 z:3 在其上——有 CG 的帧标签被盖住；`pointer-events:none` 不挡 mask。时间 `.slg-scene-time`：横排小字 `clamp(10px,1.3vmin,18px)` 白字黑描边。操作层 `.scene-title` 演出时被不透明场景图盖住，无双标签问题。真机探针 `.scene3d-work/gal-scene-tag-verify.mjs`（GM0 四帧+竖屏 390×844 自适应+GM1 mapLocation/无时间帧；断言 computed 样式/z 序/vmin 字号收放）。【2026-10-16 补充】表情栏为「特殊CGn」的整幅立绘帧与 NSFW CG 帧同口径不显示地名时间：`.slg-emotion-layer.slg-emotion-special-cg` 抬 z:3（与 NSFW CG 层同级；同帧若另有 NSFW CG，DOM 序 CG 层在后仍居上），盖住 z:2 标签；只抬层级不改渲染（标签 DOM 仍在），常规立绘 z:2 不受影响（仍在标签下）。探针帧4（苓雪妃:特殊CG1）实测 specialCg z:3 > tag z:2，截图满屏盖住。【2026-10-16 vmin 补充】手机实测横屏下匾名 3.5vw 按视口宽度计、相对视口高度占比远超竖屏——嵌套覆盖改 `font-size:3.5vmin;padding:1.5vmin 2vmin;border-radius:.5vmin`（含 ::before），时间改 `clamp(10px,1.3vmin,18px)`：竖屏 vmin=vw 与原值逐像素一致，同一屏幕横竖朝向字号绝对一致（探针 844×390 横屏与 390×844 竖屏均 13.65px）；均带 !important（flat 版 `body.ui-style-flat .scene-title` 无 important 的 font-size 特异性更高，须压） |
 
 ## 三、目标架构
 
@@ -101,7 +106,7 @@ Frame = { text, scene, time|null, cast:[{npc,emotion}](≤2), cg, legacy:boolean
 galPresentation = {
   state: 'idle'|'playing',
   enter({ source:'commit'|'page', pageIndex, curtain }) → Promise<void>,
-  goto(pageIndex),                    // 演出中翻页，只换图层，不播翻页纸
+  goto(pageIndex),                    // 演出中翻页：按 G19 判定（CG 身份/无CG阵容变化）播翻页纸，否则只换图层
   exit({ reason, curtain }) → Promise<void>,
   isPlaying(), onCommit(commitId),    // 同一 commitId 只自动进入一次
   renderLayers(viewport, frame, opts) // 从 _appendSlgLayers 迁出的纯渲染
@@ -220,7 +225,7 @@ npm.cmd --prefix scene3d run test:unit
 *进入*
 - `pipeline.js` `_commitResponse` 第 5 步 `renderMainText(parsed.mainText)` 之后追加：`if (typeof galPresentation !== 'undefined') galPresentation.onCommit({ commitId })`。控制器内部判定 G1（`GameMode===0 && frames.length≥1 && !isStoryExpanded && newWeek!==1 && commitId 未进入过`）后 `enter({source:'commit', pageIndex:0, curtain:true})`。`handleSpecialEvent` 也经 `_commitResponse`，自动覆盖特殊事件。
 - 流式 `renderMainText`（L732/L774）与回滚 `renderMainText`（L1068）不调用 `onCommit`（G4）。
-- `game-ui.js` `updateStoryDisplay`：story-area 点击处理增加中间 1/3 区域；`doGoToPage` 在 `GameMode===0 && !isStoryExpanded && frames.length>0` 时同样 `enter({source:'page', pageIndex:min(currentPage, frames.length-1), curtain:true})`（G2，翻页即进入；演出中 enter 退化为 goto，不播翻页纸）。控制台可按 `[GAL]` 前缀过滤 enter/exit/onCommit/story click 日志。
+- `game-ui.js` `updateStoryDisplay`：story-area 点击处理增加中间 1/3 区域；`doGoToPage` 在 `GameMode===0 && !isStoryExpanded && frames.length>0` 时同样 `enter({source:'page', pageIndex:min(currentPage, frames.length-1), curtain:true})`（G2，翻页即进入；演出中 enter 退化为 goto，按 G19 判定播纸）。控制台可按 `[GAL]` 前缀过滤 enter/exit/onCommit/story click 日志。
 
 *渲染*
 - `enter` 时 `document.body.classList.add('gal-presenting')`；`GameSceneBridge.setBusy('gal', true)`；恒加 `.slg-interaction-mask`（不走 `needsMask` 排除）；mask `click` → `exit({reason:'stage-click', curtain:true})`（G3）。

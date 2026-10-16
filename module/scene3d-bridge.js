@@ -36,11 +36,15 @@
     let page = null, pageParts = null, pageAnimation = null;
     // GAL 演出翻页纸持有中（cover 开始 → reveal 结束）：这段时间纸张归演出层，3D 的 abortTurn 不得掐掉它。
     let curtainHeld = false;
+    // 观景模式：只留 3D 场景本体。NPC 从投影中整体摘除（见 snapshot），2D 业务层 / 右下角 HUD /
+    // 3D 自带的地名、悬浮按钮、镜头归位由 data-scene3d-sightseeing 的样式规则隐藏；
+    // 铺满视窗的透明退出层吃掉一切点击，点哪里都退出。换房 / 视窗失格 / 任何业务遮罩出现时自动退出。
+    let sightseeing = false, sightseeingButton = null, sightseeingExit = null;
     const tuningKeys = Object.freeze(['bloom', 'shaft', 'saturation', 'contrast', 'gamma', 'warmth', 'vignette']);
     const defaultTuning = () => ({ bloom: 1, shaft: 0.85, saturation: 1.4, contrast: 1.4, gamma: 0.88, warmth: 0.38, vignette: 0.85 });
     // Native Capacitor app (APK → phone) defaults renderScale to 2.0; plain web defaults to 1.25.
     const nativeMobile = () => !!(typeof window !== 'undefined' && window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
-    const defaultPreferences = () => ({ enabled: false, quality: 'balanced', renderScale: (nativeMobile() ? 2 : 1.25), msaa: 2, shadows: true, atmosphere: true, tuning: defaultTuning() });
+    const defaultPreferences = () => ({ enabled: false, quality: 'balanced', renderScale: (nativeMobile() ? 2 : 1.25), msaa: 2, shadows: true, atmosphere: true, skyEffects: true, skyBlend: false, skyAnalytic: true, tuning: defaultTuning() });
     const displayed = new Map(), busy = new Set(), errors = [];
     const counters = { notifications: 0, applied: 0, rejectedIntents: 0, mounts: 0, destroys: 0 };
     const clone = value => JSON.parse(JSON.stringify(value));
@@ -94,7 +98,8 @@
             });
             // 3D derives the complete legitimate roster without calling displayNpcs,
             // rerolling its random subset, or modifying the original 2D DOM/save state.
-            const selected = preferences.enabled ? residents.map(n => n.gameNpcId) : displayed.get(place) || [];
+            // 观景中 renderedNpcs 置空：layoutKey 随之变化，运行时按新签名重绑，NPC 整体卸载；residents 照旧。
+            const selected = sightseeing ? [] : preferences.enabled ? residents.map(n => n.gameNpcId) : displayed.get(place) || [];
             new Set(selected).forEach(id => {
                 if (!residents.some(n => n.gameNpcId === id)) return;
                 renderedNpcs.push({ gameNpcId: id, displayName: npcs[id].name, visualKind: 'animated', visualKey: animated[id], portraitUrl: typeof npcPortraits !== 'undefined' ? new URL(npcPortraits[id], document.baseURI).href : '' });
@@ -114,9 +119,36 @@
             // animated NPC remain alive. Unrelated business overlays still pause both.
             visible, renderEnabled: visible && !blocks.filter(reason => reason !== 'scene-menu').length, interactive: visible && !blocks.length, blockReasons: blocks, rosterError };
     }
+    // 只收状态，不重投影：apply 开头的自动退出随后会重新 snapshot；其它调用方自行 notify。
+    function dropSightseeing() {
+        if (!sightseeing) return false;
+        sightseeing = false;
+        if (viewport) delete viewport.dataset.scene3dSightseeing;
+        if (sightseeingExit) sightseeingExit.hidden = true;
+        return true;
+    }
+    function setSightseeing(enabled) {
+        if (!started) return false;
+        if (enabled) {
+            if (sightseeing) return true;
+            // 只在 3D 已就绪、当前正在绘制且没有翻页时进入；带遮罩 / 换房中一律拒绝。
+            if (!preferences.enabled || !readyScene || !last?.renderEnabled || turn) return false;
+            closeMenu(true);
+            // 齿轮 HUD 不再强制收起：观景期间由样式隐藏，退出观景后保持用户原有开合状态（仅齿轮按钮可切换）
+            sightseeing = true;
+            viewport.dataset.scene3dSightseeing = 'true';
+            if (sightseeingExit) sightseeingExit.hidden = false;
+            notify('sightseeing');
+            return true;
+        }
+        if (dropSightseeing()) notify('sightseeing');
+        return false;
+    }
     function clearReady() {
         restoreHold = false;
         readyScene = null;
+        // 场景失去就绪即退出观景：NPC 摘除态不能残留到下一个房间。
+        if (dropSightseeing()) notify('sightseeing');
         if (viewport) viewport.removeAttribute('data-scene3d-ready');
         if (root) root.hidden = true;
     }
@@ -343,7 +375,7 @@
         if (expectedLife !== life || !last?.visible || !last.renderEnabled) return null;
         if (!view) {
             const token = {}; viewToken = token;
-            view = assets.module.mount(root, { protocol: 1, assetBaseUrl: assets.base, quality: preferences.quality, renderScale: preferences.renderScale, msaa: preferences.msaa, shadows: preferences.shadows, atmosphere: preferences.atmosphere, tuning: preferences.tuning,
+            view = assets.module.mount(root, { protocol: 1, assetBaseUrl: assets.base, quality: preferences.quality, renderScale: preferences.renderScale, msaa: preferences.msaa, shadows: preferences.shadows, atmosphere: preferences.atmosphere, skyEffects: preferences.skyEffects, skyBlend: preferences.skyBlend, skyAnalytic: preferences.skyAnalytic, tuning: preferences.tuning,
                 onEvent: event => { if (viewToken === token) onEvent(event); } });
             counters.mounts++;
         }
@@ -355,11 +387,18 @@
         // Legacy 2D closers can hide a shared location popup outside this bridge.
         // Never retain a scene-menu input lock after its actual UI has disappeared.
         if (menu && (menu.element.isConnected === false || menu.element.hidden || !menu.element.classList.contains('show'))) closeMenu();
-        const next = snapshot();
+        let next = snapshot();
+        // 观景只在"当前房间、无遮罩、正常绘制"下成立：视窗失格 / 任何 block（含 generation 与业务弹窗）/
+        // 目标场景变了，都先退出再重新投影，让 NPC 随本次 apply 一并回来。
+        if (sightseeing) {
+            const from = restoreHold ? readyScene : last?.sceneId ?? null;
+            if (!next.visible || next.blockReasons.length || (from && next.sceneId && from !== next.sceneId)) { dropSightseeing(); next = snapshot(); }
+        }
         // The ancient header is transparent: render the world behind it instead of
         // leaving an uncovered paper-colored strip. The opaque flat header still
         // reserves space so it cannot hide world-projected roof labels.
-        const status = !document.body.classList.contains('ui-style-ancient') && next.logicalPage === 'map' && document.querySelector('#map-scene > .status-display');
+        // 观景时 2D 状态条整层隐藏，不再让出顶部空间。
+        const status = !sightseeing && !document.body.classList.contains('ui-style-ancient') && next.logicalPage === 'map' && document.querySelector('#map-scene > .status-display');
         const vp = viewport.getBoundingClientRect();
         const inset = status ? Math.max(0, status.getBoundingClientRect().bottom - vp.top) * viewport.clientHeight / Math.max(1, vp.height) : 0;
         const top = inset + 'px';
@@ -375,6 +414,7 @@
         const changed = compare !== fingerprint;
         if (changed) { fingerprint = compare; revision++; }
         next.revision = revision; last = next;
+        if (sightseeingButton) sightseeingButton.disabled = !next.renderEnabled;
         if (menu && (!next.visible || menu.epoch !== epoch || menu.place !== next.gameLocationId || next.mode !== 0 || (menu.npcId && !next.renderedNpcs.some(n => n.gameNpcId === menu.npcId)))) closeMenu();
         if (!next.visible) {
             pendingApply = null;
@@ -678,10 +718,13 @@
         if ([2, 4].includes(patch.msaa)) next.msaa = patch.msaa;
         if (typeof patch.shadows === 'boolean') next.shadows = patch.shadows;
         if (typeof patch.atmosphere === 'boolean') next.atmosphere = patch.atmosphere;
+        if (typeof patch.skyEffects === 'boolean') next.skyEffects = patch.skyEffects;
+        if (typeof patch.skyBlend === 'boolean') next.skyBlend = patch.skyBlend;
+        if (typeof patch.skyAnalytic === 'boolean') next.skyAnalytic = patch.skyAnalytic;
         if (patch.tuning && typeof patch.tuning === 'object') for (const k of tuningKeys) if (Number.isFinite(patch.tuning[k])) next.tuning[k] = patch.tuning[k];
         const recreate = next.quality !== preferences.quality;
         const live = {};
-        for (const k of ['renderScale', 'msaa', 'shadows', 'atmosphere']) if (next[k] !== preferences[k]) live[k] = next[k];
+        for (const k of ['renderScale', 'msaa', 'shadows', 'atmosphere', 'skyEffects', 'skyBlend', 'skyAnalytic']) if (next[k] !== preferences[k]) live[k] = next[k];
         if (tuningKeys.some(k => next.tuning[k] !== preferences.tuning[k])) live.tuning = next.tuning;
         preferences = next;
         try { localStorage.setItem(key, JSON.stringify({ ...preferences, schema: PREF_SCHEMA })); } catch (_) { /* Current-session preference still works. */ }
@@ -726,12 +769,25 @@
                 if ([2, 4].includes(stored.msaa)) preferences.msaa = stored.msaa;
                 if (typeof stored.shadows === 'boolean') preferences.shadows = stored.shadows;
                 if (typeof stored.atmosphere === 'boolean') preferences.atmosphere = stored.atmosphere;
+                if (typeof stored.skyEffects === 'boolean') preferences.skyEffects = stored.skyEffects;
+                if (typeof stored.skyBlend === 'boolean') preferences.skyBlend = stored.skyBlend;
+                if (typeof stored.skyAnalytic === 'boolean') preferences.skyAnalytic = stored.skyAnalytic;
                 if (stored.tuning && typeof stored.tuning === 'object') for (const k of tuningKeys) if (Number.isFinite(stored.tuning[k])) preferences.tuning[k] = stored.tuning[k];
             }
         } catch (_) { /* Stored preference parse failure falls back to defaults. */ }
         notice = document.createElement('div'); notice.className = 'scene3d-notice'; notice.dataset.scene3dOwned = 'notice'; notice.hidden = true;
         notice.append(document.createTextNode(''));
         const retryButton = document.createElement('button'); retryButton.type = 'button'; retryButton.textContent = '重试3D'; retryButton.addEventListener('click', retry); notice.append(retryButton); viewport.append(notice);
+        // 观景按钮叠在「镜头归位」正上方（位置/皮肤见 scene3d-host.css），仅 3D 就绪时可见；
+        // 退出层铺满视窗、只在观景中出现，点到哪里都退出。两者皆 owned，不触发 MutationObserver 重投影。
+        sightseeingButton = document.createElement('button'); sightseeingButton.type = 'button'; sightseeingButton.className = 'scene3d-sightseeing'; sightseeingButton.dataset.scene3dOwned = 'sightseeing';
+        sightseeingButton.setAttribute('aria-label', '观景模式'); sightseeingButton.title = '观景模式';
+        sightseeingButton.innerHTML = '<svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor" aria-hidden="true"><path d="M14 6l-3.75 5 2.85 3.8-1.6 1.2C9.81 13.75 7 10 7 10l-6 8h22L14 6z"/></svg>';
+        sightseeingButton.addEventListener('click', () => setSightseeing(true));
+        sightseeingExit = document.createElement('div'); sightseeingExit.className = 'scene3d-sightseeing-exit'; sightseeingExit.dataset.scene3dOwned = 'sightseeing'; sightseeingExit.hidden = true;
+        sightseeingExit.setAttribute('role', 'button'); sightseeingExit.setAttribute('aria-label', '退出观景模式');
+        sightseeingExit.addEventListener('click', () => setSightseeing(false));
+        viewport.append(sightseeingButton, sightseeingExit);
         observer = new MutationObserver(records => {
             if (records.some(record => (record.target === menu?.element && ['class', 'hidden'].includes(record.attributeName)) || (!own(record.target) && !(record.target === viewport && record.attributeName === 'data-scene3d-ready')))) notify('ui');
         });
@@ -742,12 +798,16 @@
         addEventListener('resize', () => { view?.resize(); placeMenu(); notify('resize'); });
         addEventListener('scroll', event => { if (menu && !menu.element.contains(event.target)) closeMenu(true); }, true);
         document.addEventListener('pointerdown', event => { if (menu && !menu.element.contains(event.target)) closeMenu(true); }, true);
-        document.addEventListener('keydown', event => { if (menu && event.key === 'Escape') { closeMenu(true); event.preventDefault(); } });
+        document.addEventListener('keydown', event => {
+            if (menu && event.key === 'Escape') { closeMenu(true); event.preventDefault(); }
+            else if (sightseeing && event.key === 'Escape') { setSightseeing(false); event.preventDefault(); }
+        });
         notify('start', true);
     }
-    window.GameSceneBridge = Object.freeze({ start, notify, invalidate, afterRestore, captureTime, publishNpcs, setBusy, setPreference, openSettings, retry, showNpcInfoAtAnchor, showLocationInfoAtAnchor, playCurtain,
+    window.GameSceneBridge = Object.freeze({ start, notify, invalidate, afterRestore, captureTime, publishNpcs, setBusy, setPreference, openSettings, retry, showNpcInfoAtAnchor, showLocationInfoAtAnchor, playCurtain, setSightseeing,
+        isSightseeing() { return sightseeing; },
         // 仅“真正在换房”才算：turn 非空，或在飞的 apply 目标场景 ≠ 已就绪场景。普通的锁/解锁重投影
         // （setBusy('gal') 本身就会触发一次）不应抑制演出退出时的翻页纸。
         hasPendingApply() { return Boolean(turn || (pendingApply && pendingApply.sceneId !== readyScene)); },
-        getDiagnostics() { return { started, epoch, revision, buildId: release?.buildId || null, readyScene, preferences: clone(preferences), counters: { ...counters }, snapshot: last ? clone(last) : null, errors: clone(errors), renderer: view?.getDiagnostics?.() || view?.getDebugState?.() || view?.debug || null }; } });
+        getDiagnostics() { return { started, epoch, revision, buildId: release?.buildId || null, readyScene, sightseeing, preferences: clone(preferences), counters: { ...counters }, snapshot: last ? clone(last) : null, errors: clone(errors), renderer: view?.getDiagnostics?.() || view?.getDebugState?.() || view?.debug || null }; } });
 })();

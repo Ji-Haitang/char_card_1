@@ -117,13 +117,17 @@ test('paper uses far depth plus opaque coverage and shared vignette outside bloo
   } finally { cinematic.dispose() }
 })
 
-test('plain environment has three sky effects off and host-driven day/night paper without postFX', () => {
+test('plain environment defaults sky effects on (stars/analytic) with blend off and host-driven day/night paper without postFX', () => {
   const received = [], fixture = environmentFixture({ onPaperColor: color => received.push(color) })
   const { environment: env, renderer, api } = fixture
   try {
-    for (const key of ['skyEffects', 'skyBlend', 'skyAnalytic']) assert.equal(env.getState()[key], false)
-    for (const key of ['dioramaSkyEffects', 'dioramaSkyBlend', 'dioramaSkyAnalytic']) assert.equal(env.uniforms[key].value, 0)
-    assert.deepEqual([api.metrics.environment.sky.enabled, api.metrics.environment.sky.blend, api.metrics.environment.sky.analytic], [false, false, false])
+    assert.equal(env.getState().skyEffects, true)
+    assert.equal(env.getState().skyBlend, false)
+    assert.equal(env.getState().skyAnalytic, true)
+    assert.equal(env.uniforms.dioramaSkyEffects.value, 1)
+    assert.equal(env.uniforms.dioramaSkyBlend.value, 0)
+    assert.equal(env.uniforms.dioramaSkyAnalytic.value, 1)
+    assert.deepEqual([api.metrics.environment.sky.enabled, api.metrics.environment.sky.blend, api.metrics.environment.sky.analytic], [true, false, true])
     assert.equal(env.uniforms.dioramaHazeScale.value, .6)
     env.setTime(12)
     assert.equal(api.metrics.environment.paperColor, DEFAULT_PAPER_COLOR)
@@ -177,8 +181,8 @@ test('paper palette respects host override and instances never share mutable sta
     a.environment.setTime(12); b.environment.setTime(0)
     assert.equal(a.api.metrics.environment.paperColor, '#abcdef')
     assert.equal(b.api.metrics.environment.paperColor, NIGHT_PAPER_COLOR)
-    a.environment.setSkyEffects(true)
-    assert.equal(b.environment.getState().skyEffects, false)
+    a.environment.setSkyEffects(false)
+    assert.equal(b.environment.getState().skyEffects, true)
   } finally { a.environment.dispose(); b.environment.dispose() }
 })
 

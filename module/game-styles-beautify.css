@@ -1158,6 +1158,10 @@ body.ui-style-flat .story-nav-btn {
         border-color: var(--f-primary) !important;
     }
 }
+/* 翻页箭头迁入底部按钮行后不再是两侧圆形大按钮：圆角与行内按钮同档（须 !important 且更高特异性压过上方 50% 圆形规则） */
+body.ui-style-flat .story-expand-bar .story-nav-btn {
+    border-radius: var(--f-radius) !important;
+}
 body.ui-style-flat .story-expand-btn {
     color: var(--f-primary);
 }
@@ -1177,6 +1181,18 @@ body.ui-style-flat .free-action-input {
     color: var(--f-text);
 }
 body.ui-style-flat .free-action-input:focus {
+    background: var(--f-input);
+    border-color: var(--f-primary);
+    box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.25);
+    outline: none;
+}
+body.ui-style-flat .story-history-page-input {
+    background: var(--f-input);
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: var(--f-text);
+}
+body.ui-style-flat .story-history-page-input:focus {
     background: var(--f-input);
     border-color: var(--f-primary);
     box-shadow: 0 0 0 3px rgba(91, 140, 255, 0.25);

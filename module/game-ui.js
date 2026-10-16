@@ -43,6 +43,7 @@
 let storyPages = [];  // 存储分页后的文本
 let currentPage = 0;  // 当前页码
 let isStoryExpanded = false;  // 是否展开显示全文
+let storyHistoryOffset = 0;  // 展开态历史回看偏移：0=最新回合（直播源 storyPages），≥1=uiConversation 倒数第 offset+1 条 assistant 原文
 let slgModeData = [];  // 新增：存储SLG模式的数据
 
 // ==== GAL_PARSER_BEGIN ====
@@ -279,6 +280,16 @@ const galPresentation = (() => {
     const has = v => typeof v !== 'undefined' && v !== null;
     const doc = () => (typeof document !== 'undefined') ? document : null;
     const bridge = () => (typeof window !== 'undefined' && window.GameSceneBridge) ? window.GameSceneBridge : null;
+    // 3D 显示中的演出素材变体判定：bridge 报告 3D 已启用且当前可见（visible 内含 protocol!=='file:' 等口径）。
+    // 沙箱/2D/file:// 下恒 false → 全部回落原有 2D 素材路径，不影响现有逻辑与单测。
+    function use3dVer() {
+        const b = bridge();
+        if (!b || typeof b.getDiagnostics !== 'function') return false;
+        try {
+            const d = b.getDiagnostics();
+            return !!(d && d.preferences && d.preferences.enabled && d.snapshot && d.snapshot.visible);
+        } catch (e) { return false; }
+    }
     const frames = () => (typeof slgModeData !== 'undefined' && Array.isArray(slgModeData)) ? slgModeData : [];
     const viewportEl = () => { const d = doc(); return d ? d.getElementById('main-viewport') : null; };
     const assetUrl = p => (typeof _assetUrl === 'function') ? _assetUrl(p) : p;
@@ -288,6 +299,9 @@ const galPresentation = (() => {
     let gen = 0;
     let index = 0;
     let enteredCommitId = null;
+    // 双人站位记忆（最近一次双人帧的左→右 NPC 序）：相邻双人帧还是同两人（仅主次互换）时沿用旧站位，
+    // 避免 AB/BA 左右来回对调；渲染任一双人帧即刷新；enter/exit 清空，GM1 直接 renderLayers 时靠集合比对自校正
+    let lastPairOrder = null;
     let chain = Promise.resolve();
 
     function clearLayers(viewport) {
@@ -296,18 +310,29 @@ const galPresentation = (() => {
         viewport.querySelectorAll('.slg-interaction-mask').forEach(el => el.remove());
     }
 
-    // 场景图 URL：GameMode 1 沿用 SLG 路径 / legacySceneOptions 分支；GameMode 0 按 G6 只认门派地点，否则回退天山派四季图。
+    // GM0 门派子场景中文名集合（G6 判定同源：命中→子场景图/标签显示子场景名；否则回退天山派图/显示天山派）
+    function sectSceneNames() {
+        return (typeof locationNames !== 'undefined' && locationNames)
+            ? Object.keys(locationNames).filter(id => id !== 'none' && id !== 'tianshanpai').map(id => locationNames[id])
+            : [];
+    }
+    // 场景图URL：GameMode 1 沿用 SLG 路径 / legacySceneOptions 分支；GameMode 0 按 G6 只认门派地点，否则回退天山派四季图。
     function sceneUrlFor(frame, mode) {
         const dayNightCN = (typeof dayNightStatus !== 'undefined' && dayNightStatus === 'night') ? '夜' : '昼';
         const sceneName = frame && frame.scene;
         if (mode === 0) {
-            const names = (typeof locationNames !== 'undefined' && locationNames)
-                ? Object.keys(locationNames).filter(id => id !== 'none' && id !== 'tianshanpai').map(id => locationNames[id])
-                : [];
-            if (sceneName && sceneName !== 'none' && names.includes(sceneName)) {
+            const season = SEASON_CN[(typeof seasonStatus !== 'undefined') ? seasonStatus : ''] || '冬';
+            const isSectScene = sceneName && sceneName !== 'none' && sectSceneNames().includes(sceneName);
+            // 3D 显示中：改用 3D.ver 目录（<场景>-<季>-<昼夜>.webp，13 场景×4季×昼夜全齐，含厢房）；
+            // 毛玻璃效果由 .gal-3dver 的 CSS 承担。G6 回退口径不变：非门派场景 → 天山派主图。
+            if (use3dVer()) {
+                return assetUrl(isSectScene
+                    ? `img/location/3D.ver/${sceneName}-${season}-${dayNightCN}.webp`
+                    : `img/location/3D.ver/天山派-${season}-${dayNightCN}.webp`);
+            }
+            if (isSectScene) {
                 return assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`);
             }
-            const season = SEASON_CN[(typeof seasonStatus !== 'undefined') ? seasonStatus : ''] || '冬';
             return assetUrl(`img/location/天山派_${season}_${dayNightCN}.webp`);
         }
         if (!sceneName || sceneName === 'none') return null;
@@ -316,6 +341,17 @@ const galPresentation = (() => {
         return isLegacyScene
             ? assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
             : assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
+    }
+
+    // 演出层右上角地点名（与场景图判定同源）：
+    // GM0 跟 G6 命中口径——子场景帧显示子场景名，回退天山派图的帧显示「天山派」；
+    // GM1 恒显示当前 mapLocation（GM1 场景图是随行子场景图，地点标识与帧 scene 无关）。
+    function sceneLabelFor(frame, mode) {
+        if (mode === 0) {
+            const sceneName = frame && frame.scene;
+            return (sceneName && sceneName !== 'none' && sectSceneNames().includes(sceneName)) ? sceneName : '天山派';
+        }
+        return (typeof mapLocation !== 'undefined' && mapLocation) || '';
     }
 
     // 帧的立绘成员：优先 cast（≤2），兼容只有 npc/emotion 的旧消费者；过滤掉花名册外的名字。
@@ -336,6 +372,7 @@ const galPresentation = (() => {
         if (!viewport || !frame || !d) return null;
         opts = opts || {};
         const mode = has(opts.mode) ? opts.mode : ((typeof GameMode !== 'undefined') ? GameMode : 1);
+        const ver3d = mode === 0 && use3dVer();
 
         if (opts.mask) {
             const mask = d.createElement('div');
@@ -346,6 +383,7 @@ const galPresentation = (() => {
         const container = d.createElement('div');
         container.className = 'slg-layer-container';
         container.dataset.galMode = String(mode);
+        if (ver3d) container.classList.add('gal-3dver'); // 毛玻璃场景 + 左侧立绘镜像的作用域类
 
         // 1) 场景图层
         const sceneUrl = sceneUrlFor(frame, mode);
@@ -360,26 +398,57 @@ const galPresentation = (() => {
             container.appendChild(sceneLayer);
         }
 
-        // 2) NPC 表情图层：1 人居中；2 人 .slg-cast-left / .slg-cast-right（顺序 = cast 顺序，首个为焦点）
+        // 2) NPC 表情图层：1 人居中；2 人 .slg-cast-left / .slg-cast-right（默认顺序 = cast 顺序，首个为焦点；
+        //    与上一双人帧同两人仅主次互换时沿用旧站位，避免左右对调；焦点/CG 仍认 cast[0]，不受站位影响）
         const members = castOf(frame);
-        members.forEach((m, i) => {
+        let displayMembers = members;
+        if (members.length === 2) {
+            const samePair = lastPairOrder && members.every(m => lastPairOrder.indexOf(m.npc) >= 0);
+            if (samePair) displayMembers = lastPairOrder.map(name => members.find(m => m.npc === name));
+            lastPairOrder = displayMembers.map(m => m.npc);
+        }
+        displayMembers.forEach((m, i) => {
             const emotionLayer = d.createElement('div');
             emotionLayer.className = 'slg-layer slg-emotion-layer';
             if (members.length === 2) emotionLayer.classList.add(i === 0 ? 'slg-cast-left' : 'slg-cast-right');
             if (/^特殊CG\d+$/.test(m.emotion)) emotionLayer.classList.add('slg-emotion-special-cg');
             if (opts.allowEnamor && m.emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) enamor = 1;
             const emotionImg = d.createElement('img');
-            const emoUrl = assetUrl(`img/表情差分和CG/${m.npc}/表情差分/${m.emotion}.webp`);
+            // 3D 显示中改用像素立绘（目录扁平：像素/<npc>/<表情>.webp，15 NPC 全齐）；
+            // 「特殊CGn」在像素目录不存在，照走 portraitFallback 回退常规立绘，与现状一致。
+            const emoUrl = ver3d
+                ? assetUrl(`img/表情差分和CG/像素/${m.npc}/${m.emotion}.webp`)
+                : assetUrl(`img/表情差分和CG/${m.npc}/表情差分/${m.emotion}.webp`);
             emotionImg.src = emoUrl;
             emotionImg.alt = `${m.npc}-${m.emotion}`;
             if (opts.portraitFallback && typeof npcPortraits !== 'undefined' && npcPortraits && npcPortraits[m.id]) {
                 const fallback = assetUrl(npcPortraits[m.id]);
                 emotionImg.onerror = function () { this.onerror = null; this.src = fallback; };
             }
-            if (i === 0 && opts.recordLastValid) { try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {} }
+            // __lastValidNpcEmotionUrl 始终记焦点（cast[0]）而非视觉左侧——站位记忆可能调换显示顺序
+            if (m === members[0] && opts.recordLastValid) { try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {} }
             emotionLayer.appendChild(emotionImg);
             container.appendChild(emotionLayer);
         });
+
+        // 2.5) 场景标签：右上角地点名匾额（复用 .scene-title 类，古风/扁平主题样式自动生效）+ 其下小字时间（该帧无时间则不渲染）。
+        //      与立绘同 z:2、DOM 在其后（压立绘）；CG 层 z:3 在其上——有 CG 的帧标签被盖住。
+        const labelText = sceneLabelFor(frame, mode);
+        if (labelText) {
+            const tag = d.createElement('div');
+            tag.className = 'slg-scene-tag';
+            const nameEl = d.createElement('div');
+            nameEl.className = 'scene-title';
+            nameEl.textContent = labelText;
+            tag.appendChild(nameEl);
+            if (frame.time) {
+                const timeEl = d.createElement('div');
+                timeEl.className = 'slg-scene-time';
+                timeEl.textContent = frame.time;
+                tag.appendChild(timeEl);
+            }
+            container.appendChild(tag);
+        }
 
         // 3) 特殊CG图层（按焦点 NPC）
         const focus = members[0];
@@ -392,6 +461,8 @@ const galPresentation = (() => {
             const cgUrl = assetUrl(`img/表情差分和CG/${focus.npc}/色图/${frame.cg}${idx}.webp`);
             cgImg.src = cgUrl;
             cgImg.alt = `${focus.npc}-${frame.cg}${idx}`;
+            // 素材缺口兜底：色图 404（NPC 无色图目录 / 姿势索引越界）时移除整个 CG 层，不留裂图
+            cgImg.onerror = function () { this.onerror = null; cgLayer.remove(); };
             if (opts.recordLastValid) { try { window.__lastValidCgUrl = cgUrl; } catch (e) {} }
             cgLayer.appendChild(cgImg);
             container.appendChild(cgLayer);
@@ -419,8 +490,18 @@ const galPresentation = (() => {
     function setPresenting(on) {
         const d = doc();
         try { if (d && d.body) d.body.classList[on ? 'add' : 'remove']('gal-presenting'); } catch (e) {}
+        if (!on) { try { if (d && d.body) d.body.classList.remove('gal-over-3d-turn'); } catch (e) {} }
         const b = bridge();
         if (b && typeof b.setBusy === 'function') { try { b.setBusy('gal', on); } catch (e) {} }
+    }
+    // 纸归 3D 换房所有时（与 G9 跳过演出 curtain 同一判定），把演出层/mask 抬到 3D 翻页纸(z:60)之上，
+    // 使 paint 立即可见、mask 可点退出；纸归演出自己时不抬，正常翻页动画的 z 序与逐帧时序不受影响。
+    function syncOver3dTurn() {
+        const d = doc();
+        if (!d || !d.body) return;
+        const b = bridge();
+        const over = state === 'playing' && !!(b && typeof b.hasPendingApply === 'function' && b.hasPendingApply());
+        try { d.body.classList[over ? 'add' : 'remove']('gal-over-3d-turn'); } catch (e) {}
     }
     // 把第 i 帧画到 viewport（恒带 mask，mask 点击 = 退出）
     function paint(i) {
@@ -433,6 +514,7 @@ const galPresentation = (() => {
             mask: true, allowEnamor: false, recordLastValid: false, mode: 0, portraitFallback: true,
             onMaskClick: () => { exit({ reason: 'stage-click', curtain: true }); },
         });
+        syncOver3dTurn(); // 兜底：enter 时刻 3D turn 可能尚未创建（observer/微任务竞态），paint 后按实况再同步一次
         return true;
     }
 
@@ -444,9 +526,11 @@ const galPresentation = (() => {
         const target = clamp(has(opts.pageIndex) ? opts.pageIndex : 0);
         if (state === 'playing') { galLog('enter → goto (already playing)', { source: opts.source, target }); return Promise.resolve(goto(target)); }
         state = 'playing';
+        lastPairOrder = null; // 新演出会话首帧按自身 cast 序站位
         index = target;
         const myGen = ++gen;
         setPresenting(true);
+        syncOver3dTurn();
         const frame = list[target];
         const curtain = !!opts.curtain;
         const b = bridge();
@@ -466,23 +550,74 @@ const galPresentation = (() => {
         chain = chain.then(run, run);
         return chain;
     }
-    /** 演出中翻页：只换图层，不播翻页纸；同页幂等。 */
+    // —— 演出内翻页播纸判定（G19）——
+    // CG 身份键：色图层的实际内容 = f(cgContentEnabled, frame.cg, 焦点 NPC)，任一缺失即无 CG（null）。
+    // randIdx 随机变体不计入——同一标记换页不算 CG 变化；焦点换人即使标记相同也是另一张图。
+    function cgKeyOf(frame) {
+        const enabled = (typeof cgContentEnabled !== 'undefined') && cgContentEnabled;
+        if (!enabled || !frame || !frame.cg || frame.cg === 'none') return null;
+        const focus = castOf(frame)[0];
+        return focus ? focus.npc + ':' + frame.cg : null;
+    }
+    // NPC 阵容键：出场成员名字集合（排序去序）——主次互换、表情变化都不算阵容变化
+    function castKeyOf(frame) {
+        if (!frame) return '';
+        return castOf(frame).map(m => m.npc).sort().join('|');
+    }
+    // G19：CG 身份变化（无↔有 / 前后都有但不一致）播纸；前后都无 CG 时 NPC 阵容集合变化播纸
+    function needsGotoCurtain(fromFrame, toFrame) {
+        const a = cgKeyOf(fromFrame), b = cgKeyOf(toFrame);
+        if (a !== b) return true;
+        if (!a && !b) return castKeyOf(fromFrame) !== castKeyOf(toFrame);
+        return false;
+    }
+    /**
+     * 演出中翻页（G19）：所有换帧经 chain 串行，严格保持点击序（前一次播纸未走完时后一次排队）；
+     * CG 身份变化或无 CG 下阵容变化播翻页纸（封面文案同 enter：第n回），否则只换图层。
+     * 合并/幕布判定推迟到串行执行时刻：doGoToPage 一次翻页会同帧连发 enter+goto 两个换帧，
+     * 调用时刻 index 还是旧值判不出来；执行时目标已被前序 run 画过则直接合并跳过（幕布不连播）。
+     * 同页幂等（同步 true）；非 playing 同步 false；其余返回 Promise<boolean>。
+     */
     function goto(i) {
         if (state !== 'playing') return false;
+        const list = frames();
         const target = clamp(i);
         const vp = viewportEl();
         if (target === index && vp && vp.querySelector('.slg-layer-container')) return true;
-        return paint(target);
+        const myGen = gen; // 不递增：不抢占进行中的 enter；exit/reset/新 enter 会 ++gen 使本次翻页让位
+        galLog('goto', { from: index, target });
+        const run = async () => {
+            // 执行时刻再判：目标已被前序 run 画过 → 合并跳过本次（同帧双触发只播一次纸）
+            if (gen !== myGen || state !== 'playing') { galLog('goto aborted by newer op', { target }); return false; }
+            if (target === index) { galLog('goto merged: already on target', { target }); return true; }
+            // 幕布判定同样按执行时刻的当前帧计算（调用时刻的 index 可能还是排队前的旧值）
+            const curtain = needsGotoCurtain(list[index], list[target]);
+            const frame = list[target];
+            if (curtain) await playCurtain(true, `第${cnNumber(target + 1)}回`, curtainDetail(frame));
+            if (gen !== myGen || state !== 'playing') {
+                // 封面期间被 exit/reset 抢先：补揭开，避免纸张永久遮蔽视窗（与 enter 同一兜底）
+                if (curtain) await playCurtain(false);
+                galLog('goto aborted by newer op', { target });
+                return false;
+            }
+            paint(target);
+            if (curtain) await playCurtain(false);
+            return gen === myGen && state === 'playing';
+        };
+        chain = chain.then(run, run);
+        return chain;
     }
     /** exit({ reason, curtain }) → Promise<boolean>；幂等。curtain:false 时同步清层。 */
     function exit(opts) {
         opts = opts || {};
         if (state !== 'playing') return Promise.resolve(false);
         state = 'idle';
+        lastPairOrder = null; // 收卷后站位记忆作废，下次进演出重新按 cast 序
         const myGen = ++gen;
         const b = bridge();
         // G9/G12：3D 正在换房或有待应用的房间切换 → 不播自身翻页纸，由 3D 翻页兼作退场
         const pending3d = !!(b && typeof b.hasPendingApply === 'function' && b.hasPendingApply());
+        syncOver3dTurn(); // state 已置 idle → 移除 gal-over-3d-turn，保证 curtain:true 时盖纸能盖住演出层
         const curtain = !!opts.curtain && !pending3d;
         galLog('exit', { reason: opts.reason, curtainRequested: !!opts.curtain, curtain, pending3d });
         if (!curtain) {
@@ -857,6 +992,90 @@ function showAttrTooltip(event, attrName) {
     if (text) showTooltip(event, text);
 }
 
+// ==== 展开态历史回看（uiConversation assistant 原文浏览） ====
+// 取 uiConversation 中全部 assistant 回合原文（content 非空）
+function _getAssistantTurns() {
+    try {
+        const conv = (typeof storageService !== 'undefined' && storageService && typeof storageService.loadUIConversation === 'function')
+            ? storageService.loadUIConversation()
+            : ((typeof loadUIConversation === 'function') ? loadUIConversation() : []);
+        return (conv || []).filter(m => m && m.role === 'assistant' && typeof m.content === 'string' && m.content.trim());
+    } catch (e) {
+        return [];
+    }
+}
+
+// 把一回合 assistant 原文渲染为与当时观看体验一致的分页 HTML（不含事件描述页/图层逻辑）：
+// 复刻 updateStoryText 核心——帧解析 + markdownit；有标记帧→页=帧；无标记→自然段分页并剥离“|”段尾
+function _buildHistoryPages(text) {
+    const md = window.markdownit({
+        html: true,
+        breaks: true,
+        linkify: true,
+        typographer: true
+    }).disable('strikethrough');
+    const parsed = parseSlgMainText(text);
+    const hasFrames = Array.isArray(parsed) && parsed.some(f => !f.tail);
+    if (GameMode === 1) {
+        if (parsed && parsed.length > 0) {
+            return parsed.map(data => md.render(data.text || ''));
+        }
+        let gm1Text = text.replace(/\n+/g, '\n');
+        gm1Text = gm1Text.replace(/(\r\n)+/g, '\n');
+        gm1Text = gm1Text.replace(/\r+/g, '\n');
+        return [md.render(gm1Text)];
+    }
+    if (hasFrames) {
+        return parsed.map(data => `<div class="story-paragraph">${md.render(data.text || '')}</div>`);
+    }
+    let processedText = text.replace(/\n+/g, '\n');
+    processedText = processedText.replace(/(\r\n)+/g, '\n');
+    processedText = processedText.replace(/\r+/g, '\n');
+    const rawParagraphs = processedText.split('\n').filter(part => part.trim());
+    const cleanedParagraphs = rawParagraphs.map(part => part.split('|')[0].trim()).filter(p => p.length > 0);
+    if (cleanedParagraphs.length > 0) {
+        return cleanedParagraphs.map(p => `<div class="story-paragraph">${md.render(p)}</div>`);
+    }
+    const stripped = processedText.split('\n').map(line => line.split('|')[0].trim()).join('\n');
+    return [md.render(stripped)];
+}
+
+// 跳回最新回合原文：runTurn 发起 / 收起 / 再展开时调用（幂等）
+function resetStoryHistoryToLatest() {
+    storyHistoryOffset = 0;
+    if (isStoryExpanded) updateStoryDisplay();
+}
+
+// 仅刷新展开态页码标签与翻页按钮置灰态：commit 追加 assistant 后调用（renderMainText 早于
+// appendUIConversation，标签上的总页数需要补刷）；不做整屏重渲染，避免正文二次淡入
+function refreshStoryHistoryPageLabel() {
+    if (!isStoryExpanded) return;
+    const turns = _getAssistantTurns();
+    const input = document.getElementById('story-history-page-input');
+    const prevBtn = document.getElementById('story-prev-btn');
+    const nextBtn = document.getElementById('story-next-btn');
+    if (input && document.activeElement !== input) {
+        input.value = turns.length > 0 ? (turns.length - storyHistoryOffset) + '/' + turns.length : '0/0';
+    }
+    if (prevBtn) prevBtn.disabled = storyHistoryOffset >= turns.length - 1;
+    if (nextBtn) nextBtn.disabled = storyHistoryOffset <= 0;
+}
+
+// 页码跳转：输入框回合序号（1..n，n=最新）→ 回看偏移；非法输入仅回显当前页码
+function jumpToStoryHistoryPage() {
+    const input = document.getElementById('story-history-page-input');
+    const turns = _getAssistantTurns();
+    if (!input || turns.length === 0) { updateStoryDisplay(); return; }
+    // parseInt 遇 “/” 自然截断：未编辑直接跳转时取的是当前页，原地不动
+    const n = parseInt(input.value, 10);
+    if (!isNaN(n)) {
+        const clamped = Math.max(1, Math.min(turns.length, n));
+        storyHistoryOffset = turns.length - clamped;
+    }
+    try { input.blur(); } catch (e) {}
+    updateStoryDisplay();
+}
+
 // 渲染主要故事文本（供 pipeline / 开场白调用）
 function renderMainText(text) {
     if (!text) return;
@@ -867,6 +1086,7 @@ function renderMainText(text) {
 function updateStoryText(text) {
     const storyElement = document.getElementById('story-text');
     currentStoryText = text;
+    storyHistoryOffset = 0;  // 新文本到达：回看偏移归零，展开态始终落在最新回合
 
     // 保存当前页码和展开状态
     const previousPage = currentPage;
@@ -1006,7 +1226,7 @@ function updateStoryDisplay() {
     // 正文翻页点击区挂在整块故事滚动区上（横屏下文本区较高，正文只占顶部一截，光点正文下半区会点不到）
     const storyWrapper = storyElement ? storyElement.parentElement : null;
     
-    // GameMode 0 演出中：图层由 galPresentation 维护，这里不清、只同步页码（演出内翻页不播翻页纸）
+    // GameMode 0 演出中：图层由 galPresentation 维护，这里不清、只同步页码；goto 内部按 G19 判定是否播翻页纸
     const galPlaying = GameMode === 0 && galPresentation.isPlaying();
     if (galPlaying) {
         galPresentation.goto(currentPage);
@@ -1021,8 +1241,18 @@ function updateStoryDisplay() {
     if (storyWrapper) storyWrapper.onclick = null;
     
     if (isStoryExpanded) {
-        // 展开模式
-        storyElement.innerHTML = storyPages.join('');
+        // 展开模式：storyHistoryOffset=0 → 最新回合（直播源 storyPages）；
+        // ≥1 → uiConversation 倒数第 offset+1 条 assistant 原文（快照源，渲染规则与当时一致）
+        const historyTurns = _getAssistantTurns();
+        const maxHistoryOffset = historyTurns.length - 1;
+        // 读档/清空历史后偏移越界兜底
+        if (storyHistoryOffset > maxHistoryOffset) storyHistoryOffset = Math.max(0, maxHistoryOffset);
+        if (storyHistoryOffset > 0 && maxHistoryOffset >= 0) {
+            const turnIndex = historyTurns.length - 1 - storyHistoryOffset;
+            storyElement.innerHTML = _buildHistoryPages(historyTurns[turnIndex].content).join('');
+        } else {
+            storyElement.innerHTML = storyPages.join('');
+        }
         // SLG模式展开：无现存图层容器时按当前页（展开时通常为第0页）补建图层——
         // 修复展开状态下 GameMode 0→1 切换、或展开中收到新回复时永远"场景加载中"；
         // 有现存图层（toggle 切入展开）则不重建，保持"展开保持当前页图"的原设计
@@ -1035,14 +1265,50 @@ function updateStoryDisplay() {
         storyElement.classList.add('expanded');
         if (expandBtn) expandBtn.innerHTML = '▲ 收起';
         if (pageIndicator) pageIndicator.style.display = 'none';
-        if (prevBtn) prevBtn.style.display = 'none';
-        if (nextBtn) nextBtn.style.display = 'none';
+        // 展开态保留翻页箭头：左=上一回合原文，右=下一回合原文，到达边界置灰
+        if (prevBtn) {
+            prevBtn.style.display = 'block';
+            prevBtn.disabled = storyHistoryOffset >= maxHistoryOffset;
+        }
+        if (nextBtn) {
+            nextBtn.style.display = 'block';
+            nextBtn.disabled = storyHistoryOffset <= 0;
+        }
+        // 页码输入框/跳转按钮：显示“当前页/总页”（最新=n/n）；输入框聚焦时不覆盖用户键入
+        const historyInput = document.getElementById('story-history-page-input');
+        const historyJumpBtn = document.getElementById('story-history-jump-btn');
+        if (historyInput) {
+            historyInput.style.display = '';
+            const pageLabel = historyTurns.length > 0
+                ? (historyTurns.length - storyHistoryOffset) + '/' + historyTurns.length
+                : '0/0';
+            if (document.activeElement !== historyInput) historyInput.value = pageLabel;
+        }
+        if (historyJumpBtn) historyJumpBtn.style.display = '';
+        // 展开态正文左右 1/3 点击翻历史：左=上一回合，右=下一回合（中间 1/3 不响应，与分页态手感一致）
+        storyElement.style.cursor = 'pointer';
+        if (storyWrapper) {
+            storyWrapper.style.cursor = 'pointer';
+            storyWrapper.onclick = function(e) {
+                // 点翻页箭头/页码点/流式按钮时交给自己处理，不再走正文翻页
+                if (e.target && e.target.closest && e.target.closest('.story-nav-btn, .page-indicator, #stream-controls')) return;
+                const rect = storyWrapper.getBoundingClientRect();
+                const clickX = e.clientX - rect.left;
+                if (clickX < rect.width / 3) doPrevPage();
+                else if (clickX > rect.width * 2 / 3) doNextPage();
+            };
+        }
     } else {
         // 分页模式
         storyElement.innerHTML = storyPages[currentPage] || '';
         storyElement.classList.remove('expanded');
         if (expandBtn) expandBtn.innerHTML = '▼ 展开全文';
-        
+        // 分页态隐藏历史页码输入框/跳转按钮
+        const historyInput = document.getElementById('story-history-page-input');
+        const historyJumpBtn = document.getElementById('story-history-jump-btn');
+        if (historyInput) historyInput.style.display = 'none';
+        if (historyJumpBtn) historyJumpBtn.style.display = 'none';
+
         // 如果是SLG模式，显示对应的图片（事件页使用“最后验证有效”的图层）
         if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
             const effectiveIndex = Math.min(currentPage, slgModeData.length - 1);
@@ -1162,16 +1428,35 @@ function doGoToPage(pageNum) {
 }
 
 function doPrevPage() {
+    // 展开态：左翻=上一回合原文（更旧），回看偏移+1
+    if (isStoryExpanded) {
+        const turns = _getAssistantTurns();
+        if (storyHistoryOffset < turns.length - 1) {
+            storyHistoryOffset++;
+            updateStoryDisplay();
+        }
+        return;
+    }
     doGoToPage(currentPage - 1);
 }
 
 function doNextPage() {
+    // 展开态：右翻=下一回合原文（更新），回看偏移-1
+    if (isStoryExpanded) {
+        if (storyHistoryOffset > 0) {
+            storyHistoryOffset--;
+            updateStoryDisplay();
+        }
+        return;
+    }
     doGoToPage(currentPage + 1);
 }
 
 // 切换展开/收起
 function doToggleStoryExpand() {
     isStoryExpanded = !isStoryExpanded;
+    // 收起/再展开都回到最新回合原文（回看偏移归零）
+    storyHistoryOffset = 0;
     // 展开全文 = 阅读模式：GameMode 0 演出播翻页纸退场；收起不自动进入（G3）
     if (isStoryExpanded && GameMode === 0 && galPresentation.isPlaying()) {
         try { galPresentation.exit({ reason: 'expand', curtain: true }); } catch (e) {}
