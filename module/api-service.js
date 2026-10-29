@@ -99,6 +99,34 @@ var apiService = (function() {
         return url;
     }
 
+    // Gemini 密钥传递方式：官方 googleapis.com 端点用 x-goog-api-key 请求头，
+    // 避免密钥出现在 URL 里（URL 会进 console、CORS 代理的 ?target= 参数以及各类日志）。
+    // 第三方中转通常只认 ?key=，因此非官方端点保留原有行为。
+    function _useGeminiKeyHeader(endpoint) {
+        try {
+            return /(^|\.)googleapis\.com$/i.test(new URL(endpoint).hostname);
+        } catch (e) {
+            return false;
+        }
+    }
+
+    // 返回本次 Gemini 请求的 URL 与鉴权头；isGeminiKeyInUrl 时密钥拼在 URL 上（兼容第三方中转）
+    function _geminiRequest(endpoint, pathAndQuery, apiKey) {
+        var url = endpoint.replace(/\/+$/, '') + pathAndQuery;
+        var authHeaders = {};
+        if (_useGeminiKeyHeader(endpoint)) {
+            authHeaders['x-goog-api-key'] = apiKey;
+        } else {
+            url += (url.indexOf('?') === -1 ? '?' : '&') + 'key=' + encodeURIComponent(apiKey);
+        }
+        return { url: _resolveUrl(url), authHeaders: authHeaders };
+    }
+
+    // 日志脱敏：把 key 参数打码，避免控制台内容被贴进 issue / 聊天时泄露密钥
+    function _redactUrl(url) {
+        return String(url).replace(/([?&]key=)[^&]*/gi, '$1***');
+    }
+
     // 解析本次请求的最大输出 token：
     // - options.maxOutputTokens === null → 不限制（省略 max_tokens，由模型默认上限决定）
     // - 数字 → 使用该值
@@ -182,8 +210,8 @@ var apiService = (function() {
             };
         });
 
-        var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/models/' + config.model + ':generateContent?key=' + encodeURIComponent(config.apiKey));
-        console.log('[API] 发送请求到 Gemini:', url);
+        var req = _geminiRequest(config.endpoint, '/models/' + config.model + ':generateContent', config.apiKey);
+        console.log('[API] 发送请求到 Gemini:', _redactUrl(req.url));
 
         var _genConfig = { temperature: config.temperature };
         if (typeof maxTokens === 'number') {
@@ -192,9 +220,9 @@ var apiService = (function() {
             _genConfig.maxOutputTokens = config.maxOutputTokens;
         }
         _applyExtraSamplerParams(_genConfig, true);
-        var response = await fetch(url, {
+        var response = await fetch(req.url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: Object.assign({ 'Content-Type': 'application/json' }, req.authHeaders),
             body: JSON.stringify({
                 contents: contents,
                 systemInstruction: { parts: [{ text: systemPrompt }] },
@@ -247,9 +275,10 @@ var apiService = (function() {
     }
 
     async function _fetchGeminiModels(endpoint, apiKey) {
-        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models?key=' + encodeURIComponent(apiKey));
-        var response = await fetch(url, {
-            method: 'GET'
+        var req = _geminiRequest(endpoint, '/models', apiKey);
+        var response = await fetch(req.url, {
+            method: 'GET',
+            headers: req.authHeaders
         });
         if (!response.ok) {
             var text = '';
@@ -315,10 +344,10 @@ var apiService = (function() {
         var contents = messages.map(function(m) {
             return { role: 'user', parts: [{ text: m.content }] };
         });
-        var url = cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent?key=' + encodeURIComponent(cfg.apiKey);
-        var response = await fetch(url, {
+        var req = _geminiRequest(cfg.endpoint, '/models/' + cfg.model + ':generateContent', cfg.apiKey);
+        var response = await fetch(req.url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: Object.assign({ 'Content-Type': 'application/json' }, req.authHeaders),
             body: JSON.stringify({
                 contents: contents,
                 generationConfig: { temperature: cfg.temperature || 0.85, maxOutputTokens: 100 }
@@ -464,7 +493,7 @@ var apiService = (function() {
             };
         });
 
-        var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/models/' + config.model + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(config.apiKey));
+        var req = _geminiRequest(config.endpoint, '/models/' + config.model + ':streamGenerateContent?alt=sse', config.apiKey);
         var fullContent = '';
         var _streamGenConfig = { temperature: config.temperature };
         if (typeof maxTokens === 'number') {
@@ -475,9 +504,9 @@ var apiService = (function() {
         _applyExtraSamplerParams(_streamGenConfig, true);
 
         try {
-            var response = await fetch(url, {
+            var response = await fetch(req.url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: Object.assign({ 'Content-Type': 'application/json' }, req.authHeaders),
                 body: JSON.stringify({
                     contents: contents,
                     systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
