@@ -504,9 +504,8 @@ function displayNpcs(location) {
     }
 
     if (npcsAtLocation.length > 3) {
-        npcsAtLocation = npcsAtLocation.sort(() => Math.random() - 0.5);
         npcsAtLocation = npcsAtLocation.slice(0, 3);
-        console.log(`${location} 有超过3个NPC，随机显示其中3个`);
+        console.log(`${location} 有超过3个NPC，仅显示前3个`);
     }
 
     npcsAtLocation.forEach((npc, index) => {
@@ -1285,7 +1284,8 @@ function updateLocationHeadcountLabels() {
             nvdizi: 0,
             shanmen: 0,
             gongtian: 0,
-            danfang: 0
+            danfang: 0,
+            dilao: 0
         };
 
         if (currentNpcLocations && typeof currentNpcLocations === 'object') {
@@ -1556,7 +1556,7 @@ function updateSceneBackgrounds() {
     }
     
     // 更新其他场景背景
-    const sceneNames = ['yanwuchang', 'cangjingge', 'huofang', 'houshan', 'yishiting', 'tiejiangpu', 'nandizi', 'nvdizi', 'shanmen', 'gongtian', 'danfang'];
+    const sceneNames = ['yanwuchang', 'cangjingge', 'huofang', 'houshan', 'yishiting', 'tiejiangpu', 'nandizi', 'nvdizi', 'shanmen', 'gongtian', 'danfang', 'dilao'];
     const dayNight = dayNightStatus === 'night' ? '夜' : '昼';
     
     sceneNames.forEach(sceneName => {
