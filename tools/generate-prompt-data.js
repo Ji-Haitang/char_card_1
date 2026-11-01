@@ -57,6 +57,8 @@ const ACTION_FILES = [
     { varSuffix: 'BOUNTY', file: '100行动选择-悬赏缉拿.txt', keys: ['行动选择：悬赏缉拿'] },
     { varSuffix: 'RETURN', file: '100行动选择-回山.txt', keys: ['回山', '你结束了山下的游历，回到了天山派'] },
     { varSuffix: 'SKIP', file: '100行动选择-跳过一周.txt', keys: ['行动选择:新的一周开始了', '行动选择：跳过一周'] },
+    { varSuffix: 'DISCIPLINE', file: '100行动选择-调教.txt', keys: ['行动选择：调教'] },
+    { varSuffix: 'PUNISH', file: '100行动选择-惩戒.txt', keys: ['行动选择：惩戒'] },
 ];
 
 // --- Generate prompt-data-npc.js ---
