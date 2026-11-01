@@ -64,6 +64,112 @@
  */
 
 const specialEvents = [
+    // ===== 地牢三级解锁 =====
+    {
+        id: "Dungeon_Unlock_1",
+        name: "地牢·初入",
+        priority: 901,
+        conditions: {
+            "dungeonUnlocked": { equals: false },
+            "npcFavorability.B": { min: 50 },
+            "playerStats.声望": { min: 40 }
+        },
+        effects: {
+            "dungeonUnlocked": { set: true },
+            "currentSpecialEvent": { set: "" },
+            "currentNpcLocations.B": { set: "dilao" }
+        },
+        text: `<SLG_MODE>
+
+<MAIN_TEXT>
+议事厅散得比往常早。你正要随众弟子退出去，洞庭君在案后抬了抬手：「你留一下。」|议事厅|17:40|洞庭君:平静|none
+
+等人走空，她才起身，绕过屏风，在墙上按了一下。砖缝里传来一声闷响，一道暗门向里滑开，露出向下延伸的石阶。里头没有灯，只有一股冷气漫上来，带着潮湿的土腥味。|议事厅|17:42|洞庭君:严肃|none
+
+「门派有些事，不好在明面上办。」她递给你一支火把，「这地方叫地牢。你知道有这么个地方，就够了——别乱走，也别跟人说。」|议事厅|17:44|洞庭君:严肃|none
+
+她先一步走下去，火光把她的影子拉得很长。石阶很窄，只容一人。走到一半，她停下，回头看你一眼：「跟紧些。」|地牢|17:46|洞庭君:平静|none
+</MAIN_TEXT>
+
+<SUMMARY>
+洞庭君在议事厅屏风后开启暗门，带你第一次走下天山派地牢，只告知此处存在，并未授予处置之权。
+</SUMMARY>
+
+<SIDE_NOTE>
+{
+  "时间": "17:46",
+  "用户": { "位置变动": "地牢" },
+  "当前NPC": { "洞庭君": "平静" },
+  "剧情基调": { "基调归类": "严肃", "置信度": 0.90, "判定依据": "秘密场所的初次引见，语气克制" }
+}
+</SIDE_NOTE>
+
+</SLG_MODE>`
+    },
+    {
+        id: "Dungeon_Unlock_2a",
+        name: "地牢·试手",
+        priority: 900,
+        conditions: {
+            "dungeonUnlocked": { equals: true },
+            "npcFavorability.B": { min: 65 },
+            "playerStats.声望": { min: 55 }
+        },
+        effects: {
+            "dungeonAuthorized": { set: true },
+            "currentNpcLocations.I": { set: "dilao" },
+            "currentNpcLocations.J": { set: "dilao" },
+            "dungeonTrialActive": { set: true },
+            "currentSpecialEvent": { set: "" }
+        },
+        text: `<SLG_MODE>
+
+<MAIN_TEXT>
+议事厅的窗纸透进一线冷白的光。洞庭君坐在下首，没有像平日那样把腰背挺得笔直。她把一卷名册推到案边，纸页摩挲的声音在空厅里格外清楚。
+「前日西院出了事。两个弟子为几株雪莲动了手，一个断了三根肋骨。」她顿了顿，「门规写得明白，可我不好出面——刑罚长老罚到自己门下，总有人说闲话。」
+她抬眼，第一次用近乎考量的目光看你：「人已经押在地牢里了。你去处置，怎么办随你。办完来见我。」|议事厅|15:20|洞庭君:严肃|none
+
+桌上搁着一枚铜牌，牌面刻着一个"刑"字，边缘被摩挲得发亮。她没有解释这枚牌子的分量，只是把它往你面前又推了半寸。|议事厅|15:24|洞庭君:平静|none
+</MAIN_TEXT>
+
+<SUMMARY>
+洞庭君以两名弟子私斗之事试探你，把处置权临时交到你手上，命你前往地牢处置，办完回议事厅复命。
+</SUMMARY>
+
+<SIDE_NOTE>
+{
+  "时间": "15:24",
+  "用户": { "位置变动": "议事厅" },
+  "当前NPC": { "洞庭君": "平静" },
+  "剧情基调": { "基调归类": "严肃", "置信度": 0.90, "判定依据": "刑罚长老托付处置权，语气带考量" }
+}
+</SIDE_NOTE>
+
+</SLG_MODE>`
+    },
+    {
+        id: "Dungeon_Unlock_2b",
+        name: "地牢·执刑之权",
+        priority: 899,
+        conditions: {
+            "dungeonAuthorized": { equals: true },
+            "dungeonAuthorizedDongting": { equals: false },
+            "npcFavorability.B": { min: 75 },
+            "playerStats.声望": { min: 70 }
+        },
+        effects: {
+            "dungeonAuthorizedDongting": { set: true },
+            "currentNpcLocations.B": { set: "dilao" },
+            "currentNpcLocations.I": { set: "none" },
+            "currentNpcLocations.J": { set: "none" },
+            "dungeonTrialActive": { set: false },
+            "currentSpecialEvent": { set: "" }
+        },
+        promptOnly: true,
+        prompt: "特殊剧情：洞庭君出了差错。请以此为开端，自由设计她犯了什么错、如何被揭出、长老会为何决定把处置她的权力交给你。不限定具体情节，但必须符合她刑罚长老的身份与当前好感度，并在场景结束时让{{user}}明确获得处置她的权力。"
+    },
+
+
     {
         id: "Apprenticeship_Storyline_1",
         name: "拜师苓雪妃1",
@@ -4239,7 +4345,10 @@ function getValueByPath(path) {
         npcSparred: typeof npcSparred !== 'undefined' ? npcSparred : undefined,
         triggeredEvents: typeof triggeredEvents !== 'undefined' ? triggeredEvents : undefined,
         currentSpecialEvent: typeof currentSpecialEvent !== 'undefined' ? currentSpecialEvent : undefined,
-        inputEnable: typeof inputEnable !== 'undefined' ? inputEnable : undefined
+        inputEnable: typeof inputEnable !== 'undefined' ? inputEnable : undefined,
+        dungeonUnlocked: typeof dungeonUnlocked !== 'undefined' ? dungeonUnlocked : undefined,
+        dungeonAuthorized: typeof dungeonAuthorized !== 'undefined' ? dungeonAuthorized : undefined,
+        dungeonAuthorizedDongting: typeof dungeonAuthorizedDongting !== 'undefined' ? dungeonAuthorizedDongting : undefined
     };
     
     let value = globalVars[parts[0]];
@@ -4284,6 +4393,10 @@ function setValueByPath(path, newValue) {
             case 'companionNPC': companionNPC = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 companionNPC`); break;
             case 'inputEnable': inputEnable = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 inputEnable`); if (typeof updateFreeActionInputState === 'function') { updateFreeActionInputState(); } break;
             case 'currentSpecialEvent': currentSpecialEvent = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 currentSpecialEvent`); break;
+            case 'dungeonUnlocked': dungeonUnlocked = newValue; if (typeof gameData !== 'undefined' && gameData) gameData.dungeonUnlocked = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 dungeonUnlocked`); break;
+            case 'dungeonAuthorized': dungeonAuthorized = newValue; if (typeof gameData !== 'undefined' && gameData) gameData.dungeonAuthorized = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 dungeonAuthorized`); break;
+            case 'dungeonAuthorizedDongting': dungeonAuthorizedDongting = newValue; if (typeof gameData !== 'undefined' && gameData) gameData.dungeonAuthorizedDongting = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 dungeonAuthorizedDongting`); break;
+            case 'dungeonTrialActive': dungeonTrialActive = newValue; if (typeof gameData !== 'undefined' && gameData) gameData.dungeonTrialActive = newValue; console.log(`[SpecialEvent]   ✓ 已设置顶层变量 dungeonTrialActive`); break;
             default:
                 console.warn(`[SpecialEvent]   ✗ 无法设置顶层变量: ${parts[0]}（未在支持列表中）`);
         }
@@ -4292,6 +4405,7 @@ function setValueByPath(path, newValue) {
         const globalVars = {
             npcFavorability: typeof npcFavorability !== 'undefined' ? npcFavorability : null,
             npcVisibility: typeof npcVisibility !== 'undefined' ? npcVisibility : null,
+            currentNpcLocations: typeof currentNpcLocations !== 'undefined' ? currentNpcLocations : null,
             playerTalents: typeof playerTalents !== 'undefined' ? playerTalents : null,
             playerStats: typeof playerStats !== 'undefined' ? playerStats : null,
             combatStats: typeof combatStats !== 'undefined' ? combatStats : null,
@@ -4686,6 +4800,23 @@ async function triggerSpecialEvent(event, options = {}) {
             console.log('[SpecialEvent] 游戏数据已保存（独立前端）');
         }
         
+        // 7.5 promptOnly：不发固定文本，只注入提示并触发一次生成，让 LLM 自由发挥
+        if (event.promptOnly) {
+            const promptText = event.prompt || userMessage;
+            if (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
+                const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;
+                if (renderFunc) {
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    if (typeof saveGameData === 'function') await saveGameData();
+                    await renderFunc(`/inject id=10 position=chat depth=0 scan=true role=user ${promptText}`);
+                    await renderFunc('/trigger');
+                    console.log('[SpecialEvent] promptOnly 事件已注入提示并触发生成:', event.name);
+                    return true;
+                }
+            }
+            return { standalone: true, event: event, promptOnly: true, prompt: promptText };
+        }
+
         // 8. 发送预设文本（先注入用户输入，再发送AI回复）
         if (event.text && typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) {
             const renderFunc = typeof getRenderFunction === 'function' ? getRenderFunction() : null;

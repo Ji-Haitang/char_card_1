@@ -124,6 +124,11 @@ async function handleEventOption(optionIndex, option) {
             
             // 触发特殊事件
             const result = await triggerSpecialEvent(specialEvent);
+                        if (typeof updateDungeonUI === 'function') updateDungeonUI();
+            if (typeof displayNpcs === 'function') {
+                const actScene = document.querySelector('.scene.active');
+                if (actScene && actScene.id === 'dilao-scene') displayNpcs('dilao');
+            }
             
             // 独立前端：委托给 pipeline 处理文本渲染
             if (result && result.standalone && typeof pipeline !== 'undefined' && pipeline.handleSpecialEvent) {
@@ -616,6 +621,8 @@ function parseLLMResponse(response, mainTextContent) {
             }
         }
     }
+
+    if (typeof updateDungeonUI === 'function') updateDungeonUI();
 
     // 处理随机事件
     if (response.随机事件) {

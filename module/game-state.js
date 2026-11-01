@@ -93,6 +93,10 @@ let alchemyDone = false;  // 新增：本周是否已炼丹
 let triggeredEvents = [];  // 新增：已触发的特殊事件ID列表
 let currentSpecialEvent = "";  // 新增：当前触发的特殊事件ID
 let inputEnable = 1;  // 新增：自由行动输入框可用状态（1=可用，0=不可用）
+let dungeonUnlocked = false;            // 地牢地点是否解锁
+let dungeonAuthorized = false;          // 地牢处置权是否获得
+let dungeonAuthorizedDongting = false;  // 洞庭君特批
+let dungeonTrialActive = false;           // 2a 试弟子的临时状态
 let lastUserMessage = "";
 let summary_Small = "";
 let summary_Week = "";
@@ -227,7 +231,11 @@ function syncVariablesFromGameData() {
     alchemyDone,       // 新增：本周是否已炼丹
     triggeredEvents,   // 新增：已触发的特殊事件ID列表
     currentSpecialEvent, // 新增：当前触发的特殊事件ID
-    inputEnable        // 新增：自由行动输入框可用状态
+    inputEnable,       // 新增：自由行动输入框可用状态
+    dungeonUnlocked,
+    dungeonAuthorized,
+    dungeonAuthorizedDongting,
+    dungeonTrialActive = false
     } = gameData);
 
     if (!equipStats || typeof equipStats !== 'object') {
@@ -306,6 +314,10 @@ function syncGameDataFromVariables() {
     gameData.triggeredEvents = triggeredEvents;    // 新增：已触发的特殊事件ID列表
     gameData.currentSpecialEvent = currentSpecialEvent;  // 新增：当前触发的特殊事件ID
     gameData.inputEnable = inputEnable;            // 新增：自由行动输入框可用状态
+    gameData.dungeonUnlocked = dungeonUnlocked;
+    gameData.dungeonAuthorized = dungeonAuthorized;
+    gameData.dungeonAuthorizedDongting = dungeonAuthorizedDongting;
+    gameData.dungeonTrialActive = dungeonTrialActive;
     randIdx = Math.floor(Math.random() * 4) + 1;
 }
 
@@ -410,6 +422,7 @@ async function loadOrInitGameData(options = {}) {
         summaryHistory = summaryHistoryService.getAll();
         syncVariablesFromGameData();
         enamor = 0; // 对齐 SR：每次页面加载重置（SR 每轮重建 iframe 等效于此）
+        if (typeof updateDungeonUI === 'function') updateDungeonUI();
         return;
     }
     const renderer = getCurrentRenderer();
@@ -502,6 +515,7 @@ async function loadOrInitGameData(options = {}) {
 
     syncVariablesFromGameData();
     enamor = 0; // 每次初始化或加载完成后重置
+    if (typeof updateDungeonUI === 'function') updateDungeonUI();
 }
 
 async function saveGameData() {

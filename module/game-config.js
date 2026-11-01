@@ -182,6 +182,7 @@ const locationNames = {
     shanmen: '山门',
     gongtian: '公田',
     danfang: '丹房',
+    dilao: '地牢',
     tianshanpai: '天山派',
     none: 'none'
 };
@@ -343,7 +344,9 @@ const actionConfigs = {
     休息: { talentBonus: '心性', affects: '体力' },
     拜访: { talentBonus: '魅力', affects: '声望' },
     下山: { talentBonus: '心性', affects: '声望' },
-    炼丹: { talentBonus: '悟性', affects: '学识' }
+    炼丹: { talentBonus: '悟性', affects: '学识' },
+    调教: { talentBonus: '心性', affects: '学识' },
+    惩戒: { talentBonus: '心性', affects: '声望' }
 };
 
 const npcSparRewards = {
@@ -1026,7 +1029,11 @@ const defaultGameData = {
                                                         // 防止「卡长场景 step+=10」正常入库归位时被硬编码默认值覆盖
         location: { enabled: true }  // 地点更新（location-runner.runLocationUpdate），触发时机不变，仅控制开关
     },
-    locationVisit: null      // 新增：当前"下山地点"访问会话的临时标记（{active,location,startUiIndex,startWeek}），返回天山派时清空
+    locationVisit: null,     // 新增：当前"下山地点"访问会话的临时标记（{active,location,startUiIndex,startWeek}），返回天山派时清空
+    dungeonUnlocked: false,          // 地牢是否已解锁（事件1：洞庭君带你下去）
+    dungeonAuthorized: false,        // 地牢处置权是否已获得（事件2：她交给你钥匙）
+    dungeonAuthorizedDongting: false, // 是否获得处置洞庭君本人的特批（事件2b）
+    dungeonTrialActive: false,         // 2a 试手弟子是否在场（跨周清理）
 };
 
 // === BGM 配置 ===
