@@ -15,7 +15,7 @@
         alchemy: { Alchemy_furnace: () => performAction('炼丹', 'danfang') },
         female_quarters: { Female_screen: () => performAction('拜访', 'nvdizi') },
         training: { Training_medallion: () => performAction('练武', 'yanwuchang') },
-        council: { sand_table: () => performAction('汇报', 'yishiting'), bounty_board: () => showBountyModal() },
+        council: { sand_table: () => performAction('汇报', 'yishiting'), bounty_board: () => showBountyModal(), archive: () => showSideQuestPanel('rumors') },
         kitchen: { Kitchen_firewood: () => performAction('打杂', 'huofang'), Kitchen_counter: () => showTrading('food') },
         male_quarters: { Male_bed_east: () => performAction('休息', 'nandizi') },
         forge: { Smith_anvil: () => performAction('打铁', 'tiejiangpu'), Smith_weapon_rack: () => showTrading('equipment') },

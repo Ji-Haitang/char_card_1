@@ -1,0 +1,105 @@
+/* ============================================================================
+ * side-quest-panel.css — 支线面板补丁 + 支线 toast（#toast-stack）
+ *
+ * 面板主体样式由 dialog-panel.css 通用三栏承载，本文件只补支线专属小件
+ * （目标高亮/进展列表/结局徽标/放弃按钮）与 toast。
+ * 分层：基座 → body.ui-style-flat（扁平）→ body.ui-style-ancient（古风），只换皮不改几何。
+ * ========================================================================== */
+
+/* ---------- 面板小件（基座） ---------- */
+:is(#side-quest-modal, #task-info-modal) .sq-goal {
+    font-weight: bold;
+    color: #7a5b12;
+}
+:is(#side-quest-modal, #task-info-modal) .sq-progress-list {
+    margin: .3em 0 0;
+    padding-left: 1.4em;
+}
+:is(#side-quest-modal, #task-info-modal) .sq-progress-list li { margin: .15em 0; }
+:is(#side-quest-modal, #task-info-modal) .sq-abandon-btn {
+    border-color: #a33;
+    color: #a33;
+}
+:is(#side-quest-modal, #task-info-modal) .sq-outcome-completed { color: #2e7d32; }
+:is(#side-quest-modal, #task-info-modal) .sq-outcome-failed { color: #b03030; }
+:is(#side-quest-modal, #task-info-modal) .sq-outcome-abandoned { color: #716659; }
+
+/* 中栏：列表滚动 + 底部操作区（「换一批传闻」与右栏「接取此线」底边对齐） */
+:is(#side-quest-modal, #task-info-modal) .sq-list-col {
+    display: flex; flex-direction: column;
+    overflow: hidden; padding: .7em;
+}
+:is(#side-quest-modal, #task-info-modal) .sq-list-items {
+    flex: 1 1 auto; min-height: 0; overflow: auto; overscroll-behavior: contain;
+}
+/* 两栏操作按钮统一尺寸：打探传闻 → 接取此线 原位换字，换一批传闻与之同形 */
+:is(#side-quest-modal, #task-info-modal) .dialog-detail-actions button {
+    min-width: 0;
+    width: min(100%, 8.5em);
+    padding-left: .4em; padding-right: .4em;
+    white-space: nowrap;
+}
+
+/* 滚动条皮肤统一由 module/scrollbar-skin.css 提供（古风/扁平全局） */
+:is(#side-quest-modal, #task-info-modal) .dialog-detail-body,
+:is(#side-quest-modal, #task-info-modal) .sq-list-items { padding-right: .35em; }
+
+/* ---------- toast（基座）：挂 #main-viewport 右上，z-2600 压过 GAL 演出层 ---------- */
+#toast-stack {
+    position: absolute;
+    top: clamp(8px, 2vmin, 16px);
+    right: clamp(8px, 2vmin, 16px);
+    z-index: 2600;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    max-width: min(70%, 360px);
+    pointer-events: none;
+}
+#toast-stack .toast-item {
+    padding: .5em .9em;
+    border-radius: 6px;
+    background: rgba(44, 44, 44, .92);
+    color: #f5f0e4;
+    font-size: clamp(12px, 1.6vmin, 15px);
+    line-height: 1.4;
+    border: 1px solid rgba(255, 255, 255, .14);
+    box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: opacity .28s ease, transform .28s ease;
+}
+#toast-stack .toast-item.show { opacity: 1; transform: none; }
+#toast-stack .toast-item.hide { opacity: 0; transform: translateY(-6px); }
+#toast-stack .toast-item.toast-sidequest {
+    border-color: #d4a017;
+    color: #ffd977;
+}
+
+/* ---------- 扁平皮肤 ---------- */
+body.ui-style-flat :is(#side-quest-modal, #task-info-modal) .sq-goal { color: var(--f-gold); }
+body.ui-style-flat :is(#side-quest-modal, #task-info-modal) .sq-abandon-btn { border-color: #d0635a; color: #e0837b; }
+body.ui-style-flat #toast-stack .toast-item {
+    background: var(--f-card);
+    color: var(--f-text);
+    border: 1px solid var(--f-line);
+    border-radius: var(--f-radius);
+    box-shadow: var(--f-shadow-sm);
+}
+body.ui-style-flat #toast-stack .toast-item.toast-sidequest {
+    border-left: 3px solid var(--f-gold);
+    color: var(--f-gold);
+}
+
+/* ---------- 古风皮肤 ---------- */
+body.ui-style-ancient #toast-stack .toast-item {
+    background: linear-gradient(#faf7ee, #f3ecd9);
+    color: #4f473c;
+    border: 1px solid #b3a486;
+    box-shadow: 0 3px 10px rgba(63, 54, 41, .35);
+}
+body.ui-style-ancient #toast-stack .toast-item.toast-sidequest {
+    border-color: #d4a017;
+    color: #7a5b12;
+}

@@ -15,7 +15,8 @@ test('pixel budget caps both low and balanced without quality promotion',()=>{
   const dpr=renderPixelRatio(quality,2,w,h);assert.ok(w*h*dpr*dpr<=4500000.01);assert.ok(dpr<=(quality==='low'?1:1.25));
  }
 });
-test('sixteen display-only labels map to eleven existing business rooms',()=>{
- assert.equal(Object.keys(HOTSPOTS).length,11);assert.equal(Object.values(HOTSPOTS).flat().length,16);
+test('seventeen display-only labels map to eleven existing business rooms',()=>{
+ assert.equal(Object.keys(HOTSPOTS).length,11);assert.equal(Object.values(HOTSPOTS).flat().length,17);
+ assert.deepEqual(HOTSPOTS.council,[['sand_table','汇报'],['bounty_board','悬赏任务'],['archive','打探传闻']]);
  assert.deepEqual(HOTSPOTS.library,[['desk','学习'],['shelf_classics','技能习得']]);assert.equal(HOTSPOTS.guest_quarters,undefined);
 });

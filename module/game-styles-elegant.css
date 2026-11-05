@@ -137,7 +137,7 @@ body.ui-style-ancient .modal-content h2 { font-size: clamp(22px,2.2vw,28px); }
 body.ui-style-ancient :is(.modal-content h3,.stats-group h3) { font-size: 19px; }
 body.ui-style-ancient :is(.stats-group,.inventory-item,.relationship-card,.equipment-stats,
     .item-info,.shop-item-info,.shop-item-price-info,.equipment-slot,.trading-list,.trading-item-row,
-    .random-event-container,.battle-event-container,.skill-panel,.skill-card,.skill-equip-card,
+    .random-event-container,.battle-event-container,.sidequest-interaction-container,.skill-panel,.skill-card,.skill-equip-card,
     .bounty-card,.cheat-section,.difficulty-option) {
     border: 1px solid var(--elegant-line) !important;
     border-image: none !important;

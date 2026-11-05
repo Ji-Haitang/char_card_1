@@ -392,18 +392,41 @@ var bountyService = (function() {
             console.log('[BountyService] 已接取悬赏 (第' + currentWeek + '周):', JSON.parse(JSON.stringify(activeBounty)));
             _currentBountyList = [];
             if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+            if (typeof updateTaskInfoButton === 'function') updateTaskInfoButton();
             closeBountyModal();
         });
     }
 
-    function abandonBounty() {
+    function abandonBounty(onDone) {
         if (typeof activeBounty === 'undefined' || !activeBounty) return;
         var enemyName = activeBounty.enemyName;
         showConfirmModal('放弃悬赏', '确定要放弃当前悬赏任务"' + _escapeHtml(enemyName) + '"吗？', function() {
             activeBounty = null;
             if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
-            showBountyModal();
+            if (typeof updateTaskInfoButton === 'function') updateTaskInfoButton();
+            // 任务信息面板入口传回调：只刷新该面板，不弹出议事厅悬赏榜
+            if (typeof onDone === 'function') onDone();
+            else showBountyModal();
         });
+    }
+
+    /**
+     * 悬赏暂缓：有进行中支线（gameData.sideQuest.active）且支线地点与悬赏地点相同时，悬赏让位于支线——
+     * 大地图不标 ⚔、抵达时不走悬赏缉拿流程（也就不加载悬赏提示词）。不写存档，每次下山现算：
+     * 支线结束（完成/失败/放弃）或地点不再相同后自动恢复。只比地点，不看随行 NPC。
+     */
+    function isSuspendedBySideQuest() {
+        if (typeof activeBounty === 'undefined' || !activeBounty || !activeBounty.locationName) return false;
+        var sq = (typeof sideQuestService !== 'undefined' && typeof sideQuestService.getActive === 'function')
+            ? sideQuestService.getActive() : null;
+        if (!sq || !Array.isArray(sq.relatedLocations)) return false;
+        return sq.relatedLocations.indexOf(activeBounty.locationName) !== -1;
+    }
+
+    /** 本次下山可用的悬赏地点：无悬赏或被支线暂缓时为 null */
+    function getActiveLocation() {
+        if (typeof activeBounty === 'undefined' || !activeBounty) return null;
+        return isSuspendedBySideQuest() ? null : (activeBounty.locationName || null);
     }
 
     return {
@@ -411,7 +434,10 @@ var bountyService = (function() {
         closeBountyModal: closeBountyModal,
         generateBountyTasks: generateBountyTasks,
         acceptBounty: acceptBounty,
-        abandonBounty: abandonBounty
+        abandonBounty: abandonBounty,
+        getStageLabel: _stageLabel,
+        isSuspendedBySideQuest: isSuspendedBySideQuest,
+        getActiveLocation: getActiveLocation
     };
 })();
 

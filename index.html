@@ -103,6 +103,9 @@
     <link rel="stylesheet" href="module/inventory-panel.css?v=1">
     <link rel="stylesheet" href="module/equipment-panel.css?v=1">
     <link rel="stylesheet" href="module/dialog-panel.css?v=1">
+    <link rel="stylesheet" href="module/side-quest-panel.css?v=4">
+    <!-- 全局滚动条皮肤（古风/扁平）：须保持为最后一个样式表 -->
+    <link rel="stylesheet" href="module/scrollbar-skin.css?v=1">
     <script src="module/inventory-panel.js?v=1" defer></script>
     <script src="module/equipment-panel.js?v=1" defer></script>
     <script src="module/dialog-panel.js?v=1" defer></script>
@@ -130,6 +133,8 @@
                         <div class="mood-display" id="mood-display">体力: 100</div>
                         <div class="action-points-display" id="action-points-display">行动点: 3</div>
                     </div>
+                    <!-- 支线常驻状态条（有进行中支线时显示，内容/显隐由 updateSideQuestStatusBar 维护） -->
+                    <div class="sidequest-status-bar" id="sidequest-status-bar" style="display:none"></div>
                     <!-- <button class="refresh-npc-btn" onclick="refreshNpcLocations()">刷新NPC位置</button> -->
                     <div class="location" id="yanwuchang"></div>
                     <div class="location" id="cangjingge"></div>
@@ -348,6 +353,7 @@
                     <div class="scene-actions">
                         <button class="scene-btn" onclick="performAction('汇报', 'yishiting')">汇报</button>
                         <button class="scene-btn" onclick="showBountyModal()">悬赏任务</button>
+                        <button class="scene-btn" id="sq-rumor-btn" onclick="showSideQuestPanel('rumors')">打探传闻</button>
                     </div>
                 </div>
 
@@ -565,6 +571,14 @@
                             <svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor" aria-hidden="true"><path d="M19.14 12.94a7.07 7.07 0 0 0 0-1.88l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.59.24-1.13.56-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.65 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.07 7.07 0 0 0 0 1.88l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.3.6.22l2.39-.96c.5.38 1.04.7 1.63.94l.36 2.54c.04.24.25.42.5.42h3.84c.25 0 .46-.18.5-.42l.36-2.54c.59-.24 1.13-.56 1.63-.94l2.39.96c.22.08.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.6a3.6 3.6 0 1 1 0-7.2 3.6 3.6 0 0 1 0 7.2z"/></svg>
                         </button>
                     </div>
+
+                    <!-- 任务信息按钮（叹号）：齿轮正上方一档，尺寸/皮肤与齿轮一致；位于 dock 层内，
+                         显隐逻辑随齿轮（GM0 演出层遮挡 / GM1 下山不遮挡 / 小游戏与观景隐藏）。
+                         有进行中悬赏或支线时挂 .has-task，叹号转金橘色（updateTaskInfoButton 维护）。 -->
+                    <button class="viewport-task-btn" id="viewport-task-btn" type="button"
+                            onclick="showTaskInfoPanel()" aria-label="任务信息" title="任务信息">
+                        <svg viewBox="0 0 24 24" width="100%" height="100%" fill="currentColor" aria-hidden="true"><path d="M10.3 3.6h3.4l-.55 11.2h-2.3z"/><circle cx="12" cy="19" r="2"/></svg>
+                    </button>
                 </div>
             </div>
         </div>
@@ -654,6 +668,23 @@
                                     <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
                                     <span class="gs-toggle-hint" id="gs-event-hint">开</span>
                                 </label>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">支线剧情</span>
+                                <label class="gs-toggle-wrap">
+                                    <input type="checkbox" id="gs-sidequest-toggle" onchange="gsOnSideQuest(this)">
+                                    <span class="gs-toggle-track"><span class="gs-toggle-thumb"></span></span>
+                                    <span class="gs-toggle-hint" id="gs-sidequest-hint">开</span>
+                                </label>
+                            </div>
+                            <div class="gs-switch-row">
+                                <span class="gs-switch-label">支线判定置信度</span>
+                                <div class="gs-font-row">
+                                    <span>宽</span>
+                                    <input type="range" id="gs-sidequest-confidence" class="gs-range" min="50" max="90" step="5" value="70" oninput="gsOnSideQuestConfidence(this)">
+                                    <span>严</span>
+                                    <span id="gs-sidequest-confidence-display" class="gs-toggle-hint">0.70</span>
+                                </div>
                             </div>
                             <!-- 提示词 -->
                             <h4 class="gs-subhead">提示词</h4>
@@ -1107,6 +1138,7 @@
                     <button id="pipeline-tab-summarylog" class="pl-tab" onclick="switchPipelineTab('summarylog')">每周总结日志</button>
                     <button id="pipeline-tab-eventlog" class="pl-tab" onclick="switchPipelineTab('eventlog')">事件总结日志</button>
                     <button id="pipeline-tab-locationlog" class="pl-tab" onclick="switchPipelineTab('locationlog')">地点更新日志</button>
+                    <button id="pipeline-tab-sidequestlog" class="pl-tab" onclick="switchPipelineTab('sidequestlog')">支线日志</button>
                 </div>
                 <div id="pipeline-log-content" style="
                     flex: 1;
@@ -1224,16 +1256,6 @@
                 <div class="story-text" id="story-text">
                     江湖路远，故事未始...
                 </div>
-                
-                <!-- 流式生成控件 -->
-                <div id="stream-controls" style="display:none; justify-content:center; align-items:center; padding:6px 0;">
-                    <button id="stream-stop-btn" onclick="pipeline.abortCurrentTurn()" style="
-                        background: linear-gradient(135deg, #c0392b, #e74c3c);
-                        color: #fff; border: none; border-radius: 6px;
-                        padding: 6px 18px; cursor: pointer; font-size: 14px;
-                        box-shadow: 0 2px 6px rgba(0,0,0,0.3);
-                    ">⏹ 停止生成</button>
-                </div>
             </div>
             
             <!-- 随机事件容器 -->
@@ -1241,6 +1263,12 @@
                 <div class="event-title">随机事件</div>
                 <div class="event-description" id="event-description"></div>
                 <div class="event-options" id="event-options"></div>
+            </div>
+            <!-- 支线抉择容器（系统确定性呈现，与随机事件分区共存） -->
+            <div class="sidequest-interaction-container" id="sidequest-interaction-container">
+                <div class="event-title">支线抉择</div>
+                <div class="event-description" id="sidequest-choice-description"></div>
+                <div class="event-options" id="sidequest-choice-options"></div>
             </div>
             <!-- 战斗事件容器 -->
             <div class="battle-event-container" id="battle-event-container">
@@ -1284,7 +1312,13 @@
                 <!-- 底部按钮行：输入行之下、文本区最底部；翻页箭头分居本行最左/最右（正文两侧不再留箭头让位），中部为展开/收起按钮，展开时出现历史页码输入框+跳转按钮 -->
                 <div class="story-expand-bar">
                     <button class="story-nav-btn prev" id="story-prev-btn" onclick="prevPage()">◀</button>
-                    <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
+                    <!-- 展开/收起 与 流式「中断」叠在同一格：生成中展开按钮仅 visibility:hidden 占位，中断按钮铺满同一格，尺寸与之完全一致 -->
+                    <div class="story-expand-slot">
+                        <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
+                        <div id="stream-controls" style="display:none">
+                            <button class="story-expand-btn" id="stream-stop-btn" type="button" onclick="pipeline.abortCurrentTurn()">■ 中断</button>
+                        </div>
+                    </div>
                     <input type="text" class="story-history-page-input" id="story-history-page-input" inputmode="numeric" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter'){event.preventDefault();jumpToStoryHistoryPage();}">
                     <button class="story-expand-btn story-history-jump-btn" id="story-history-jump-btn" onclick="jumpToStoryHistoryPage()" style="display:none">跳转</button>
                     <button class="story-nav-btn next" id="story-next-btn" onclick="nextPage()">▶</button>
@@ -1323,7 +1357,7 @@
     <script src="module/skill-list.js"></script>
     <script src="module/game-utils.js"></script>
     <script src="module/game-state.js"></script>
-    <script src="module/game-ui.js?v=ui-click-title-2"></script>
+    <script src="module/game-ui.js?v=task-info-1"></script>
     <script src="module/game-helpers.js"></script>
     <script src="module/game-events.js"></script>
     <script src="module/special-event.js"></script>
@@ -1348,7 +1382,7 @@
     <script src="module/summary-history-service.js"></script>
     <script src="module/week-history-service.js"></script>
     <script src="module/summary-runner.js"></script>
-    <script src="module/bounty-service.js"></script>
+    <script src="module/bounty-service.js?v=task-info-1"></script>
     <script src="module/embedding-service.js"></script>
     <script src="module/reranker.js"></script>
     <script src="module/idb-storage.js"></script>
@@ -1361,6 +1395,9 @@
     <script src="module/memory-recall.js"></script>
     <script src="module/event-runner.js"></script>
     <script src="module/location-runner.js"></script>
+    <script src="module/side-quest-service.js"></script>
+    <script src="module/side-quest-runner.js"></script>
+    <script src="module/side-quest-panel.js?v=task-info-1"></script>
     <script src="module/pipeline.js"></script>
     
     <!-- UI 模块 -->
@@ -2181,10 +2218,12 @@ const outPut = `
 
         // 修改 skipWeek 函数，在跳过周时重置送礼状态并检查特殊事件
         function skipWeek() {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             showConfirmModal(
                 '确认跳过',
                 '确定要跳过这一周吗？',
                 async () => {
+                    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
                     currentWeek++;
                     actionPoints = 3;
                     userLocation = "tianshanpai";
@@ -2262,27 +2301,8 @@ const outPut = `
                 return;
             }
             if (action === '秘密赌场') {
-                if (actionPoints < 1) {
-                    showModal('行动点不足，无法进行此操作！');
-                    return;
-                }
-                
-                let actionPointConsumed = true;
-                const totalTalents = getTotalTalents();
-                const mindChance = totalTalents.心性 / 2;
-                if (Math.random() * 100 < mindChance) {
-                    actionPointConsumed = false;
-                } else {
-                    actionPoints--;
-                }
-                checkAllValueRanges();
-                updateAllDisplays();
-                
+                // 秘密赌场不消耗行动点
                 showBlackjackGame();
-                
-                if (!actionPointConsumed) {
-                    window.pendingMindMessage = true;
-                }
                 return;
             }
 
@@ -2320,6 +2340,66 @@ const outPut = `
                 return;
             }
 
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
+
+            // roll 点行动：先弹确认框（确定 / 取消 / 快速完成）
+            showRollActionConfirm(action, location);
+        }
+
+        // roll 点行动确认弹窗
+        function showRollActionConfirm(action, location) {
+            const modal = document.getElementById('modal');
+            const modalText = document.getElementById('modal-text');
+            const modalButtons = document.getElementById('modal-buttons');
+
+            modalText.innerHTML = `是否要进行「${action}」？`;
+            modalButtons.innerHTML = `
+                <button class="modal-btn" onclick="confirmRollAction(false)">确定</button>
+                <button class="modal-btn cancel" onclick="closeModal()">取消</button>
+                <button class="modal-btn" onclick="confirmRollAction(true)">快速完成</button>
+            `;
+
+            window._pendingRollAction = { action, location };
+            modal.style.display = 'block';
+        }
+
+        let _rollActionRunning = false;
+        async function confirmRollAction(quick) {
+            const pending = window._pendingRollAction;
+            window._pendingRollAction = null;
+            closeModal();
+            if (!pending || _rollActionRunning) return;
+            if (GameMode === 1) return;
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
+            // 弹窗期间状态可能变化，执行前再校验一次行动点
+            if (actionPoints < 1) {
+                showModal('行动点不足，无法进行此操作！');
+                return;
+            }
+            _rollActionRunning = true;
+            try {
+                await executeRollAction(pending.action, pending.location, !!quick);
+            } finally {
+                _rollActionRunning = false;
+            }
+        }
+
+        // 快速完成后同步当前状态（不生成自动存档）：独立前端写 appState；酒馆环境写变量
+        async function _persistAfterQuickAction() {
+            try {
+                if (isInRenderEnvironment()) {
+                    await saveGameData();
+                    return;
+                }
+                syncGameDataFromVariables();
+                storageService.saveAppState({ gameData: gameData });
+            } catch (e) {
+                console.error('[QuickAction] 状态保存失败:', e);
+            }
+        }
+
+        // roll 点 + 结算；quick=true 时不触发 LLM，只弹结算结果并存档
+        async function executeRollAction(action, location, quick) {
             let actionPointConsumed = true;
             let mindMessageShown = false;
             const totalTalents = getTotalTalents();
@@ -2488,6 +2568,16 @@ const outPut = `
 
             updateAllDisplays();
             refreshNpcLocations();
+
+            if (quick) {
+                // 快速完成：不触发 LLM、不推进对话，仅展示结算结果并存档
+                showModal(
+                    `<div style="font-size: clamp(1.2rem, 3vw, 1.5rem); margin-bottom: 10px;">快速完成 · ${action}</div>` +
+                    resultMessage
+                );
+                await _persistAfterQuickAction();
+                return;
+            }
             
             await handleMessageOutput(resultMessage);
         }
@@ -2949,6 +3039,7 @@ const outPut = `
 
         // 发送自由行动
         async function sendFreeAction() {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             const inputElement = document.getElementById('free-action-input');
             const actionContent = inputElement.value.trim();
 
@@ -2975,8 +3066,12 @@ const outPut = `
             let resultMessage = '';
             // GameMode为1时的特殊处理
             if (GameMode === 1) {
-                // 根据mapLocation的危险度进行事件判定（仅在haveEvent开启时）
-                if (haveEvent) {
+                // 根据mapLocation的危险度进行事件判定（仅在haveEvent开启时）；
+                // 有进行中支线时不按概率掷随机/战斗事件（支线自身抉择/战斗照常）
+                const _sqSuppressEvents = typeof sideQuestService !== 'undefined'
+                    && typeof sideQuestService.suppressesRandomEvents === 'function'
+                    && sideQuestService.suppressesRandomEvents();
+                if (haveEvent && !_sqSuppressEvents) {
                     // 地点信息迭代：优先读取 locationMemory 里 AI 已更新的危险度评级，没有再退回编译期默认值
                     const _locMemForDanger = (typeof storageService !== 'undefined' && storageService.loadLocationMemory) ? storageService.loadLocationMemory() : {};
                     const dangerLevel = (_locMemForDanger[mapLocation] && _locMemForDanger[mapLocation].危险度 && _locMemForDanger[mapLocation].危险度.评级)
@@ -3001,6 +3096,7 @@ const outPut = `
                     }
                     console.log(`[SLG][骰子] roll=${eventRoll.toFixed(1)} | 阈值 战斗<${eventChance.battle} 随机<${eventChance.battle + eventChance.random} | 危险度:${dangerLevel} | 判定→ randomEvent=${randomEvent} battleEvent=${battleEvent}`);
                 } else {
+                    if (_sqSuppressEvents && haveEvent) console.log('[SLG][骰子] 进行中支线：跳过随机/战斗事件掷骰');
                     randomEvent = 0;
                     battleEvent = 0;
                 }
@@ -3068,6 +3164,7 @@ const outPut = `
 
         // 发起战斗
         function startBattle() {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
             
             // 进入战斗前关闭战斗事件框并清除战斗标志位
@@ -3078,8 +3175,8 @@ const outPut = `
             if (typeof gameData !== 'undefined') gameData.battleEvent = 0;
             
             const enemyInfo = currentBattleEvent.敌方信息;
-            // 只防止被意外覆盖，不重新推导（worldmap-exit 悬赏分支已赋值为 'bounty' 为准）
-            if (currentBattleType !== 'bounty') {
+            // 只防止被意外覆盖，不重新推导（worldmap-exit 悬赏分支已赋值为 'bounty'、支线战斗 awaiting 已赋值为 'sidequest' 为准）
+            if (currentBattleType !== 'bounty' && currentBattleType !== 'sidequest') {
                 currentBattleType = 'event';
             }
             
@@ -3103,8 +3200,16 @@ const outPut = `
 
         // 放弃战斗
         async function fleeBattle() {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             if (!currentBattleEvent) return;
-            
+
+            // 支线战斗放弃：按败走推进 loseNext（与 battle-exit 的 quit 同口径），战报轮走正常流水线
+            let _sqFleeOutcome = null;
+            if (currentBattleType === 'sidequest' && typeof sideQuestService !== 'undefined') {
+                _sqFleeOutcome = sideQuestService.settleBattle('quit');
+                if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+            }
+
             const _fbYear = Math.floor((currentWeek - 1) / 48) + 1;
             const _fbRemaining = (currentWeek - 1) % 48;
             const _fbMonth = Math.floor(_fbRemaining / 4) + 1;
@@ -3115,10 +3220,15 @@ const outPut = `
                 `地点：${mapLocation || '天山派'}<br>` +
                 `事件描述: ${currentBattleEvent.事件描述}<br>` +
                 `战斗结果: 放弃战斗，选择避开`;
-            
+
             hideBattleEvent();
-            
+
             await handleMessageOutput(resultMessage);
+
+            // 支线：若 loseNext 直指终点，结算弹窗在战报轮后补出
+            if (_sqFleeOutcome && _sqFleeOutcome.action === 'ending' && typeof sideQuestRunner !== 'undefined') {
+                sideQuestRunner.notifyOutcome(_sqFleeOutcome);
+            }
         }
 
         // 翻页相关函数（调用game-ui.js中的实际实现）
@@ -3146,20 +3256,65 @@ const outPut = `
             }
         }
         // 从SLG模式返回
-        async function returnFromSLG() {
-            // 在重置前保存当前地点和随行NPC，用于消息构建
-            const _slgLocation = mapLocation || '天山派';
-            const _slgCompanions = (companionNPC && companionNPC.length > 0) ? companionNPC.join('、') : '无';
+        async function returnFromSLG(options) {
+            options = options || {};
+            if (GameMode !== 1 || (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy())) return;
+            const _sideQuestActive = typeof sideQuestService !== 'undefined' && sideQuestService.getReturnRisk
+                ? sideQuestService.getReturnRisk() : null;
+            // 固定剧情与实际战斗仍走各自退出流程；支线待战卡允许主动放弃返门。
+            const _battleModal = document.getElementById('battle-modal');
+            if (currentSpecialEvent || (_battleModal && _battleModal.style.display === 'block')) return;
+            const _sideQuestWaitingBattle = _sideQuestActive && _sideQuestActive.pendingInteraction &&
+                _sideQuestActive.pendingInteraction.kind === 'battle' && _sideQuestActive.pendingInteraction.state === 'awaiting';
+            if (inputEnable === 0 && !_sideQuestWaitingBattle) return;
+            // 弹窗期间若读档、切换任务或地点，旧确认不能作用于新的现场。
+            if (options.confirmed && (options.gameData !== gameData || options.quest !== _sideQuestActive ||
+                options.location !== mapLocation)) return;
+            if (_sideQuestActive && !options.confirmed) {
+                const _sqTitle = String(_sideQuestActive.title || '当前支线')
+                    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+                const _confirmation = { confirmed: true, gameData: gameData, quest: _sideQuestActive, location: mapLocation };
+                let _confirmedOnce = false;
+                showConfirmModal(
+                    '中途返回门派',
+                    `支线「${_sqTitle}」尚未完成（包括结局余韵）。现在返回门派将导致任务失败，声望 -3（最低为 0），且不会获得结局奖励。<br><br>确定要放弃任务并返回门派吗？`,
+                    () => {
+                        if (_confirmedOnce) return;
+                        _confirmedOnce = true;
+                        return returnFromSLG(_confirmation);
+                    }
+                );
+                return;
+            }
+            // 失败先由代码结算，并保存返程现场；快照在下面的 handleMessageOutput 内保存，重试不再扣罚。
+            if (_sideQuestActive && typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
+            const _returnFailureOutcome = _sideQuestActive ? sideQuestService.failQuestForReturn(_sideQuestActive) : null;
+            const _returnFailure = _returnFailureOutcome && _returnFailureOutcome.returnFailure;
+            const _slgLocation = (_returnFailure && _returnFailure.originLocation) || mapLocation || '天山派';
+            const _slgCompanions = (_returnFailure && Array.isArray(_returnFailure.companions))
+                ? (_returnFailure.companions.length ? _returnFailure.companions.join('、') : '无')
+                : ((companionNPC && companionNPC.length > 0) ? companionNPC.join('、') : '无');
             const _slgYear = Math.floor((currentWeek - 1) / 48) + 1;
             const _slgRemaining = (currentWeek - 1) % 48;
             const _slgMonth = Math.floor(_slgRemaining / 4) + 1;
             const _slgWeek = _slgRemaining % 4 + 1;
-            const message =
-                `时间：第${_slgYear}年第${_slgMonth}月第${_slgWeek}周<br>` +
-                `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
-                `地点：${_slgLocation}<br>` +
-                `随行NPC：${_slgCompanions}<br>` +
-                `你结束了山下的游历，回到了天山派`;
+            const message = _returnFailure
+                ? (
+                    `时间：第${_slgYear}年第${_slgMonth}月第${_slgWeek}周<br>` +
+                    `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                    `地点：${_slgLocation}<br>` +
+                    `随行NPC：${_slgCompanions}<br>` +
+                    `【支线·${_returnFailure.title || '未名支线'}】你确认中途放弃任务，${_returnFailure.companions.length ? '与' + _slgCompanions + '一起' : '独自'}从${_slgLocation}离开，返回天山派。<br>` +
+                    '任务结果：支线因主动放弃而失败，请衔接此前已发生的剧情，描写中止行动、返程及抵达门派后的余波。'
+                )
+                : (
+                    `时间：第${_slgYear}年第${_slgMonth}月第${_slgWeek}周<br>` +
+                    `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+                    `地点：${_slgLocation}<br>` +
+                    `随行NPC：${_slgCompanions}<br>` +
+                    `你结束了山下的游历，回到了天山派`
+                );
             
             // 重置游戏模式
             GameMode = 0;
@@ -3193,6 +3348,16 @@ const outPut = `
             // 重置下山相关的变量
             randomEvent = 0;
             battleEvent = 0;
+            if (_returnFailure) {
+                if (typeof hideSideQuestChoice === 'function') hideSideQuestChoice();
+                if (typeof hideBattleEvent === 'function') hideBattleEvent();
+                if (typeof hideRandomEvent === 'function') hideRandomEvent();
+                currentBattleEvent = null;
+                currentBattleType = null;
+                currentBattleReward = null;
+                currentRandomEvent = null;
+                inputEnable = 1;
+            }
             companionNPC = [];
             mapLocation = '天山派';
             
@@ -3239,7 +3404,11 @@ const outPut = `
             // } else {
             //     showModal(message);
             // }
-            await handleMessageOutput(message);
+            const _returnSettled = await handleMessageOutput(message);
+            if (_returnFailureOutcome && _returnSettled !== false && typeof sideQuestRunner !== 'undefined' &&
+                typeof sideQuestRunner.notifyOutcome === 'function') {
+                sideQuestRunner.notifyOutcome(_returnFailureOutcome);
+            }
             // 地点信息迭代：异步触发地点更新（不阻塞本回合提交）
             if (typeof locationRunner !== 'undefined') {
                 setTimeout(function() { locationRunner.scheduleLocationUpdate(); }, 0);
@@ -3295,11 +3464,15 @@ const outPut = `
             
             // 独立模式：使用 localStorage 存档
             if (!isInRenderEnvironment()) {
+                if (!(await _waitForSideQuestSaveSettled())) return;
                 syncGameDataFromVariables();
                 // 独立前端专用：将当前活跃事件存入存档
                 gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
-                storageService.createSave(saveName);
-                delete gameData._activeEvent;
+                try {
+                    storageService.createSave(saveName);
+                } finally {
+                    delete gameData._activeEvent;
+                }
                 showModal('存档成功！<br>存档名称：' + saveName);
                 toggleDropdown('system-dropdown');
                 return;
@@ -3374,6 +3547,24 @@ function closeSaveListModal() {
     if (modal) modal.remove();
 }
 
+// 手动保存/导出与自动存档共用同一落定口径：等待最新支线判定（含重试/排队）完成。
+// 若期间读档、导入或重生成取消了该轮，则放弃本次手动保存，避免把另一现场误存进去。
+async function _waitForSideQuestSaveSettled() {
+    if (isInRenderEnvironment() || typeof sideQuestRunner === 'undefined' ||
+        typeof sideQuestRunner.whenSettled !== 'function') return true;
+    var saveContext = gameData;
+    if (typeof sideQuestRunner.isRunning === 'function' && sideQuestRunner.isRunning() &&
+        typeof showToast === 'function') {
+        showToast('等待支线判定落定后继续存档操作…', { type: 'sidequest' });
+    }
+    var settled = await sideQuestRunner.whenSettled();
+    if (settled === false || saveContext !== gameData) {
+        showModal('支线判定未完成（失败或已取消），或存档上下文已切换，本次保存/导出已取消；请先重新生成或完成本轮回复。');
+        return false;
+    }
+    return true;
+}
+
 // ==================== 自动存档 ====================
 var AUTO_SAVE_PREFIX = '[自动]';
 var AUTO_SAVE_MAX = 3;
@@ -3385,7 +3576,6 @@ function autoSave() {
         gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
         var saveName = AUTO_SAVE_PREFIX + buildSaveName();
         storageService.createSave(saveName);
-        delete gameData._activeEvent;
 
         // FIFO：超出上限时删除最老的自动存档
         var all = storageService.listSaves();
@@ -3401,6 +3591,8 @@ function autoSave() {
     } catch(e) {
         console.error('[AutoSave] 自动存档失败:', e);
         showModal('本次回复内容格式不完整，自动存档失败，建议重生成');
+    } finally {
+        delete gameData._activeEvent;
     }
 }
 
@@ -3471,11 +3663,13 @@ function importSaveFromLoadModal() {
 }
 
 function importSTSaveFromLoadModal() {
+    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
     closeLoadModal();
     // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果写回导入后的新存档
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     if (typeof locationRunner !== 'undefined') locationRunner.cancel();
+    if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.jsonl';
@@ -3484,6 +3678,7 @@ function importSTSaveFromLoadModal() {
         if (!file) return;
         var reader = new FileReader();
         reader.onload = function(ev) {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             var text = ev.target.result;
             if (typeof convertSTJsonl !== 'function') {
                 showModal('ST 转换模块未加载，请刷新页面后重试');
@@ -3549,6 +3744,12 @@ function importSTSaveFromLoadModal() {
                 // 与JSON/存档槽恢复一致：特殊事件链的有效输入锁不能被ST导入清除。
                 // ST不恢复临时随机/战斗事件；没有进行中特殊事件时仍释放临时锁。
                 if (!(inputEnable === 0 && currentSpecialEvent)) inputEnable = 1;
+                // ST 元数据同样包含完整 sideQuest：清完临时事件后再恢复 awaiting 交互，
+                // 随后重渲染事件描述页并统一刷新输入锁，顺序与 JSON 导入保持一致。
+                if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.resumeOnLoad();
+                if (typeof renderMainText === 'function' && currentStoryText) {
+                    renderMainText(currentStoryText);
+                }
                 updateFreeActionInputState();
                 if (typeof storageService.setMarkWeekUiIndex === 'function') {
                     var mwIdx = typeof payload.markWeekUiIndex === 'number' ? payload.markWeekUiIndex : uiConv.length;
@@ -3580,10 +3781,12 @@ function importSTSaveFromLoadModal() {
 }
 
 function loadSaveSlot(saveId) {
+    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
     // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果在切换存档后写回新存档（“串台”）
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     if (typeof locationRunner !== 'undefined') locationRunner.cancel();
+    if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
     var payload = storageService.loadSave(saveId);
     if (!payload) { showModal('存档加载失败'); return; }
     if (window.GameSceneBridge) GameSceneBridge.invalidate('load-save-begin');
@@ -3706,6 +3909,10 @@ function loadSaveSlot(saveId) {
         currentBattleEvent = null;
         inputEnable = 1;
     }
+    // 支线：恢复 awaiting 状态的抉择/战斗交互呈现（UI 不持久化）。
+    // 必须放在事件恢复块之后：上方 hideBattleEvent 会清掉敌人卡片、else 分支会把
+    // inputEnable 重置为 1，若提前呈现会被覆盖，支线战斗 awaiting 读档后软卡。
+    if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.resumeOnLoad();
     // 事件变量已恢复，重新渲染正文以追加事件描述页
     if (typeof renderMainText === 'function' && currentStoryText) {
         renderMainText(currentStoryText);
@@ -3786,14 +3993,21 @@ function exportSave() {
     });
 }
 
-function _doExportSave(customName, defaultName) {
+async function _doExportSave(customName, defaultName) {
+    // 文件名确认后再等待支线落定：导出 payload 必须包含最终节点与 awaiting 交互状态。
+    if (!(await _waitForSideQuestSaveSettled())) return;
+    syncGameDataFromVariables();
     // 导出时保存当前活跃事件，供 importSave 恢复选项框
     gameData._activeEvent = currentRandomEvent || currentBattleEvent || null;
     var saveName = customName || defaultName;
     var chk = document.getElementById('export-include-vectors-chk');
     var includeVectors = chk ? chk.checked : true;
-    var json = storageService.exportSaveToJson(saveName, includeVectors);
-    delete gameData._activeEvent;
+    var json;
+    try {
+        json = storageService.exportSaveToJson(saveName, includeVectors);
+    } finally {
+        delete gameData._activeEvent;
+    }
     // 用户自定义名：消毒后直接作为文件名主体；消毒后为空（全是特殊字符）则回退默认命名
     var fileBase = customName ? customName.replace(/[^a-zA-Z0-9一-龥]/g, '_') : '';
     if (!fileBase) fileBase = 'jxz_save_' + defaultName.replace(/[^a-zA-Z0-9一-龥]/g, '_');
@@ -3811,14 +4025,17 @@ function _doExportSave(customName, defaultName) {
 }
 
 function importSave() {
+    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
     // 取消上一个存档可能还在飞行中的 周总结/事件总结/地点更新 请求，避免旧结果写回导入后的新存档
     if (typeof summaryRunner !== 'undefined' && summaryRunner.isRunning()) summaryRunner.cancel();
     if (typeof eventRunner !== 'undefined') eventRunner.cancel();
     if (typeof locationRunner !== 'undefined') locationRunner.cancel();
+    if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
     var input = document.createElement('input');
     input.type = 'file';
     input.accept = '.json';
     input.onchange = async function(e) {
+        if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
         var file = e.target.files[0];
         if (!file) return;
         if (window.GameSceneBridge) {
@@ -3827,6 +4044,7 @@ function importSave() {
         }
         try {
             var payload = await storageService.importSaveFromJson(file);
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             // 深拷贝隔断：即使这里的 payload 是本次新解析出的对象，克隆一层也能保证以后无论
             // 是否有代码把它缓存进 _cache，gameData 的数组字段都不会与其它对象共享引用
             gameData = mergeWithDefaults(structuredClone(payload.gameData), defaultGameData);
@@ -3944,6 +4162,8 @@ function importSave() {
                 currentBattleEvent = null;
                 inputEnable = 1;
             }
+            // 支线：恢复 awaiting 状态的抉择/战斗交互呈现（须在事件恢复块之后，理由同 loadSaveSlot）
+            if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.resumeOnLoad();
             // 事件变量已恢复，重新渲染正文以追加事件描述页
             if (typeof renderMainText === 'function' && currentStoryText) {
                 renderMainText(currentStoryText);
@@ -4473,6 +4693,9 @@ function buildSaveName() {
             } else if (tab === 'locationlog') {
                 const logs = window._locationRunnerLogs;
                 content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「地点更新」相关日志';
+            } else if (tab === 'sidequestlog') {
+                const logs = window._sideQuestRunnerLogs;
+                content.textContent = (logs && logs.length) ? logs.join('\n\n---\n\n') : '暂无「支线剧情」相关日志';
             } else {
                 content.textContent = window._lastPromptRecallBlock || '暂无召回数据（请先发送一轮消息）';
             }
@@ -4569,11 +4792,19 @@ function buildSaveName() {
             const iframe = document.getElementById('worldmap-iframe');
             
             // 准备传递给世界地图的数据（只保留体积小的标量参数走URL，避免随游戏进度增长导致 "URI Too Long"）
+            const activeSideQuest = (typeof gameData !== 'undefined' && gameData.sideQuest) ? gameData.sideQuest.active : null;
+            const sideQuestRelatedNpcs = activeSideQuest && Array.isArray(activeSideQuest.relatedNpcs)
+                ? activeSideQuest.relatedNpcs : [];
             const params = new URLSearchParams({
                 reputation: playerStats.声望,
                 mapLocation: mapLocation,
                 randomEvent: randomEvent,
-                battleEvent: battleEvent
+                battleEvent: battleEvent,
+                // 每次打开都传当前值；无支线时为空数组，避免沿用上一支线的同行豁免。
+                sideQuestRelatedNpcs: JSON.stringify(sideQuestRelatedNpcs),
+                // 有进行中支线：大地图不生成按概率的随机/战斗事件标记（悬赏 ⚔ 不受影响）
+                suppressRandomEvents: (typeof sideQuestService !== 'undefined' && typeof sideQuestService.suppressesRandomEvents === 'function'
+                    ? sideQuestService.suppressesRandomEvents() : !!activeSideQuest) ? 1 : 0
             });
 
             // 体积可能较大且随存档增长的数据改用 localStorage 传递（world_map.html 与本页同源，可直接读取）
@@ -4602,9 +4833,13 @@ function buildSaveName() {
                 }
             }
             
-            // 悬赏：若有进行中任务，附带目标地点参数，供大地图叠加 ⚔ 标记
+            // 悬赏：若有进行中任务，附带目标地点参数，供大地图叠加 ⚔ 标记；
+            // 与进行中支线同地点时暂缓（不传地点 → 地图无 ⚔、不会回传 bountyBattle）
             if (typeof activeBounty !== 'undefined' && activeBounty) {
-                params.set('bountyLocation', activeBounty.locationName);
+                const _bountyLoc = (typeof bountyService !== 'undefined' && typeof bountyService.getActiveLocation === 'function')
+                    ? bountyService.getActiveLocation() : activeBounty.locationName;
+                if (_bountyLoc) params.set('bountyLocation', _bountyLoc);
+                else console.log('[bounty] 与进行中支线同地点，本次下山暂缓悬赏:', activeBounty.locationName);
             }
 
             // 构建世界地图URL（根据你的实际部署情况调整）
@@ -4696,6 +4931,20 @@ function buildSaveName() {
             const evHint   = document.getElementById('gs-event-hint');
             if (evToggle) evToggle.checked = !!ev;
             if (evHint)   evHint.textContent = ev ? '开' : '关';
+
+            // 支线剧情（开关 = sideQuestConfig.enabled 且未触发判定熔断；置信度 0.5–0.9）
+            const _sqCfg = (typeof gameData !== 'undefined' && gameData && gameData.sideQuestConfig) ? gameData.sideQuestConfig : { enabled: true, confidenceThreshold: 0.7 };
+            const _sqJudgeOff = !!(typeof gameData !== 'undefined' && gameData && gameData.sideQuest && gameData.sideQuest.judgeDisabled);
+            const _sqOn = (_sqCfg.enabled !== false) && !_sqJudgeOff;
+            const sqToggle = document.getElementById('gs-sidequest-toggle');
+            const sqHint   = document.getElementById('gs-sidequest-hint');
+            const sqConf   = document.getElementById('gs-sidequest-confidence');
+            const sqConfDisp = document.getElementById('gs-sidequest-confidence-display');
+            if (sqToggle) sqToggle.checked = _sqOn;
+            if (sqHint)   sqHint.textContent = _sqOn ? '开' : '关';
+            const _sqConfPct = Math.round((typeof _sqCfg.confidenceThreshold === 'number' ? _sqCfg.confidenceThreshold : 0.7) * 100);
+            if (sqConf)     sqConf.value = Math.max(50, Math.min(90, _sqConfPct));
+            if (sqConfDisp) sqConfDisp.textContent = (Math.max(50, Math.min(90, _sqConfPct)) / 100).toFixed(2);
 
             // 提示词预设
             const _preset = (typeof gameData !== 'undefined' && gameData.promptPreset) ? gameData.promptPreset : 'ny';
@@ -4867,6 +5116,34 @@ function buildSaveName() {
             haveEvent = el.checked ? 1 : 0;
             document.getElementById('gs-event-hint').textContent = haveEvent ? '开' : '关';
             updateHaveEventLabel();
+        }
+
+        // 支线剧情总开关：关闭即停注入/停判定；重新开启时顺带清除判定熔断（judgeDisabled）
+        function gsOnSideQuest(el) {
+            if (typeof gameData === 'undefined' || !gameData) return;
+            gameData.sideQuestConfig = gameData.sideQuestConfig || { enabled: true, confidenceThreshold: 0.7, deadlineWeeks: 10 };
+            gameData.sideQuestConfig.enabled = !!el.checked;
+            if (el.checked && typeof sideQuestService !== 'undefined' && sideQuestService) {
+                sideQuestService.setJudgeDisabled(false);
+            }
+            document.getElementById('gs-sidequest-hint').textContent = el.checked ? '开' : '关';
+            if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+            if (typeof storageService !== 'undefined' && storageService.saveAppState) {
+                try { storageService.saveAppState({ gameData: gameData }); } catch (e) { console.warn('[SideQuest] 设置保存失败:', e); }
+            }
+        }
+
+        // 支线判定置信度（0.5–0.9）：低于阈值的后台判定一律按 continue 处理
+        function gsOnSideQuestConfidence(el) {
+            if (typeof gameData === 'undefined' || !gameData) return;
+            const v = Math.max(50, Math.min(90, parseInt(el.value, 10) || 70));
+            gameData.sideQuestConfig = gameData.sideQuestConfig || { enabled: true, confidenceThreshold: 0.7, deadlineWeeks: 10 };
+            gameData.sideQuestConfig.confidenceThreshold = v / 100;
+            document.getElementById('gs-sidequest-confidence-display').textContent = (v / 100).toFixed(2);
+            if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+            if (typeof storageService !== 'undefined' && storageService.saveAppState) {
+                try { storageService.saveAppState({ gameData: gameData }); } catch (e) { console.warn('[SideQuest] 设置保存失败:', e); }
+            }
         }
 
         // 提示词预设：ny预设（6条消息）/ 夏瑾预设（4条消息），写入 gameData.promptPreset，下一次行动生效
@@ -5132,6 +5409,7 @@ function buildSaveName() {
 
         // 重生成按钮：删除最后一条回复并重新触发生成
         async function handleRegenerate() {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             // SR 链路保持原有逻辑
             if (isInRenderEnvironment()) {
                 showConfirmModal('重新生成', '是否要重新生成回复？', async () => {
@@ -5175,6 +5453,7 @@ function buildSaveName() {
         }
 
         async function _confirmRegenerate() {
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             var ta = document.getElementById('regen-msg-input');
             var editedMsg = ta ? ta.value.trim() : '';
             closeModal();
@@ -5201,6 +5480,8 @@ function buildSaveName() {
             if (typeof eventRunner !== 'undefined') eventRunner.cancel();
             // 地点信息迭代：取消正在飞行的地点更新请求（防止旧结果写回已回滚的 locationMemory）
             if (typeof locationRunner !== 'undefined') locationRunner.cancel();
+            // 支线：取消在途判定（questId+水位线双校验兜底之外，省 token 并防其 _persist 写回已回滚状态）
+            if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
 
             // 从全量快照还原所有字段
             var ok = storageService.restoreFromSnapshot();
@@ -5208,6 +5489,19 @@ function buildSaveName() {
             if (!ok) {
                 showModal('快照数据损坏，无法重新生成');
                 return;
+            }
+            // 支线：回滚后若战斗 awaiting 已随快照消失，清理残留的敌人卡片与预标记。
+            // battle awaiting 期间重生成按钮可用，而 updateStoryDisplay 的 battle 显隐依赖内存态
+            // currentBattleEvent，快照回滚不会自动清除——残留卡片可被重复挑战刷奖励。
+            if (typeof currentBattleType !== 'undefined' && currentBattleType === 'sidequest'
+                && typeof sideQuestService !== 'undefined' && sideQuestService.getActive) {
+                var _sqRgActive = sideQuestService.getActive();
+                var _sqRgPend = _sqRgActive && _sqRgActive.pendingInteraction;
+                var _sqRgAwaitBattle = !!(_sqRgPend && _sqRgPend.kind === 'battle' && _sqRgPend.state === 'awaiting');
+                if (!_sqRgAwaitBattle) {
+                    if (typeof hideBattleEvent === 'function') hideBattleEvent();
+                    currentBattleType = null;
+                }
             }
             if (typeof memoryRecall !== 'undefined' && typeof memoryRecall._refreshAliasMap === 'function' && typeof eventHistoryService !== 'undefined') {
                 memoryRecall._refreshAliasMap(eventHistoryService.getMeta());
@@ -5234,7 +5528,19 @@ function buildSaveName() {
             const regenerateBtn = document.getElementById('regenerate-btn');
             const skipWeekBtn = document.getElementById('skip-week-btn');
             const slgReturnBtn = document.getElementById('slg-return-btn');
-            
+
+            // 正文、提交、支线判定及重试期间，刷新显示也不得提前恢复输入。
+            if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) {
+                [inputElement, sendButton, regenerateBtn, skipWeekBtn, slgReturnBtn].forEach(function(el) {
+                    if (!el) return;
+                    el.disabled = true;
+                    el.style.opacity = '0.5';
+                    el.style.cursor = 'not-allowed';
+                });
+                if (inputElement) inputElement.placeholder = '施延年正在忙碌，请稍候…';
+                return;
+            }
+
             if (inputEnable === 0) {
                 // 禁用输入框和按钮（事件期间）
                 if (inputElement) {
@@ -5263,11 +5569,17 @@ function buildSaveName() {
                     skipWeekBtn.style.opacity = '0.5';
                     skipWeekBtn.style.cursor = 'not-allowed';
                 }
-                // 禁用返回天山派按钮
+                // 支线待战仍允许确认失败返门；实际战斗弹窗与固定事件继续锁定。
                 if (slgReturnBtn) {
-                    slgReturnBtn.disabled = true;
-                    slgReturnBtn.style.opacity = '0.5';
-                    slgReturnBtn.style.cursor = 'not-allowed';
+                    const _sq = typeof sideQuestService !== 'undefined' && sideQuestService.getReturnRisk
+                        ? sideQuestService.getReturnRisk() : null;
+                    const _battleModal = document.getElementById('battle-modal');
+                    const _canAbandonBattle = GameMode === 1 && !currentSpecialEvent && _sq && _sq.pendingInteraction &&
+                        _sq.pendingInteraction.kind === 'battle' && _sq.pendingInteraction.state === 'awaiting' &&
+                        (!_battleModal || _battleModal.style.display !== 'block');
+                    slgReturnBtn.disabled = !_canAbandonBattle;
+                    slgReturnBtn.style.opacity = _canAbandonBattle ? '1' : '0.5';
+                    slgReturnBtn.style.cursor = _canAbandonBattle ? '' : 'not-allowed';
                 }
             } else {
                 // 启用输入框和按钮
@@ -5621,6 +5933,8 @@ function buildSaveName() {
                         currentBattleEvent = null;
                         inputEnable = 1;
                     }
+                    // 支线：恢复 awaiting 状态的抉择/战斗交互呈现（须在事件恢复块之后，理由同 loadSaveSlot）
+                    if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.resumeOnLoad();
                     if (typeof renderMainText === 'function' && currentStoryText) {
                         renderMainText(currentStoryText);
                     }
@@ -5631,6 +5945,9 @@ function buildSaveName() {
                         var _outPut = outPut.replace(/\{\{user\}\}/g, _pn);
                         applyParsedInit(responseParser.run(_outPut));
                     } catch (e) { console.error('初始化解析失败', e); }
+                    // 支线：恢复 awaiting 交互呈现须在开场白解析之后——applyParsedInit 的
+                    // parseLLMResponse 无事件分支会 hideBattleEvent + inputEnable=1，提前呈现会被覆盖
+                    if (typeof sideQuestRunner !== 'undefined' && !launchIntent) sideQuestRunner.resumeOnLoad();
                 }
                 if (launchIntent === 'loadSave' && !loadSaveId) {
                     setTimeout(function(){ if (typeof showSaveListModal === 'function') showSaveListModal(); }, 300);
@@ -5696,17 +6013,30 @@ function buildSaveName() {
         
         document.getElementById('battle-modal').addEventListener('click', function(e) {
             if (e.target === this) {
-                if (confirm('确定要退出战斗吗？')) {
+                // 支线战斗强退按败走处理（确认文案区分），推进 loseNext
+                const _isSidequestBattle = (currentBattleType === 'sidequest');
+                const _quitTip = _isSidequestBattle ? '确定要退出战斗吗？强行离开将被视为败走。' : '确定要退出战斗吗？';
+                if (confirm(_quitTip)) {
                     this.style.display = 'none';
                     if (typeof bgmManager !== 'undefined' && typeof bgmManager.onBattleEnd === 'function') {
                         bgmManager.onBattleEnd();
                     }
                     document.getElementById('battle-iframe').src = '';
-                    
+
                     if (currentBattleType === 'event') {
                         hideBattleEvent();
+                    } else if (_isSidequestBattle) {
+                        // 强退不发战报（对齐 event 强退口径），只推进节点；下轮自由行动注入新节点指导
+                        if (typeof sideQuestService !== 'undefined') {
+                            const _sqForceOutcome = sideQuestService.settleBattle('quit');
+                            if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
+                            if (_sqForceOutcome && _sqForceOutcome.action === 'ending' && typeof sideQuestRunner !== 'undefined') {
+                                sideQuestRunner.notifyOutcome(_sqForceOutcome);
+                            }
+                        }
+                        hideBattleEvent();
                     }
-                    
+
                     currentBattleType = null;
                     currentBattleReward = null;
                 }

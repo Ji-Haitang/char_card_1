@@ -802,6 +802,8 @@
         // 为地点生成事件
         function generateLocationEvents() {
             locationEvents = {};
+            // 有进行中支线：所有地点均无随机/战斗事件
+            if (suppressRandomEvents) return;
             
             for (const [locationName, locationInfo] of Object.entries(locationDatabase)) {
                 const events = {
@@ -999,6 +1001,8 @@
         let currentLocation = '';
         let selectedNPCs = [];
         let bountyLocation = null;  // 悬赏目标地点（由 index.html 传入，SR 链路永远为 null）
+        let sideQuestRelatedNpcs = new Set(); // 当前进行中支线允许无视好感度同行的 NPC 中文名
+        let suppressRandomEvents = false; // 父页传入：有进行中支线时不生成按概率的随机/战斗事件
 
         const idToName = {
         'A': '破阵子','B': '洞庭君','C': '钱塘君','D': '萧白瑚','E': '姬姒','F': '施延年',
@@ -1028,6 +1032,19 @@
             // 悬赏：目标地点（只有 index.html 的 showWorldMap() 会传这个参数，SR 链路不传时保持 null）
             const bl = q.get('bountyLocation');
             if (bl) bountyLocation = bl;
+
+            // 有进行中支线：本次打开地图不按概率生成随机/战斗事件（悬赏不受影响）
+            suppressRandomEvents = q.get('suppressRandomEvents') === '1';
+
+            // 当前支线的相关 NPC 可无视好感度（含 999 锁定门槛）同行；无支线时父页传空数组。
+            try {
+                const relatedRaw = JSON.parse(q.get('sideQuestRelatedNpcs') || '[]');
+                const knownNames = new Set(Object.values(idToName));
+                const relatedNames = Array.isArray(relatedRaw) ? relatedRaw.map(id => idToName[id] || id) : [];
+                sideQuestRelatedNpcs = new Set(relatedNames.filter(name => knownNames.has(name)));
+            } catch (e) {
+                sideQuestRelatedNpcs = new Set();
+            }
 
             // 3) 随行NPC（可选，用于默认勾选）
             // URL 参数优先（父页实时传入的当前值），localStorage 兜底（index.html 同源传递，避免URL过长）
@@ -1193,14 +1210,19 @@
             const modalBody = document.getElementById('modalBody');
             const modalFooter = document.getElementById('modalFooter');
 
-            // 展示 npcFavorThreshold 内的所有 NPC
+            // 平时展示既有 NPC；当前支线若关联其他合法 NPC（如神秘杂役），也临时加入候选。
             const allNPCs = Object.keys(npcFavorThreshold);
-            // 计算可邀请 NPC（好感达到且阈值不为999）
-            const eligibleNPCs = allNPCs.filter(npc => {
+            sideQuestRelatedNpcs.forEach(npc => {
+                if (!allNPCs.includes(npc)) allNPCs.push(npc);
+            });
+            // 仅当前支线的 relatedNpcs 豁免好感/锁定门槛，其余 NPC 仍走原规则。
+            const isEligibleForTravel = npc => {
+                if (sideQuestRelatedNpcs.has(npc)) return true;
                 const threshold = npcFavorThreshold[npc];
                 const favor = (npcCurrentFavor[npc] || 0);
                 return threshold !== 999 && favor >= threshold;
-            });
+            };
+            const eligibleNPCs = allNPCs.filter(isEligibleForTravel);
             const maxCount = getMaxNPCCount();
 
             let npcHTML = `
@@ -1216,15 +1238,16 @@
                 allNPCs.forEach(npc => {
                     const threshold = npcFavorThreshold[npc];
                     const favor = (npcCurrentFavor[npc] || 0);
+                    const isQuestRelated = sideQuestRelatedNpcs.has(npc);
                     const isLocked = threshold === 999;
-                    const isEligible = !isLocked && favor >= threshold;
+                    const isEligible = isEligibleForTravel(npc);
                     const disabledAttr = isEligible ? '' : 'disabled';
                     const forceDisabledClass = isEligible ? '' : 'force-disabled';
                     const itemDisabledClass = isEligible ? '' : 'disabled';
                     const nameDisabledClass = isEligible ? '' : 'disabled';
-                    const hintText = isEligible
-                        ? ''
-                        : (isLocked ? '随行功能等待后续更新解锁' : `需好感${threshold}（当前${favor}）`);
+                    const hintText = isQuestRelated
+                        ? '当前支线相关，可同行'
+                        : (isEligible ? '' : (isLocked ? '随行功能等待后续更新解锁' : `需好感${threshold}（当前${favor}）`));
 
                     npcHTML += `
                         <div class="npc-item ${itemDisabledClass}">

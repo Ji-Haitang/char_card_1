@@ -189,21 +189,20 @@
 
     /**
      * onBattleStart()
-     * 暂存当前路径，随机播放战斗BGM（绕过 _enabled，战斗BGM始终播放）。
+     * 暂存当前路径；音乐开启时随机播放战斗BGM，关闭时保持静音。
      * 不更新 gameData.bgmName。
      */
     function onBattleStart() {
         var manifest = (typeof bgmFileManifest !== 'undefined') ? bgmFileManifest : null;
         _preBattlePath = _currentPath;
+        if (!_enabled) {
+            stop();
+            return;
+        }
         if (!manifest || !manifest['战斗'] || !_audio) return;
         var picked = _pickRandom(manifest['战斗']);
         if (!picked) return;
-        // 直接操作 audio，绕过 _enabled
-        _currentPath = picked;
-        _audio.src = _toSrc(picked);
-        _audio.volume = _volume;
-        _audio.currentTime = 0;
-        _audio.play().catch(function () {});
+        play(picked);
     }
 
     /**

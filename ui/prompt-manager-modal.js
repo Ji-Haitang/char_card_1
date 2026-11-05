@@ -101,6 +101,14 @@ var promptManagerModal = (function() {
             _pmBtn('FINAL_INSTRUCTION', '最终指令', false)
         ]);
 
+        // 分组7：支线剧情系统（runner 调用的四份提示词）
+        html += _pmSection([
+            _pmBtn('SQ_RUMOR', '支线-传闻生成', true),
+            _pmBtn('SQ_TREE', '支线-剧情树生成', true),
+            _pmBtn('SQ_JUDGE', '支线-阶段判定', true),
+            _pmBtn('SQ_GUIDE', '支线-阶段指导', true)
+        ]);
+
         root.innerHTML = html;
     }
 
@@ -162,6 +170,14 @@ var promptManagerModal = (function() {
         // 分组8：任务链（第3条 user 尾部，含内嵌模拟对话与隐式思考要求）
         html += _pmSection([
             _pmBtn('XJ_TASK_CHAIN', '任务链', false)
+        ]);
+
+        // 分组9：支线剧情系统（runner 调用的四份提示词，与 ny 预设共享）
+        html += _pmSection([
+            _pmBtn('SQ_RUMOR', '支线-传闻生成', true),
+            _pmBtn('SQ_TREE', '支线-剧情树生成', true),
+            _pmBtn('SQ_JUDGE', '支线-阶段判定', true),
+            _pmBtn('SQ_GUIDE', '支线-阶段指导', true)
         ]);
 
         root.innerHTML = html;
@@ -318,7 +334,11 @@ var promptManagerModal = (function() {
         XJ_USER_ROLE:       { title: '主角设定说明（夏瑾预设）', editable: false, get: function() { return typeof PROMPT_XJ_USER_ROLE !== 'undefined' ? PROMPT_XJ_USER_ROLE : ''; } },
         XJ_CORE_GUIDE:      { title: '核心指导（夏瑾预设）',     editable: true,  get: function() { return typeof PROMPT_XJ_CORE_GUIDE !== 'undefined' ? PROMPT_XJ_CORE_GUIDE : ''; } },
         XJ_OUTPUT_NOTE:     { title: '输出模板说明（夏瑾预设）', editable: false, get: function() { return typeof PROMPT_XJ_OUTPUT_NOTE !== 'undefined' ? PROMPT_XJ_OUTPUT_NOTE : ''; } },
-        XJ_TASK_CHAIN:      { title: '任务链（夏瑾预设）',       editable: false, get: function() { return typeof PROMPT_XJ_TASK_CHAIN !== 'undefined' ? PROMPT_XJ_TASK_CHAIN : ''; } }
+        XJ_TASK_CHAIN:      { title: '任务链（夏瑾预设）',       editable: false, get: function() { return typeof PROMPT_XJ_TASK_CHAIN !== 'undefined' ? PROMPT_XJ_TASK_CHAIN : ''; } },
+        SQ_RUMOR:           { title: '支线-传闻生成',     editable: true, get: function() { return typeof PROMPT_SQ_RUMOR !== 'undefined' ? PROMPT_SQ_RUMOR : ''; } },
+        SQ_TREE:            { title: '支线-剧情树生成',   editable: true, get: function() { return typeof PROMPT_SQ_TREE !== 'undefined' ? PROMPT_SQ_TREE : ''; } },
+        SQ_JUDGE:           { title: '支线-阶段判定',     editable: true, get: function() { return typeof PROMPT_SQ_JUDGE !== 'undefined' ? PROMPT_SQ_JUDGE : ''; } },
+        SQ_GUIDE:           { title: '支线-阶段指导',     editable: true, get: function() { return typeof PROMPT_SQ_GUIDE !== 'undefined' ? PROMPT_SQ_GUIDE : ''; } }
     };
 
     /**

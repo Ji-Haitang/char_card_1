@@ -1026,7 +1026,20 @@ const defaultGameData = {
                                                         // 防止「卡长场景 step+=10」正常入库归位时被硬编码默认值覆盖
         location: { enabled: true }  // 地点更新（location-runner.runLocationUpdate），触发时机不变，仅控制开关
     },
-    locationVisit: null      // 新增：当前"下山地点"访问会话的临时标记（{active,location,startUiIndex,startWeek}），返回天山派时清空
+    locationVisit: null,     // 新增：当前"下山地点"访问会话的临时标记（{active,location,startUiIndex,startWeek}），返回天山派时清空
+    sideQuest: {             // 新增：暗线/支线剧情系统状态（见 开发文档/支线剧情系统方案书.md）
+        active: null,            // 进行中支线（含玩家不可见的剧情树）
+        history: [],             // 已完结支线摘要，FIFO 上限 20
+        lastRefreshWeek: 0,      // 最近一次接取/结算支线的记账周（候选生成不占次数；跨周结算占用结算周）
+        pendingTree: null,       // 已接取但尚未建树成功的传闻 { rumor, index, week }；重试入口的唯一持久化来源
+        pendingReturnFailure: null, // 中途返回门派时的一次性失败收束上下文
+        judgeDisabled: false     // 兼容旧存档的判定暂停开关，设置中可重开；新失败由本轮重生成处理
+    },
+    sideQuestConfig: {
+        enabled: true,
+        confidenceThreshold: 0.7,   // 判定置信度阈值（<阈值按 continue 处理）
+        deadlineWeeks: 10           // 默认时限（周），0=不限
+    }
 };
 
 // === BGM 配置 ===

@@ -1,0 +1,42 @@
+<%_ const form = sqForm || 'stage'; _%>
+<%_ if (form === 'stage') { _%>
+<SideQuestGuide>
+【支线暗线·<%= sqQuestTitle %>】当前阶段：<%= sqNodeTitle %>
+支线背景：<%= sqBackground %>
+隐藏目标（严禁向玩家泄露）：<%= sqHiddenGoal %>
+铺垫建议：<%= sqGuideHint %>
+要求：让剧情自然朝该目标方向牵引，可借 NPC 闲谈、环境细节、偶遇等方式埋下契机；不得直接说出目标本身；不得替{{user}}做决定；若{{user}}的行动与目标无关，照常演绎，只在行间留一线伏笔即可。
+</SideQuestGuide>
+<%_ } else if (form === 'choice_buildup') { _%>
+<SideQuestGuide>
+【支线暗线·<%= sqQuestTitle %>】即将迎来抉择：<%= sqNodeTitle %>
+支线背景：<%= sqBackground %>
+抉择情境：<%= sqChoiceSituation %>
+要求：把剧情推向这个两难情境，让矛盾充分显露，本轮结尾停在决断点之前；严禁替{{user}}做出选择；选项按钮将由系统弹出，不要在正文中列出选项或暗示"请选择"。
+</SideQuestGuide>
+<%_ } else if (form === 'choice_awaiting') { _%>
+<SideQuestGuide>
+【支线暗线·<%= sqQuestTitle %>】抉择悬而未决：<%= sqNodeTitle %>
+支线背景：<%= sqBackground %>
+抉择情境：<%= sqChoiceSituation %>
+要求：玩家正在权衡（选项按钮已由系统呈现），正文可自然呼应其犹豫、描写周遭人物的反应；若{{user}}做了无关行动则照常演绎；严禁替{{user}}决定，不要在正文中列出选项。
+</SideQuestGuide>
+<%_ } else if (form === 'battle_buildup') { _%>
+<SideQuestGuide>
+【支线暗线·<%= sqQuestTitle %>】即将爆发冲突：<%= sqNodeTitle %>
+支线背景：<%= sqBackground %>
+遭遇前须完成的铺垫（严禁向玩家泄露）：<%= sqHiddenGoal %>
+铺垫建议：<%= sqGuideHint %>
+遭遇预告：<%= sqBattleIntro %>
+遭遇者：<%= sqBattleEnemyName %>
+外观参考：<%= sqBattleEnemyAppearance %>
+要求：先自然完成上述铺垫，再把剧情推向遭遇爆发点，渲染剑拔弩张之势，本轮结尾停在交手前一刻；战斗将由系统触发，不要描写实际交手与胜负。
+</SideQuestGuide>
+<%_ } else if (form === 'ending') { _%>
+<SideQuestGuide>
+【支线暗线·<%= sqQuestTitle %>】已至结局，请自然收束。
+支线背景：<%= sqBackground %>
+结局走向：<%= sqEpilogue %>
+要求：用一到两段让这条支线的余韵落地（相关人物的反应、事件留下的痕迹），之后剧情回归日常；不要再展开新的冲突或悬念。
+</SideQuestGuide>
+<%_ } _%>

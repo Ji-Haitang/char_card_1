@@ -108,7 +108,7 @@ function showConfigModal() {
         '<input type="checkbox" id="api-cors-proxy-enabled"' + (config.corsProxyEnabled ? ' checked' : '') + '>' +
         '<span style="font-size:12px;color:rgba(55,55,55,0.7)">启用 CORS 代理（勾选后通过代理中转 API 请求）</span></label>' +
         '<input id="api-cors-proxy-input" type="text" placeholder="https://your-worker.your-name.workers.dev" value="' + _escapeHtml(config.corsProxyUrl || '') + '" class="cfg-input">' +
-        '<div class="cfg-notice" style="margin-top:4px">勾选后通过代理中转。线上部署且 API 不支持 CORS（如 OpenAI 官方）时需启用；本地 file:// 与 APK 通常直连即可（APK 默认不勾）。</div>' +
+        '<div class="cfg-notice" style="margin-top:4px">测试立即使用当前代理设置，无需先保存。默认代理仅接受 HTTPS API；HTTPS 游戏页面也不能直接访问 HTTP API。建议向服务商索取 HTTPS 地址。直连时，服务端需正确允许 CORS，包括 Authorization 请求头。</div>' +
         '</div>' +
 
         // 测试消息
@@ -143,7 +143,7 @@ function showConfigModal() {
         '</div>' +
 
         // 安全提示
-        '<div class="cfg-notice">⚠️ API Key 仅保存在浏览器本地，不会上传到任何服务器。请使用支持 CORS 的中转站或部署代理服务。</div>' +
+        '<div class="cfg-notice">⚠️ API Key 保存在浏览器本地，请求时会发送给 API 服务；启用代理时也会经过该代理。仅使用可信服务，推荐 HTTPS，HTTP 会明文传输密钥和内容。</div>' +
 
         // 底部按钮
         '</div><div class="cfg-footer">' +
@@ -251,6 +251,21 @@ function saveConfigAndClose() {
 
 // ========== 连接测试 ==========
 
+function _apiConnectionError(message, endpoint, proxyEnabled, proxyUrl) {
+    message = String(message || '未知错误');
+    if (message.indexOf('Only HTTPS targets are allowed') !== -1) {
+        return message + '；当前 CORS 代理只接受 HTTPS API，请向服务商索取 HTTPS 地址。';
+    }
+    if (/^http:\/\//i.test(endpoint) && !(proxyEnabled && proxyUrl) &&
+        window.location.protocol === 'https:') {
+        return message + '；HTTPS 游戏页面不能直连 HTTP API，请使用 HTTPS API 或可信的 HTTPS 中转。';
+    }
+    if (/Failed to fetch|NetworkError|Load failed/i.test(message)) {
+        return message + '；请检查网络、代理是否可达及服务端 CORS。直连时需显式允许 Authorization 请求头，不能仅使用 Allow-Headers: *。';
+    }
+    return message;
+}
+
 async function _doConnectTest() {
     var btn = document.getElementById('api-connect-btn');
     var status = document.getElementById('api-connect-status');
@@ -265,13 +280,19 @@ async function _doConnectTest() {
     var apiKey = document.getElementById('api-key-input').value.trim();
     var type = document.getElementById('api-type-select').value;
 
+    var corsProxyUrl = (document.getElementById('api-cors-proxy-input') || {}).value || '';
+    var corsProxyEnabled = !!(document.getElementById('api-cors-proxy-enabled') && document.getElementById('api-cors-proxy-enabled').checked);
+
     try {
-        var models = await apiService.fetchModels(endpoint, apiKey, type);
-        status.textContent = '🟢 已连接（' + models.length + ' 个模型）';
-        status.style.color = '#4CAF50';
+        var models = await apiService.fetchModels(endpoint, apiKey, type, {
+            corsProxyUrl: corsProxyUrl.trim(),
+            corsProxyEnabled: corsProxyEnabled
+        });
+        status.textContent = models.length ? '🟢 已连接（' + models.length + ' 个模型）' : '🟡 接口未返回可选模型，请确认 Key 的模型权限，或手动输入模型 ID 后发送测试消息。';
+        status.style.color = models.length ? '#4CAF50' : '#b7791f';
 
         // 填充模型下拉框
-        select.innerHTML = '<option value="">-- 请选择模型 --</option>';
+        select.innerHTML = models.length ? '<option value="">-- 请选择模型 --</option>' : '<option value="">-- 无可选模型，可手动输入 --</option>';
         for (var i = 0; i < models.length; i++) {
             var opt = document.createElement('option');
             opt.value = models[i].id;
@@ -291,7 +312,7 @@ async function _doConnectTest() {
             }
         }
     } catch (e) {
-        status.textContent = '🔴 连接失败: ' + e.message + '（若使用本地代理工具，可点击"✎ 手动输入"直接填写模型名）';
+        status.textContent = '🔴 获取模型失败: ' + _apiConnectionError(e.message, endpoint, corsProxyEnabled, corsProxyUrl.trim()) + '（若服务不提供模型列表，可手动输入模型 ID 再发送测试消息；手动输入不能绕过网络限制）';
         status.style.color = '#f44336';
         select.innerHTML = '<option value="">-- 连接失败 --</option>';
         select.disabled = true;
@@ -332,7 +353,9 @@ async function _doSendTest() {
         endpoint: document.getElementById('api-endpoint-input').value.trim(),
         apiKey: document.getElementById('api-key-input').value.trim(),
         model: document.getElementById('api-model-input').value.trim(),
-        temperature: parseFloat(document.getElementById('api-temp-input').value) || 0.85
+        temperature: parseFloat(document.getElementById('api-temp-input').value) || 0.85,
+        corsProxyUrl: ((document.getElementById('api-cors-proxy-input') || {}).value || '').trim(),
+        corsProxyEnabled: !!(document.getElementById('api-cors-proxy-enabled') && document.getElementById('api-cors-proxy-enabled').checked)
     };
 
     var result = await apiService.sendTestMessage(tempConfig);
@@ -343,7 +366,7 @@ async function _doSendTest() {
         resultDiv.textContent = '✅ 测试通过！AI 回复: ' + preview;
     } else {
         resultDiv.className = 'cfg-test-result cfg-test-fail';
-        resultDiv.textContent = '❌ 测试失败: ' + result.error;
+        resultDiv.textContent = '❌ 测试失败: ' + _apiConnectionError(result.error, tempConfig.endpoint, tempConfig.corsProxyEnabled, tempConfig.corsProxyUrl);
     }
 
     btn.disabled = false;

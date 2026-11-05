@@ -1,0 +1,104 @@
+/* ============================================================================
+ * scrollbar-skin.css — 全局统一滚动条皮肤（古风 / 扁平）
+ *
+ * 必须作为最后一个样式表加载：用 !important 覆盖散落在 game-styles*.css、
+ * dialog 面板等处的旧滚动条规则（包括带 ID 选择器的事件框规则）。
+ *
+ * 古风：细墨线轨道 + 两端淡、中段浓的墨色滑块，悬停加深。
+ * 扁平：透明轨道 + 浅蓝灰圆角细条，悬停转主题蓝。
+ *
+ * 兼容说明：Chromium 121+ 中，元素自身或祖先（scrollbar-color 可继承）只要设置了
+ * 非 auto 的 scrollbar-color / scrollbar-width，就会忽略 ::-webkit-scrollbar 定制，
+ * 所以在支持 webkit 伪元素的浏览器里统一复位为 auto；Firefox 则只走标准属性。
+ * ========================================================================== */
+
+/* ---------- Chromium / WebKit：复位标准属性，让下方伪元素皮肤生效 ---------- */
+@supports selector(::-webkit-scrollbar) {
+    body.ui-style-ancient,
+    body.ui-style-ancient *,
+    body.ui-style-flat,
+    body.ui-style-flat * {
+        scrollbar-color: auto !important;
+        scrollbar-width: auto !important;
+    }
+}
+
+/* ---------- 古风 ---------- */
+body.ui-style-ancient ::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+    background: transparent !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-track {
+    background: linear-gradient(90deg, transparent 3px, rgba(113, 102, 89, .22) 3px, rgba(113, 102, 89, .22) 5px, transparent 5px) !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-track:horizontal {
+    background: linear-gradient(180deg, transparent 3px, rgba(113, 102, 89, .22) 3px, rgba(113, 102, 89, .22) 5px, transparent 5px) !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(58, 52, 44, .35), rgba(26, 26, 26, .7) 50%, rgba(58, 52, 44, .35)) !important;
+    border: 1px solid transparent !important;
+    border-radius: 4px 1px 4px 1px !important;
+    background-clip: padding-box !important;
+    box-shadow: none !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-thumb:horizontal {
+    background: linear-gradient(90deg, rgba(58, 52, 44, .35), rgba(26, 26, 26, .7) 50%, rgba(58, 52, 44, .35)) !important;
+    background-clip: padding-box !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-thumb:hover,
+body.ui-style-ancient ::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, rgba(26, 26, 26, .55), rgba(26, 26, 26, .9) 50%, rgba(26, 26, 26, .55)) !important;
+    background-clip: padding-box !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-thumb:horizontal:hover,
+body.ui-style-ancient ::-webkit-scrollbar-thumb:horizontal:active {
+    background: linear-gradient(90deg, rgba(26, 26, 26, .55), rgba(26, 26, 26, .9) 50%, rgba(26, 26, 26, .55)) !important;
+    background-clip: padding-box !important;
+}
+body.ui-style-ancient ::-webkit-scrollbar-corner,
+body.ui-style-ancient ::-webkit-scrollbar-button { background: transparent !important; display: none; }
+
+/* ---------- 扁平 ---------- */
+body.ui-style-flat ::-webkit-scrollbar {
+    width: 8px !important;
+    height: 8px !important;
+    background: transparent !important;
+}
+body.ui-style-flat ::-webkit-scrollbar-track {
+    background: transparent !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+body.ui-style-flat ::-webkit-scrollbar-thumb {
+    background: #b9c8db !important;
+    border: 2px solid transparent !important;
+    border-radius: 8px !important;
+    background-clip: padding-box !important;
+    box-shadow: none !important;
+}
+body.ui-style-flat ::-webkit-scrollbar-thumb:hover,
+body.ui-style-flat ::-webkit-scrollbar-thumb:active {
+    background: #567fae !important;
+    background-clip: padding-box !important;
+}
+body.ui-style-flat ::-webkit-scrollbar-corner,
+body.ui-style-flat ::-webkit-scrollbar-button { background: transparent !important; display: none; }
+
+/* ---------- Firefox：只支持标准属性，取同色系细条 ---------- */
+@supports not selector(::-webkit-scrollbar) {
+    body.ui-style-ancient,
+    body.ui-style-ancient * {
+        scrollbar-width: thin !important;
+        scrollbar-color: rgba(79, 71, 60, .45) transparent !important;
+    }
+    body.ui-style-flat,
+    body.ui-style-flat * {
+        scrollbar-width: thin !important;
+        scrollbar-color: #a9bbd2 transparent !important;
+    }
+}

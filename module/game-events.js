@@ -78,6 +78,7 @@ function hideRandomEvent() {
 
 // 处理事件选项
 async function handleEventOption(optionIndex, option) {
+    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
     if (!currentRandomEvent) return;
     
     const successRate = parseInt(option.成功率) / 100;
@@ -884,13 +885,13 @@ function setupMessageListeners() {
                     const _bvWeek = _bvRemaining % 4 + 1;
                     const _bvSeason = seasonNameMap[seasonStatus] || '冬天';
                     const _bvLoc = mapLocation || '天山派';
-                    await handleMessageOutput(
+                    const reportSettled = await handleMessageOutput(
                         `时间：第${_bvYear}年第${_bvMonth}月第${_bvWeek}周<br>` +
                         `季节：${_bvSeason}<br>` +
                         `地点：${_bvLoc}<br>` +
                         `事件描述: ${currentBattleEvent.事件描述}<br>` +
                         `战斗结果: 胜利，击败了${currentBattleEvent.敌方信息.名称}`);
-                    if (rewardText || dropText) {
+                    if (reportSettled !== false && (rewardText || dropText)) {
                         const modalLines = [rewardText, dropText].filter(Boolean).join('<br>');
                         showModal(modalLines);
                     }
@@ -962,14 +963,14 @@ function setupMessageListeners() {
                     syncGameDataFromVariables();
                     hideBattleEvent();
 
-                    await handleMessageOutput(
+                    const reportSettled = await handleMessageOutput(
                         `时间：第${_boYear}年第${_boMonth}月第${_boWeek}周<br>` +
                         `季节：${_boSeason}<br>` +
                         `地点：${_boLoc}<br>` +
                         `悬赏目标：${_bountyEnemyName}<br>` +
                         `战斗结果: 胜利，成功缉拿悬赏目标`);
 
-                    if (rewardText || dropText) {
+                    if (reportSettled !== false && (rewardText || dropText)) {
                         const modalLines = [rewardText, dropText].filter(Boolean).join('<br>');
                         showModal(modalLines);
                     }
@@ -986,6 +987,95 @@ function setupMessageListeners() {
                         `地点：${_boLoc}<br>` +
                         `悬赏目标：${_bountyEnemyName}<br>` +
                         `战斗结果: ${result === 'quit' ? '放弃战斗' : '落败，悬赏目标逃脱'}`);
+                }
+            } else if (currentBattleType === 'sidequest') {
+                // 支线战斗结算：推进由 sideQuestService.settleBattle 确定性完成
+                // （victory→winNext，defeat/quit→loseNext，对齐 bounty 口径）
+                if (event.data.remainingItems) {
+                    const remaining = event.data.remainingItems;
+                    inventory['大力丸'] = remaining.daliwan || 0;
+                    inventory['筋骨贴'] = remaining.jingutie || 0;
+                    inventory['金疮药'] = remaining.jinchuangyao || 0;
+                    inventory['霹雳丸'] = remaining.piliwan || 0;
+
+                    Object.keys(inventory).forEach(key => {
+                        if (inventory[key] === 0) {
+                            delete inventory[key];
+                        }
+                    });
+
+                    console.log('[战斗-支线] 道具数量已同步:', remaining);
+                }
+
+                const _sqYear = Math.floor((currentWeek - 1) / 48) + 1;
+                const _sqRemaining = (currentWeek - 1) % 48;
+                const _sqMonth = Math.floor(_sqRemaining / 4) + 1;
+                const _sqWeek = _sqRemaining % 4 + 1;
+                const _sqSeason = seasonNameMap[seasonStatus] || '冬天';
+                const _sqLoc = mapLocation || '天山派';
+                // 先缓存事件字段：hideBattleEvent 会清 currentBattleEvent
+                const _sqEventDesc = (currentBattleEvent && currentBattleEvent.事件描述) || '';
+                const _sqEnemyName = (currentBattleEvent && currentBattleEvent.敌方信息 && currentBattleEvent.敌方信息.名称) || '强敌';
+                let _sqOutcome = null;
+
+                if (result === 'victory') {
+                    let rewardText = '';
+                    let dropText = '';
+
+                    // 即时赏金（建树时按敌人 level 参照悬赏公式预掷，由 211 固定写入）
+                    const rewardSource = currentBattleEvent && currentBattleEvent.敌方信息 && currentBattleEvent.敌方信息.战斗报酬;
+                    if (rewardSource && rewardSource.数值 > 0) {
+                        applyBattleReward(rewardSource);
+                        rewardText = `获得赏金：${rewardSource.数值}`;
+                    }
+                    // 掉落物（按敌方武学档位 roll 稀有度）
+                    const dropResult = generateBattleEventDrop(currentBattleEvent && currentBattleEvent.敌方信息);
+                    if (dropResult && dropResult.itemName) {
+                        dropText = `获得掉落：${dropResult.itemName}`;
+                    }
+
+                    // 推进 winNext（内部 _persist 统一 sync+save+updateAllDisplays，赏金/掉落改动一并入档）
+                    if (typeof sideQuestService !== 'undefined') {
+                        _sqOutcome = sideQuestService.settleBattle('victory');
+                    }
+                    currentBattleType = null;
+                    checkAllValueRanges();
+                    updateAllDisplays();
+                    syncGameDataFromVariables();
+                    hideBattleEvent();
+
+                    // 战报走完整 LLM 轮；判定失败时保留重新生成提示，奖励提示不得覆盖它。
+                    const reportSettled = await handleMessageOutput(
+                        `时间：第${_sqYear}年第${_sqMonth}月第${_sqWeek}周<br>` +
+                        `季节：${_sqSeason}<br>` +
+                        `地点：${_sqLoc}<br>` +
+                        `事件描述: ${_sqEventDesc}<br>` +
+                        `战斗结果: 胜利，击败了${_sqEnemyName}`);
+
+                    if (reportSettled !== false && (rewardText || dropText)) {
+                        const modalLines = [rewardText, dropText].filter(Boolean).join('<br>');
+                        showModal(modalLines);
+                    }
+                } else if (result === 'defeat' || result === 'quit') {
+                    if (typeof sideQuestService !== 'undefined') {
+                        _sqOutcome = sideQuestService.settleBattle(result);
+                    }
+                    currentBattleType = null;
+                    syncGameDataFromVariables();
+                    hideBattleEvent();
+
+                    await handleMessageOutput(
+                        `时间：第${_sqYear}年第${_sqMonth}月第${_sqWeek}周<br>` +
+                        `季节：${_sqSeason}<br>` +
+                        `地点：${_sqLoc}<br>` +
+                        `事件描述: ${_sqEventDesc}<br>` +
+                        `战斗结果: ${result === 'quit' ? '放弃战斗' : `落败，败给了${_sqEnemyName}`}`);
+                }
+
+                // 战报轮渲染完后弹终点/失败结算；普通推进不打扰（战报轮 afterCommit 会继续判定新节点）
+                if (_sqOutcome && (_sqOutcome.action === 'ending' || _sqOutcome.action === 'fail')
+                    && typeof sideQuestRunner !== 'undefined' && typeof sideQuestRunner.notifyOutcome === 'function') {
+                    sideQuestRunner.notifyOutcome(_sqOutcome);
                 }
             } else {
                 // 非NPC切磋、非事件战斗的情况，也需要同步道具
@@ -1113,6 +1203,12 @@ function setupMessageListeners() {
             if (event.data.battleEvent !== undefined) {
                 battleEvent = event.data.battleEvent;
             }
+            // 有进行中支线：抵达时不带按概率生成的随机/战斗事件（地图页已不生成，这里兜底；悬赏分支下方自行置位）
+            if (typeof sideQuestService !== 'undefined' && typeof sideQuestService.suppressesRandomEvents === 'function'
+                && sideQuestService.suppressesRandomEvents()) {
+                randomEvent = 0;
+                battleEvent = 0;
+            }
             
             // 构建返回消息
             const year = Math.floor((currentWeek - 1) / 48) + 1;
@@ -1134,7 +1230,11 @@ function setupMessageListeners() {
 
             // 悬赏战斗：优先于普通"下山游历"流程处理。bountyBattle 只有 index.html 专属的
             // bounty-service.js + 改造后的 showWorldMap() 才会产生，SR 链路不可达（详见开发文档第九节）
-            if (event.data.bountyBattle === 1 && typeof activeBounty !== 'undefined' && activeBounty) {
+            // 与进行中支线同地点时悬赏暂缓（地图页已不标 ⚔，这里兜底），按普通下山游历处理
+            const _bountySuspended = typeof bountyService !== 'undefined'
+                && typeof bountyService.isSuspendedBySideQuest === 'function'
+                && bountyService.isSuspendedBySideQuest();
+            if (event.data.bountyBattle === 1 && typeof activeBounty !== 'undefined' && activeBounty && !_bountySuspended) {
                 currentBattleType = 'bounty';  // 提前标记，battle-exit 时判断用
 
                 const _actorNameBounty = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
@@ -1206,6 +1306,7 @@ function setupMessageListeners() {
             
             // 发送消息
             GameMode = 1;
+            if (typeof sideQuestService !== 'undefined' && sideQuestService.markStarted) sideQuestService.markStarted();
             if (window.GameSceneBridge) GameSceneBridge.invalidate('enter-gal');
             await handleMessageOutput(resultMessage);
         }

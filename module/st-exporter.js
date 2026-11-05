@@ -84,7 +84,10 @@
         }
     }
 
-    function _doExportSTJsonl(customName, defaultName) {
+    async function _doExportSTJsonl(customName, defaultName) {
+        // 与 JSON 导出共用支线落定口径，避免把判定前节点或 buildup 中间态写入 ST 存档。
+        if (typeof _waitForSideQuestSaveSettled === 'function' &&
+            !(await _waitForSideQuestSaveSettled())) return;
         // 同步独立运行时变量回 gameData，并挂当前活跃事件（与 exportSave 一致）
         if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
         gameData._activeEvent = (typeof currentRandomEvent !== 'undefined' ? currentRandomEvent : null)

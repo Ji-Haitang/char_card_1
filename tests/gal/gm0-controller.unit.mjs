@@ -116,9 +116,19 @@ test('unknown scene in GM0 falls back to 天山派 seasonal background; sect loc
   box.setFrames('甲。|龟兹驿馆|12:00|雨烛:微笑|none\n乙。|藏经阁|12:30|雨烛:微笑|none');
   await box.pres().enter({ source: 'page', pageIndex: 0, curtain: false });
   assert.equal(imgOf(box.dom.viewport.querySelector('.slg-scene-layer')).src, 'img/location/天山派_夏_昼.webp');
-  await box.pres().goto(1); // 同 cast 无 CG：G19 不播纸，但换帧统一走 chain 异步
-  assert.equal(box.bridgeCalls.curtain.length, 0, '纯场景切换不播纸');
+  await box.pres().goto(1); // 场景图变化（天山派回退图 → 藏经阁）：G19 播纸
+  assert.equal(box.bridgeCalls.curtain.length, 2, '场景图切换播纸');
   assert.equal(imgOf(box.dom.viewport.querySelector('.slg-scene-layer')).src, 'img/location/藏经阁_昼.webp');
+});
+
+test('G19 场景图判定按实际图：两个非门派场景都回退天山派图不播纸；同场景不播', async () => {
+  const box = gm0({ seasonStatus: 'summer', dayNightStatus: 'daytime' });
+  box.setFrames('甲。|龟兹驿馆|12:00|雨烛:微笑|none\n乙。|沙漠|12:30|雨烛:微笑|none\n丙。|沙漠|12:40|雨烛:大笑|none');
+  await box.pres().enter({ source: 'page', pageIndex: 0, curtain: false });
+  await box.pres().goto(1);
+  assert.equal(box.bridgeCalls.curtain.length, 0, '场景名不同但都回退天山派图，不播');
+  await box.pres().goto(2);
+  assert.equal(box.bridgeCalls.curtain.length, 0, '同场景仅表情变，不播');
 });
 
 test('GM0 never flips enamor nor records __lastValid* even on 发情 frames', async () => {

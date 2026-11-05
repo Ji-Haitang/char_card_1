@@ -49,6 +49,7 @@
 
 // 处理消息输出
 async function handleMessageOutput(message) {
+    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return false;
     // 保存原始未处理的消息（用于弹窗展示）
     const unprocessed_message = message;
     
@@ -138,34 +139,19 @@ async function handleMessageOutput(message) {
     } else {
         // 独立模式：委托给 Pipeline
         if (!getRenderFunction()) {
-            // 检测是否为新周消息
-            var newWeekPattern = /行动选择:新的一周开始了/;
-            var match = message.match(newWeekPattern);
-            if (match) {
-                newWeek = 1;
-                // markWeek = currentWeek;
-            } else {
-                newWeek = 0;
-            }
-
-            var modalHTML = '<div style="font-size: 16px; font-weight: bold; margin-bottom: 15px;">正在发送以下内容</div>' +
-                '<div style="background: #f5f5f5; padding: 15px; border-radius: 8px; max-height: 400px; overflow-y: auto; text-align: left; white-space: pre-wrap; word-break: break-word;">' + unprocessed_message + '</div>' +
-                '<div style="margin-top: 15px; color: #666; font-size: 14px; text-align: center;">自动发送中...</div>';
-            showModal(modalHTML);
-
-            // 保存用户消息，供重新生成时复用
-            lastUserMessage = message;
-
-            // 发送时第一阶段：全量同步 + 全量快照（await确保落盘后再发请求）+ 持久化
-            syncGameDataFromVariables();
-            await storageService.saveFullSnapshot();
-            storageService.saveAppState({ gameData: gameData });
-            console.log('[Standalone] 全量快照已落盘，发起 API 请求');
-
             try {
-                await pipeline.runTurn(message);
-            } catch (e) {}
-            return;
+                return await pipeline.runTurn(message, {
+                    // 在整轮锁内准备快照，避免保存快照的异步间隙重复发送并覆盖回滚现场。
+                    prepare: async function() {
+                        newWeek = /行动选择:新的一周开始了/.test(message) ? 1 : 0;
+                        lastUserMessage = message;
+                        syncGameDataFromVariables();
+                        await storageService.saveFullSnapshot();
+                        storageService.saveAppState({ gameData: gameData });
+                        console.log('[Standalone] 全量快照已落盘，发起 API 请求');
+                    }
+                });
+            } catch (e) { return false; }
         }
         const message_notST = `非酒馆环境以弹窗显示<br>` + unprocessed_message;
         showModal(message_notST);

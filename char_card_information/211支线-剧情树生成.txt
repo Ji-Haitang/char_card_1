@@ -1,0 +1,156 @@
+<%_ const gd = gameData || {}; _%>
+<%_ const npcVisibility = gd.npcVisibility || {}; _%>
+<%_ const wk = gd.currentWeek || 1; _%>
+<%_ const yr = Math.floor((wk - 1) / 48) + 1; _%>
+<%_ const rem = (wk - 1) % 48; _%>
+<%_ const mo = Math.floor(rem / 4) + 1; _%>
+<%_ const w2 = rem % 4 + 1; _%>
+世界观背景（北宋初年，公元1048年，西域）：
+- 故事舞台在天山东段至河西走廊一带，高昌—瓜州的丝绸之路要道横亘其间。
+- 党项西夏崛起，已据河西大半，其擒生军专捕汉民为奴，以瓜州为巢；吕氏伪军盘踞沙州，篡权自立、横征暴敛；回鹘据高昌，掌控丝路贸易，中立自保；宋朝远隔玉门，无力西顾。
+- 天山派乃归义军正统传人，以「护民安邦、锄强扶弱」为宗，庇护流民；派中上下团结，无有叛徒。
+- 崆峒派、昆仑派为西域正派，与天山派守望相助；白驼山贩奴、拜火教惑众，皆为邪派。
+
+玩家接取的传闻：
+  标题: <%= sqRumorTitle %>
+  背景: <%= sqRumorBackground %>
+  玩家目标: <%= sqRumorGoal %>
+  牵涉NPC: <%= sqRelatedNpcs %>
+  唯一相关地点: <%= sqRelatedLocations %>
+  难度: <%= sqDifficulty %>
+
+当前游戏状态：
+  时间: 第<%= yr %>年第<%= mo %>月第<%= w2 %>周　季节: <%= sqSeason %>　主角所在: <%= sqLocation %>
+
+可用素材：
+  已出场NPC（可供剧情牵涉，括号内为字母编号；神秘杂役不可选）:
+    概述:
+      - 掌门与长老为第七代弟子
+      - 掌门与长老亲传的内门弟子和其他的外门弟子皆为第八代弟子
+      - 客座弟子不入代，礼遇和称呼可按第八代内门弟子对待
+    第七代弟子:
+      张天义:
+        身份: 掌门（已故）
+      <%_ if (npcVisibility.A) { _%>
+      破阵子（A）:
+        身份: 34岁回鹘族男性，天山派外务长老，西域义军统领，呼延显和雨烛的师父。
+        外观特点: 190cm高大魁梧，褐色眼眸，褐色长发束成马尾，黑色玄铁软甲配深红战袍，身后有褐色猿尾。
+        性格气质: 豪爽不羁，爱赌爱饮，人称道法将军。表面粗豪实则心思缜密，重情重义。
+      <%_ } _%>
+      <%_ if (npcVisibility.B) { _%>
+      洞庭君（B）:
+        身份: 27岁（外表14岁）汉族女性，天山派刑罚长老，钱塘君的姐姐。
+        外观特点: 145cm娇小如孩童，冰蓝色眼眸，银白短发盘成发髻，白蓝配色袍服，额头有青色龙角，身后有银白龙尾。
+        性格气质: 沉默寡言，公正严明，努力维持成熟气质。
+      <%_ } _%>
+      <%_ if (npcVisibility.M) { _%>
+      玄天青（M）:
+        身份: 31岁汉族男性，天山派岐黄长老，丹药房掌事，鹿椿若的师父。
+        外观特点: 182cm清瘦修长，浅灰色眼眸，墨黑长发用发冠束起，月白色宽袖长袍，脸颊手背有白色蛇鳞，肤色苍白。
+        性格气质: 温文尔雅，智计百出，博闻强识，体弱多病。
+      <%_ } _%>
+      <%_ if (npcVisibility.O) { _%>
+      苓雪妃（O）:
+        身份: 26岁汉族女性，天山派侍剑长老，派中第一高手。
+        外观特点: 170cm修长凌厉，赤红色眼眸，乌黑长发略显凌乱，白衫黑裙外罩黑色披风，生有黑色兔耳，腰系红色系带。
+        性格气质: 冷艳绝伦，武功登峰造极，因往事自我封闭，常在田地劳作。
+      <%_ } _%>
+    第八代弟子:
+      <%_ if (npcVisibility.G) { _%>
+      呼延显（G）:
+        身份: 24岁汉族男性，天山派内门弟子，第八代大师兄，破阵子之徒，带发修行的僧侣。
+        外观特点: 175cm修长纤细，琥珀色眼眸眼角微挑，乌黑长发额前有红色发丝，素衣黑袍佩佛珠，生有灰色狼耳狼尾，男生女相。
+        性格气质: 玩世不恭满嘴歪理，能言善辩。关键时刻亦有可靠的一面。
+      <%_ } _%>
+      <%_ if (npcVisibility.C) { _%>
+      钱塘君（C）:
+        身份: 19岁党项汉族混血女性，天山派内门弟子，洞庭君之妹，已故掌门张天义之徒。
+        外观特点: 168cm苗条挺拔，赤红色竖瞳，银白长发鬓角编成双辫，黑底金纹服饰配赤色流苏带，额侧有赤红龙角，身后有银白龙尾。
+        性格气质: 活泼俏丽，言行跳脱，没心没肺的最佳损友。
+      <%_ } _%>
+      <%_ if (npcVisibility.H) { _%>
+      雨烛（H）:
+        身份: 15岁梵衍那族女性，天山派内门弟子，破阵子之徒。
+        外观特点: 155cm纤细轻盈，碧蓝色眼眸，金色长发发梢带青色渐变扎成小马尾和丸子头，白色旗袍短裙配蓝色素带，腰后生有青色半透明羽翼。
+        性格气质: 活泼乖巧的团宠小天使，纯真善良，是门派的开心果。
+      <%_ } _%>
+      <%_ if (npcVisibility.F) { _%>
+      施延年（F）:
+        身份: 16岁汉族女性，天山派外门弟子，藏经阁管理员。
+        外观特点: 158cm纤细优雅，翠绿色杏眼，乌黑长发饰青玉簪，黑袍青边配藏青腰带，耳旁和腰后生有青绿色羽翼。
+        性格气质: 温文尔雅的书呆子，醉心典籍安贫乐道。偶尔会慷慨激昂针砭时弊。
+      <%_ } _%>
+      <%_ if (npcVisibility.I) { _%>
+      安慕（I）:
+        身份: 18岁汉族女性，天山派外门弟子，伙房主厨。
+        外观特点: 150cm娇小玲珑却力大无穷，琥珀色眼眸因近视常眯眼，金色中长发侧编麻花辫，深青上衣配橙黄围裙，头顶生有金色猫耳，身后有同色猫尾。
+        性格气质: 刀子嘴豆腐心的小厨娘，不善言辞却用美食温暖人心，天生怪力让人不敢靠近。
+      <%_ } _%>
+      <%_ if (npcVisibility.K) { _%>
+      洛潜幽（K）:
+        身份: 17岁汉族女性，天山派外门弟子，负责女红织绣和接待贵客。
+        外观特点: 157cm纤弱单薄，水蓝色杏眼，深蓝色长发，淡青色弟子服配锦鲤香囊，耳侧生有小巧鱼鳍，手腕锁骨等处有彩光鱼鳞。
+        性格气质: 温和善良的纤弱少女，唯独对{{user}}态度反常。精通观星占卜，心思敏感易碎。
+      <%_ } _%>
+      <%_ if (npcVisibility.D) { _%>
+      萧白瑚（D）:
+        身份: 14岁汉族女性，天山派外门弟子，年纪最小的第八代弟子。
+        外观特点: 144cm娇小玲珑，赤红色圆眼，银白色头发扎成双髻配红色铃铛，白衣红裙配黑色束腰，头顶生有白色狐耳，身后有蓬松银白狐尾。
+        性格气质: 傲娇好胜爱逞强，嘴硬心软，自称要成为天下第一。
+      <%_ } _%>
+    客座弟子:
+      <%_ if (npcVisibility.J) { _%>
+      唐沐梨（J）:
+        身份: 20岁汉族女性，蜀中唐门大小姐，天山派客座弟子。
+        外观特点: 165cm挺拔优雅，紫罗兰色杏眼，粉紫渐变长发，白底紫纹便服配深紫腰带，头顶有粉色猫耳，身后有同色猫尾。
+        性格气质: 颐指气使的千金大小姐，实则重情重义。精于商道算计，暗器百发百中。
+      <%_ } _%>
+      <%_ if (npcVisibility.N) { _%>
+      鹿椿若（N）:
+        身份: 17岁汉族女性，昆仑派弟子，天山派客座弟子，玄天青的记名弟子。
+        外观特点: 158cm纤细娇小，淡紫色眼眸，浅绿色长发用发带挽成两束，淡绿色汉服配翠绿对襟上衣，头顶生有白色分叉鹿角，发间有褐白相间鹿耳。
+        性格气质: 温婉慢性子，热衷医术，严重路痴，经常迷路。
+      <%_ } _%>
+    特殊弟子:
+      <%_ if (npcVisibility.E) { _%>
+      姬姒（E）:
+        身份: 外表28岁汉族女性，天山派内门弟子，辈分成谜，自掌门至第八代弟子皆称其为师姐。
+        外观特点: 162cm匀称轻盈，琥珀色眼眸，银白长发插蓝色花簪，青衫黑袍腰挂古旧长剑，生有银白狐耳和蓬松狐尾。
+        性格气质: 古板正直，重情守礼，爱对后辈唠叨说教，饕口馋舌。
+      <%_ } _%>
+  敌人命名黑名单（这些名字是游戏预设角色，禁止用作敌人名）: <%= sqEnemyBlacklist %>
+
+剧情树硬约束（必须全部满足，违反任何一条都将被系统拒绝）：
+- 节点总数 <%= sqNodeMin %>~<%= sqNodeMax %> 个：stage 阶段节点 <%= sqStageMin %>~<%= sqStageMax %> 个、ending 终点节点 <%= sqEndingMin %>~<%= sqEndingMax %> 个且至少 1 个 success
+- 恰好 1 个 choice 抉择节点（2~3 个选项）；<%_ if (sqBattleRequired) { _%>恰好 1 个 battle 战斗节点<%_ } else { _%>0~1 个 battle 战斗节点<%_ } _%>
+- 节点 id 用 "n1"~"n<%= sqNodeMax %>"，rootNodeId 固定 "n1"，n1 必须是 stage 节点
+- 每个 stage 节点的 hiddenGoal 按白描五要素「谁/在哪/对谁/做什么/结果」写得具体可观察，严禁"收集线索""提升好感""打听消息"式抽象目标；successCriteria、failCriteria 各一句话，须能被第三方从剧情正文中判定
+- 全部节点从开端到结局都发生在上述唯一相关地点内，不得安排跨地点旅行或转场；节点不设置 hardGates，阶段判定不设置关键词门槛
+- guideHint 一句话，给主笔 AI 的铺垫建议
+- choice 节点：选项必须是道德或利益上的两难，各选项通向不同后续；label 8 字内；narrative 用第二人称古风白描写出抉择处境（30~60 字），停在决断前一刻
+- battle 节点：必须生成 enemyCategory（仅可从 正派弟子/反派弟子/游侠/军士/匪徒/平民/蒙面人/野兽 中选一个，必须与敌人的身份及情节吻合）；必须生成 enemyAppearance（20~45字，描写可见的脸部/发式/衣着/兵器等外观）；introText 停在兵刃相向一刻（50 字内，第二人称）；enemyName 须有江湖气且避开黑名单；level 固定为 <%= sqEnemyLevel %>，rewardGold 固定为 <%= sqBattleRewardGold %>（均已按主角当前武学、支线难度与悬赏公式预掷，禁止自行更改）；败不应即死——loseNext 尽量指向「败中求生」的替代 stage 支路而非直接失败结局
+- ending 节点：endingType 为 success 或 bittersweet；epilogue 为 40~80 字结局摘要；rewards 按以下已计算上限生成，{"add":数值} 形式：
+  playerStats.武学 / playerStats.学识（单项 ≤<%= sqRewardStatCap %>）；playerStats.声望（≤<%= sqRewardReputationCap %>）；playerStats.金钱（≤<%= sqRewardGoldCap %>）
+  <%_ if (sqRewardTalentCap > 0) { _%>
+  playerTalents.根骨 / playerTalents.悟性 / playerTalents.心性 / playerTalents.魅力（单项 ≤<%= sqRewardTalentCap %>；仅 success 结局可给，且最多 1 项，不得与武学/学识重复堆高成长奖励）
+  <%_ } else { _%>
+  本支线所有结局均不得给予 playerTalents 天赋点
+  <%_ } _%>
+  npcFavorability.A ~ npcFavorability.O（单项 ≤<%= sqRewardFavorCap %>）
+  success 结局给 2~4 项；bittersweet 给 1~2 项，不超过同字段上限且整体从简
+- 所有 onSuccess / options[].next / winNext / loseNext 必须指向存在的节点 id；从 n1 出发必须可达全部节点；不允许成环；每个节点都必须有归宿（stage 节点必有 onSuccess 或 options 或 battle）
+
+严格按以下 JSON 格式输出，用 <SIDE_QUEST_TREE> 和 </SIDE_QUEST_TREE> 标签将整个 JSON 完整包裹，除了标签和 JSON 以外不输出任何其他文字，不加任何 markdown 代码块。示例仅展示字段结构，不代表当前难度所需节点数；必须按上面的当前档位补足节点：
+<SIDE_QUEST_TREE>
+{
+  "rootNodeId": "n1",
+  "nodes": {
+    "n1": {"type":"stage","interaction":"none","title":"阶段名(完成后向玩家揭示)","hiddenGoal":"...","successCriteria":"...","failCriteria":"...","maxTurns":0,"guideHint":"...","onSuccess":"n2"},
+    "n2": {"type":"stage","interaction":"choice","title":"...","hiddenGoal":"...","successCriteria":"...","failCriteria":"...","maxTurns":0,"guideHint":"...","options":[{"id":"b1","label":"...","narrative":"...","next":"n3"},{"id":"b2","label":"...","narrative":"...","next":"n4"}]},
+    "n3": {"type":"stage","interaction":"battle","title":"...","hiddenGoal":"...","successCriteria":"...","failCriteria":"...","maxTurns":0,"guideHint":"...","battle":{"enemyName":"...","enemyCategory":"游侠","enemyAppearance":"衣袍颜色与兵器特征","level":<%= sqEnemyLevel %>,"introText":"...","rewardGold":<%= sqBattleRewardGold %>,"winNext":"n5","loseNext":"n4"}},
+    "n4": {"type":"stage","interaction":"none","title":"...","hiddenGoal":"...","successCriteria":"...","failCriteria":"...","maxTurns":0,"guideHint":"...","onSuccess":"n6"},
+    "n5": {"type":"ending","interaction":"none","title":"结局名","endingType":"success","epilogue":"...","rewards":{"playerStats.声望":{"add":1},"npcFavorability.E":{"add":1}}},
+    "n6": {"type":"ending","interaction":"none","title":"结局名","endingType":"bittersweet","epilogue":"...","rewards":{"playerStats.金钱":{"add":1}}}
+  }
+}
+</SIDE_QUEST_TREE>

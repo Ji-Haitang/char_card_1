@@ -264,7 +264,7 @@ function parseSlgMainText(mainText, mode) {
 
 // ==== GAL_PRESENTATION_BEGIN ====
 // GAL 演出控制器：渲染 .slg-layer-container（场景/立绘/CG）+ .slg-interaction-mask，并管理 GameMode 0 的进出状态机。
-// - GameMode 1：updateStoryDisplay 直接调 renderLayers/clearLayers（行为等同旧 _appendSlgLayers），不走状态机。
+// - GameMode 1：gotoSlg 按同一换帧判定与翻页队列更新图层，保留原有遮罩与业务副作用，不走进出状态机。
 // - GameMode 0：enter/goto/exit/onCommit 按 SKILL G0-G13；演出层是业务层（.scene / #sect-3d-root）之上的纯覆盖，
 //   不读业务状态、不触发 enamor、不写 __lastValid*，唯一副作用是 body.gal-presenting 与 GameSceneBridge.setBusy('gal')。
 // 块内只引用参数、document/window 与 typeof 守卫过的全局，保证可在最小沙箱加载。
@@ -303,11 +303,16 @@ const galPresentation = (() => {
     // 避免 AB/BA 左右来回对调；渲染任一双人帧即刷新；enter/exit 清空，GM1 直接 renderLayers 时靠集合比对自校正
     let lastPairOrder = null;
     let chain = Promise.resolve();
+    let slgSession = null; // GM1 当前已显示帧与排队换帧的所有权；新文本/清层/reset 后旧任务失效
 
-    function clearLayers(viewport) {
+    function removeLayers(viewport) {
         if (!viewport) return;
         viewport.querySelectorAll('.slg-layer-container').forEach(el => el.remove());
         viewport.querySelectorAll('.slg-interaction-mask').forEach(el => el.remove());
+    }
+    function clearLayers(viewport) {
+        if (slgSession && slgSession.viewport === viewport) slgSession = null;
+        removeLayers(viewport);
     }
 
     // GM0 门派子场景中文名集合（G6 判定同源：命中→子场景图/标签显示子场景名；否则回退天山派图/显示天山派）
@@ -564,16 +569,74 @@ const galPresentation = (() => {
         if (!frame) return '';
         return castOf(frame).map(m => m.npc).sort().join('|');
     }
-    // G19：CG 身份变化（无↔有 / 前后都有但不一致）播纸；前后都无 CG 时 NPC 阵容集合变化播纸
-    function needsGotoCurtain(fromFrame, toFrame) {
+    // 场景图键：按实际显示的场景图 URL 比较（与 renderLayers 同源）——GM0 非门派场景统一回退天山派图，
+    // 场景名不同但图相同不算变化；GM1 scene=none 无场景图记为 null。
+    function sceneKeyOf(frame, mode) {
+        if (!frame) return null;
+        try { return sceneUrlFor(frame, mode) || null; } catch (e) { return null; }
+    }
+    // G19：场景图变化播纸；CG 身份变化（无↔有 / 前后都有但不一致）播纸；前后都无 CG 时 NPC 阵容集合变化播纸
+    function needsGotoCurtain(fromFrame, toFrame, mode) {
+        if (sceneKeyOf(fromFrame, mode) !== sceneKeyOf(toFrame, mode)) return true;
         const a = cgKeyOf(fromFrame), b = cgKeyOf(toFrame);
         if (a !== b) return true;
         if (!a && !b) return castKeyOf(fromFrame) !== castKeyOf(toFrame);
         return false;
     }
     /**
+     * GM1 段落切换：首帧同步显示；后续复用 GM0 的 G19 判定、话本封面与同一条翻页队列。
+     * 盖纸前保留旧图，盖好后再换图；连续点击按顺序执行，同目标重复刷新在执行时合并。
+     * 新文本/reset/外部清层/切模式/展开阅读后，旧任务不得重新挂回图层，但已盖的纸仍须揭开。
+     */
+    function gotoSlg(i, opts) {
+        const list = frames(), vp = viewportEl();
+        if (!vp || !list.length) return false;
+        opts = opts || {};
+        const target = clamp(i);
+        function paintSlg(session) {
+            removeLayers(vp);
+            session.index = target;
+            session.layer = renderLayers(vp, list[target], opts);
+            try { window.__lastValidSlgIndex = target; } catch (e) {}
+        }
+        if (!slgSession || slgSession.viewport !== vp || slgSession.list !== list ||
+            vp.querySelector('.slg-layer-container') !== slgSession.layer) {
+            clearLayers(vp);
+            slgSession = { viewport: vp, list, index: target, layer: null, pending: 0 };
+            paintSlg(slgSession);
+            return true;
+        }
+        const session = slgSession;
+        if (target === session.index && !session.pending) { paintSlg(session); return true; }
+        const valid = () => slgSession === session && frames() === list &&
+            (typeof GameMode === 'undefined' || GameMode === 1) &&
+            !(typeof isStoryExpanded !== 'undefined' && isStoryExpanded) &&
+            vp.querySelector('.slg-layer-container') === session.layer;
+        session.pending++;
+        const run = async () => {
+            try {
+                if (!valid()) return false;
+                // 同页只合并翻页动画，仍重绘以应用揭纸期间变更的 CG 等显示设置。
+                if (target === session.index) { paintSlg(session); return true; }
+                const curtain = needsGotoCurtain(list[session.index], list[target], has(opts.mode) ? opts.mode : 1);
+                if (curtain) await playCurtain(true, `第${cnNumber(target + 1)}回`, curtainDetail(list[target]));
+                if (!valid()) {
+                    if (curtain) await playCurtain(false);
+                    return false;
+                }
+                paintSlg(session);
+                if (curtain) await playCurtain(false);
+                return valid();
+            } finally {
+                session.pending--;
+            }
+        };
+        chain = chain.then(run, run);
+        return chain;
+    }
+    /**
      * 演出中翻页（G19）：所有换帧经 chain 串行，严格保持点击序（前一次播纸未走完时后一次排队）；
-     * CG 身份变化或无 CG 下阵容变化播翻页纸（封面文案同 enter：第n回），否则只换图层。
+     * 场景图变化、CG 身份变化或无 CG 下阵容变化播翻页纸（封面文案同 enter：第n回），否则只换图层。
      * 合并/幕布判定推迟到串行执行时刻：doGoToPage 一次翻页会同帧连发 enter+goto 两个换帧，
      * 调用时刻 index 还是旧值判不出来；执行时目标已被前序 run 画过则直接合并跳过（幕布不连播）。
      * 同页幂等（同步 true）；非 playing 同步 false；其余返回 Promise<boolean>。
@@ -591,7 +654,7 @@ const galPresentation = (() => {
             if (gen !== myGen || state !== 'playing') { galLog('goto aborted by newer op', { target }); return false; }
             if (target === index) { galLog('goto merged: already on target', { target }); return true; }
             // 幕布判定同样按执行时刻的当前帧计算（调用时刻的 index 可能还是排队前的旧值）
-            const curtain = needsGotoCurtain(list[index], list[target]);
+            const curtain = needsGotoCurtain(list[index], list[target], 0);
             const frame = list[target];
             if (curtain) await playCurtain(true, `第${cnNumber(target + 1)}回`, curtainDetail(frame));
             if (gen !== myGen || state !== 'playing') {
@@ -650,14 +713,16 @@ const galPresentation = (() => {
     }
     /** GameMode 切换 / 存档恢复等硬重置：同步清层、清 commit 记忆。 */
     function reset() {
+        slgSession = null;
         exit({ reason: 'reset', curtain: false });
+        clearLayers(viewportEl());
         enteredCommitId = null;
     }
 
     return Object.freeze({
         get state() { return state; },
         get index() { return index; },
-        enter, goto, exit, onCommit, reset, isPlaying,
+        enter, goto, gotoSlg, exit, onCommit, reset, isPlaying,
         renderLayers, clearLayers, sceneUrlFor, cnNumber,
     });
 })();
@@ -703,11 +768,9 @@ function updateMoodDisplay() {
 // 更新行动点显示
 function updateActionPointsDisplay() {
     document.getElementById('action-points-display').textContent = `行动点: ${actionPoints}`;
-    
-    const allSceneBtns = document.querySelectorAll('.scene-btn');
-    allSceneBtns.forEach(btn => {
-        btn.disabled = actionPoints < 1;
-    });
+    // 不再按行动点禁用场景按钮（与3D场景对齐）：
+    // 需要行动点的行动由 performAction 内部检查并弹窗提示"行动点不足"，
+    // 不耗行动点的按钮（交易、炼丹、耕种、下山、悬赏等）在0行动点时仍可使用。
 }
 
 // 更新所有显示
@@ -717,6 +780,7 @@ function updateAllDisplays() {
     updateActionPointsDisplay();
     updateStatsDisplay();
     updateSLGReturnButton();  // 确保这个函数被调用
+    updateSideQuestStatusBar();  // 支线常驻状态条（无进行中支线时自动隐藏）
     
     // 删除或注释掉这部分
     // if (GameMode === 0) {
@@ -1230,8 +1294,8 @@ function updateStoryDisplay() {
     const galPlaying = GameMode === 0 && galPresentation.isPlaying();
     if (galPlaying) {
         galPresentation.goto(currentPage);
-    } else if (!isStoryExpanded || GameMode !== 1) {
-        // 只在非展开模式或非SLG模式时清除图层（连容器与遮罩一起，避免空容器壳累积）
+    } else if (GameMode !== 1 || !Array.isArray(slgModeData) || !slgModeData.length) {
+        // GM1 换段由 gotoSlg 在纸页盖好后清层；这里提前清会丢失上一帧并让视窗闪回操作层。
         galPresentation.clearLayers(viewport);
         // 退出SLG相关全局标记
         try { if (GameMode !== 1) document.body.classList.remove('slg-global'); } catch (e) {}
@@ -1259,8 +1323,7 @@ function updateStoryDisplay() {
         if (GameMode === 1 && slgModeData && slgModeData.length > 0
             && viewport && !viewport.querySelector('.slg-layer-container')) {
             const expandIndex = Math.min(currentPage, slgModeData.length - 1);
-            try { window.__lastValidSlgIndex = expandIndex; } catch (e) {}
-            galPresentation.renderLayers(viewport, slgModeData[expandIndex], _slgLayerOptsGm1());
+            galPresentation.gotoSlg(expandIndex, _slgLayerOptsGm1());
         }
         storyElement.classList.add('expanded');
         if (expandBtn) expandBtn.innerHTML = '▲ 收起';
@@ -1312,10 +1375,7 @@ function updateStoryDisplay() {
         // 如果是SLG模式，显示对应的图片（事件页使用“最后验证有效”的图层）
         if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
             const effectiveIndex = Math.min(currentPage, slgModeData.length - 1);
-            const pageData = slgModeData[effectiveIndex];
-            // 记录最后一次有效的图层索引，供其他模块使用（如战斗背景）
-            try { window.__lastValidSlgIndex = effectiveIndex; } catch (e) {}
-            galPresentation.renderLayers(viewport, pageData, _slgLayerOptsGm1());
+            galPresentation.gotoSlg(effectiveIndex, _slgLayerOptsGm1());
         }
         
         // GameMode 0 且本轮有演出帧：正文中间 1/3 点击 = 进入 GAL 演出（G2），单页时也要挂点击
@@ -1338,7 +1398,7 @@ function updateStoryDisplay() {
                     if (multiPage) doPrevPage();
                 } else if (zone === 'right') {
                     if (multiPage) doNextPage();
-                } else if (galEnterable) {
+                } else if (galEnterable && !_turnBusy()) {
                     // 演出中再点 = goto 当前页（幂等）；事件页越界由控制器 clamp 到末帧
                     galPresentation.enter({ source: 'page', pageIndex: Math.min(currentPage, slgModeData.length - 1), curtain: true });
                 }
@@ -1385,6 +1445,7 @@ function updateStoryDisplay() {
         const viewportEl = document.getElementById('main-viewport');
         const randomContainer = document.getElementById('random-event-container');
         const battleContainer = document.getElementById('battle-event-container');
+        const sidequestContainer = document.getElementById('sidequest-interaction-container');
 
         if (viewportEl && randomContainer && randomContainer.parentElement !== viewportEl) {
             viewportEl.appendChild(randomContainer);
@@ -1392,18 +1453,66 @@ function updateStoryDisplay() {
         if (viewportEl && battleContainer && battleContainer.parentElement !== viewportEl) {
             viewportEl.appendChild(battleContainer);
         }
+        if (viewportEl && sidequestContainer && sidequestContainer.parentElement !== viewportEl) {
+            viewportEl.appendChild(sidequestContainer);
+        }
 
         const hasBattle = (typeof currentBattleEvent !== 'undefined') && !!currentBattleEvent;
         const hasRandom = !hasBattle && (typeof currentRandomEvent !== 'undefined') && !!currentRandomEvent;
-        const shouldShowByMode = isStoryExpanded 
-            ? (hasBattle || hasRandom) 
-            : ((storyPages && storyPages.length > 0) && currentPage === storyPages.length - 1 && (hasBattle || hasRandom));
+
+        // 支线抉择：显隐以 active.pendingInteraction（持久化状态）为准而非内存变量，
+        // regenerate 回滚到 buildup 后自动隐藏；awaiting 且内容缺失时补渲染（读档恢复兜底）
+        let hasSqChoice = false;
+        let sqChoiceNode = null;
+        if (typeof sideQuestService !== 'undefined' && sideQuestService.getActive) {
+            try {
+                const sqActive = sideQuestService.getActive();
+                if (sqActive && sqActive.pendingInteraction
+                    && sqActive.pendingInteraction.kind === 'choice'
+                    && sqActive.pendingInteraction.state === 'awaiting') {
+                    sqChoiceNode = sqActive.nodes ? sqActive.nodes[sqActive.pendingInteraction.nodeId] : null;
+                    hasSqChoice = !!sqChoiceNode;
+                }
+            } catch (e) {}
+        }
+        if (hasSqChoice && !_sideQuestChoiceNode && sqChoiceNode) {
+            displaySideQuestChoice(sqChoiceNode, { silent: true });
+        }
+
+        const shouldShowByMode = isStoryExpanded
+            ? (hasBattle || hasRandom || hasSqChoice)
+            : ((storyPages && storyPages.length > 0) && currentPage === storyPages.length - 1 && (hasBattle || hasRandom || hasSqChoice));
 
         if (randomContainer) {
             randomContainer.classList.toggle('show', shouldShowByMode && hasRandom);
         }
         if (battleContainer) {
             battleContainer.classList.toggle('show', shouldShowByMode && hasBattle);
+        }
+        if (sidequestContainer) {
+            if (!hasSqChoice && typeof _sideQuestChoiceNode !== 'undefined' && _sideQuestChoiceNode) {
+                hideSideQuestChoice();
+            }
+            sidequestContainer.classList.toggle('show', shouldShowByMode && hasSqChoice);
+        }
+        // 支线抉择与随机/战斗事件同屏共存：三者共用 bottom 锚定 + 同 z-1500，同时 show 会原位堆叠，
+        // 后插入的支线容器把事件容器整个盖住。这里上下分区：事件容器限高 40% 留在底部，
+        // 支线容器抬到其上方、高度下限 120px（竖屏视窗偏矮时两容器各自滚动兜底），
+        // 保证两套选项同屏可见可操作、互不遮挡。
+        if (sidequestContainer) {
+            const otherContainer = (battleContainer && battleContainer.classList.contains('show')) ? battleContainer
+                : ((randomContainer && randomContainer.classList.contains('show')) ? randomContainer : null);
+            if (otherContainer && sidequestContainer.classList.contains('show')) {
+                otherContainer.style.maxHeight = '40%';
+                const lift = (otherContainer.offsetHeight || 0) + 8;  // 设完限高再读，强制重排拿到新高度
+                sidequestContainer.style.bottom = `calc(clamp(10px, 3vw, 16px) + ${lift}px)`;
+                sidequestContainer.style.maxHeight = `max(120px, calc(100% - clamp(80px, 12vw, 120px) - ${lift}px))`;
+            } else {
+                sidequestContainer.style.bottom = '';
+                sidequestContainer.style.maxHeight = '';
+                if (randomContainer) randomContainer.style.maxHeight = '';
+                if (battleContainer) battleContainer.style.maxHeight = '';
+            }
         }
     } catch (e) {}
     
@@ -1414,13 +1523,210 @@ function updateStoryDisplay() {
     }, 100);
 }
 
+// =========================================================================
+// 支线交互（SideQuestInteraction）：呈现由 sideQuestRunner._presentInteraction 调用，
+// 显隐由 updateStoryDisplay 按 active.pendingInteraction 持久化状态统一控制
+// =========================================================================
+
+// 当前呈现的抉择节点（仅作渲染内容缓存；显隐判断不依赖它，以 pendingInteraction 为准）
+let _sideQuestChoiceNode = null;
+
+/**
+ * 渲染支线抉择按钮组（复用 .event-option-btn 样式，与随机事件分区共存）
+ * @param {object} node - choice 节点（options: [{id, label, narrative, next}]）
+ * @param {object} [opts] - silent: 仅渲染内容不主动 show（updateStoryDisplay 补渲染路径用）
+ */
+function displaySideQuestChoice(node, opts) {
+    const container = document.getElementById('sidequest-interaction-container');
+    const description = document.getElementById('sidequest-choice-description');
+    const options = document.getElementById('sidequest-choice-options');
+    if (!container || !options || !node || !Array.isArray(node.options)) return;
+
+    _sideQuestChoiceNode = node;
+
+    // 处境描述用节点标题（guideHint 是给主 LLM 的隐藏铺垫建议，玩家不可见）
+    if (description) description.textContent = node.title || '';
+    options.innerHTML = '';
+
+    node.options.forEach((opt) => {
+        if (!opt) return;
+        const btn = document.createElement('button');
+        btn.className = 'event-option-btn';
+        // 结构与随机事件按钮一致（主文案 + 小字），视觉自动复用
+        const labelDiv = document.createElement('div');
+        labelDiv.className = 'option-desc';
+        labelDiv.textContent = opt.label || '';
+        btn.appendChild(labelDiv);
+        if (opt.narrative) {
+            const narrativeDiv = document.createElement('div');
+            narrativeDiv.className = 'option-reward';
+            narrativeDiv.textContent = opt.narrative;
+            btn.appendChild(narrativeDiv);
+        }
+        btn.onclick = () => handleSideQuestChoice(opt.id);
+        options.appendChild(btn);
+    });
+
+    // afterCommit 异步呈现时 updateStoryDisplay 本轮不会再跑，须手动 show；
+    // silent 模式（updateStoryDisplay 补渲染）交由其 toggle 统一控制
+    if (!opts || !opts.silent) {
+        container.classList.add('show');
+    }
+}
+
+function hideSideQuestChoice() {
+    _sideQuestChoiceNode = null;
+    const container = document.getElementById('sidequest-interaction-container');
+    if (container) container.classList.remove('show');
+}
+
+/**
+ * 玩家点选抉择选项：applyChoice 确定性推进 → 构造抉择消息走正常 LLM 轮
+ * （下一轮 msg4 注入新节点指导；若直达终点/失败，本轮渲染完后弹结算）
+ */
+async function handleSideQuestChoice(optionId) {
+    if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
+    if (typeof sideQuestService === 'undefined') return;
+    const result = sideQuestService.applyChoice(optionId);
+    if (!result || !result.option) return;
+    hideSideQuestChoice();
+
+    const sqActive = sideQuestService.getActive();
+    const questTitle = sqActive ? sqActive.title : '';
+    const _actorName = (typeof isInRenderEnvironment === 'function' && isInRenderEnvironment()) ? '{{user}}' : (gameData.playerName || '主角');
+    const _cqYear = Math.floor((currentWeek - 1) / 48) + 1;
+    const _cqRemaining = (currentWeek - 1) % 48;
+    const _cqMonth = Math.floor(_cqRemaining / 4) + 1;
+    const _cqWeek = _cqRemaining % 4 + 1;
+    const choiceMessage =
+        `时间：第${_cqYear}年第${_cqMonth}月第${_cqWeek}周<br>` +
+        `季节：${seasonNameMap[seasonStatus] || '冬天'}<br>` +
+        `地点：${mapLocation || '天山派'}<br>` +
+        `【支线·${questTitle}】${_actorName}下定决心：${result.option.label}`;
+
+    await handleMessageOutput(choiceMessage);
+
+    const outcome = result.outcome;
+    if (outcome && (outcome.action === 'ending' || outcome.action === 'fail')
+        && typeof sideQuestRunner !== 'undefined' && typeof sideQuestRunner.notifyOutcome === 'function') {
+        sideQuestRunner.notifyOutcome(outcome);
+    }
+}
+
+/**
+ * 支线战斗呈现（sideQuestRunner._presentInteraction 调用）：预标记 + 复用战斗遭遇面板
+ * afterCommit 异步触发，updateStoryDisplay 本轮不会再跑，须手动 show
+ */
+function presentSideQuestBattle(node) {
+    if (!node || !node.battle) return;
+    currentBattleType = 'sidequest';  // 预标记，battle-exit 结算分支判断用（仿 worldmap-exit bounty）
+    const battleEvt = {
+        事件类型: '战斗事件',
+        事件描述: node.battle.introText || '',
+        敌方信息: {
+            名称: node.battle.enemyName || '神秘人',
+            类别: (typeof sideQuestService !== 'undefined' && sideQuestService.resolveBattleCategory)
+                ? sideQuestService.resolveBattleCategory(node.battle)
+                : (node.battle.enemyCategory || '游侠'),
+            外观: node.battle.enemyAppearance || '',
+            属性: { 攻击力: '中', 生命力: '中', 武学: node.battle.level },
+            战斗报酬: { 类型: '金钱', 数值: node.battle.rewardGold || 0 }
+        }
+    };
+    inputEnable = 0;
+    if (typeof updateFreeActionInputState === 'function') updateFreeActionInputState();
+    if (typeof displayBattleEvent === 'function') displayBattleEvent(battleEvt);
+    const container = document.getElementById('battle-event-container');
+    if (container) container.classList.add('show');
+}
+
+// sideQuestRunner._presentInteraction 的 UI 钩子（未注册时 runner 仅做状态翻转，安全空操作）
+window.SideQuestInteraction = {
+    presentChoice: function(node) { displaySideQuestChoice(node); },
+    presentBattle: function(node) { presentSideQuestBattle(node); }
+};
+
+/* ============ 轻提示 toast（支线进展/抉择/遭遇，非阻塞） ============ */
+const TOAST_MAX = 3;
+function _ensureToastStack() {
+    let stack = document.getElementById('toast-stack');
+    if (stack) return stack;
+    const host = document.getElementById('main-viewport') || document.body;
+    if (!host) return null;
+    stack = document.createElement('div');
+    stack.id = 'toast-stack';
+    stack.setAttribute('aria-live', 'polite');
+    host.appendChild(stack);
+    return stack;
+}
+// showToast(text, { type, duration })：type 如 'sidequest'（琥珀金），duration 默认 2600ms
+function showToast(text, opts) {
+    const stack = _ensureToastStack();
+    if (!stack) return;
+    opts = opts || {};
+    const duration = Number(opts.duration) > 0 ? Number(opts.duration) : 2600;
+    const item = document.createElement('div');
+    item.className = 'toast-item' + (opts.type ? ' toast-' + opts.type : '');
+    item.textContent = String(text == null ? '' : text);
+    stack.appendChild(item);
+    // 队列上限：超出时丢弃最旧一条
+    while (stack.children.length > TOAST_MAX) stack.removeChild(stack.firstChild);
+    requestAnimationFrame(() => item.classList.add('show'));
+    setTimeout(() => {
+        item.classList.remove('show');
+        item.classList.add('hide');
+        setTimeout(() => { if (item.parentNode) item.parentNode.removeChild(item); }, 320);
+    }, duration);
+}
+
+/* ============ 支线常驻状态条（#map-scene .status-display 后，点击开面板） ============ */
+function updateSideQuestStatusBar() {
+    const bar = document.getElementById('sidequest-status-bar');
+    if (!bar) return;
+    // 同步入口按钮可用态（有进行中支线时「打探传闻」禁用）
+    if (typeof updateSideQuestEntryButtons === 'function') updateSideQuestEntryButtons();
+    if (typeof updateTaskInfoButton === 'function') updateTaskInfoButton();
+    const svc = (typeof sideQuestService !== 'undefined') ? sideQuestService : null;
+    const active = (svc && svc.isAvailable && svc.isAvailable()) ? svc.getActive() : null;
+    if (!active) {
+        bar.style.display = 'none';
+        bar.classList.remove('is-judging');
+        return;
+    }
+    // 第 N 阶 = 已揭示 stage 节点数 + 1（当前节点），分母为 stage 节点总数
+    let stageTotal = 0;
+    Object.keys(active.nodes || {}).forEach(id => {
+        if (active.nodes[id] && active.nodes[id].type === 'stage') stageTotal++;
+    });
+    const seen = {};
+    let revealed = 0;
+    (active.log || []).forEach(entry => {
+        if (entry && entry.revealedTitle && entry.nodeId && !seen[entry.nodeId]) {
+            seen[entry.nodeId] = true;
+            revealed++;
+        }
+    });
+    stageTotal = Math.max(stageTotal, 1);
+    const stageNow = Math.min(revealed + 1, stageTotal);
+    let text = '支线·' + (active.title || '') + ' · 第' + stageNow + '/' + stageTotal + '阶';
+    if (active.deadlineWeek > 0 && typeof currentWeek !== 'undefined') {
+        text += ' · 余' + Math.max(0, active.deadlineWeek - currentWeek) + '周';
+    }
+    const judging = (typeof sideQuestRunner !== 'undefined' && sideQuestRunner &&
+        typeof sideQuestRunner.isRunning === 'function' && sideQuestRunner.isRunning());
+    bar.classList.toggle('is-judging', !!judging);
+    bar.textContent = judging ? (text + ' · 推敲中…') : text;
+    bar.style.display = '';
+    bar.onclick = () => { if (typeof showSideQuestPanel === 'function') showSideQuestPanel('active'); };
+}
+
 // 翻页函数（注意函数名改为doXXX避免冲突）
 function doGoToPage(pageNum) {
     if (pageNum >= 0 && pageNum < storyPages.length) {
         currentPage = pageNum;
         // GameMode 0 且本轮有演出帧：翻页（正文左右 1/3 / 箭头 / 页码点）即进入演出；已在演出中则 enter 退化为 goto，
-        // 展开态不响应。事件描述页越界由控制器 clamp 到末帧。
-        if (GameMode === 0 && !isStoryExpanded && Array.isArray(slgModeData) && slgModeData.length > 0) {
+        // 展开态不响应。事件描述页越界由控制器 clamp 到末帧。生成中只翻正文、不进演出。
+        if (GameMode === 0 && !isStoryExpanded && Array.isArray(slgModeData) && slgModeData.length > 0 && !_turnBusy()) {
             galPresentation.enter({ source: 'page', pageIndex: Math.min(currentPage, slgModeData.length - 1), curtain: true });
         }
         updateStoryDisplay();
@@ -1462,6 +1768,11 @@ function doToggleStoryExpand() {
         try { galPresentation.exit({ reason: 'expand', curtain: true }); } catch (e) {}
     }
     updateStoryDisplay();
+}
+
+// 回合生成/提交中（流式遮罩显示期间）：只允许翻正文，不进 GAL 演出（帧还在流式增长，且新回合已退出演出）
+function _turnBusy() {
+    return typeof pipeline !== 'undefined' && pipeline && typeof pipeline.isBusy === 'function' && pipeline.isBusy();
 }
 
 // 显示弹窗
@@ -1693,6 +2004,18 @@ function closeAllSpecialModals() {
     const shopDetailModal = document.getElementById('shop-detail-modal');
     if (shopDetailModal && shopDetailModal.style.display === 'block') {
         closeShopDetailModal();
+    }
+
+    // 关闭支线面板
+    const sideQuestModal = document.getElementById('side-quest-modal');
+    if (sideQuestModal && sideQuestModal.style.display === 'block' && typeof closeSideQuestPanel === 'function') {
+        closeSideQuestPanel();
+    }
+
+    // 关闭任务信息面板
+    const taskInfoModal = document.getElementById('task-info-modal');
+    if (taskInfoModal && taskInfoModal.style.display === 'block' && typeof closeTaskInfoPanel === 'function') {
+        closeTaskInfoPanel();
     }
 }
 

@@ -7,6 +7,11 @@
 ```powershell
 # 本目录单测（注意：必须用 glob；传目录会 MODULE_NOT_FOUND）
 node --test "tests/gal/*.unit.mjs"
+# 受限 Windows 环境若不支持测试子进程管道，可改为同进程运行：
+node --test --test-isolation=none "tests/gal/*.unit.mjs"
+
+# GM1 真实页面翻页冒烟（传入一个尚不存在的绝对证据目录）
+node tests/gal/gm1-controller.browser.mjs E:\JJBurst\git\.scene3d-work\gm1-page-turn-new
 
 # 涉及文件的语法检查
 node --check module/game-ui.js; node --check module/game-events.js; node --check module/pipeline.js; node --check module/scene3d-bridge.js; node --check module/game-helpers.js; node --check module/storage-service.js
@@ -27,6 +32,8 @@ npm.cmd --prefix scene3d run test:unit
 | `time.unit.mjs` | Phase 2：末帧时间 → 前序帧 → SIDE_NOTE → 不变 的兜底链；旧格式行为不变 |
 | `presentation.unit.mjs` | Phase 3：`renderLayers` 单/双 NPC 站位、G6 场景 URL、G7 开关、`clearLayers`、`goto` 幂等、`cnNumber` |
 | `gm0-controller.unit.mjs` | Phase 4：`onCommit` 门控、`enter/goto/exit/reset` 状态机、mask 退出、翻页纸文案、`hasPendingApply` 抑制、busy/body class 收放 |
+| `gm1-controller.unit.mjs` | GM1：G19 判定与 GM0 对照、连续翻页与去重、盖纸后换图、过期队列取消、真实分页入口、事件页与展开阅读 |
+| `gm1-controller.browser.mjs` | 合成 GM1 存档在桌面/手机视口的真实导航与翻页逐帧采样；3D 关闭；证据写入指定的新目录 |
 | `fixtures/legacy-gm1.txt` | 旧格式 GM1 正文（非随行 NPC、none 场景、无标记纯文本、末尾残文） |
 | `fixtures/legacy-gm1.expected.json` | Phase 0 快照 |
 | `fixtures/legacy-special-event.txt` | `special-event.js` 抽出的 GM0 下旧格式片段（龟兹场景） |
@@ -37,7 +44,7 @@ npm.cmd --prefix scene3d run test:unit
 - 切片块内只用 `function`/`const`/`let` 顶层声明，不依赖外部模块；全局引用一律 `typeof` 守卫。
 - 沙箱里 `let` 绑定只能在沙箱内赋值：`box.sandbox.__v = v; box.run('GameMode = __v;')`，直接改 `box.sandbox.GameMode` 无效。
 - 翻页纸/busy 通过 fake `GameSceneBridge`（`playCurtain/setBusy/hasPendingApply`）记录调用，断言调用序列而非 DOM 动画。
-- 浏览器验收脚本（`*.browser.mjs`）本轮未编写；如补写，沿用 `scene3d/scripts/run-browser.mjs` 启动方式，证据目录 `.scene3d-work/gal-<phase>-<序号>/`（须是尚不存在的路径）。
+- `gm1-controller.browser.mjs` 复用 scene3d 的本地测试服务与合成存档，在独立浏览器 profile 中检查真实分页入口和纸页覆盖时序；证据目录必须是 `.scene3d-work/` 下尚不存在的绝对路径。
 
 ## 编辑 `module/game-ui.js` 的纪律
 

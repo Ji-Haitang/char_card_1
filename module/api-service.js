@@ -91,9 +91,11 @@ var apiService = (function() {
      * @param {string} url - 原始 API URL
      * @returns {string}
      */
-    function _resolveUrl(url) {
-        if (config.corsProxyEnabled && config.corsProxyUrl) {
-            var proxy = config.corsProxyUrl.replace(/\/+$/, '');
+    function _resolveUrl(url, requestConfig) {
+        // 测试请求使用表单当前值，未传入的字段继续沿用已保存配置；不提前保存草稿。
+        var routing = Object.assign({}, config, requestConfig || {});
+        if (routing.corsProxyEnabled && routing.corsProxyUrl) {
+            var proxy = routing.corsProxyUrl.replace(/\/+$/, '');
             return proxy + '?target=' + encodeURIComponent(url);
         }
         return url;
@@ -199,7 +201,8 @@ var apiService = (function() {
                 contents: contents,
                 systemInstruction: { parts: [{ text: systemPrompt }] },
                 generationConfig: _genConfig
-            })
+            }),
+            signal: signal
         });
         if (!response.ok) {
             var text = '';
@@ -216,18 +219,18 @@ var apiService = (function() {
 
     // ========== 模型列表 ==========
 
-    async function fetchModels(endpoint, apiKey, type) {
+    async function fetchModels(endpoint, apiKey, type, requestConfig) {
         if (!endpoint || !apiKey) {
             throw new Error('请填写 API 地址和 Key');
         }
         if (type === 'gemini') {
-            return _fetchGeminiModels(endpoint, apiKey);
+            return _fetchGeminiModels(endpoint, apiKey, requestConfig);
         }
-        return _fetchOpenAIModels(endpoint, apiKey);
+        return _fetchOpenAIModels(endpoint, apiKey, requestConfig);
     }
 
-    async function _fetchOpenAIModels(endpoint, apiKey) {
-        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models');
+    async function _fetchOpenAIModels(endpoint, apiKey, requestConfig) {
+        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models', requestConfig);
         var response = await fetch(url, {
             method: 'GET',
             headers: { 'Authorization': 'Bearer ' + apiKey }
@@ -246,8 +249,8 @@ var apiService = (function() {
         return models;
     }
 
-    async function _fetchGeminiModels(endpoint, apiKey) {
-        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models?key=' + encodeURIComponent(apiKey));
+    async function _fetchGeminiModels(endpoint, apiKey, requestConfig) {
+        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models?key=' + encodeURIComponent(apiKey), requestConfig);
         var response = await fetch(url, {
             method: 'GET'
         });
@@ -288,7 +291,7 @@ var apiService = (function() {
     }
 
     async function _callOpenAIWith(cfg, messages) {
-        var url = cfg.endpoint.replace(/\/+$/, '') + '/chat/completions';
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/chat/completions', cfg);
         var response = await fetch(url, {
             method: 'POST',
             headers: {
@@ -315,7 +318,7 @@ var apiService = (function() {
         var contents = messages.map(function(m) {
             return { role: 'user', parts: [{ text: m.content }] };
         });
-        var url = cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent?key=' + encodeURIComponent(cfg.apiKey);
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent?key=' + encodeURIComponent(cfg.apiKey), cfg);
         var response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },

@@ -20,7 +20,7 @@ const closeVector = (actual, expected, tolerance = 0.75) => actual?.length === e
 const mobileCss = await readFile(path.join(gameRoot, 'module/mobile-density-overrides.css'), 'utf8');
 const dialogsCss = await readFile(path.join(gameRoot, 'module/game-styles-dialogs.css'), 'utf8');
 assert.match(mobileCss, /--viewport-corner-bottom:\s*max\(12px,\s*env\(safe-area-inset-bottom,\s*0px\)\)/, 'mobile CSS must retain safe-area bottom fallback');
-assert.match(mobileCss, /bottom:\s*calc\(var\(--viewport-corner-bottom\)\s*\+\s*var\(--viewport-corner-size\)\s*\+\s*10px\)/, 'reset CSS must retain size+10+safe-bottom contract');
+assert.match(mobileCss, /bottom:\s*calc\(var\(--viewport-corner-bottom\)\s*\+\s*\(var\(--viewport-corner-size\)\s*\+\s*10px\)\s*\*\s*2\)/, 'reset CSS must retain (size+10)*2+safe-bottom contract (task button sits between gear and reset)');
 assert.match(dialogsCss, /padding-top:\s*0\s*!important/, 'status CSS must retain padding-top:0 contract');
 
 const cases = [
@@ -86,7 +86,11 @@ try {
       assert.ok(Math.abs(reset.width - gear.width) < 0.1 && Math.abs(reset.height - gear.height) < 0.1, `${testCase.label}: reset and gear sizes differ`);
       assert.ok(Math.abs(reset.width - 0.8 * record.layout.controlBtn.height) < 0.75, `${testCase.label}: corner size ${reset.width.toFixed(2)}px != 80% of control-btn height ${record.layout.controlBtn.height.toFixed(2)}px`);
       assert.ok(Math.abs(reset.rightGap - gear.rightGap) < 0.1, `${testCase.label}: reset and gear right edges differ`);
-      assert.ok(Math.abs((gear.top - reset.bottom) - 10) < 0.2, `${testCase.label}: corner controls gap is ${(gear.top - reset.bottom).toFixed(2)}px, expected 10px`);
+      const task = await page.evaluate(() => { const r = document.getElementById('viewport-task-btn').getBoundingClientRect(); return { top: r.top, bottom: r.bottom, width: r.width, right: r.right }; });
+      assert.ok(Math.abs(task.width - gear.width) < 0.1, `${testCase.label}: task button and gear sizes differ`);
+      assert.ok(Math.abs(task.right - gear.right) < 0.1, `${testCase.label}: task button and gear right edges differ`);
+      assert.ok(Math.abs((gear.top - task.bottom) - 10) < 0.2, `${testCase.label}: gear/task gap is ${(gear.top - task.bottom).toFixed(2)}px, expected 10px`);
+      assert.ok(Math.abs((task.top - reset.bottom) - 10) < 0.2, `${testCase.label}: task/reset gap is ${(task.top - reset.bottom).toFixed(2)}px, expected 10px`);
       assert.equal(reset.hit.hit, true, `${testCase.label}: reset center is not hit by reset`);
       assert.equal(gear.hit.hit, true, `${testCase.label}: gear center is not hit by gear`);
 

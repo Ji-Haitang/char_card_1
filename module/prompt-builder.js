@@ -757,12 +757,15 @@ var promptBuilder = (function() {
         return lastAssistantReply || '（故事尚未开始，暂无上一轮正文）';
     }
 
+    // 有支线时在 <user_input> 强调句后追加，避免主笔只遵循玩家输入而忽略隐藏指导
+    var SIDE_QUEST_GUIDE_REMINDER = '同时，当前存在 <SideQuestGuide>，它是当前支线的隐藏剧情指导，必须与 <user_input> 一并遵循，且不得向玩家泄露。';
+
     /**
      * 构建消息4: USER
      * 结构: </LatestReply></history> + <fresh> + 自定义世界书No.2 + 用户输入 + <MainTextGuidance> + 105列表
      *       + </background> + <Order>(内含110格式规范，位于</request>之后) + <ThinkGuidance> + </Order>
      */
-    function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2) {
+    function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2, sideQuestGuide) {
         var parts = [];
 
         // 闭合消息2打开的 <LatestReply> 与 <history>
@@ -784,6 +787,7 @@ var promptBuilder = (function() {
 
         // 用户输入
         parts.push('# `<user_input>`作为本次交互的用户输入，以`<user_input>`为大纲指导，丰富细节，进行扩写后输出，不得省略或跳过用户输入中的情节，并合理流畅地继续向下推进');
+        if (sideQuestGuide) parts.push(SIDE_QUEST_GUIDE_REMINDER);
         parts.push('');
         parts.push('<user_input>');
         parts.push(userMessage);
@@ -796,6 +800,12 @@ var promptBuilder = (function() {
             parts.push('<MainTextGuidance>');
             parts.push(templateEngine.renderPromptTemplate(actionGuide, variables));
             parts.push('</MainTextGuidance>');
+            parts.push('');
+        }
+
+        // <SideQuestGuide>（支线暗线隐藏指导，side-quest-service 预渲染的纯文本，不过 EJS；计入 msg4 即 fixedTokens）
+        if (sideQuestGuide) {
+            parts.push(sideQuestGuide);
             parts.push('');
         }
 
@@ -906,7 +916,7 @@ var promptBuilder = (function() {
      * 结构: </LatestReply></互动历史> + 世界书2 + <user_input> + <可用信息列表>(MainTextGuidance + 105)
      *       + <核心指导>(含 EJS enamor 门控) + <输出模板>(110 + 输出模板说明) + 任务链
      */
-    function _buildXjMsg4User(variables, userMessage, actionGuide, wbBlocks2) {
+    function _buildXjMsg4User(variables, userMessage, actionGuide, wbBlocks2, sideQuestGuide, locationConstraint) {
         var parts = [];
 
         // 闭合消息2打开的 <LatestReply> 与 <互动历史>
@@ -925,6 +935,7 @@ var promptBuilder = (function() {
 
         // 用户输入
         parts.push('# `<user_input>`作为本次交互的用户输入，以`<user_input>`为大纲指导，丰富细节，进行扩写后输出，不得省略或跳过用户输入中的情节，并合理流畅地继续向下推进');
+        if (sideQuestGuide) parts.push(SIDE_QUEST_GUIDE_REMINDER);
         parts.push('');
         parts.push('<user_input>');
         parts.push(userMessage);
@@ -938,6 +949,11 @@ var promptBuilder = (function() {
             parts.push('<MainTextGuidance>');
             parts.push(templateEngine.renderPromptTemplate(actionGuide, variables));
             parts.push('</MainTextGuidance>');
+            parts.push('');
+        }
+        // <SideQuestGuide>（支线暗线隐藏指导，随 <可用信息列表> 注入，与 ny 预设同规格）
+        if (sideQuestGuide) {
+            parts.push(sideQuestGuide);
             parts.push('');
         }
         parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_105, variables));
@@ -954,7 +970,7 @@ var promptBuilder = (function() {
         parts.push('');
         parts.push(templateEngine.renderPromptTemplate(PROMPT_CORE_110, variables).replace(/^\s+|\s+$/g, ''));
         parts.push('');
-        parts.push(_po('XJ_OUTPUT_NOTE', PROMPT_XJ_OUTPUT_NOTE));
+        parts.push(_insertLocationConstraint(_po('XJ_OUTPUT_NOTE', PROMPT_XJ_OUTPUT_NOTE), locationConstraint));
         parts.push('</输出模板>');
         parts.push('');
 
@@ -962,6 +978,32 @@ var promptBuilder = (function() {
         parts.push(_po('XJ_TASK_CHAIN', PROMPT_XJ_TASK_CHAIN));
 
         return parts.join('\n');
+    }
+
+    function _buildLocationConstraint(userMessage, gd) {
+        var text = String(userMessage || '');
+        var currentLocation = gd.GameMode === 0 ? '天山派' : (gd.mapLocation || '天山派');
+
+        if (text.indexOf('行动选择：下山游历') !== -1) {
+            return '本轮从【天山派】前往【' + currentLocation + '】，结尾必须抵达。';
+        }
+
+        if (text.indexOf('你结束了山下的游历，回到了天山派') !== -1) {
+            var locationMatch = text.match(/地点：([^<\n]+)/);
+            var departure = locationMatch ? locationMatch[1].trim() : currentLocation;
+            return '本轮从【' + departure + '】返回【天山派】，结尾必须抵达。';
+        }
+
+        return '本轮仅限【' + currentLocation + '】及其子场景，若user提出前往其他地点，处理为未完成的出行意图和出行准备，结尾仍留在【' + currentLocation + '】。';
+    }
+
+    function _insertLocationConstraint(text, constraint) {
+        if (!constraint) return text;
+        var anchor = '- 第二人称输出，用「你」称呼主角';
+        var anchorIndex = text.indexOf(anchor);
+        if (anchorIndex === -1) return text;
+        var insertAt = anchorIndex + anchor.length;
+        return text.slice(0, insertAt) + '\n- ' + constraint + text.slice(insertAt);
     }
 
     // ==================== 公共：NSFW 解锁判定 + token 预算 ====================
@@ -1021,9 +1063,10 @@ var promptBuilder = (function() {
         var msg1Content = _buildMsg1System(variables);
         var msg2Content = _buildMsg2UserSettings(variables, ctx.wbBlocks1, historySummaryPlaceholder);
         var msg3Content = _buildMsg3LatestReply(ctx.lastAssistantReply);
-        var msg4Content = _buildMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.isDeepSeek, ctx.wbBlocks2);
+        var msg4Content = _buildMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.isDeepSeek, ctx.wbBlocks2, ctx.sideQuestGuide);
         var msg5Content = templateEngine.renderPromptTemplate(
             ctx.isDeepSeek ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : PROMPT_JAILBREAK_PREFILL, variables);
+        msg5Content = _insertLocationConstraint(msg5Content, ctx.locationConstraint);
         // DeepSeek 自带思维链，不声明 [thinking omitted]
         var msg6Content = ctx.isDeepSeek
             ? PROMPT_FINAL_INSTRUCTION.replace(/\[thinking omitted\]\n/, '')
@@ -1073,7 +1116,7 @@ var promptBuilder = (function() {
         var msg1Content = _buildXjMsg1System();
         var msg2Content = _buildXjMsg2User(variables, ctx.wbBlocks1, historySummaryPlaceholder);
         var msg3Content = _buildMsg3LatestReply(ctx.lastAssistantReply);
-        var msg4Content = _buildXjMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.wbBlocks2);
+        var msg4Content = _buildXjMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.wbBlocks2, ctx.sideQuestGuide, ctx.locationConstraint);
 
         var fixedTokens = tokenUtils.estimate(msg1Content)
                         + tokenUtils.estimate(msg2Content)
@@ -1138,6 +1181,11 @@ var promptBuilder = (function() {
         var actionGuide = worldbookEngine.matchActionGuide(userMessage);
         var wbBlocks1 = (typeof customWorldbook !== 'undefined') ? customWorldbook.match('1', userMessage, lastAssistantReply) : [];
         var wbBlocks2 = (typeof customWorldbook !== 'undefined') ? customWorldbook.match('2', userMessage, lastAssistantReply) : [];
+        // 中途返回的支线失败收束拥有专用指导，屏蔽“正常回山/任务完成”行动模板，
+        // 避免通用 PROMPT_ACTION_RETURN 与失败事实发生冲突。
+        var _sideQuestReturnFailure = (typeof sideQuestService !== 'undefined' && sideQuestService.getPendingReturnFailure)
+            ? sideQuestService.getPendingReturnFailure() : null;
+        if (_sideQuestReturnFailure) actionGuide = null;
 
         // --- 召回与场中判定公用文本：本次用户输入 + 上一次 AI 回复（与 worldbookEngine.matchNPCs 一致）---
         var _recallSearchText = (userMessage || '') + (lastAssistantReply || '');
@@ -1177,6 +1225,9 @@ var promptBuilder = (function() {
             userMessage: userMessage,
             lastAssistantReply: lastAssistantReply,
             actionGuide: actionGuide,
+            locationConstraint: _sideQuestReturnFailure
+                ? '本轮从【' + _sideQuestReturnFailure.originLocation + '】中途放弃任务返回【天山派】，结尾必须抵达；支线已经失败。'
+                : _buildLocationConstraint(userMessage, gd),
             isDeepSeek: isDeepSeek,
             wbBlocks1: wbBlocks1,
             wbBlocks2: wbBlocks2,
@@ -1186,7 +1237,10 @@ var promptBuilder = (function() {
             recalledMemories: recalledMemories,
             recalledEvents: recalledEvents,
             recallSearchText: _recallSearchText,
-            recallConfig: _recallConfig
+            recallConfig: _recallConfig,
+            // 支线暗线隐藏指导（side-quest-service 预渲染纯文本；无进行中支线/剧本链互斥/开关关闭时为 ''）
+            sideQuestGuide: (typeof sideQuestService !== 'undefined' && sideQuestService.buildGuideText)
+                ? sideQuestService.buildGuideText() : ''
         };
         var assembled = (preset === 'xiajin') ? _assembleXiajin(assembleCtx) : _assembleNy(assembleCtx);
         var messages = assembled.messages;

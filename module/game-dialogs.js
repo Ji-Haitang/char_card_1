@@ -9,7 +9,8 @@
         'pipeline-log-modal', 'history-summary-modal',
         'equipment-modal', 'item-detail-modal', 'trading-modal', 'shop-detail-modal',
         'bounty-modal', 'load-modal', 'save-list-modal', 'last-input-modal',
-        'skill-library-modal', 'skill-equipment-modal', 'music-modal', 'font-modal'
+        'skill-library-modal', 'skill-equipment-modal', 'music-modal', 'font-modal',
+        'side-quest-modal'
     ]);
     const frames = new Set(['worldmap-modal', 'blackjack-modal', 'battle-modal', 'farm-modal', 'alchemy-modal']);
     const headerSelector = 'h2,h3,.skill-modal-header,.pl-tabs';

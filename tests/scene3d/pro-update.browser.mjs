@@ -31,7 +31,7 @@ const ROOMS = Object.freeze([
   { id: 'alchemy', location: 'danfang', file: 'alchemy_room.glb', hotspots: ['Alchemy_furnace'] },
   { id: 'female_quarters', location: 'nvdizi', file: 'female_quarters.glb', hotspots: ['Female_screen'] },
   { id: 'training', location: 'yanwuchang', file: 'training.glb', hotspots: ['Training_medallion'] },
-  { id: 'council', location: 'yishiting', file: 'council_hall.glb', hotspots: ['sand_table', 'bounty_board'] },
+  { id: 'council', location: 'yishiting', file: 'council_hall.glb', hotspots: ['sand_table', 'bounty_board', 'archive'] },
   { id: 'kitchen', location: 'huofang', file: 'kitchen_room.glb', hotspots: ['Kitchen_firewood', 'Kitchen_counter'] },
   { id: 'male_quarters', location: 'nandizi', file: 'male_quarters.glb', hotspots: ['Male_bed_east'] },
   { id: 'forge', location: 'tiejiangpu', file: 'blacksmith.glb', hotspots: ['Smith_anvil', 'Smith_weapon_rack'] },

@@ -189,7 +189,7 @@ test('3D 显示中（use3dVer）：GM0 场景走 3D.ver 连字符命名、立绘
 
 test('双人站位记忆：相邻帧同两人仅主次互换时站位不换；换人对按 cast 序；exit/enter 清空', async () => {
   const box = loadPresentation({ GameMode: 0 });
-  box.setFrames('甲。|藏经阁|09:00|雨烛:微笑;安慕:平静|none\n乙。|伙房|09:30|安慕:大笑;雨烛:平静|none\n丙。|伙房|10:00|钱塘君:平静;安慕:微笑|none');
+  box.setFrames('甲。|伙房|09:00|雨烛:微笑;安慕:平静|none\n乙。|伙房|09:30|安慕:大笑;雨烛:平静|none\n丙。|伙房|10:00|钱塘君:平静;安慕:微笑|none');
   await box.pres().enter({ source: 'page', pageIndex: 0, curtain: false });
   let emo = box.emotionLayers();
   assert.deepEqual(emo.map(l => imgOf(l).alt), ['雨烛-微笑', '安慕-平静'], '首帧按 cast 序');

@@ -130,6 +130,25 @@ body.ui-style-ancient .viewport-dock .dropdown-menu {
     translate: none;
 }
 
+/* 小屏（主按钮窄于二级文字所需宽度，约 ≤430px）：菜单至少与主按钮同宽，
+   文字放不下时按内容撑宽、以主按钮为中心向两侧展开，保证「角色属性」等四字标题完整显示。
+   宽屏下内容本就窄于主按钮，min-width:100% 使其仍与主按钮同宽，视觉不变。 */
+.viewport-dock .dropdown-menu,
+body.ui-style-flat .viewport-dock .dropdown-menu,
+body.ui-style-ancient .viewport-dock .dropdown-menu {
+    left: 50%;
+    right: auto;
+    width: max-content;
+    min-width: 100%;
+    max-width: 96cqw;
+    translate: -50% 0;
+}
+@supports not (translate: -50% 0) {
+    .viewport-dock .dropdown-menu,
+    body.ui-style-flat .viewport-dock .dropdown-menu,
+    body.ui-style-ancient .viewport-dock .dropdown-menu { left: 0; translate: none; }
+}
+
 /* 二级下拉按钮：与主按钮同宽、随视窗等比缩放（字体/内边距用 cqw，不用固定 px） */
 .viewport-dock .dropdown-item {
     width: 100%;
@@ -200,6 +219,54 @@ body.ui-style-flat .viewport-dock .dropdown-item {
     transform: rotate(60deg);
 }
 
+/* 任务信息按钮（叹号）：齿轮正上方一档（尺寸 + 10px 间距），尺寸/底色/阴影与齿轮一致。
+   挂在 .viewport-dock-layer 内，故显隐与齿轮完全同步：GM0 演出层（body.gal-presenting）、
+   观景模式、小游戏弹窗时随 dock 层一起隐藏；GM1 下山时 z:950 不被 CG/场景图层遮住。
+   3D 场景的「镜头归位」「观景」按钮相应再上移一档（见 mobile-density-overrides.css / scene3d-host.css）。 */
+.viewport-task-btn {
+    position: absolute;
+    right: max(12px, env(safe-area-inset-right, 0px));
+    bottom: calc(var(--viewport-corner-bottom, 12px) + var(--viewport-corner-size, clamp(20px, 2.4vw, 24px)) + 10px);
+    width: var(--viewport-corner-size, clamp(20px, 2.4vw, 24px));
+    height: var(--viewport-corner-size, clamp(20px, 2.4vw, 24px));
+    min-height: 0;
+    margin: 0;
+    padding: 5px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: 50%;
+    color: #9a948a;               /* 平时：灰色叹号 */
+    background: #f4ecdded;
+    box-shadow: 0 1px 4px rgba(20, 20, 20, 0.28);
+    cursor: pointer;
+    pointer-events: auto;
+    -webkit-tap-highlight-color: transparent;
+    transition: color 0.2s ease;
+}
+body.layout-landscape #main-viewport .viewport-task-btn { right: 12px; }
+.viewport-task-btn svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+.viewport-task-btn:hover {
+    background: #f8f2e4;
+}
+.viewport-task-btn:focus-visible {
+    outline: 2px solid #a47435;
+    outline-offset: 2px;
+}
+/* 有进行中的悬赏 / 支线：叹号转金橘色 */
+.viewport-task-btn.has-task {
+    color: #f08a12;
+}
+.viewport-task-btn.has-task svg {
+    filter: drop-shadow(0 0 1.5px rgba(240, 138, 18, 0.55));
+}
+
 /* 小游戏/全屏 iframe 界面（战斗、炼丹、21点、种植、世界地图、悬赏）不显示本面板。 */
 #blackjack-modal[style*="block"] ~ .viewport-dock-layer,
 #battle-modal[style*="block"] ~ .viewport-dock-layer,
@@ -217,6 +284,8 @@ body.ui-style-flat .viewport-dock .dropdown-item {
 /* 文本区作为容器，让输入行/按钮用 cqw 按文本区自身宽度等比缩放 */
 .story-area {
     container-type: inline-size;
+    /* 与基础层 .story-area 横向 padding 同值（横屏为 0，见第 3 节），供输入行计算左右留白 */
+    --fa-area-pad: clamp(15px, 3vw, 25px);
 }
 
 /* 输入栏容器改为纵向两行：第一行 = 输入框 + 发送/重生成，第二行 = 展开/收起按钮。
@@ -233,24 +302,32 @@ body.ui-style-flat .story-area > .free-action-container {
     box-sizing: border-box;
 }
 
-/* 第一行：输入框 + 发送/重生成，横排不换行（垂直居中，各自按宽高比定高） */
+/* 第一行：输入框 + 发送/重生成，横排不换行。
+   左右留白（文本区内边距 + 输入栏内边距；古风 10px 边框属画框本身，不计入）用负外边距收至原来的 40%：
+   输入框随之横向拉伸，重生成/发送整体略向右移。 */
 .free-action-row {
     display: flex;
     align-items: center;
     gap: clamp(6px, 1cqw, 10px);
-    width: 100%;
+    width: auto;
     min-width: 0;
+    margin-inline: calc(-0.6 * (var(--fa-area-pad, 0px) + clamp(8px, 1.5cqw, 14px)));
 }
 
-/* 输入框固定占 60%、宽高比 7:1，不随页面拉伸形变，多行内容内部滚动 */
-.free-action-row .free-action-input {
+/* 输入框占 60%；高度不再按自身宽高比，而是拉伸到与发送/重生成按钮等高
+   （contain: size 使其不以内容撑高这一行，行高完全由按钮 3:1 比例决定），多行内容内部滚动 */
+.free-action-row .free-action-input,
+body.ui-style-ancient .free-action-row .free-action-input,
+body.ui-style-flat .free-action-row .free-action-input {
     flex: 0 0 60%;
     width: 60%;
     min-width: 0;
-    min-height: 0;
+    min-height: 0 !important;
     max-height: none;
-    height: auto;
-    aspect-ratio: 7 / 1;
+    height: auto !important;
+    aspect-ratio: auto;
+    align-self: stretch;
+    contain: size;
     padding: 0 clamp(8px, 1.4cqw, 14px);
     font-size: clamp(12px, 2.2cqw, 15px);
     line-height: 1.1;
@@ -267,7 +344,8 @@ body.ui-style-flat .free-action-row :is(#free-action-send-btn, #regenerate-btn) 
     height: auto !important;
     min-height: 0 !important;
     aspect-ratio: 3 / 1;
-    align-self: center;
+    /* stretch：极窄栏下古风输入框边框+行高的最小高度若超过按钮 3:1 高，按钮随行同高 */
+    align-self: stretch;
     padding: 0 0.6em !important;
     font-size: clamp(11px, 2cqw, 15px) !important;
     line-height: 1.2;
@@ -299,6 +377,55 @@ body.ui-style-flat .free-action-row :is(#free-action-send-btn, #regenerate-btn) 
     padding-bottom: 10px;
 }
 
+/* 展开/收起 与 流式「■ 中断」同格叠放：格子尺寸只由展开按钮决定
+   （生成中展开按钮 visibility:hidden 继续占位），中断按钮铺满整格，
+   因此两者位置、宽高完全一致——看上去就是同一枚按钮换了文字。 */
+.story-expand-slot {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    align-self: center;
+}
+.story-expand-slot > #stream-controls {
+    /* display 由 pipeline 内联切换（none / flex）；绝对铺满，不参与格子尺寸计算 */
+    position: absolute;
+    inset: 0;
+    align-items: stretch;
+    justify-content: stretch;
+    padding: 0;
+    z-index: 1;
+}
+.story-area > .free-action-container .story-expand-slot #stream-stop-btn,
+.story-area > .free-action-container .story-expand-slot #stream-stop-btn:hover,
+.story-area > .free-action-container .story-expand-slot #stream-stop-btn:active {
+    width: 100% !important;
+    height: 100%;
+    min-width: 0 !important;
+    min-height: 0 !important;
+    padding: 0 !important; /* 尺寸完全由格子给定；压过 beautify 4.11 古风 padding */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    text-overflow: clip;
+    cursor: pointer;
+}
+/* 扁平：与展开按钮同皮，仅文字转警示红 */
+body.ui-style-flat .story-expand-slot #stream-stop-btn,
+body.ui-style-flat .story-expand-slot #stream-stop-btn:hover {
+    color: var(--f-danger, #f26d6d) !important;
+}
+/* 古风：与展开按钮同一框3-fill 长框，仅朱砂字（压过 beautify 4.11 的框5-红fill 与其 padding） */
+body.ui-style-ancient .story-expand-slot #stream-stop-btn,
+body.ui-style-ancient .story-expand-slot #stream-stop-btn:hover {
+    background-color: transparent !important;
+    background-image: url('../assets/image/static/框3-fill.png') !important;
+    background-size: 100% 100% !important;
+    background-position: center !important;
+    background-repeat: no-repeat !important;
+    color: var(--accent-red, #a93226) !important;
+}
+
 /* 展开/收起按钮行：翻页箭头 + 收起按钮 + 历史页码输入框 + 跳转按钮，整体居中横排；
    极窄栏（如横屏剩余列过窄）时折行而非溢出（正常宽度下与单行无差别） */
 .story-expand-bar {
@@ -311,16 +438,40 @@ body.ui-style-flat .free-action-row :is(#free-action-send-btn, #regenerate-btn) 
     box-sizing: border-box;
 }
 
+/* 展开/收起、跳转按钮与历史页码输入框统一显式高度（= 字号×1.2 + 上下内边距），
+   两种 UI 风格下页码框与跳转按钮严格等高（输入框边框计入该高度内）。 */
+.story-expand-bar {
+    --bar-ctl-h: calc(clamp(11px, 1.8cqw, 14px) * 1.2 + 2 * clamp(4px, 0.8cqw, 8px));
+}
+.story-area > .free-action-container .story-expand-bar :is(#story-expand-btn, #story-history-jump-btn) {
+    height: var(--bar-ctl-h) !important;
+    min-height: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    line-height: 1.2 !important;
+}
+
 /* 历史页码输入框：尺寸与展开/收起按钮同档，随 story-area 容器宽自适应 */
-.story-expand-bar .story-history-page-input {
+.story-expand-bar .story-history-page-input,
+body.ui-style-ancient .story-expand-bar .story-history-page-input,
+body.ui-style-flat .story-expand-bar .story-history-page-input {
     width: clamp(58px, 11cqw, 92px);
-    padding: clamp(4px, 0.8cqw, 8px) clamp(6px, 1cqw, 10px);
+    height: var(--bar-ctl-h) !important;
+    min-height: 0 !important;
+    padding: 0 clamp(6px, 1cqw, 10px);
     font-size: clamp(11px, 1.8cqw, 14px);
     font-family: inherit;
     line-height: 1.2;
     text-align: center;
     box-sizing: border-box;
     margin: 0;
+}
+
+/* 古风：两枚输入框的枯笔边框窄屏下收细（原固定 6px），避免等高后内容区过矮压字 */
+body.ui-style-ancient .free-action-row .free-action-input,
+body.ui-style-ancient .story-expand-bar .story-history-page-input {
+    border-width: clamp(3px, 0.8cqw, 6px) !important;
+    border-image-width: clamp(3px, 0.8cqw, 6px) !important;
 }
 
 /* 翻页箭头迁入本行两端：prev 靠最左、next 靠最右（两侧 auto 外边距均分剩余空间，
@@ -400,6 +551,7 @@ body.layout-landscape .story-area {
     overflow: hidden;
     /* 供输入栏换行的容器查询（按文本列实际宽度而非窗口宽度判断） */
     container-type: inline-size;
+    --fa-area-pad: 0px;
 }
 
 /* 故事内容在此滚动。
@@ -482,4 +634,48 @@ body.layout-landscape .story-text {
         flex: 0 0 auto;
         margin-top: 0 !important;
     }
+}
+
+/* ============================================================
+ * 7. 支线常驻状态条（#map-scene .status-display 正下方，琥珀金，点击开面板）
+ *    基座（几何）→ flat/ancient 仅换皮；横竖屏同一绝对定位，随视窗等比缩放。
+ * ============================================================ */
+.sidequest-status-bar {
+    position: absolute;
+    /* 紧贴 .status-display（height: clamp(24px, 7.3%, 56px)）下沿 */
+    top: calc(clamp(24px, 7.3%, 56px) + 4px);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 19; /* 低于状态栏(20)，高于地图 */
+    max-width: 92%;
+    padding: 2px 12px;
+    border-radius: 10px;
+    background: rgba(44, 36, 18, 0.78);
+    color: #ffd977;
+    border: 1px solid #d4a017;
+    font-size: clamp(0.7rem, 1.4vw, 0.95rem);
+    font-weight: bold;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+/* 判定中脉冲（runner.isRunning 为 true 时挂 .is-judging） */
+.sidequest-status-bar.is-judging {
+    animation: sqJudgingPulse 1.2s ease-in-out infinite;
+}
+@keyframes sqJudgingPulse {
+    0%, 100% { opacity: 1; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3); }
+    50% { opacity: 0.55; box-shadow: 0 0 12px rgba(212, 160, 23, 0.75); }
+}
+body.ui-style-flat .sidequest-status-bar {
+    background: rgba(23, 30, 48, 0.92);
+    color: var(--f-gold);
+    border-color: var(--f-gold);
+}
+body.ui-style-ancient .sidequest-status-bar {
+    background: rgba(244, 241, 229, 0.92);
+    color: #7a5b12;
+    border-color: #b3a486;
 }

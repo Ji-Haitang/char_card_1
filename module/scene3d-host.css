@@ -4,10 +4,10 @@
 /* The original room back button remains the single host navigation control. */
 #sect-3d-root .scene3d-back { display:none !important; }
 /* 镜头归位已改为右下角摄像机图标，尺寸/位置由渲染器 scene3d.css 提供 */
-/* 主机新增右下角齿轮控制面板（#viewport-dock）位于同一角落后，镜头归位按钮整体上移一档，
-   让齿轮落在最下方；两者尺寸一致，故用 尺寸+10px 间距 抬升（覆盖冻结交付版本 scene3d.css）。 */
+/* 主机右下角自下而上：齿轮（#viewport-dock）→ 任务信息叹号 → 镜头归位 → 观景；尺寸一致，
+   每档用 尺寸+10px 间距 抬升（覆盖冻结交付版本 scene3d.css）。 */
 #sect-3d-root .scene3d-runtime .scene3d-reset {
-  bottom: calc(clamp(20px, 2.4vw, 24px) + 22px);
+  bottom: calc(12px + (clamp(20px, 2.4vw, 24px) + 10px) * 2);
 }
 /* ===== 观景模式 =====
    按钮由 scene3d-bridge.js 创建并直接挂在 #main-viewport 下（不在 3D shell 内，也不在任何 .scene 内），
@@ -17,7 +17,7 @@
 #main-viewport > .scene3d-sightseeing {
     position:absolute; z-index:55;
     right:var(--viewport-corner-right, 12px);
-    bottom:calc(var(--viewport-corner-bottom, 12px) + (var(--viewport-corner-size, clamp(20px, 2.4vw, 24px)) + 10px) * 2);
+    bottom:calc(var(--viewport-corner-bottom, 12px) + (var(--viewport-corner-size, clamp(20px, 2.4vw, 24px)) + 10px) * 3);
     width:var(--viewport-corner-size, clamp(20px, 2.4vw, 24px));
     height:var(--viewport-corner-size, clamp(20px, 2.4vw, 24px));
     min-height:0; padding:5px; margin:0; box-sizing:border-box;

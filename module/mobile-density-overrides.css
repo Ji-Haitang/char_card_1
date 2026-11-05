@@ -71,6 +71,7 @@ body :is(#blackjack-modal, #battle-modal, #farm-modal, #alchemy-modal, #worldmap
 }
 body.layout-landscape #main-viewport { --viewport-corner-right: 12px; }
 body #main-viewport .viewport-dock-gear,
+body #main-viewport .viewport-task-btn,
 body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-reset {
     width: var(--viewport-corner-size);
     height: var(--viewport-corner-size);
@@ -78,9 +79,10 @@ body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-reset {
     box-sizing: border-box;
     padding: 5px;
 }
+/* 右下角自下而上：齿轮 → 任务信息（叹号）→ 镜头归位 → 观景，每档 尺寸 + 10px */
 body #main-viewport #sect-3d-root .scene3d-runtime .scene3d-reset {
     right: var(--viewport-corner-right);
-    bottom: calc(var(--viewport-corner-bottom) + var(--viewport-corner-size) + 10px);
+    bottom: calc(var(--viewport-corner-bottom) + (var(--viewport-corner-size) + 10px) * 2);
 }
 @media (max-width: 600px) {
     #main-viewport { --viewport-corner-size: 36px; }

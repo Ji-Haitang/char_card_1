@@ -12,7 +12,11 @@ var pipeline = (function() {
     var _currentAbort = null;    // 当前流式的中断控制器
     var _isStreaming = false;    // 是否正在流式生成
     var _abortRequested = false; // 用户是否请求中断
+    var _externalBusyOverlay = false; // 非正文 LLM 请求暂借正文生成遮罩时的锁
+    var _externalBusyExpandDisplay = null;
+    var _externalBusyMaskZIndex = null;
     var _currentSummarySource = null; // 当前提交的摘要来源（null 时默认 'llm'）
+    var _autoSaveGeneration = 0;     // 每轮提交递增，废弃上一回合尚未落定的延迟自动存档
 
     // 入库/查询侧共用的字段 key 列表
     var _LOCATION_KEYS = ['抵达目的地', '地点'];
@@ -253,8 +257,21 @@ var pipeline = (function() {
     }
 
     async function runTurn(message, options) {
+        if (_externalBusyOverlay) {
+            if (typeof showModal === 'function') showModal('支线剧情树正在生成，请稍候。');
+            return false;
+        }
         options = options || {};
         var isRegenerate = options.isRegenerate || false;
+        if (typeof options.prepare === 'function') {
+            try {
+                await options.prepare();
+            } catch (e) {
+                console.error('[Pipeline] 发送前快照保存失败:', e);
+                if (typeof showModal === 'function') showModal('发送前状态保存失败，请重试。');
+                throw e;
+            }
+        }
 
         // 展开态浏览历史原文时发起 LLM 请求：自动跳回最新回合（回看偏移归零）
         if (typeof resetStoryHistoryToLatest === 'function') resetStoryHistoryToLatest();
@@ -264,13 +281,9 @@ var pipeline = (function() {
 
         var lastAssistantReply = _getLastAssistantContent(storageService.loadUIConversation());
 
-        // 向量补全阶段：提前显示蒙版，防止用户误以为卡死
+        // 遮罩与输入锁由 withSceneGuard 覆盖整轮；补全期间仅更新提示。
         var _embEnabled = typeof embeddingService !== 'undefined' && embeddingService.isEnabled && embeddingService.isEnabled();
-        if (_embEnabled) {
-            _showStreamMask();
-            _setInteractionEnabled(false);
-            _setStreamLog('施延年翻阅旧卷');
-        }
+        if (_embEnabled) _setStreamLog('施延年翻阅旧卷');
 
         // Phase 3：发起请求前，同步 emb_ 与 summaryHistory 一致性
         try {
@@ -639,16 +652,18 @@ var pipeline = (function() {
                 console.groupEnd();
             }
         } catch (err) {
-            _hideStreamControls();
             _setStreamLog('施延年墨尽笔折');
             console.error('[Pipeline] API 请求失败:', err.message);
             if (typeof showModal === 'function') {
                 showModal('AI 请求失败：' + err.message + '\n\n可点击重试');
             }
             throw err;
+        } finally {
+            // 正文结束后停止按钮失去作用，但遮罩与输入锁要等支线判定落定。
+            var controls = document.getElementById('stream-controls');
+            if (controls) controls.style.display = 'none';
         }
-
-        _hideStreamControls();
+        _setStreamLog('施延年核对文稿');
 
         // 中断时不提交副作用，只保留已渲染的文本
         if (wasAborted) {
@@ -664,11 +679,11 @@ var pipeline = (function() {
             if (typeof showModal === 'function' && typeof isInRenderEnvironment === 'function' && !isInRenderEnvironment()) {
                 showModal('本轮输出已中断，未自动存档，建议重新生成。');
             }
-            return;
+            return false;
         }
 
         // === 提交阶段（有副作用，按顺序可控）===
-        await _commitResponse(preprocessed, rawText, isRegenerate);
+        return await _commitResponse(preprocessed, rawText, isRegenerate);
     }
 
     /**
@@ -1057,11 +1072,37 @@ var pipeline = (function() {
             if (typeof eventRunner !== 'undefined') {
                 setTimeout(function() { eventRunner.maybeSchedule(); }, 0);
             }
-            // 触发自动存档（仅独立前端，函数由 index.html 定义）
-            // 仅在 SIDE_NOTE 成功解析时才存档，截断响应跳过
-            if (typeof autoSave === 'function' && parsed.sideNote !== null) {
-                autoSave();
-            } else if (typeof autoSave === 'function') {
+            // 支线判定（含重试）是本轮完成的一部分：落定前保持遮罩、输入锁及场景锁。
+            var _autoSaveTicket = ++_autoSaveGeneration;
+            var _autoSaveGameData = gameData;
+            var _sideQuestSettled = true;
+            if (typeof sideQuestRunner !== 'undefined') {
+                var _sqMeta = {
+                    uiIndex: (storageService.loadUIConversation() || []).length - 1,
+                    userMessage: preprocessed,
+                    onStatus: _setStreamLog
+                };
+                try {
+                    _sideQuestSettled = await sideQuestRunner.afterCommit(parsed, _sqMeta);
+                } catch (e) {
+                    console.error('[Pipeline] 支线后处理异常，跳过本轮自动存档:', e);
+                    _sideQuestSettled = false;
+                    if (typeof showModal === 'function') {
+                        showModal('本轮支线判定未完成，自动存档已跳过，请重新生成本轮回复。');
+                    }
+                }
+            }
+            // 仅完整回复且支线落定后自动存档；取消、失败、读档或导入均不得保存旧现场。
+            if (typeof autoSave === 'function' && parsed.sideNote !== null && _sideQuestSettled !== false) {
+                if (_autoSaveTicket === _autoSaveGeneration && _autoSaveGameData === gameData) {
+                    _setStreamLog('施延年收卷归档');
+                    autoSave();
+                } else {
+                    console.log('[Pipeline] 跳过过期自动存档：回合或存档上下文已切换');
+                }
+            }
+            // 截断响应仍执行支线确定性交互，但不自动存档。
+            if (typeof autoSave === 'function' && parsed.sideNote === null && _sideQuestSettled !== false) {
                 console.log('[Pipeline] 跳过自动存档：SIDE_NOTE 解析失败，响应可能被截断');
                 if (typeof showModal === 'function') {
                     showModal('本次回复内容格式不完整，自动存档已跳过，建议重新生成。');
@@ -1071,6 +1112,7 @@ var pipeline = (function() {
             if (typeof updateFreeActionInputState === 'function') {
                 updateFreeActionInputState();
             }
+            return parsed.sideNote !== null && _sideQuestSettled !== false;
         } catch (err) {
             console.error('[Pipeline] 提交阶段错误:', err.message);
             // 取消正在飞行的周总结请求（防止旧结果覆盖还原后的状态）
@@ -1079,6 +1121,8 @@ var pipeline = (function() {
             if (_pipelineSummaryRunning) summaryRunner.cancel();
             // 地点信息迭代：同样取消正在飞行的地点更新请求（防止旧结果写回已回滚的 locationMemory）
             if (typeof locationRunner !== 'undefined') locationRunner.cancel();
+            // 支线判定：同样取消在途请求（旧结果不得写回已回滚的 sideQuest 状态）
+            if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
             storageService.restoreFromSnapshot();
             if (typeof renderMainText === 'function') {
                 renderMainText(_getLastAssistantContent(storageService.loadUIConversation()));
@@ -1086,6 +1130,7 @@ var pipeline = (function() {
             if (typeof showModal === 'function') {
                 showModal('状态保存异常，已恢复到发送前状态。建议重新生成。');
             }
+            return false;
         }
     }
 
@@ -1105,11 +1150,49 @@ var pipeline = (function() {
         return _isStreaming;
     }
 
+    function isBusy() {
+        return _isStreaming || _externalBusyOverlay || _sceneOperationActive;
+    }
+
+    function showBusyOverlay(text) {
+        if (_sceneOperationActive || _isStreaming) return false;
+        if (_externalBusyOverlay) return true;
+        _externalBusyOverlay = true;
+        var expandBtn = document.getElementById('story-expand-btn');
+        _externalBusyExpandDisplay = expandBtn ? expandBtn.style.visibility : null;
+        // visibility 而非 display：展开按钮继续占位，保持其所在格（中断按钮同格叠放）尺寸不变
+        if (expandBtn) expandBtn.style.visibility = 'hidden';
+        _setInteractionEnabled(false);
+        _showStreamMask();
+        var mask = document.getElementById('stream-mask');
+        if (mask) {
+            _externalBusyMaskZIndex = mask.style.zIndex;
+            mask.style.zIndex = '2600';
+        }
+        _setStreamLog(text || '施延年伏案疾书');
+        return true;
+    }
+
+    function hideBusyOverlay() {
+        if (!_externalBusyOverlay) return;
+        _externalBusyOverlay = false;
+        var expandBtn = document.getElementById('story-expand-btn');
+        if (expandBtn) expandBtn.style.visibility = _externalBusyExpandDisplay == null ? '' : _externalBusyExpandDisplay;
+        _externalBusyExpandDisplay = null;
+        var mask = document.getElementById('stream-mask');
+        if (mask) mask.style.zIndex = _externalBusyMaskZIndex == null ? '' : _externalBusyMaskZIndex;
+        _externalBusyMaskZIndex = null;
+        if (typeof updateFreeActionInputState === 'function') updateFreeActionInputState();
+        else _setInteractionEnabled(true);
+        _hideStreamMask();
+    }
+
     // ========== 流式控件 UI ==========
 
     function _showStreamControls() {
+        // 展开/收起按钮仅隐形占位（visibility），「■ 中断」叠放在同一格内铺满，尺寸与之完全一致
         var expandBtn = document.getElementById('story-expand-btn');
-        if (expandBtn) expandBtn.style.display = 'none';
+        if (expandBtn) expandBtn.style.visibility = 'hidden';
         var el = document.getElementById('stream-controls');
         if (el) el.style.display = 'flex';
         _setInteractionEnabled(false);
@@ -1120,7 +1203,7 @@ var pipeline = (function() {
         var el = document.getElementById('stream-controls');
         if (el) el.style.display = 'none';
         var expandBtn = document.getElementById('story-expand-btn');
-        if (expandBtn) expandBtn.style.display = '';
+        if (expandBtn) expandBtn.style.visibility = '';
         // 用 updateFreeActionInputState 恢复按钮状态，以尊重 inputEnable 变量
         // （若 inputEnable===0，如特殊事件触发后，按钮应保持禁用）
         if (typeof updateFreeActionInputState === 'function') {
@@ -1131,7 +1214,25 @@ var pipeline = (function() {
         _hideStreamMask();
     }
 
+    // 遮罩覆盖不到右侧正文/菜单，也不会阻止键盘激活底层按钮；统一拦截这些用户操作。
+    // 放行：停止生成；只读的正文翻页控件（左右箭头、页码点、正文点击区、展开态历史页码跳转）——
+    // 它们只切换正文显示，不改游戏状态、不发请求（GM0 忙碌期间翻页不进演出，见 game-ui doGoToPage）。
+    var _BUSY_READONLY_SELECTOR = '#story-prev-btn, #story-next-btn, #page-indicator, .story-content-wrapper, ' +
+        '#story-history-page-input, #story-history-jump-btn';
+    function _blockBusyInteraction(event) {
+        if (!isBusy()) return;
+        var target = event.target;
+        if (target && target.closest && target.closest('#stream-stop-btn')) return;
+        if (target && target.closest && target.closest(_BUSY_READONLY_SELECTOR)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    }
+
     function _showStreamMask() {
+        if (typeof document.addEventListener === 'function') {
+            document.addEventListener('click', _blockBusyInteraction, true);
+            document.addEventListener('keydown', _blockBusyInteraction, true);
+        }
         var viewport = document.getElementById('main-viewport');
         if (!viewport) return;
         var mask = document.getElementById('stream-mask');
@@ -1156,6 +1257,10 @@ var pipeline = (function() {
     }
 
     function _hideStreamMask() {
+        if (typeof document.removeEventListener === 'function') {
+            document.removeEventListener('click', _blockBusyInteraction, true);
+            document.removeEventListener('keydown', _blockBusyInteraction, true);
+        }
         var mask = document.getElementById('stream-mask');
         if (mask) mask.classList.remove('active');
         _setStreamLog('');
@@ -1174,11 +1279,9 @@ var pipeline = (function() {
         }
     }
 
-    // 补全进度用：直接 textContent，不做逐字动画，适合逐条高频刷新
+    // 向量补全阶段也沿用施延年提示与逐字动画，覆盖请求前的等待。
     function _setProgressLog(text) {
-        var el = document.getElementById('stream-log');
-        if (!el) return;
-        el.textContent = text || '';
+        _setStreamLog(text ? '施延年翻阅旧卷 · ' + text : '');
     }
 
     function _setInteractionEnabled(enabled) {
@@ -1303,7 +1406,6 @@ var pipeline = (function() {
         console.log('[Pipeline] 处理特殊事件:', event.name);
         
         try {
-            _showStreamControls();
             _setStreamLog('施延年灵光乍现');
             
             // 模拟思考延迟
@@ -1354,22 +1456,26 @@ var pipeline = (function() {
                 updateFreeActionInputState();
             }
             
-            _hideStreamControls();
-            
             console.log('[Pipeline] 特殊事件处理完成');
         } catch (error) {
-            _hideStreamControls();
             console.error('[Pipeline] 特殊事件处理失败:', error);
             if (typeof showModal === 'function') {
                 showModal('特殊事件处理失败：' + error.message);
             }
+        } finally {
+            _currentSummarySource = null;
         }
     }
 
-    // Presentation-only guard covers recall/request/commit/failure without changing business branches.
+    // 整轮守卫统一管理场景、遮罩和输入锁，直到正文提交与支线判定全部落定。
     var _sceneTurnSequence = 0;
     var _galCommitSequence = 0;
+    var _sceneOperationActive = false;
     async function withSceneGuard(operation, args) {
+        if (_externalBusyOverlay || _sceneOperationActive) {
+            if (typeof showModal === 'function') showModal('当前已有生成任务进行，请稍候。');
+            return false;
+        }
         var token = 'pipeline-' + (++_sceneTurnSequence);
         var bridge = typeof window !== 'undefined' && window.GameSceneBridge;
         // 新回合开始：退出上一轮的 GAL 演出（不播翻页纸），业务层在流式期间保持可见
@@ -1378,9 +1484,18 @@ var pipeline = (function() {
         }
         // 操作层表情立绘回默认「平静」（仅 GameMode 0 生效）
         if (typeof resetNpcTurnEmotions === 'function') { try { resetNpcTurnEmotions(); } catch (e) {} }
-        if (bridge) bridge.setBusy(token, true);
-        try { return await operation.apply(null, args); }
-        finally {
+        _sceneOperationActive = true;
+        try {
+            var expandBtn = document.getElementById('story-expand-btn');
+            if (expandBtn) expandBtn.style.visibility = 'hidden';
+            _setInteractionEnabled(false);
+            _showStreamMask();
+            _setStreamLog('施延年整理书案');
+            if (bridge) bridge.setBusy(token, true);
+            return await operation.apply(null, args);
+        } finally {
+            _sceneOperationActive = false;
+            _hideStreamControls();
             if (bridge) {
                 bridge.setBusy(token, false);
                 bridge.notify('pipeline-finished');
@@ -1391,6 +1506,9 @@ var pipeline = (function() {
         runTurn: function() { return withSceneGuard(runTurn, arguments); },
         abortCurrentTurn: abortCurrentTurn, 
         isStreaming: isStreaming,
+        isBusy: isBusy,
+        showBusyOverlay: showBusyOverlay,
+        hideBusyOverlay: hideBusyOverlay,
         handleSpecialEvent: function() { return withSceneGuard(handleSpecialEvent, arguments); }
     };
 })();

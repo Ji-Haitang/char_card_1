@@ -553,6 +553,7 @@ body.ui-style-ancient .trading-list,
 body.ui-style-ancient .trading-item-row,
 body.ui-style-ancient .random-event-container,
 body.ui-style-ancient .battle-event-container,
+body.ui-style-ancient .sidequest-interaction-container,
 body.ui-style-ancient .skill-panel,
 body.ui-style-ancient .bounty-card,
 body.ui-style-ancient .cheat-section,
@@ -1243,6 +1244,16 @@ body.ui-style-flat .battle-event-container {
 body.ui-style-flat .battle-event-title {
     color: var(--f-danger);
     --be-icon: var(--be-i-icons-flat-sword);
+}
+body.ui-style-flat .sidequest-interaction-container {
+    background: var(--f-card);
+    border: 1px solid var(--f-line);
+    border-left: 4px solid var(--f-gold);
+    border-radius: var(--f-radius);
+    box-shadow: var(--f-shadow-sm);
+}
+body.ui-style-flat .sidequest-interaction-container .event-title {
+    color: var(--f-gold);
 }
 body.ui-style-flat .event-option-btn,
 body.ui-style-flat .battle-action-btn {

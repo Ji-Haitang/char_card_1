@@ -1244,7 +1244,7 @@ body {
 
 /* 小屏幕优化 */
 @media (max-width: 600px) {
-    .random-event-container {
+    .random-event-container, .sidequest-interaction-container {
         margin-top: 10px;
         padding: 10px;
     }
@@ -1270,7 +1270,7 @@ body {
 
 /* 横屏手机优化 */
 @media (max-height: 500px) and (orientation: landscape) {
-    .random-event-container {
+    .random-event-container, .sidequest-interaction-container {
         padding: 8px 12px;
         margin-top: 8px;
     }
@@ -1292,7 +1292,7 @@ body {
 
 /* 平板和小窗口优化 */
 @media (min-width: 600px) and (max-width: 840px) {
-    .random-event-container {
+    .random-event-container, .sidequest-interaction-container {
         padding: 15px;
         margin-top: 15px;
     }
@@ -1321,9 +1321,49 @@ body {
     display: block;
 }
 
+/* 支线抉择框样式 - 琥珀金配色，与随机事件(青)/战斗(粉红)区分 */
+.sidequest-interaction-container {
+    background: rgba(44, 44, 44, 0.95);
+    border: 2px solid #d4a017;
+    border-radius: 10px;
+    padding: clamp(12px, 3vw, 20px);
+    margin-top: clamp(12px, 3vw, 20px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    display: none;
+}
+
+.sidequest-interaction-container.show {
+    display: block;
+}
+
+/* 抉择处境描述：基础层 .event-description 默认隐藏（随机事件描述移至正文末页），支线需显示 */
+#sidequest-interaction-container .event-description {
+    display: block;
+    font-size: clamp(0.875rem, 2vw, 1rem);
+    color: #eee;
+    line-height: 1.5;
+    margin-bottom: clamp(8px, 2vw, 12px);
+    text-align: center;
+}
+
+/* 支线标题/小字/按钮描边换琥珀金 */
+#sidequest-interaction-container .event-title {
+    color: #d4a017;
+}
+#sidequest-interaction-container .option-reward {
+    color: #d4a017;
+}
+#sidequest-interaction-container .event-option-btn {
+    border-color: #d4a017;
+}
+#sidequest-interaction-container .event-option-btn:hover {
+    box-shadow: 0 5px 15px rgba(212, 160, 23, 0.3);
+}
+
 /* 当事件容器被放置到主视窗(#main-viewport)内时的定位与层级（覆盖默认样式） */
 #main-viewport > #random-event-container,
-#main-viewport > #battle-event-container {
+#main-viewport > #battle-event-container,
+#main-viewport > #sidequest-interaction-container {
     position: absolute;
     left: 50%;
     transform: translateX(-50%);
@@ -1370,6 +1410,25 @@ body {
     background: linear-gradient(180deg, #ff6b87, rgba(255,77,109,0.75));
 }
 
+/* 支线抉择：琥珀金拇指（track/尺寸与随机事件一致，自成一组避免改动既有选择器） */
+#main-viewport > #sidequest-interaction-container::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+}
+#main-viewport > #sidequest-interaction-container::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+}
+#main-viewport > #sidequest-interaction-container::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(212,160,23,0.95), rgba(212,160,23,0.6));
+    border-radius: 8px;
+    border: 2px solid rgba(44,44,44,0.95);
+    transition: background 0.2s ease;
+}
+#main-viewport > #sidequest-interaction-container::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #e5b52a, rgba(212,160,23,0.75));
+}
+
 /* Firefox 滚动条配色 */
 #main-viewport > #random-event-container {
     scrollbar-width: thin;
@@ -1378,6 +1437,10 @@ body {
 #main-viewport > #battle-event-container {
     scrollbar-width: thin;
     scrollbar-color: rgba(255,77,109,0.9) rgba(255,255,255,0.08);
+}
+#main-viewport > #sidequest-interaction-container {
+    scrollbar-width: thin;
+    scrollbar-color: rgba(212,160,23,0.9) rgba(255,255,255,0.08);
 }
 
 .battle-event-title {
@@ -3479,12 +3542,12 @@ body.ui-style-flat #map-hit-areas polygon.active {
     cursor: pointer;
 }
 
-/* ========== 流式生成遮罩（stream-mask） ========== */
+/* ========== 整轮生成遮罩（正文、提交、支线判定与重试） ========== */
 #stream-mask {
     display: none;
     position: absolute;
     inset: 0;
-    z-index: 900;
+    z-index: 2600; /* 覆盖 z-1500 的随机/战斗/支线选项，避免判定期间提前操作 */
     background: rgba(0, 0, 0, 0.25);
     flex-direction: column;
     align-items: center;
@@ -3531,6 +3594,9 @@ body.ui-style-flat #map-hit-areas polygon.active {
 }
 #stream-log {
     display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: calc(100% - 32px);
     font-size: clamp(0.9rem, 2.2vw, 1.125rem);
     font-family: "Microsoft YaHei", "SimSun", serif;
     color: rgba(255,255,255,0.88);

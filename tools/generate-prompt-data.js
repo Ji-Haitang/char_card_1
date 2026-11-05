@@ -277,6 +277,20 @@ Core-Style:
   // 夏瑾预设 消息4: 尾部任务链（含内嵌 User/Assistant 模拟对话与隐式思考要求）
   window.PROMPT_XJ_TASK_CHAIN = ${escapeForJS(XJ_TASK_CHAIN)};
 
+  // ==================== 支线剧情系统（210~213支线-*.txt） ====================
+
+  // 支线-传闻生成（打探传闻，EJS 上下文由 side-quest-runner 预计算 sq* 变量传入）
+  window.PROMPT_SQ_RUMOR = ${escapeForJS(readFileLF('210支线-传闻生成.txt'))};
+
+  // 支线-剧情树生成（接取时建树）
+  window.PROMPT_SQ_TREE = ${escapeForJS(readFileLF('211支线-剧情树生成.txt'))};
+
+  // 支线-阶段判定（每轮后台判定）
+  window.PROMPT_SQ_JUDGE = ${escapeForJS(readFileLF('212支线-阶段判定.txt'))};
+
+  // 支线-阶段指导（主对话 msg4 <SideQuestGuide> 注入，五形态）
+  window.PROMPT_SQ_GUIDE = ${escapeForJS(readFileLF('213支线-阶段指导.txt'))};
+
 })();
 `;
 

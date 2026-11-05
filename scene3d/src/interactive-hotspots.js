@@ -5,7 +5,7 @@ export const HOTSPOTS = Object.freeze({
   gate: [['Gate_stairs','下山']], fields: [['Fields_shed','耕种']],
   library: [['desk','学习'],['shelf_classics','技能习得']], alchemy: [['Alchemy_furnace','炼丹']],
   female_quarters: [['Female_screen','拜访']], training: [['Training_medallion','练武']],
-  council: [['sand_table','汇报'],['bounty_board','悬赏任务']],
+  council: [['sand_table','汇报'],['bounty_board','悬赏任务'],['archive','打探传闻']],
   kitchen: [['Kitchen_firewood','打杂'],['Kitchen_counter','交易']], male_quarters: [['Male_bed_east','休息']],
   forge: [['Smith_anvil','打铁'],['Smith_weapon_rack','交易']], back_mountain: [['Ravine_cave','秘密赌场'],['Ravine_stairs','探索']],
 })

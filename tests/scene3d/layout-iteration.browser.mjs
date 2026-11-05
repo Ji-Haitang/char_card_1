@@ -171,9 +171,13 @@ try {
         const t = trigger.getBoundingClientRect();
         const item = menu.querySelector('.dropdown-item');
         const ir = item.getBoundingClientRect();
+        const truncatedItems = [...menu.querySelectorAll('.dropdown-item')]
+          .filter(node => node.offsetParent && node.scrollWidth > node.clientWidth + 1)
+          .map(node => node.textContent.trim());
         return {
           display: getComputedStyle(menu).display, left: r.left, right: r.right, top: r.top, bottom: r.bottom,
           width: r.width, triggerWidth: t.width, itemWidth: ir.width, itemHeight: ir.height,
+          truncated: truncatedItems.length > 0, truncatedItems,
           vp: { left: vp.left, right: vp.right, top: vp.top, bottom: vp.bottom }
         };
       });
@@ -182,7 +186,9 @@ try {
       assert.ok(record.dropdown.right <= record.dropdown.vp.right + 1, `菜单不越出视窗右缘（right=${record.dropdown.right}）`);
       assert.ok(record.dropdown.top >= record.dropdown.vp.top - 1, `菜单不越出视窗上缘（top=${record.dropdown.top}）`);
       assert.ok(record.dropdown.bottom <= record.dropdown.vp.bottom + 1, `菜单不越出视窗下缘（bottom=${record.dropdown.bottom}）`);
-      assert.ok(Math.abs(record.dropdown.width - record.dropdown.triggerWidth) <= 2, `二级菜单应与主按钮等宽（menu=${record.dropdown.width} vs btn=${record.dropdown.triggerWidth}）`);
+      // 二级菜单默认与主按钮等宽；主按钮窄于文字所需宽度（小屏）时按内容撑开，保证标题不被截断
+      assert.ok(record.dropdown.width >= record.dropdown.triggerWidth - 2, `二级菜单不得窄于主按钮（menu=${record.dropdown.width} vs btn=${record.dropdown.triggerWidth}）`);
+      assert.equal(record.dropdown.truncated, false, `二级菜单标题不得被截断（截断项：${record.dropdown.truncatedItems.join('、')}）`);
       assert.ok(Math.abs(record.dropdown.itemWidth - record.dropdown.width) <= 16, `二级按钮应填满菜单内容区（item=${record.dropdown.itemWidth} vs menu=${record.dropdown.width}，含内边距差）`);
       await page.screenshot({ path: path.join(directory, `${label}-menu.png`) });
       await page.evaluate(() => { toggleDropdown('attribute-dropdown'); toggleViewportDock(false); });
@@ -285,12 +291,14 @@ try {
         const { row, input, send, regen, expand } = record.inputRow;
         const inputShare = input.width / row.width;
         assert.ok(Math.abs(inputShare - 0.6) < 0.05, `输入框应约占输入行 60%（实际 ${(inputShare * 100).toFixed(1)}%）`);
-        const inputRatio = input.width / input.height;
-        assert.ok(Math.abs(inputRatio - 7) < 1.2, `输入框应≈7:1（实际 ${inputRatio.toFixed(2)}）`);
+        assert.ok(Math.abs(input.height - send.height) <= 1 && Math.abs(input.height - regen.height) <= 1,
+          `输入框应与发送/重生成按钮等高（input=${input.height} send=${send.height} regen=${regen.height}）`);
         const sendRatio = send.width / send.height;
         const regenRatio = regen.width / regen.height;
-        assert.ok(Math.abs(sendRatio - 3) < 0.6, `发送按钮应≈3:1（实际 ${sendRatio.toFixed(2)}）`);
-        assert.ok(Math.abs(regenRatio - 3) < 0.6, `重生成按钮应≈3:1（实际 ${regenRatio.toFixed(2)}）`);
+        // 按钮常态≈3:1；极窄栏下 3:1 高度不足输入框一行文字（行高+边框）时，按钮随输入框同高，宽高比变小
+        const lineFloor = input.height <= 24;
+        assert.ok(Math.abs(sendRatio - 3) < 0.6 || (lineFloor && sendRatio < 3), `发送按钮应≈3:1（实际 ${sendRatio.toFixed(2)}）`);
+        assert.ok(Math.abs(regenRatio - 3) < 0.6 || (lineFloor && regenRatio < 3), `重生成按钮应≈3:1（实际 ${regenRatio.toFixed(2)}）`);
         assert.ok(expand.top >= row.bottom - 1, `展开/收起按钮必须在输入行下方（expand.top=${expand.top} vs row.bottom=${row.bottom}）`);
         assert.ok(expand.width < row.width * 0.7, `展开/收起按钮应为小按钮不拉伸（width=${expand.width} vs row=${row.width}）`);
       }
