@@ -47,14 +47,14 @@ var promptManagerModal = (function() {
         html += '<style>.pm-section > .gs-switch-row:last-child { border-bottom: none; }</style>';
         // html += '<p class="cfg-hint">以下内容按实际发送给 LLM 的拼装顺序列出。"可调"条目点开后可编辑并保存，保存为全局配置（不随存档走，所有存档共用）；"只读"条目仅供查看。</p>';
 
-        // 分组1：第0条 system —— PROMPT头部（开头两行 + <settings> + role_user 身份说明 + <role_user>）
+        // 分组1：第0条 system —— PROMPT头部（1105 新版：进度注释 + 任务目的 + <settings> + role_user 身份说明；
+        // tone/故事背景/地点/世界书/文笔风格/对话历史均已并入本条 system 消息）
         html += _pmSection([
             _pmBtn('OPENING', 'PROMPT头部', false)
         ]);
 
-        // 分组2：第1条 user 开头 —— 角色行为授权 / 叙事基调 / 故事背景
+        // 分组2：叙事基调 / 故事背景（1105 起位于第0条 system 内；角色行为授权已移除）
         html += _pmSection([
-            _pmBtn('ROLE_AUTH', '角色行为授权', false),
             _pmBtn('INFO_TONE', '叙事基调', true),
             _pmBtn('CORE_010', '故事背景', true)
         ]);
@@ -88,16 +88,17 @@ var promptManagerModal = (function() {
             _pmBtn('CORE_105', '信息列表', false)
         ]);
 
-        // 分组5：剧情生成要求 / 输出格式规范（位于 Order 内 </request> 之后）/ 思维链
+        // 分组5：剧情生成要求 / 输出格式规范（位于 Order 内 </request> 之后）/ 思维链（1105 起全模型统一）
         html += _pmSection([
             _pmBtn('ORDER', '剧情生成要求', true),
             _pmBtn('CORE_110', '输出格式规范', false),
-            _pmThinkGuidanceDropdown()
+            _pmBtn('THINK_GUIDANCE', '思维链', true)
         ]);
 
-        // 分组6：第4条 assistant 越狱前缀 / 第5条 user 最终指令
+        // 分组6：第3条 user 尾部输出要求（含动态地点约束）/ 第4条 assistant 固定前缀 / 第5条 user 最终指令
         html += _pmSection([
-            _pmBtn('JAILBREAK_PREFILL', '越狱前缀', false),
+            _pmBtn('NY_USER_TAIL', '尾部输出要求', false),
+            _pmBtn('NY_ASSISTANT_PREFILL', '助手前缀', false),
             _pmBtn('FINAL_INSTRUCTION', '最终指令', false)
         ]);
 
@@ -250,22 +251,6 @@ var promptManagerModal = (function() {
             '</div>';
     }
 
-    function _pmThinkGuidanceDropdown() {
-        var options = [
-            { key: 'THINK_GUIDANCE', label: '默认（非DeepSeek模型）' },
-            { key: 'THINK_GUIDANCE_DEEPSEEK', label: 'DeepSeek模型' }
-        ];
-        var opts = '<option value="">-- 选择模型 --</option>';
-        for (var i = 0; i < options.length; i++) {
-            var overridden = (typeof promptOverrides !== 'undefined') && promptOverrides.has(options[i].key);
-            opts += '<option value="' + options[i].key + '">' + options[i].label + (overridden ? '（已自定义）' : '') + '</option>';
-        }
-        return '<div class="gs-switch-row">' +
-            '<span class="gs-switch-label">思维链</span>' +
-            '<select class="cfg-input" style="flex:1 1 160px;max-width:220px;min-width:0" onchange="promptManagerModal._openThink(this)">' + opts + '</select>' +
-            '</div>';
-    }
-
     // --- 下拉框选中后打开编辑弹窗 ---
     function _openLocation(sel) {
         var name = sel.value;
@@ -296,21 +281,9 @@ var promptManagerModal = (function() {
         sel.selectedIndex = 0;
     }
 
-    function _openThink(sel) {
-        var key = sel.value;
-        if (!key) return;
-        var label = (key === 'THINK_GUIDANCE_DEEPSEEK') ? '思维链 - DeepSeek模型' : '思维链 - 默认';
-        var defaultText = (key === 'THINK_GUIDANCE_DEEPSEEK')
-            ? (typeof PROMPT_THINK_GUIDANCE_DEEPSEEK !== 'undefined' ? PROMPT_THINK_GUIDANCE_DEEPSEEK : '')
-            : (typeof PROMPT_THINK_GUIDANCE !== 'undefined' ? PROMPT_THINK_GUIDANCE : '');
-        open(key, label, true, defaultText);
-        sel.selectedIndex = 0;
-    }
-
     // --- 固定 key -> 默认常量 / 展示名 映射（用于单按钮条目）---
     var _FIXED_MAP = {
         OPENING:            { title: 'PROMPT头部',     editable: false, get: function() { return typeof PROMPT_OPENING !== 'undefined' ? PROMPT_OPENING : ''; } },
-        ROLE_AUTH:          { title: '角色行为授权',    editable: false, get: function() { return typeof PROMPT_ROLE_AUTH !== 'undefined' ? PROMPT_ROLE_AUTH : ''; } },
         INFO_TONE:          { title: '叙事基调',        editable: true,  get: function() { return typeof PROMPT_INFO_TONE !== 'undefined' ? PROMPT_INFO_TONE : ''; } },
         CORE_010:           { title: '故事背景',        editable: true,  get: function() { return typeof PROMPT_CORE_010 !== 'undefined' ? PROMPT_CORE_010 : ''; } },
         CORE_040:           { title: '主角信息',        editable: true,  get: function() { return typeof PROMPT_CORE_040 !== 'undefined' ? PROMPT_CORE_040 : ''; } },
@@ -319,15 +292,10 @@ var promptManagerModal = (function() {
         CORE_105:           { title: '信息列表',        editable: false, get: function() { return typeof PROMPT_CORE_105 !== 'undefined' ? PROMPT_CORE_105 : ''; } },
         CORE_110:           { title: '输出格式规范',    editable: false, get: function() { return typeof PROMPT_CORE_110 !== 'undefined' ? PROMPT_CORE_110 : ''; } },
         ORDER:              { title: '剧情生成要求',    editable: true,  get: function() { return typeof PROMPT_ORDER !== 'undefined' ? PROMPT_ORDER : ''; } },
-        JAILBREAK_PREFILL:  { title: '越狱前缀',        editable: false, get: function() {
-            var a = typeof PROMPT_JAILBREAK_PREFILL !== 'undefined' ? PROMPT_JAILBREAK_PREFILL : '';
-            var b = typeof PROMPT_JAILBREAK_PREFILL_DEEPSEEK !== 'undefined' ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : '';
-            return '【非DeepSeek模型版本】\n' + a + '\n\n【DeepSeek模型版本】\n' + b;
-        } },
-        FINAL_INSTRUCTION:  { title: '最终指令',        editable: false, get: function() {
-            var f = typeof PROMPT_FINAL_INSTRUCTION !== 'undefined' ? PROMPT_FINAL_INSTRUCTION : '';
-            return '【非DeepSeek模型版本】\n' + f + '\n\n【DeepSeek模型版本】\n' + f.replace(/\[thinking omitted\]\n/, '');
-        } },
+        THINK_GUIDANCE:     { title: '思维链',          editable: true,  get: function() { return typeof PROMPT_THINK_GUIDANCE !== 'undefined' ? PROMPT_THINK_GUIDANCE : ''; } },
+        NY_USER_TAIL:       { title: '尾部输出要求',    editable: false, get: function() { return typeof PROMPT_NY_USER_TAIL !== 'undefined' ? PROMPT_NY_USER_TAIL : ''; } },
+        NY_ASSISTANT_PREFILL: { title: '助手前缀',      editable: false, get: function() { return typeof PROMPT_NY_ASSISTANT_PREFILL !== 'undefined' ? PROMPT_NY_ASSISTANT_PREFILL : ''; } },
+        FINAL_INSTRUCTION:  { title: '最终指令',        editable: false, get: function() { return typeof PROMPT_FINAL_INSTRUCTION !== 'undefined' ? PROMPT_FINAL_INSTRUCTION : ''; } },
         XJ_SYSTEM:          { title: '系统头部（夏瑾预设）',     editable: false, get: function() { return typeof PROMPT_XJ_SYSTEM !== 'undefined' ? PROMPT_XJ_SYSTEM : ''; } },
         XJ_TASK_INTRO:      { title: '任务介绍（夏瑾预设）',     editable: false, get: function() { return typeof PROMPT_XJ_TASK_INTRO !== 'undefined' ? PROMPT_XJ_TASK_INTRO : ''; } },
         XJ_WRITING_GUIDE:   { title: '第一写作指导（夏瑾预设）', editable: true,  get: function() { return typeof PROMPT_XJ_WRITING_GUIDE !== 'undefined' ? PROMPT_XJ_WRITING_GUIDE : ''; } },
@@ -945,7 +913,6 @@ var promptManagerModal = (function() {
         _locResetDefault: _locResetDefault,
         _openNpc: _openNpc,
         _openAction: _openAction,
-        _openThink: _openThink,
         _save: _save,
         _resetDefault: _resetDefault,
         _close: _close,

@@ -2,14 +2,18 @@
  * prompt-builder.js - Prompt 编排（双预设：ny 6 条消息 / 夏瑾 4 条消息）
  * gameData.promptPreset 选择预设（通用设置下拉框，默认 'ny'）：
  *
- * 【ny 预设】与“开发文档/实际的log-迭代.md”一致：
- *   msg1: system    (PROMPT_OPENING：开头两行 + <settings> + role_user 身份说明 + <role_user>，仅此)
- *   msg2: user      (角色行为授权 </role_user> + <tone> + <main_settings> + [Additional settings…地点+世界书1] + </settings>
- *                    + <background> + <writing_style> + <history>([Start a new Chat] + HistorySummary，内含 MainNPCs/UserInfo) + <LatestReply> 开标签)
+ * 【ny 预设】与“开发文档/新ny预设log - 1105.md”一致（1105 新版）：
+ *   msg1: system    (PROMPT_OPENING + <tone> + <main_settings> + </settings>
+ *                    + [Additional settings…地点+世界书1] + lore补充句
+ *                    + <background> + <writing_style> + <history>(连载说明 + [Start a new Chat] + HistorySummary) + <LatestReply> 开标签)
+ *   msg2: user      ([Start a new chat])
  *   msg3: assistant (上一次 AI 回复的正文原文)
- *   msg4: user      (</LatestReply></history> + <fresh> + 世界书2 + <user_input> + MainTextGuidance + 105 + </background> + Order[内含110格式规范 + ThinkGuidance])
- *   msg5: assistant (jailbreak prefill)
- *   msg6: user      (final instruction)
+ *   msg4: user      (</LatestReply> + 截断说明 + </history> + <fresh> + 世界书2 + <user_input> + MainTextGuidance
+ *                    + <SideQuestGuide> + 105 + </background> + Order[内含110格式规范 + ANALGuidance] + </Order>
+ *                    + 尾部输出要求[原 msg5 prefill 并入，含动态地点约束])
+ *   msg5: assistant (PROMPT_NY_ASSISTANT_PREFILL 固定文本)
+ *   msg6: user      (【Reply directly】)
+ *   1105 起不再按 DeepSeek/其他模型区分，全部消息结构保持一致。
  *
  * 【夏瑾预设】与“开发文档/夏瑾预设新log.md”一致：
  *   msg1: system    (PROMPT_XJ_SYSTEM 整条固定文本，含内嵌假对话)
@@ -667,27 +671,20 @@ var promptBuilder = (function() {
     }
 
     /**
-     * 构建消息1: SYSTEM
-     * 仅含 PROMPT_OPENING：开头两行 + <settings> + role_user 身份说明 + <role_user>（两个标签均在消息2中闭合）
+     * 构建消息1: SYSTEM（1105 新版：原消息2的设定与历史全部并入本条 system）
+     * 结构: PROMPT_OPENING + <tone> + <main_settings>(010) + </settings>
+     *       + [Additional settings…](020 + 自定义世界书No.1) + ] + lore 补充句
+     *       + <background> + <writing_style> + <history>(连载说明 + [Start a new Chat] + HistorySummary)
+     *       + <LatestReply> 开标签（<LatestReply>/<history>/<background> 均跨消息在消息4闭合）
      */
-    function _buildMsg1System(variables) {
-        return templateEngine.renderTemplate(PROMPT_OPENING, variables);
-    }
-
-    /**
-     * 构建消息2: USER（设定与历史）
-     * 结构: 角色行为授权(含 </role_user>) + <tone> + <main_settings>(010) + [Additional settings…](020 + 自定义世界书No.1) + </settings>
-     *       + <background> + <writing_style> + <history>([Start a new Chat] + HistorySummary) + <LatestReply> 开标签
-     *       （<LatestReply>/<history>/<background> 均跨消息闭合：前两者在消息4开头，后者在消息4 Order 之前）
-     */
-    function _buildMsg2UserSettings(variables, wbBlocks, historySummaryBlock) {
+    function _buildMsg1System(variables, wbBlocks, historySummaryBlock) {
         var parts = [];
 
-        // 角色行为授权（承接消息1末尾的 <role_user>，在此闭合）
-        parts.push(templateEngine.renderTemplate(PROMPT_ROLE_AUTH, variables));
+        // 固定头部（进度注释 + 任务目的 + <settings> + role_user 身份说明）
+        parts.push(templateEngine.renderTemplate(PROMPT_OPENING, variables));
         parts.push('');
 
-        // <settings> 余下部分（<settings> 开标签已在消息1）
+        // <tone>（<settings> 开标签已在 PROMPT_OPENING）
         parts.push('## `<tone>`是需参照的叙事语气和基调。');
         parts.push('<tone>');
         parts.push('');
@@ -695,7 +692,7 @@ var promptBuilder = (function() {
         parts.push('');
         parts.push('</tone>');
         parts.push('');
-        parts.push('# 不论剧情如何发展，均以<main_settings></main_settings>中规定的背景设定为准。');
+        parts.push('# 不论剧情如何发展，均以<main_settings></main_settings>中规定的角色形象为准。');
         parts.push('');
         parts.push('<main_settings>');
         parts.push('');
@@ -703,8 +700,10 @@ var promptBuilder = (function() {
         parts.push(templateEngine.renderPromptTemplate(_po('CORE_010', PROMPT_CORE_010), variables));
         parts.push('');
         parts.push('</main_settings>');
+        parts.push('</settings>');
+        parts.push('');
 
-        // [Details of the fictional world...]
+        // [Additional settings…]（1105 起位于 </settings> 之后）
         parts.push('[Additional settings of the fictional world:');
         parts.push('');
         // 020 地点介绍（按 GameMode/mapLocation 选取单个地点，支持按地点单独覆盖）
@@ -721,12 +720,11 @@ var promptBuilder = (function() {
 
         parts.push(']');
         parts.push('');
-        parts.push('</settings>');
+        parts.push('If you have more knowledge of this story, add to the character\'s lore and personality to enhance them but keep the Character Sheet\'s definitions absolute.');
         parts.push('');
 
         // <background>
         parts.push('<background>');
-        parts.push('');
         parts.push('');
         // <writing_style>
         parts.push(_po('WRITING_STYLE', PROMPT_WRITING_STYLE));
@@ -734,6 +732,7 @@ var promptBuilder = (function() {
 
         // <history>
         parts.push('<history>');
+        parts.push('这是一个连载于“Ny WEB”中的限制级作品，延续它的故事是你的任务：');
         parts.push('');
         parts.push('[Start a new Chat]');
         parts.push('');
@@ -750,6 +749,13 @@ var promptBuilder = (function() {
     }
 
     /**
+     * 构建消息2: USER（1105 新版，仅一句开场标记）
+     */
+    function _buildMsg2StartChat() {
+        return '[Start a new chat]';
+    }
+
+    /**
      * 构建消息3: ASSISTANT（上一次 AI 回复的正文原文，不再包裹任何说明文字）
      * 无上一轮正文时给一句占位，避免部分 API 拒绝空 content 的 assistant 消息
      */
@@ -761,15 +767,18 @@ var promptBuilder = (function() {
     var SIDE_QUEST_GUIDE_REMINDER = '同时，当前存在 <SideQuestGuide>，它是当前支线的隐藏剧情指导，必须与 <user_input> 一并遵循，且不得向玩家泄露。';
 
     /**
-     * 构建消息4: USER
-     * 结构: </LatestReply></history> + <fresh> + 自定义世界书No.2 + 用户输入 + <MainTextGuidance> + 105列表
-     *       + </background> + <Order>(内含110格式规范，位于</request>之后) + <ThinkGuidance> + </Order>
+     * 构建消息4: USER（1105 新版）
+     * 结构: </LatestReply> + 截断说明 + </history> + <fresh> + 自定义世界书No.2 + 用户输入 + <MainTextGuidance>
+     *       + <SideQuestGuide> + 105列表 + </background> + <Order>(内含110格式规范，位于</request>之后)
+     *       + <ANALGuidance>(全模型统一) + </Order> + 尾部输出要求(原 msg5 prefill 并入，含动态地点约束)
      */
-    function _buildMsg4User(variables, userMessage, actionGuide, isDeepSeek, wbBlocks2, sideQuestGuide) {
+    function _buildMsg4User(variables, userMessage, actionGuide, wbBlocks2, sideQuestGuide, locationConstraint) {
         var parts = [];
 
-        // 闭合消息2打开的 <LatestReply> 与 <history>
+        // 闭合消息1打开的 <LatestReply> 与 <history>
         parts.push('</LatestReply>');
+        parts.push('//以上latest文字是剧情截断处，本次新剧情生成应当从此处开始。');
+        parts.push('');
         parts.push('</history>');
         parts.push('');
 
@@ -835,12 +844,15 @@ var promptBuilder = (function() {
         parts.push(orderText);
         parts.push('');
 
-        // <ThinkGuidance> (根据模型选择版本，需经过模板引擎替换 {{user}} 等变量)
-        var thinkGuidance = isDeepSeek
-            ? _po('THINK_GUIDANCE_DEEPSEEK', PROMPT_THINK_GUIDANCE_DEEPSEEK)
-            : _po('THINK_GUIDANCE', PROMPT_THINK_GUIDANCE);
+        // <ANALGuidance>（1105 起全模型统一，不再按 DeepSeek 分叉；需经过模板引擎替换 {{user}} 等变量）
+        var thinkGuidance = _po('THINK_GUIDANCE', PROMPT_THINK_GUIDANCE);
         parts.push(templateEngine.renderPromptTemplate(thinkGuidance, variables).replace(/^\s+|\s+$/g, ''));
         parts.push('</Order>');
+        parts.push('');
+
+        // 尾部输出要求（原 msg5 prefill 并入本消息；动态地点约束插入「第二人称输出」行之后）
+        var userTail = templateEngine.renderPromptTemplate(PROMPT_NY_USER_TAIL, variables);
+        parts.push(_insertLocationConstraint(userTail, locationConstraint));
 
         return parts.join('\n');
     }
@@ -1055,22 +1067,18 @@ var promptBuilder = (function() {
     }
 
     /**
-     * ny 预设组装（6 条消息）：先占位估算 fixedTokens，预算后重建承载 HistorySummary 的 msg2
+     * ny 预设组装（1105 新版 6 条消息）：先占位估算 fixedTokens，预算后重建承载 HistorySummary 的 msg1(system)
      */
     function _assembleNy(ctx) {
         var variables = ctx.variables;
         var historySummaryPlaceholder = _buildHistorySummaryBlock([], [], [], null, ctx.recallSearchText, ctx.recallConfig, ctx.npcUserBlock);
-        var msg1Content = _buildMsg1System(variables);
-        var msg2Content = _buildMsg2UserSettings(variables, ctx.wbBlocks1, historySummaryPlaceholder);
+        var msg1Content = _buildMsg1System(variables, ctx.wbBlocks1, historySummaryPlaceholder);
+        var msg2Content = _buildMsg2StartChat();
         var msg3Content = _buildMsg3LatestReply(ctx.lastAssistantReply);
-        var msg4Content = _buildMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.isDeepSeek, ctx.wbBlocks2, ctx.sideQuestGuide);
-        var msg5Content = templateEngine.renderPromptTemplate(
-            ctx.isDeepSeek ? PROMPT_JAILBREAK_PREFILL_DEEPSEEK : PROMPT_JAILBREAK_PREFILL, variables);
-        msg5Content = _insertLocationConstraint(msg5Content, ctx.locationConstraint);
-        // DeepSeek 自带思维链，不声明 [thinking omitted]
-        var msg6Content = ctx.isDeepSeek
-            ? PROMPT_FINAL_INSTRUCTION.replace(/\[thinking omitted\]\n/, '')
-            : PROMPT_FINAL_INSTRUCTION;
+        var msg4Content = _buildMsg4User(variables, ctx.userMessage, ctx.actionGuide, ctx.wbBlocks2, ctx.sideQuestGuide, ctx.locationConstraint);
+        // 1105 起 msg5/msg6 全模型一致，不再按 DeepSeek 分叉
+        var msg5Content = PROMPT_NY_ASSISTANT_PREFILL;
+        var msg6Content = PROMPT_FINAL_INSTRUCTION;
 
         var fixedTokens = tokenUtils.estimate(msg1Content)
                         + tokenUtils.estimate(msg2Content)
@@ -1090,7 +1098,7 @@ var promptBuilder = (function() {
             recallConfig: ctx.recallConfig,
             npcUserBlock: ctx.npcUserBlock
         });
-        msg2Content = _buildMsg2UserSettings(variables, ctx.wbBlocks1, finalHistory.block);
+        msg1Content = _buildMsg1System(variables, ctx.wbBlocks1, finalHistory.block);
 
         return {
             label: 'ny 6-msg',
@@ -1191,10 +1199,6 @@ var promptBuilder = (function() {
         var _recallSearchText = (userMessage || '') + (lastAssistantReply || '');
         var _recallConfig = gd.recallConfig || {};
 
-        // --- 模型检测 ---
-        var modelName = (apiService.getConfig().model || '').toLowerCase();
-        var isDeepSeek = modelName.indexOf('deepseek') !== -1;
-
         // --- RecentMemories：summaryHistory 中 week >= (lastWeekHistory.markWeek - 1) ---
         var recentSummaries = _selectRecentSummaries(summaryHistory, weekHistory);
 
@@ -1228,7 +1232,6 @@ var promptBuilder = (function() {
             locationConstraint: _sideQuestReturnFailure
                 ? '本轮从【' + _sideQuestReturnFailure.originLocation + '】中途放弃任务返回【天山派】，结尾必须抵达；支线已经失败。'
                 : _buildLocationConstraint(userMessage, gd),
-            isDeepSeek: isDeepSeek,
             wbBlocks1: wbBlocks1,
             wbBlocks2: wbBlocks2,
             npcUserBlock: npcUserBlock,
@@ -1272,5 +1275,38 @@ var promptBuilder = (function() {
         return messages;
     }
 
-    return { buildMessages: buildMessages };
+    /**
+     * 后台总结/生成/判定请求共用的 1105 六消息框架。
+     * 任务规则集中在 system；素材保留在 msg3 assistant；msg4 合并任务与输出要求；
+     * msg5/msg6 与 ny 主对话一致，不再使用素材收集轮次、■模式或旧 reply 收尾。
+     */
+    function buildBackgroundMessages(opts) {
+        var outputTag = opts.outputTag;
+        var outputDescription = opts.outputDescription || '结构化结果';
+        var taskRules = opts.taskRules || ['严格遵循 <settings> 中的任务规则与输出格式'];
+        var taskRuleText = taskRules.map(function(rule) { return '\n- ' + rule; }).join('');
+        var systemContent = '<!--后台任务当前进度: 0/100-->\n<!--本次目标完成度: 0/100-->\n'
+            + '任务与目的：**以完成游戏后台结构化文本处理为目的输出**\n开始鲁取有效信息:\n\n<settings>\n'
+            + opts.systemPrompt + '\n</settings>';
+        var userContent = opts.taskPrompt
+            + '\n\n命令录入完毕，即将使用“简体中文”进行输出，同步避免对其他语言的引用。\n\n{'
+            + taskRuleText
+            + '\n- 不输出任何解释、前言或 Markdown 代码围栏'
+            + '\n- 仅输出由 <' + outputTag + '> 和 </' + outputTag + '> 包裹的' + outputDescription
+            + '\n\n<thinking>\n{\nOrder\n   thinking analysis omitted \n**续写only order**\n}\n</thinking>}';
+
+        return [
+            { role: 'system', content: systemContent },
+            { role: 'user', content: '[Start a new chat]' },
+            { role: 'assistant', content: opts.materialContent },
+            { role: 'user', content: userContent },
+            { role: 'assistant', content: PROMPT_NY_ASSISTANT_PREFILL },
+            { role: 'user', content: PROMPT_FINAL_INSTRUCTION }
+        ];
+    }
+
+    return {
+        buildMessages: buildMessages,
+        buildBackgroundMessages: buildBackgroundMessages
+    };
 })();
