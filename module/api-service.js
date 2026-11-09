@@ -6,7 +6,19 @@
  */
 
 var apiService = (function() {
-    var config = {
+    // 可分流到副 API 的后台 LLM 请求（runturn 正文请求固定走主 API，不在此列）
+    var BACKGROUND_TASKS = [
+        { key: 'summary',        label: '周总结' },
+        { key: 'event',          label: '剧情事件抽取' },
+        { key: 'location',       label: '地点信息更新' },
+        { key: 'sideQuestRumor', label: '支线传闻生成' },
+        { key: 'sideQuestTree',  label: '支线剧情树生成' },
+        { key: 'sideQuestJudge', label: '支线阶段判断' },
+        { key: 'bounty',         label: '悬赏任务生成' }
+    ];
+    var SECONDARY_STORAGE_KEY = 'jxz_apiConfigSecondary';
+
+    function _createDefaultConfig() { return {
         endpoint: '',
         apiKey: '',
         model: '',
@@ -22,6 +34,7 @@ var apiService = (function() {
         maxContextTokens: 500000,
         streamMode: 'stream',  // 'stream' 流式 | 'non-stream' 非流式（正文与总结统一遵循）
         toolOutputEnabled: false, // 可选工具输出封装；旧配置缺省关闭，按 API 类型适配
+        promptPreset: 'ny',       // 提示词预设：'ny'=ny预设 6条消息结构，'xiajin'=夏瑾预设 4条消息结构
         corsProxyUrl: 'https://jxz-cors-proxy.nicholaswuai.workers.dev/',  // 部署后替换为你的 Worker 地址
         // 是否启用 CORS 代理。默认按环境：web 默认开启，本地 file:// / APK(webview) / Electron 默认关闭。
         // 用户在配置页勾选后可覆盖（APK 勾选后也能走代理）。
@@ -33,20 +46,40 @@ var apiService = (function() {
                 return true; // web
             } catch (e) { return true; }
         })()
-    };
+    }; }
+
+    // 主 API：所有请求的默认通道（含 runturn 正文）
+    var config = _createDefaultConfig();
+    // 副 API：参数与主 API 相同，另含 enabled（副API开关）与 backgroundTasks（勾选后走副 API 的后台请求 key 列表）
+    var secondaryConfig = Object.assign(_createDefaultConfig(), { enabled: false, backgroundTasks: [] });
+
+    function _loadInto(target, key) {
+        var saved = localStorage.getItem(key);
+        if (!saved) return;
+        var parsed = JSON.parse(saved);
+        // corsProxyUrl 若用户从未手动改过（为空），保留代码默认值
+        var defaultProxy = target.corsProxyUrl;
+        Object.assign(target, parsed);
+        if (!target.corsProxyUrl) target.corsProxyUrl = defaultProxy;
+    }
 
     function loadConfig() {
         try {
-            var saved = localStorage.getItem('jxz_apiConfig');
-            if (saved) {
-                var parsed = JSON.parse(saved);
-                // corsProxyUrl 若用户从未手动改过（为空），保留代码默认值
-                var defaultProxy = config.corsProxyUrl;
-                Object.assign(config, parsed);
-                if (!config.corsProxyUrl) config.corsProxyUrl = defaultProxy;
-            }
+            _loadInto(config, 'jxz_apiConfig');
         } catch (e) {
             console.warn('加载 API 配置失败', e);
+        }
+        try {
+            var hadEnabled = (function() {
+                try { var raw = JSON.parse(localStorage.getItem(SECONDARY_STORAGE_KEY) || '{}'); return raw && typeof raw.enabled === 'boolean'; }
+                catch (e) { return false; }
+            })();
+            _loadInto(secondaryConfig, SECONDARY_STORAGE_KEY);
+            if (!Array.isArray(secondaryConfig.backgroundTasks)) secondaryConfig.backgroundTasks = [];
+            // 旧版副 API 配置无开关字段：已填完整的视为开启，保持升级前行为
+            if (!hadEnabled) secondaryConfig.enabled = isSecondaryComplete();
+        } catch (e) {
+            console.warn('加载副 API 配置失败', e);
         }
     }
 
@@ -61,6 +94,105 @@ var apiService = (function() {
     function updateConfig(newConfig) {
         Object.assign(config, newConfig);
         saveConfig();
+    }
+
+    function getSecondaryConfig() {
+        return secondaryConfig;
+    }
+
+    function updateSecondaryConfig(newConfig) {
+        Object.assign(secondaryConfig, newConfig);
+        if (!Array.isArray(secondaryConfig.backgroundTasks)) secondaryConfig.backgroundTasks = [];
+        secondaryConfig.enabled = secondaryConfig.enabled === true;
+        localStorage.setItem(SECONDARY_STORAGE_KEY, JSON.stringify(secondaryConfig));
+    }
+
+    function _isValidEndpoint(url) {
+        return typeof url === 'string' && /^https?:\/\/[^\s\/]+/i.test(url.trim());
+    }
+
+    function _hasText(v) {
+        return typeof v === 'string' && v.trim() !== '';
+    }
+
+    // 副 API 三项（地址、Key、模型）是否全部有效
+    function isSecondaryComplete() {
+        return _isValidEndpoint(secondaryConfig.endpoint) && _hasText(secondaryConfig.apiKey) && _hasText(secondaryConfig.model);
+    }
+
+    // 副 API 是否启用：开关打开 且 地址、Key、模型三项全部有效；否则全部走主 API
+    function isSecondaryConfigured() {
+        return secondaryConfig.enabled === true && isSecondaryComplete();
+    }
+
+    function _taskLabel(task) {
+        if (!task || task === 'runturn') return '正文(runturn)';
+        for (var i = 0; i < BACKGROUND_TASKS.length; i++) {
+            if (BACKGROUND_TASKS[i].key === task) return BACKGROUND_TASKS[i].label + '(' + task + ')';
+        }
+        return String(task);
+    }
+
+    /**
+     * 解析路由并给出原因（供日志/调试）
+     * @returns {{ cfg: object, which: 'primary'|'secondary', reason: string }}
+     */
+    function _resolveRoute(task) {
+        if (!task || task === 'runturn') return { cfg: config, which: 'primary', reason: '正文请求固定走主API' };
+        if (secondaryConfig.enabled !== true) return { cfg: config, which: 'primary', reason: '副API开关未打开' };
+        if (!isSecondaryComplete()) return { cfg: config, which: 'primary', reason: '副API地址/Key/模型不完整或无效' };
+        if (secondaryConfig.backgroundTasks.indexOf(task) === -1) return { cfg: config, which: 'primary', reason: '该请求未勾选使用副API' };
+        return { cfg: secondaryConfig, which: 'secondary', reason: '已勾选使用副API' };
+    }
+
+    /**
+     * 按请求类型解析本次应使用的 API 配置。
+     * 仅当副 API 已启用且该后台请求被勾选时走副 API；runturn / 未传 task / 未勾选 → 主 API。
+     * @param {string} [task] - BACKGROUND_TASKS 中的 key
+     */
+    function getConfigFor(task) {
+        return _resolveRoute(task).cfg;
+    }
+
+    function _requireConfigured(cfg) {
+        return !!(cfg.endpoint && cfg.apiKey && cfg.model);
+    }
+
+    function _hostOf(endpoint) {
+        try { return new URL(endpoint).host; } catch (e) { return endpoint || '(未设置)'; }
+    }
+
+    // 每次请求打印路由结果：哪类请求 → 主/副 API、模型、域名、流式与否、原因
+    function _logRoute(cfg, options, mode) {
+        var task = options && options.task;
+        var route = _resolveRoute(task);
+        var tag = route.which === 'secondary' ? '副API' : '主API';
+        console.log('[API][路由] ' + _taskLabel(task) + ' → ' + tag +
+            ' | model=' + (cfg.model || '(未设置)') + ' | host=' + _hostOf(cfg.endpoint) +
+            ' | ' + mode + ' | 原因: ' + route.reason);
+    }
+
+    /**
+     * 旧版把提示词预设存在 gameData.promptPreset（随存档进 jxz_db）。
+     * 现迁到主 API 配置：若主配置从未保存过 promptPreset，则采纳旧值；无论是否采纳都从 gameData 中移除。
+     * 直接读写 localStorage，因此可在 loadConfig() 之前调用。
+     */
+    function migrateLegacyPromptPreset(gd) {
+        if (!gd || typeof gd !== 'object' || !Object.prototype.hasOwnProperty.call(gd, 'promptPreset')) return;
+        var legacy = gd.promptPreset === 'xiajin' ? 'xiajin' : 'ny';
+        delete gd.promptPreset;
+        try {
+            var raw = localStorage.getItem('jxz_apiConfig');
+            var saved = raw ? JSON.parse(raw) : {};
+            if (saved && typeof saved === 'object' && !Object.prototype.hasOwnProperty.call(saved, 'promptPreset')) {
+                saved.promptPreset = legacy;
+                config.promptPreset = legacy;
+                localStorage.setItem('jxz_apiConfig', JSON.stringify(saved));
+                console.log('[API] 已将旧存档的提示词预设迁移到 AI 配置: ' + legacy);
+            }
+        } catch (e) {
+            console.warn('[API] 迁移提示词预设失败', e);
+        }
     }
 
     // ========== 环境检测 & CORS 代理路由 ==========
@@ -106,21 +238,22 @@ var apiService = (function() {
     // - options.maxOutputTokens === null → 不限制（省略 max_tokens，由模型默认上限决定）
     // - 数字 → 使用该值
     // - 未指定 → 使用全局配置 config.maxOutputTokens
-    function _resolveMaxOutputTokens(options) {
+    function _resolveMaxOutputTokens(options, cfg) {
         if (options && Object.prototype.hasOwnProperty.call(options, 'maxOutputTokens')) {
             return options.maxOutputTokens;
         }
-        return config.maxOutputTokens;
+        return (cfg || config).maxOutputTokens;
     }
 
     // 按「排除开关」把已启用的采样参数写进请求体/generationConfig；关闭的参数完全不写入 key，
     // 交由服务端/模型自身默认值决定（与 SillyTavern「排除该参数」效果一致）。
     // isGemini=true 时用 Gemini 的 camelCase 字段名，否则用 OpenAI 兼容的 snake_case。
-    function _applyExtraSamplerParams(target, isGemini) {
-        if (config.topPEnabled) target[isGemini ? 'topP' : 'top_p'] = config.topP;
-        if (config.topKEnabled) target[isGemini ? 'topK' : 'top_k'] = config.topK;
-        if (config.frequencyPenaltyEnabled) target[isGemini ? 'frequencyPenalty' : 'frequency_penalty'] = config.frequencyPenalty;
-        if (config.presencePenaltyEnabled) target[isGemini ? 'presencePenalty' : 'presence_penalty'] = config.presencePenalty;
+    function _applyExtraSamplerParams(target, isGemini, cfg) {
+        cfg = cfg || config;
+        if (cfg.topPEnabled) target[isGemini ? 'topP' : 'top_p'] = cfg.topP;
+        if (cfg.topKEnabled) target[isGemini ? 'topK' : 'top_k'] = cfg.topK;
+        if (cfg.frequencyPenaltyEnabled) target[isGemini ? 'frequencyPenalty' : 'frequency_penalty'] = cfg.frequencyPenalty;
+        if (cfg.presencePenaltyEnabled) target[isGemini ? 'presencePenalty' : 'presence_penalty'] = cfg.presencePenalty;
     }
 
     // ========== 工具输出协议（仅改变传输格式，不执行任何外部工具） ==========
@@ -549,40 +682,48 @@ var apiService = (function() {
         return state;
     }
 
+    /**
+     * 非流式发送消息
+     * @param {Array} messages
+     * @param {object} [options] - { signal, maxOutputTokens, task }；task 为后台请求类型，决定是否走副 API
+     */
     async function sendMessages(messages, options) {
-        if (!config.endpoint || !config.apiKey || !config.model) {
+        var cfg = getConfigFor(options && options.task);
+        if (!_requireConfigured(cfg)) {
             throw new Error('请先配置 API 信息（endpoint, key, model）');
         }
+        _logRoute(cfg, options, '非流式');
         var signal = options && options.signal;
-        var maxTokens = _resolveMaxOutputTokens(options);
-        if (config.type === 'gemini') {
-            return _callGemini(messages, signal, maxTokens);
+        var maxTokens = _resolveMaxOutputTokens(options, cfg);
+        if (cfg.type === 'gemini') {
+            return _callGemini(messages, signal, maxTokens, cfg);
         }
-        return _callOpenAI(messages, signal, maxTokens);
+        return _callOpenAI(messages, signal, maxTokens, cfg);
     }
 
-    async function _callOpenAI(messages, signal, maxTokens) {
-        var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/chat/completions');
+    async function _callOpenAI(messages, signal, maxTokens, cfg) {
+        cfg = cfg || config;
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/chat/completions', cfg);
         console.log('[API] 发送请求到 OpenAI:', url);
         var _reqBody = {
-            model: config.model,
+            model: cfg.model,
             messages: messages,
-            temperature: config.temperature
+            temperature: cfg.temperature
         };
         // maxTokens 为 null 表示不限制（省略 max_tokens）；数字按值；undefined 回退全局配置
         if (typeof maxTokens === 'number') {
             _reqBody.max_tokens = maxTokens;
         } else if (typeof maxTokens === 'undefined') {
-            _reqBody.max_tokens = config.maxOutputTokens;
+            _reqBody.max_tokens = cfg.maxOutputTokens;
         }
-        _applyExtraSamplerParams(_reqBody, false);
-        var toolMode = config.toolOutputEnabled === true;
-        _wrapToolRequest(_reqBody, messages, false, config);
+        _applyExtraSamplerParams(_reqBody, false, cfg);
+        var toolMode = cfg.toolOutputEnabled === true;
+        _wrapToolRequest(_reqBody, messages, false, cfg);
         var fetchOptions = {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'Authorization': 'Bearer ' + config.apiKey
+                'Authorization': 'Bearer ' + cfg.apiKey
             },
             body: JSON.stringify(_reqBody)
         };
@@ -601,7 +742,8 @@ var apiService = (function() {
         };
     }
 
-    async function _callGemini(messages, signal, maxTokens) {
+    async function _callGemini(messages, signal, maxTokens, cfg) {
+        cfg = cfg || config;
         var systemMsgs = messages.filter(function(m) { return m.role === 'system'; });
         var chatMsgs = messages.filter(function(m) { return m.role !== 'system'; });
         var systemPrompt = systemMsgs.map(function(m) { return m.content; }).join('\n\n');
@@ -613,22 +755,22 @@ var apiService = (function() {
             };
         });
 
-        var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/models/' + config.model + ':generateContent?key=' + encodeURIComponent(config.apiKey));
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent?key=' + encodeURIComponent(cfg.apiKey), cfg);
         console.log('[API] 发送请求到 Gemini:', url);
 
-        var _genConfig = { temperature: config.temperature };
+        var _genConfig = { temperature: cfg.temperature };
         if (typeof maxTokens === 'number') {
             _genConfig.maxOutputTokens = maxTokens;
         } else if (typeof maxTokens === 'undefined') {
-            _genConfig.maxOutputTokens = config.maxOutputTokens;
+            _genConfig.maxOutputTokens = cfg.maxOutputTokens;
         }
-        _applyExtraSamplerParams(_genConfig, true);
-        var toolMode = config.toolOutputEnabled === true;
+        _applyExtraSamplerParams(_genConfig, true, cfg);
+        var toolMode = cfg.toolOutputEnabled === true;
         var requestBody = _wrapToolRequest({
             contents: contents,
             systemInstruction: { parts: [{ text: systemPrompt }] },
             generationConfig: _genConfig
-        }, messages, true, config);
+        }, messages, true, cfg);
         var response = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -783,47 +925,51 @@ var apiService = (function() {
      * 流式发送消息
      * @param {Array} messages - 消息数组
      * @param {object} callbacks - { onToken(text), onThinking(text), onComplete(fullText, usage), onError(err) }
+     * @param {object} [options] - { maxOutputTokens, task }；task 为后台请求类型，决定是否走副 API
      * @returns {{ abort: Function }} 中断控制器
      */
     function sendMessagesStream(messages, callbacks, options) {
-        if (!config.endpoint || !config.apiKey || !config.model) {
+        var cfg = getConfigFor(options && options.task);
+        if (!_requireConfigured(cfg)) {
             callbacks.onError(new Error('请先配置 API 信息'));
             return { abort: function() {} };
         }
+        _logRoute(cfg, options, '流式');
 
         var controller = new AbortController();
-        var maxTokens = _resolveMaxOutputTokens(options);
+        var maxTokens = _resolveMaxOutputTokens(options, cfg);
 
-        if (config.type === 'gemini') {
-            _streamGemini(messages, callbacks, controller, maxTokens);
+        if (cfg.type === 'gemini') {
+            _streamGemini(messages, callbacks, controller, maxTokens, cfg);
         } else {
-            _streamOpenAI(messages, callbacks, controller, maxTokens);
+            _streamOpenAI(messages, callbacks, controller, maxTokens, cfg);
         }
 
         return { abort: function() { controller.abort(); } };
     }
 
-    async function _streamOpenAI(messages, callbacks, controller, maxTokens) {
-        var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/chat/completions');
+    async function _streamOpenAI(messages, callbacks, controller, maxTokens, cfg) {
+        cfg = cfg || config;
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/chat/completions', cfg);
         var fullContent = '';
         var fullThinking = '';
 
         var requestBody = {
-            model: config.model,
+            model: cfg.model,
             messages: messages,
-            temperature: config.temperature,
+            temperature: cfg.temperature,
             stream: true
         };
         // maxTokens 为 null 表示不限制（省略 max_tokens）；数字按值；undefined 回退全局配置
         if (typeof maxTokens === 'number') {
             requestBody.max_tokens = maxTokens;
         } else if (typeof maxTokens === 'undefined') {
-            requestBody.max_tokens = config.maxOutputTokens;
+            requestBody.max_tokens = cfg.maxOutputTokens;
         }
-        _applyExtraSamplerParams(requestBody, false);
-        var toolMode = config.toolOutputEnabled === true;
+        _applyExtraSamplerParams(requestBody, false, cfg);
+        var toolMode = cfg.toolOutputEnabled === true;
         var toolState = { content: '', usage: null, diag: toolMode ? _createStreamDiag() : null };
-        _wrapToolRequest(requestBody, messages, false, config);
+        _wrapToolRequest(requestBody, messages, false, cfg);
         console.log('[API][DEBUG] 流式请求 body (非messages部分):', JSON.stringify({
             model: requestBody.model,
             temperature: requestBody.temperature,
@@ -837,7 +983,7 @@ var apiService = (function() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ' + config.apiKey
+                    'Authorization': 'Bearer ' + cfg.apiKey
                 },
                 body: JSON.stringify(requestBody),
                 signal: controller.signal
@@ -907,7 +1053,8 @@ var apiService = (function() {
         }
     }
 
-    async function _streamGemini(messages, callbacks, controller, maxTokens) {
+    async function _streamGemini(messages, callbacks, controller, maxTokens, cfg) {
+        cfg = cfg || config;
         var systemMsgs = messages.filter(function(m) { return m.role === 'system'; });
         var chatMsgs = messages.filter(function(m) { return m.role !== 'system'; });
         var systemPrompt = systemMsgs.map(function(m) { return m.content; }).join('\n\n');
@@ -918,22 +1065,22 @@ var apiService = (function() {
             };
         });
 
-        var url = _resolveUrl(config.endpoint.replace(/\/+$/, '') + '/models/' + config.model + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(config.apiKey));
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(cfg.apiKey), cfg);
         var fullContent = '';
-        var _streamGenConfig = { temperature: config.temperature };
+        var _streamGenConfig = { temperature: cfg.temperature };
         if (typeof maxTokens === 'number') {
             _streamGenConfig.maxOutputTokens = maxTokens;
         } else if (typeof maxTokens === 'undefined') {
-            _streamGenConfig.maxOutputTokens = config.maxOutputTokens;
+            _streamGenConfig.maxOutputTokens = cfg.maxOutputTokens;
         }
-        _applyExtraSamplerParams(_streamGenConfig, true);
-        var toolMode = config.toolOutputEnabled === true;
+        _applyExtraSamplerParams(_streamGenConfig, true, cfg);
+        var toolMode = cfg.toolOutputEnabled === true;
         var toolState = { content: '', usage: null, diag: toolMode ? _createStreamDiag() : null };
         var requestBody = _wrapToolRequest({
             contents: contents,
             systemInstruction: systemPrompt ? { parts: [{ text: systemPrompt }] } : undefined,
             generationConfig: _streamGenConfig
-        }, messages, true, config);
+        }, messages, true, cfg);
 
         try {
             var response = await fetch(url, {
@@ -1011,6 +1158,13 @@ var apiService = (function() {
         saveConfig: saveConfig,
         getConfig: getConfig,
         updateConfig: updateConfig,
+        getSecondaryConfig: getSecondaryConfig,
+        updateSecondaryConfig: updateSecondaryConfig,
+        isSecondaryConfigured: isSecondaryConfigured,
+        isSecondaryComplete: isSecondaryComplete,
+        getConfigFor: getConfigFor,
+        migrateLegacyPromptPreset: migrateLegacyPromptPreset,
+        BACKGROUND_TASKS: BACKGROUND_TASKS,
         sendMessages: sendMessages,
         sendMessagesStream: sendMessagesStream,
         fetchModels: fetchModels,

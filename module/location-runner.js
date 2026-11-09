@@ -208,9 +208,9 @@ var locationRunner = (function() {
      * 按 API 配置决定流式 / 非流式（与正文请求共用 streamMode 开关），不受弹窗最大输出 Token 限制
      */
     function _sendForLocation(messages, signal) {
-        var streamMode = (apiService.getConfig && apiService.getConfig().streamMode) || 'stream';
+        var streamMode = (apiService.getConfigFor ? apiService.getConfigFor('location') : apiService.getConfig()).streamMode || 'stream';
         if (streamMode !== 'stream') {
-            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null });
+            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null, task: 'location' });
         }
         return new Promise(function(resolve, reject) {
             var handle = apiService.sendMessagesStream(messages, {
@@ -218,7 +218,7 @@ var locationRunner = (function() {
                 onThinking: function() {},
                 onComplete: function(fullText, usage) { resolve({ content: fullText, usage: usage }); },
                 onError: function(err) { reject(err); }
-            }, { maxOutputTokens: null });
+            }, { maxOutputTokens: null, task: 'location' });
             if (signal) {
                 if (signal.aborted) { handle.abort(); }
                 else { signal.addEventListener('abort', function() { handle.abort(); }, { once: true }); }

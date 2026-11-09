@@ -120,12 +120,14 @@ try {
     results.push(record);
    }
    // Real settings controls remain interactive; cancel must not persist edits.
-   await page.evaluate(()=>{closeAllSpecialModals();closeMusicModal();if(document.getElementById('font-modal'))closeFontModal();showConfigModal();});
+   await page.evaluate(()=>{closeAllSpecialModals();closeMusicModal();if(document.getElementById('font-modal'))closeFontModal();showConfigModal();window.__confirms=[];window.confirm=m=>{__confirms.push(m);return true;};});
    await page.type('#api-key-input','temporary-ui-test');
    await new Promise(r=>setTimeout(r,350));
    const cancelHit=await page.$eval('#api-config-modal .cfg-footer button:first-child',e=>{const r=e.getBoundingClientRect();const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);return {button:e.outerHTML,hit:hit?.outerHTML.slice(0,300)};});
+   const savedKey=await page.evaluate(()=>apiService.getConfig().apiKey);
    await page.click('#api-config-modal .cfg-footer button:first-child');
-   results.push({label,name:'config-cancel',cancelHit,pass:await page.$('#api-config-modal')===null});
+   const discard=await page.evaluate(k=>({asked:__confirms.some(m=>/未保存的修改/.test(m)),kept:apiService.getConfig().apiKey===k}),savedKey);
+   results.push({label,name:'config-cancel',cancelHit,discard,pass:await page.$('#api-config-modal')===null&&discard.asked&&discard.kept});
    await writeFile(path.join(output,`${label}-errors.json`),JSON.stringify(session.logs.filter(x=>x.type==='pageerror'),null,2));
   } finally {await session.close();}
  }

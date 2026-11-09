@@ -321,9 +321,22 @@ const galPresentation = (() => {
             ? Object.keys(locationNames).filter(id => id !== 'none' && id !== 'tianshanpai').map(id => locationNames[id])
             : [];
     }
+    // 逐页昼夜：本帧 time → 同一 frames 列表中逆序最近的前序帧 time → 全局 dayNightStatus。
+    // 昼夜阈值与 applyTurnTime 一致（6:00–17:59 为昼）。frame 不在当前列表中时（如单测直接构造）只看自身 time。
+    function dayNightCNFor(frame) {
+        let time = frame && frame.time;
+        if (!time) {
+            const list = frames();
+            const idx = frame ? list.indexOf(frame) : -1;
+            for (let i = idx - 1; i >= 0 && !time; i--) time = list[i] && list[i].time;
+        }
+        const m = time ? /^(\d{1,2})[:：](\d{2})$/.exec(String(time).trim()) : null;
+        if (m && +m[1] < 24) return (+m[1] >= 6 && +m[1] < 18) ? '昼' : '夜';
+        return (typeof dayNightStatus !== 'undefined' && dayNightStatus === 'night') ? '夜' : '昼';
+    }
     // 场景图URL：GameMode 1 沿用 SLG 路径 / legacySceneOptions 分支；GameMode 0 按 G6 只认门派地点，否则回退天山派四季图。
     function sceneUrlFor(frame, mode) {
-        const dayNightCN = (typeof dayNightStatus !== 'undefined' && dayNightStatus === 'night') ? '夜' : '昼';
+        const dayNightCN = dayNightCNFor(frame);
         const sceneName = frame && frame.scene;
         if (mode === 0) {
             const season = SEASON_CN[(typeof seasonStatus !== 'undefined') ? seasonStatus : ''] || '冬';

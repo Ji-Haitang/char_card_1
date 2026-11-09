@@ -1,7 +1,7 @@
 /**
  * prompt-manager-modal.js - 提示词管理面板（系统设置-游戏设置-提示词管理）
  *
- * 按当前提示词预设（gameData.promptPreset，通用设置下拉框）展示对应结构与条目：
+ * 按当前提示词预设（主 API 配置的 promptPreset，AI 配置弹窗下拉框）展示对应结构与条目：
  *   - ny 预设（默认）：6 条消息结构，见 _renderNy
  *   - 夏瑾预设：4 条消息结构，见 _renderXiajin
  * 条目规则（两套预设共用）：
@@ -33,7 +33,8 @@ var promptManagerModal = (function() {
     // --- 渲染整个面板（按当前预设分支） ---
     function render(root) {
         if (!root) return;
-        var preset = (typeof gameData !== 'undefined' && gameData && gameData.promptPreset === 'xiajin') ? 'xiajin' : 'ny';
+        var _apiCfg = (typeof apiService !== 'undefined' && apiService.getConfig) ? apiService.getConfig() : {};
+        var preset = (_apiCfg.promptPreset === 'xiajin') ? 'xiajin' : 'ny';
         if (preset === 'xiajin') {
             _renderXiajin(root);
         } else {

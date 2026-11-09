@@ -78,9 +78,9 @@ var bountyService = (function() {
     // API 调用（按 apiService.getConfig().streamMode 动态选择流式/非流式，同 summary-runner.js）
     // =========================================================================
     function _sendForBounty(messages) {
-        var streamMode = (apiService.getConfig && apiService.getConfig().streamMode) || 'stream';
+        var streamMode = (apiService.getConfigFor ? apiService.getConfigFor('bounty') : apiService.getConfig()).streamMode || 'stream';
         if (streamMode !== 'stream') {
-            return apiService.sendMessages(messages, { maxOutputTokens: null });
+            return apiService.sendMessages(messages, { maxOutputTokens: null, task: 'bounty' });
         }
         return new Promise(function(resolve, reject) {
             apiService.sendMessagesStream(messages, {
@@ -88,7 +88,7 @@ var bountyService = (function() {
                 onThinking: function() {},
                 onComplete: function(fullText, usage) { resolve({ content: fullText, usage: usage }); },
                 onError: function(err) { reject(err); }
-            }, { maxOutputTokens: null });
+            }, { maxOutputTokens: null, task: 'bounty' });
         });
     }
 

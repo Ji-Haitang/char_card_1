@@ -229,6 +229,47 @@ test('GM1 直渲染翻页同样保持双人站位（焦点/CG 仍认 cast[0]）'
   assert.equal(box.get('window.__lastValidNpcEmotionUrl'), 'img/表情差分和CG/雨烛/表情差分/发情.webp');
 });
 
+test('逐页昼夜：本帧 time → 逆序最近前序帧 time → 全局 dayNightStatus（GM0/GM1 同口径）', () => {
+  // 全局为夜，验证帧时间优先
+  const box = loadPresentation({ GameMode: 0, seasonStatus: 'autumn', dayNightStatus: 'night', mapLocation: '龟兹' });
+  const url = (frame, mode) => box.run('galPresentation.sceneUrlFor')(frame, mode);
+  const frames = box.setFrames([
+    '甲。|藏经阁|17:30|none|none',
+    '乙。|藏经阁|18:00|none|none',
+    '丙。|藏经阁|05:59|none|none',
+    '丁。|藏经阁|06:00|none|none',
+  ].join('\n'));
+  assert.deepEqual(Array.from(frames, f => url(f, 0)), [
+    'img/location/藏经阁_昼.webp', 'img/location/藏经阁_夜.webp',
+    'img/location/藏经阁_夜.webp', 'img/location/藏经阁_昼.webp',
+  ], '阈值与 applyTurnTime 一致：6:00–17:59 为昼');
+  // 无时间帧（旧格式）沿用前序最近有时间帧；全无时间 → 全局
+  const mixed = box.setFrames('甲。|藏经阁|10:00|none|none\n乙。|none|藏经阁|none|none\n丙。|none|藏经阁|none|none');
+  assert.equal(mixed[1].time, null);
+  assert.equal(url(mixed[1], 0), 'img/location/藏经阁_昼.webp', '前一帧有时间 → 沿用');
+  assert.equal(url(mixed[2], 0), 'img/location/藏经阁_昼.webp', '逆序跨多帧查找');
+  const noTime = box.setFrames('甲。|none|藏经阁|none|none');
+  assert.equal(url(noTime[0], 0), 'img/location/藏经阁_夜.webp', '全无时间 → 全局 night');
+  // 帧不在当前列表中（直接构造）→ 只看自身 time，否则全局
+  assert.equal(url({ scene: '藏经阁', time: '09:00' }, 0), 'img/location/藏经阁_昼.webp');
+  assert.equal(url({ scene: '藏经阁' }, 0), 'img/location/藏经阁_夜.webp');
+  // GM1 同口径
+  assert.equal(url({ scene: '沙漠', time: '12:00' }, 1), 'img/location/scene_webp/龟兹/昼/沙漠.webp');
+  assert.equal(url({ scene: '沙漠', time: '23:00' }, 1), 'img/location/scene_webp/龟兹/夜/沙漠.webp');
+});
+
+test('逐页昼夜：同场景昼→夜换页按 G19 播翻页纸', async () => {
+  const box = loadPresentation({ GameMode: 0 });
+  box.setFrames('甲。|藏经阁|17:00|雨烛:微笑|none\n乙。|藏经阁|19:00|雨烛:微笑|none');
+  await box.pres().enter({ source: 'page', pageIndex: 0, curtain: false });
+  assert.equal(imgOf(box.dom.viewport.querySelector('.slg-scene-layer')).src, 'img/location/藏经阁_昼.webp');
+  const before = box.bridgeCalls.curtain.length;
+  await box.pres().goto(1);
+  assert.equal(box.bridgeCalls.curtain.length, before + 2, '场景图 URL 变化 → cover+reveal');
+  assert.equal(imgOf(box.dom.viewport.querySelector('.slg-scene-layer')).src, 'img/location/藏经阁_夜.webp');
+  await box.pres().exit({ reason: 'test', curtain: false });
+});
+
 test('cnNumber for curtain labels', () => {
   const box = loadPresentation({ GameMode: 0 });
   const cn = box.run('galPresentation.cnNumber');

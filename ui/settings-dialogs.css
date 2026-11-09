@@ -58,10 +58,36 @@ body :is(#prompt-editor-textarea, #loc-label-editor-value, #wb-content-textarea)
 body #loc-editor-body { max-height: none !important; overflow: visible !important; }
 body.ui-style-flat #api-config-modal .cfg-scroll-body span[style*="color:rgba(55"],
 body[data-responsive-page="start"] #api-config-modal .cfg-scroll-body span[style*="color:rgba(55"] { color: var(--settings-text) !important; }
+/* 副 API 折叠区 */
+body #api-config-modal .cfg-collapsible {
+    margin: 4px 0 12px; border: 1px solid var(--settings-line); border-radius: 6px; padding: 0 10px;
+}
+body #api-config-modal .cfg-collapsible-summary {
+    cursor: pointer; padding: 10px 0; font-size: 14px; font-weight: 600;
+    display: flex; align-items: center; gap: 8px; overflow-wrap: anywhere;
+}
+body #api-config-modal .cfg-collapsible-summary input[type="checkbox"] { width: 18px; height: 18px; margin: 0; flex: 0 0 auto; }
+body #api-config-modal .cfg-collapsible-state { font-weight: 400; font-size: 12px; opacity: .75; }
+body #api-config-modal .cfg-collapsible.is-open > .cfg-collapsible-summary { border-bottom: 1px solid var(--settings-line); margin-bottom: 10px; }
+body #api-config-modal .cfg-collapsible-body { padding-bottom: 4px; }
+/* 分区保存：每部分底部一行「状态 + 保存按钮」 */
+body #api-config-modal .cfg-section-title { font-size: 14px; font-weight: 600; margin: 4px 0 10px; }
+body #api-config-modal .cfg-section-actions {
+    display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap;
+    padding: 8px 0 10px; margin-bottom: 6px; border-bottom: 1px dashed var(--settings-line);
+}
+body #api-config-modal .cfg-collapsible .cfg-section-actions { border-bottom: 0; margin-bottom: 0; }
+body #api-config-modal .cfg-save-status { font-size: 12px; opacity: .85; overflow-wrap: anywhere; }
+body #api-config-modal .cfg-save-status.is-dirty { color: #c77d00; }
+body #api-config-modal .cfg-save-status.is-ok { color: #3c9a4b; }
+body #api-config-modal .cfg-save-status.is-error { color: #d23c3c; }
 @media (max-height: 500px) and (min-width: 600px) {
     body #api-config-modal .cfg-panel { width: min(100%, 960px) !important; max-width: 960px !important; }
     .cfg-scroll-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; align-items: start; }
-    .cfg-scroll-body > :is(.cfg-hint, .cfg-notice, hr, .cfg-section-title, #api-preset-container) { grid-column: 1 / -1; }
+    .cfg-scroll-body > :is(.cfg-hint, .cfg-notice, hr, .cfg-section-title, #api-preset-container, .cfg-collapsible, .cfg-section) { grid-column: 1 / -1; }
+    .cfg-section, .cfg-collapsible-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 20px; align-items: start; }
+    .cfg-section > :is(.cfg-section-title, .cfg-section-actions, hr, .cfg-history-container),
+    .cfg-collapsible-body > :is(.cfg-hint, hr, .cfg-history-container, .cfg-field:last-child) { grid-column: 1 / -1; }
     .cfg-scroll-body > hr { width: 100%; }
     body #api-config-modal .cfg-field { margin-bottom: 8px; }
     body #api-config-modal .cfg-title { margin-bottom: 4px !important; padding-bottom: 4px !important; }

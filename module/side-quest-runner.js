@@ -63,10 +63,10 @@ var sideQuestRunner = (function() {
     // API 调用（按 streamMode 分流，与 event-runner._sendForEvents 同款；signal 桥接取消）
     // =========================================================================
 
-    function _sendSQ(messages, signal) {
-        var streamMode = (apiService.getConfig && apiService.getConfig().streamMode) || 'stream';
+    function _sendSQ(messages, signal, task) {
+        var streamMode = (apiService.getConfigFor ? apiService.getConfigFor(task) : apiService.getConfig()).streamMode || 'stream';
         if (streamMode !== 'stream') {
-            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null });
+            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null, task: task });
         }
         return new Promise(function(resolve, reject) {
             var handle = apiService.sendMessagesStream(messages, {
@@ -74,7 +74,7 @@ var sideQuestRunner = (function() {
                 onThinking: function() {},
                 onComplete: function(fullText, usage) { resolve({ content: fullText, usage: usage }); },
                 onError: function(err) { reject(err); }
-            }, { maxOutputTokens: null });
+            }, { maxOutputTokens: null, task: task });
             if (signal) {
                 if (signal.aborted) { handle.abort(); }
                 else { signal.addEventListener('abort', function() { handle.abort(); }, { once: true }); }
@@ -258,7 +258,7 @@ var sideQuestRunner = (function() {
             }
             console.groupEnd();
 
-            var result = await _sendSQ(messages, null);
+            var result = await _sendSQ(messages, null, 'sideQuestRumor');
             var raw = (result && result.content) || '';
             console.groupCollapsed('[SideQuest] ══ 传闻生成回复 ══');
             console.log('[SideQuest] usage:', JSON.stringify(result && result.usage || null));
@@ -403,7 +403,7 @@ var sideQuestRunner = (function() {
                 console.groupEnd();
 
                 // 单次请求：失败后不自动重试，由玩家点击“重新生成剧情树”手动重试
-                var result = await _sendSQ(messages, treeSignal);
+                var result = await _sendSQ(messages, treeSignal, 'sideQuestTree');
                 var raw = (result && result.content) || '';
                 console.groupCollapsed('[SideQuest] ══ 剧情树回复 ══');
                 console.log('[SideQuest] usage:', JSON.stringify(result && result.usage || null));
@@ -639,7 +639,7 @@ var sideQuestRunner = (function() {
                     }
                     console.groupEnd();
 
-                    var apiResult = await _sendSQ(messages, signal);
+                    var apiResult = await _sendSQ(messages, signal, 'sideQuestJudge');
                     if (signal.aborted || generation !== _lifecycleGeneration) {
                         console.log('[SideQuest] 已被取消（LLM 返回后检测），放弃写入');
                         return false;

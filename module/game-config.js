@@ -1004,7 +1004,7 @@ const defaultGameData = {
     compressSummary: false,    // 新增：强力总结（默认关）
     haveEvent: 1,              // 新增：随机事件开关（1=开，0=关）
     enamor: 0,              // 新增：倾慕触发标记（默认0）
-    promptPreset: 'ny',     // 新增：提示词预设（'ny'=ny预设 6条消息结构，'xiajin'=夏瑾预设 4条消息结构；通用设置下拉框控制）
+    // 提示词预设已迁出 gameData：改存于 AI 配置（localStorage jxz_apiConfig / jxz_apiConfigSecondary 的 promptPreset）
     alchemyDone: false,      // 新增：本周是否已炼丹（默认false）
     triggeredEvents: [],     // 新增：已触发的特殊事件ID列表
     currentSpecialEvent: "", // 新增：当前触发的特殊事件ID

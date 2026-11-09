@@ -38,7 +38,6 @@ async function run(preset, stage, truncated) {
             randomEvent = battleEvent = 0;
             GameMode = 1; mapLocation = '伊州'; companionNPC = ['施延年'];
             playerStats.声望 = 20;
-            gameData.promptPreset = preset;
             gameData.locationVisit = null;
             gameData.sideQuestConfig = { enabled: true, confidenceThreshold: 0.7, deadlineWeeks: 0 };
             gameData.sideQuest = { active: null, history: [], lastRefreshWeek: 0, pendingReturnFailure: null };
@@ -63,7 +62,7 @@ async function run(preset, stage, truncated) {
             if (stage === 'ending') gameData.sideQuest.history.push({ questId: active.questId, title: active.title, outcome: 'completed', endingId: 'ending' });
             if (stage === 'battle') presentSideQuestBattle(active.nodes.battle);
             if (stage === 'choice') displaySideQuestChoice(active.nodes.choice);
-            apiService.updateConfig({ streamMode: 'non-stream' });
+            apiService.updateConfig({ streamMode: 'non-stream', promptPreset: preset });
             embeddingService.updateConfig({ enabled: false });
             eventRunner.maybeSchedule = () => {};
             locationRunner.scheduleLocationUpdate = () => {};
@@ -73,7 +72,7 @@ async function run(preset, stage, truncated) {
                 if (prompt.includes('<SIDE_QUEST_CHECK>')) throw Error('Unexpected judge after deterministic failure');
                 const guide = sideQuestService.buildGuideText();
                 __returnTest.calls.push({
-                    preset: gameData.promptPreset,
+                    preset: apiService.getConfig().promptPreset,
                     reputation: playerStats.声望, active: !!sideQuestService.getActive(), mode: GameMode,
                     location: mapLocation, companions: [...companionNPC], battleType: currentBattleType,
                     hasGuide: prompt.includes('【支线中途放弃·失败返程】'), guide,

@@ -349,6 +349,11 @@ function mergeWithDefaults(loadedData, defaultData) {
             // 如果key存在且不是对象，保持原值不变
         }
     }
+    // 旧存档的 gameData.promptPreset 迁移到 AI 配置（仅顶层 gameData 合并时执行）
+    if (typeof defaultGameData !== 'undefined' && defaultData === defaultGameData &&
+        typeof apiService !== 'undefined' && apiService.migrateLegacyPromptPreset) {
+        apiService.migrateLegacyPromptPreset(result);
+    }
     return result;
 }
 

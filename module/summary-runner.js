@@ -75,10 +75,10 @@ var summaryRunner = (function() {
      * @returns {Promise<{content:string, usage:*}>}
      */
     function _sendForSummary(messages, signal) {
-        var streamMode = (apiService.getConfig && apiService.getConfig().streamMode) || 'stream';
+        var streamMode = (apiService.getConfigFor ? apiService.getConfigFor('summary') : apiService.getConfig()).streamMode || 'stream';
         // 周总结不受弹窗「最大输出 Token」限制：maxOutputTokens=null → 由模型默认上限决定
         if (streamMode !== 'stream') {
-            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null });
+            return apiService.sendMessages(messages, { signal: signal, maxOutputTokens: null, task: 'summary' });
         }
         return new Promise(function(resolve, reject) {
             var handle = apiService.sendMessagesStream(messages, {
@@ -86,7 +86,7 @@ var summaryRunner = (function() {
                 onThinking: function() {},
                 onComplete: function(fullText, usage) { resolve({ content: fullText, usage: usage }); },
                 onError: function(err) { reject(err); }
-            }, { maxOutputTokens: null });
+            }, { maxOutputTokens: null, task: 'summary' });
             // 中断信号（点击重生成时取消）联动到流式句柄
             if (signal) {
                 if (signal.aborted) { handle.abort(); }
@@ -115,7 +115,7 @@ var summaryRunner = (function() {
             }
 
             // 字符上限截取（取末尾，最近内容更重要）
-            var apiCfg = apiService.getConfig();
+            var apiCfg = apiService.getConfigFor ? apiService.getConfigFor('summary') : apiService.getConfig();
             var charLimit = Math.floor((apiCfg.maxContextTokens || 500000) * 1.5 * 0.6);
             var text = buff.text;
             if (text.length > charLimit) {

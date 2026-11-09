@@ -1,6 +1,6 @@
 /**
  * prompt-builder.js - Prompt 编排（双预设：ny 6 条消息 / 夏瑾 4 条消息）
- * gameData.promptPreset 选择预设（通用设置下拉框，默认 'ny'）：
+ * 主 API 配置的 promptPreset 选择预设（AI 配置弹窗下拉框，默认 'ny'；存于 localStorage jxz_apiConfig）：
  *
  * 【ny 预设】与“开发文档/新ny预设log - 1105.md”一致（1105 新版）：
  *   msg1: system    (PROMPT_OPENING + <tone> + <main_settings> + </settings>
@@ -1171,8 +1171,10 @@ var promptBuilder = (function() {
 
         var playerName = gd.playerName || '主角';
 
-        // --- 提示词预设：ny（默认，6条消息） / xiajin（夏瑾预设，4条消息），通用设置下拉框控制 ---
-        var preset = (gd.promptPreset === 'xiajin') ? 'xiajin' : 'ny';
+        // --- 提示词预设：ny（默认，6条消息） / xiajin（夏瑾预设，4条消息），由 AI 配置（主 API）控制 ---
+        // runturn 正文请求固定走主 API，因此读取主 API 配置中的预设
+        var _apiCfg = (typeof apiService !== 'undefined' && apiService.getConfig) ? apiService.getConfig() : {};
+        var preset = (_apiCfg.promptPreset === 'xiajin') ? 'xiajin' : 'ny';
 
         // --- NSFW 提示词解锁：enamor==1 或当前 BGM 为暧昧清单之一（或逻辑，两套预设共用）---
         // BGM 触发而 enamor 未开时，用 enamor=1 的 gameData 浅克隆渲染模板，
