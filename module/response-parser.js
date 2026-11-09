@@ -5,48 +5,46 @@
 
 var responseParser = (function() {
     /**
-     * 移除 thinking / ANAL 类标签块（对齐 index.html 内联版）
-     * 支持嵌套循环移除 + 未闭合标签截断
+     * 移除明确的思考块，不把 <ANALGuidance> 等引用标签当成思考边界。
+     * 只在同名闭合标签处恢复输出；未闭合的块隐藏到当前文本末尾，适用于流式预览。
+     * 块内任意 XML/JSON 示例均作为不透明内容，不参与正文、摘要和状态提取。
      */
     function removeThinkingContent(text) {
         if (!text) return '';
-        var result = text;
+        text = String(text);
+        var result = [];
+        var stack = [];
+        var visibleStart = 0;
+        // 先识别 JSON 字符串、中文引文和单行 code span，保护其中的标签/注释字面量。
+        // 单引号只保护标签引用，避免 Let's / It's 之类缩写跨越真正的思考边界。
+        // 只把完整 <!-- ... --> 当注释，未闭合的字面起始符不能吞掉真实闭合标签。
+        var tokens = /"(?:\\.|[^"\\\r\n])*"|'\s*<[^<>\r\n]*>\s*'|“[^”\r\n]*”|‘[^’\r\n]*’|「[^」\r\n]*」|『[^』\r\n]*』|`[^`\r\n]*`|<!--[\s\S]*?-->|<\s*(\/?)\s*([^<>]+?)\s*(\/?)>/g;
+        var match;
+        while ((match = tokens.exec(text)) !== null) {
+            if (!match[2]) continue;
+            // 容忍大小写、空格、下划线和普通 XML 属性，但不做 ANAL 子串匹配。
+            var name = match[2].replace(/\s+[a-z_:][\w:.-]*\s*=[\s\S]*$/i, '')
+                .replace(/[\s_-]/g, '').toUpperCase();
+            if (name !== 'THINK' && name !== 'THINKING' && name !== 'ANAL' &&
+                name !== 'ANALYSIS' && name !== 'ANALFORJXZ') continue;
 
-        // 步骤1: 循环移除完整的 ANAL 块
-        var prevResult;
-        do {
-            prevResult = result;
-            result = result.replace(
-                /<([^>\/]+)>([\s\S]*?)<\/([^>]+)>/g,
-                function(match, openTag, inner, closeTag) {
-                    var normOpen = openTag.replace(/[\s_]/g, '').toUpperCase();
-                    var normClose = closeTag.replace(/[\s_]/g, '').toUpperCase();
-                    if (normOpen.indexOf('ANAL') !== -1 || normClose.indexOf('ANAL') !== -1) {
-                        return '';
-                    }
-                    return match;
-                }
-            );
-        } while (result !== prevResult);
-
-        // 步骤2: 截断未闭合的 ANAL 开始标签
-        var openTagPattern = /<([^>\/]+)>/g;
-        var m;
-        var lastThinkingStart = -1;
-        while ((m = openTagPattern.exec(result)) !== null) {
-            var normalized = m[1].replace(/[\s_]/g, '').toUpperCase();
-            if (normalized.indexOf('ANAL') !== -1) {
-                lastThinkingStart = m.index;
+            if (!stack.length) result.push(text.slice(visibleStart, match.index));
+            if (match[1]) {
+                var index = stack.lastIndexOf(name);
+                // 显式关闭外层块时，也结束其中未闭合的引用/嵌套块。
+                if (index !== -1) stack.length = index;
+            } else if (!match[3]) {
+                stack.push(name);
             }
+            if (!stack.length) visibleStart = tokens.lastIndex;
         }
-        if (lastThinkingStart !== -1) {
-            result = result.substring(0, lastThinkingStart);
-        }
-
-        return result.trim();
+        // 未闭合时不猜测哪个 MAIN_TEXT/SIDE_NOTE 是真输出，避免把思考中的草稿提交。
+        if (!stack.length) result.push(text.slice(visibleStart));
+        return result.join('').trim();
     }
 
     function extractMainText(text) {
+        text = removeThinkingContent(text);
         if (!text) return '';
 
         // 优先策略：匹配 <MAIN_TEXT> 标签（容忍大小写、标签内外空格/下划线）
@@ -84,6 +82,7 @@ var responseParser = (function() {
      * 鲁棒回退：从首个 { 往前搜索，在 > 和有意义字符之间提取可能的 SUMMARY 文本
      */
     function extractSummaries(text) {
+        text = removeThinkingContent(text);
         if (!text) return [];
         var summaries = [];
         var regex = /<[\s_]*[Ss][Uu][Mm][Mm][Aa][Rr][Yy][\s_]*>([\s\S]*?)<[\s_]*\/[\s_]*[Ss][Uu][Mm][Mm][Aa][Rr][Yy][\s_]*>/g;
@@ -122,6 +121,7 @@ var responseParser = (function() {
     }
 
     function extractSideNoteJson(text) {
+        text = removeThinkingContent(text);
         if (!text) return null;
         // 先提取 <SIDE_NOTE> 标签内的内容，避免被 MAIN_TEXT/SUMMARY 中的 { 干扰
         var sideNoteMatch = text.match(/<[\s_]*[Ss][Ii][Dd][Ee][\s_]*[Nn][Oo][Tt][Ee][\s_]*>([\s\S]*?)(?:<[\s_]*\/[\s_]*[Ss][Ii][Dd][Ee][\s_]*[Nn][Oo][Tt][Ee][\s_]*>|$)/);
@@ -167,6 +167,7 @@ var responseParser = (function() {
      *   found: 是否找到开标签；closed: 是否找到闭合标签（false=截断）；content: 闭合时标签内文本
      */
     function extractXmlBlock(text, tagName) {
+        text = removeThinkingContent(text);
         if (!text || !tagName) return { found: false, closed: false, content: '' };
         // 把 tagName 拆成逐字符的大小写不敏感字符类，字符间允许空格/下划线
         // 例如 SUMMARY → [Ss][\s_]*[Uu][\s_]*[Mm]...

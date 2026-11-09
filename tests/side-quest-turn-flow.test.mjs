@@ -782,3 +782,48 @@ test('Gemini non-stream request forwards cancellation to its pending fetch', asy
     controller.abort();
     await assert.rejects(request, { name: 'AbortError' });
 });
+
+test('stream tool-protocol error (noFallback) rejects without a duplicate non-stream request', async () => {
+    const harness = makePipelineHarness({ streamMode: 'stream', active: false });
+    const run = harness.pipeline.runTurn('stream input');
+    await flush();
+    assert.ok(harness.state.mainStream);
+    const callsBefore = harness.state.apiCalls;
+    const err = new Error('工具输出模式：未返回预期的工具调用');
+    err.noFallback = true;
+    harness.state.mainStream.onError(err);
+    await run.then(() => {}, () => {});
+    await flush();
+    assert.equal(harness.state.apiCalls, callsBefore, 'must not re-send the same request non-stream');
+    assert.ok(harness.state.notices.some((text) => /未返回预期的工具调用/.test(text)));
+    assert.equal(harness.pipeline.isBusy(), false);
+});
+
+test('ordinary stream transport error still falls back to one non-stream request', async () => {
+    const harness = makePipelineHarness({ streamMode: 'stream', active: false });
+    const run = harness.pipeline.runTurn('stream input');
+    await flush();
+    const callsBefore = harness.state.apiCalls;
+    harness.state.mainStream.onError(new TypeError('network failure'));
+    await flush();
+    assert.equal(harness.state.apiCalls, callsBefore + 1, 'non-stream fallback request');
+    await run;
+});
+
+test('first stream token renders immediately, later tokens throttle at 250ms', async () => {
+    const harness = makePipelineHarness({ streamMode: 'stream', active: false });
+    const renders = [];
+    harness.context.updateStoryText = (text) => renders.push(text);
+    const run = harness.pipeline.runTurn('stream input');
+    await flush();
+    harness.state.mainStream.onToken('第一段');
+    assert.deepEqual(renders, ['第一段'], 'first token must render without waiting for the throttle');
+    harness.state.mainStream.onToken('第二段');
+    assert.equal(renders.length, 1);
+    harness.clock.advance(249);
+    assert.equal(renders.length, 1);
+    harness.clock.advance(1);
+    assert.deepEqual(renders, ['第一段', '第一段第二段']);
+    harness.state.mainStream.onComplete('MAIN_RESPONSE', {});
+    await run;
+});

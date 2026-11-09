@@ -102,13 +102,18 @@ function showConfigModal() {
         '<option value="non-stream"' + (config.streamMode === 'non-stream' ? ' selected' : '') + '>非流式</option>' +
         '</select></div></div>' +
 
+        // 预设穿甲强化（工具输出模式，默认关闭，需接口支持 tools）
+        '<div class="cfg-field">' +
+        '<label class="cfg-label" for="api-tool-output-enabled" style="display:flex;align-items:center;gap:6px;cursor:pointer">' +
+        '<input type="checkbox" id="api-tool-output-enabled"' + (config.toolOutputEnabled ? ' checked' : '') + '>预设穿甲强化</label>' +
+        '</div>' +
+
         // CORS 代理地址（网页与 APK 均显示；勾选启用后才生效，默认 web 勾 / APK 不勾）
         '<div class="cfg-field" id="cors-proxy-field"><label class="cfg-label">CORS 代理</label>' +
         '<label style="display:flex;align-items:center;gap:6px;cursor:pointer;margin-bottom:6px">' +
         '<input type="checkbox" id="api-cors-proxy-enabled"' + (config.corsProxyEnabled ? ' checked' : '') + '>' +
         '<span style="font-size:12px;color:rgba(55,55,55,0.7)">启用 CORS 代理（勾选后通过代理中转 API 请求）</span></label>' +
         '<input id="api-cors-proxy-input" type="text" placeholder="https://your-worker.your-name.workers.dev" value="' + _escapeHtml(config.corsProxyUrl || '') + '" class="cfg-input">' +
-        '<div class="cfg-notice" style="margin-top:4px">测试立即使用当前代理设置，无需先保存。默认代理仅接受 HTTPS API；HTTPS 游戏页面也不能直接访问 HTTP API。建议向服务商索取 HTTPS 地址。直连时，服务端需正确允许 CORS，包括 Authorization 请求头。</div>' +
         '</div>' +
 
         // 测试消息
@@ -201,6 +206,7 @@ function saveConfigAndClose() {
         maxOutputTokens: parseInt(document.getElementById('api-max-tokens-input').value) || 8192,
         maxContextTokens: parseInt(document.getElementById('api-ctx-tokens-input').value) || 128000,
         streamMode: (document.getElementById('api-stream-mode-select') && document.getElementById('api-stream-mode-select').value) || 'stream',
+        toolOutputEnabled: !!(document.getElementById('api-tool-output-enabled') && document.getElementById('api-tool-output-enabled').checked),
         topP: parseFloat(document.getElementById('api-top-p-input').value),
         topPEnabled: !!(document.getElementById('api-top-p-enabled') && document.getElementById('api-top-p-enabled').checked),
         topK: parseInt(document.getElementById('api-top-k-input').value, 10),
@@ -354,6 +360,8 @@ async function _doSendTest() {
         apiKey: document.getElementById('api-key-input').value.trim(),
         model: document.getElementById('api-model-input').value.trim(),
         temperature: parseFloat(document.getElementById('api-temp-input').value) || 0.85,
+        streamMode: (document.getElementById('api-stream-mode-select') && document.getElementById('api-stream-mode-select').value) || 'stream',
+        toolOutputEnabled: !!(document.getElementById('api-tool-output-enabled') && document.getElementById('api-tool-output-enabled').checked),
         corsProxyUrl: ((document.getElementById('api-cors-proxy-input') || {}).value || '').trim(),
         corsProxyEnabled: !!(document.getElementById('api-cors-proxy-enabled') && document.getElementById('api-cors-proxy-enabled').checked)
     };
@@ -457,6 +465,9 @@ function _applyPreset(indexStr) {
     el = document.getElementById('api-temp-input');       if (el) el.value = preset.temperature != null ? preset.temperature : 0.9;
     el = document.getElementById('api-max-tokens-input'); if (el) el.value = preset.maxOutputTokens || 18000;
     el = document.getElementById('api-ctx-tokens-input'); if (el) el.value = preset.maxContextTokens || 500000;
+    el = document.getElementById('api-stream-mode-select'); if (el) el.value = preset.streamMode === 'non-stream' ? 'non-stream' : 'stream';
+    // 旧历史无工具输出字段时明确关闭，避免继承当前草稿的开关。
+    el = document.getElementById('api-tool-output-enabled'); if (el) el.checked = !!preset.toolOutputEnabled;
     el = document.getElementById('api-top-p-input');          if (el) el.value = preset.topP != null ? preset.topP : 1;
     el = document.getElementById('api-top-p-enabled');        if (el) el.checked = !!preset.topPEnabled;
     el = document.getElementById('api-top-k-input');          if (el) el.value = preset.topK != null ? preset.topK : 200;

@@ -1791,6 +1791,10 @@ const outPut = `
         
         // 过滤thinking标签内容（鲁棒匹配：支持空格、下划线、大小写、时态变体）
         function removeThinkingContent(content) {
+            // 独立前端与酒馆页面共用已加载的纯解析器，避免旧 ANAL 子串截断规则误删正文。
+            if (typeof responseParser !== 'undefined') {
+                return responseParser.removeThinkingContent(content);
+            }
             if (!content) return content;
             
             let result = content;

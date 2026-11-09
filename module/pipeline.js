@@ -703,6 +703,8 @@ var pipeline = (function() {
             var accumulatedThinking = ''; // 累积思维链（reasoning_content 字段，如 DeepSeek/Qwen）
             var throttleTimer = null;
             var aborted = false;
+            var STREAM_RENDER_INTERVAL = 250; // 首段立即渲染，之后按此间隔节流
+            var _uiDiag = { t0: Date.now(), firstToken: null, firstRender: null, renders: 0, tokens: 0 };
             _isStreaming = true;
             _abortRequested = false;
 
@@ -712,21 +714,41 @@ var pipeline = (function() {
                     var mainText = responseParser.extractMainText(cleaned);
                     if (mainText && typeof updateStoryText === 'function') {
                         updateStoryText(mainText);
+                        _uiDiag.renders++;
+                        if (_uiDiag.firstRender == null) _uiDiag.firstRender = Date.now() - _uiDiag.t0;
                     }
                 } catch (e) {
                     console.warn('[Pipeline] 流式渲染异常:', e.message);
                 }
             }
 
+            function logUiDiag(label) {
+                console.log('[Pipeline] 流式界面诊断(' + label + '): ' + JSON.stringify({
+                    '首个onToken(ms)': _uiDiag.firstToken,
+                    '首次正文渲染(ms)': _uiDiag.firstRender,
+                    'onToken次数': _uiDiag.tokens,
+                    '流式渲染次数': _uiDiag.renders,
+                    '总耗时(ms)': Date.now() - _uiDiag.t0
+                }));
+            }
+
             var handle = apiService.sendMessagesStream(messages, {
                 onToken: function(delta) {
-                    if (accumulatedText === '') _setStreamLog('施延年伏案疾书');
+                    var isFirst = accumulatedText === '';
+                    if (isFirst) _setStreamLog('施延年伏案疾书');
+                    if (_uiDiag.firstToken == null) _uiDiag.firstToken = Date.now() - _uiDiag.t0;
+                    _uiDiag.tokens++;
                     accumulatedText += delta;
+                    // 尚未渲染出正文时立即尝试渲染（首段不等节流），之后按间隔节流
+                    if (_uiDiag.firstRender == null && !throttleTimer) {
+                        doRender();
+                        if (_uiDiag.firstRender != null) return;
+                    }
                     if (!throttleTimer) {
                         throttleTimer = setTimeout(function() {
                             throttleTimer = null;
                             doRender();
-                        }, 1500);
+                        }, STREAM_RENDER_INTERVAL);
                     }
                 },
                 onThinking: function(delta) {
@@ -742,6 +764,7 @@ var pipeline = (function() {
                     _abortRequested = false;
                     clearTimeout(throttleTimer);
                     throttleTimer = null;
+                    logUiDiag('完成');
                     // 完成后交给正式 renderMainText 做完整处理（分页等）
                     accumulatedText = fullText;
                     try {
@@ -756,6 +779,13 @@ var pipeline = (function() {
                     _currentAbort = null;
                     clearTimeout(throttleTimer);
                     throttleTimer = null;
+                    logUiDiag('失败');
+                    // 工具协议错误 / 工具模式 4xx：原样重发大概率同样失败且重复计费，直接报错
+                    if (err && err.noFallback) {
+                        console.warn('[Pipeline] 流式失败（不可降级，跳过非流式重试）:', err.message);
+                        reject(err);
+                        return;
+                    }
                     // 降级：尝试非流式
                     console.warn('[Pipeline] 流式失败，尝试非流式降级:', err.message);
                     _setStreamLog('施延年另起新卷');
