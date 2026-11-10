@@ -107,7 +107,10 @@ for (const type of ['openai', 'gemini']) {
             assert.deepEqual(body.tool_choice, { type: 'function', function: { name: toolName } });
             assert.equal(options.headers.Authorization, 'Bearer fake-key');
         } else {
-            assert.match(url, /\/models\/gemini-alias:generateContent\?key=fake-key$/);
+            assert.match(url, /\/models\/gemini-alias:generateContent$/);
+            assert.ok(!url.includes('key='));
+            assert.ok(!url.includes('fake-key'));
+            assert.equal(options.headers['x-goog-api-key'], 'fake-key');
             assert.match(body.systemInstruction.parts[0].text, /ONLY valid response/);
             assert.ok(!JSON.stringify(body.systemInstruction).includes('游戏叙事助手'));
             assert.equal(body.contents.length, 1);
@@ -167,7 +170,9 @@ for (const type of ['openai', 'gemini']) {
             assert.equal(h.calls[0].body.max_tokens, undefined);
             assert.ok(result.tokens.length > 5);
         } else {
-            assert.match(h.calls[0].url, /:streamGenerateContent\?alt=sse&key=/);
+            assert.match(h.calls[0].url, /:streamGenerateContent\?alt=sse$/);
+            assert.ok(!h.calls[0].url.includes('fake-key'));
+            assert.equal(h.calls[0].options.headers['x-goog-api-key'], 'fake-key');
             assert.equal(h.calls[0].body.generationConfig.maxOutputTokens, undefined);
         }
     });

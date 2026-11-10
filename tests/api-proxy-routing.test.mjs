@@ -54,6 +54,9 @@ for (const type of ['openai', 'gemini']) {
         assert.equal(new URL(calls[0].url).origin, 'https://trusted-relay.example');
         assert.match(new URL(calls[0].url).searchParams.get('target'), /\/v1\/models/);
         assert.equal(models[0].id, type === 'openai' ? 'model-a' : 'gemini-test');
+        // 密钥只能在请求头里，绝不能出现在代理 target / URL 中
+        assert.ok(!calls[0].url.includes('fake-key'));
+        if (type === 'gemini') assert.equal(calls[0].options.headers['x-goog-api-key'], 'fake-key');
         await api.fetchModels(endpoint, 'fake-key', type, { corsProxyEnabled: false });
         assert.ok(calls[1].url.startsWith(endpoint + '/models'));
         assert.equal(JSON.stringify(api.getConfig()), saved);
@@ -65,6 +68,8 @@ for (const type of ['openai', 'gemini']) {
         const cfg = { endpoint, apiKey: 'fake-key', model: 'model-a', type, corsProxyEnabled: true, corsProxyUrl: proxy };
         assert.equal((await api.sendTestMessage(cfg)).success, true);
         assert.equal(new URL(calls[0].url).origin, 'https://trusted-relay.example');
+        assert.ok(!calls[0].url.includes('fake-key'));
+        if (type === 'gemini') assert.equal(calls[0].options.headers['x-goog-api-key'], 'fake-key');
         assert.equal((await api.sendTestMessage({ ...cfg, corsProxyEnabled: false })).success, true);
         assert.ok(calls[1].url.startsWith(endpoint));
     });

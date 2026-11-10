@@ -82,12 +82,21 @@ try {
     if (-not $buildTools) { throw 'No stable Android build-tools version for apksigner.' }
     $signer = Join-Path $buildTools.FullName 'apksigner.bat'
     if (-not (Test-Path -LiteralPath $signer)) { throw 'apksigner.bat missing.' }
-    $signatureOutput = & $signer verify --verbose --print-certs $prepared.apkPath 2>&1
+    # --min-sdk-version 18 forces apksigner to actually verify the v1 (JAR) signature;
+    # with the APK's own minSdk (24) it skips v1 and always reports it as false.
+    $signatureOutput = & $signer verify --verbose --print-certs --min-sdk-version 18 $prepared.apkPath 2>&1
     $signatureExit = $LASTEXITCODE
     $signatureText = $signatureOutput -join [Environment]::NewLine
     [System.IO.File]::WriteAllText((Join-Path (Split-Path $RunRecord) 'apk-signature.txt'), $signatureText, [System.Text.Encoding]::UTF8)
     Write-Host $signatureText
     if ($signatureExit -ne 0) { throw "APK signature verification failed (exit $signatureExit)." }
+    # Some installers only recognise v1 (JAR) signatures and report v2-only APKs as unsigned.
+    if ($signatureText -notmatch 'Verified using v1 scheme \(JAR signing\): true') { throw 'APK lacks v1 (JAR) signature; check signingConfigs in app/build.gradle.' }
+    if ($signatureText -notmatch 'Verified using v2 scheme \(APK Signature Scheme v2\): true') { throw 'APK lacks v2 signature.' }
+    # Same key as every published release; a different key breaks in-place upgrades.
+    $expectedCert = 'a78a94a0201ee7743e523fa05d15edca6a623209c627eb16c42329bed7460d6c'
+    # build-tools <=36 prints "Signer #1 certificate ...", 37+ prints "V2 Signer: certificate ...".
+    if ($signatureText -notmatch "(Signer #1|V2 Signer:) certificate SHA-256 digest: $expectedCert") { throw 'APK signing certificate differs from published releases; upgrade would fail.' }
     # Copy only after verification; File.Copy(false) refuses every existing destination.
     $appName = [string]([char]0x701A) + [char]0x6D77
     $destination = Join-Path (Split-Path $RunRecord) ($appName + '-debug-' + $record.buildId + '.apk')

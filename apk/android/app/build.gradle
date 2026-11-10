@@ -7,8 +7,8 @@ android {
         applicationId "com.jihaitang.jxz"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 7
-        versionName "1.6"
+        versionCode 8
+        versionName "1.6.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -16,7 +16,20 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        // Keep the existing key (~/.android/debug.keystore, SHA-256 a78a94a0...) so
+        // already-installed users can still upgrade in place. minSdk >= 24 makes AGP
+        // skip v1 (JAR) signing by default; some installers/file managers only check
+        // v1 and report "unsigned", so force v1 + v2 explicitly.
+        debug {
+            enableV1Signing true
+            enableV2Signing true
+        }
+    }
     buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'

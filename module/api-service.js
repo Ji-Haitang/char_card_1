@@ -755,8 +755,9 @@ var apiService = (function() {
             };
         });
 
-        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent?key=' + encodeURIComponent(cfg.apiKey), cfg);
-        console.log('[API] 发送请求到 Gemini:', url);
+        // 密钥走 x-goog-api-key 请求头，不进 URL（避免出现在日志、代理 target 参数和网络面板中）
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':generateContent', cfg);
+        console.log('[API] 发送请求到 Gemini: host=' + _hostOf(cfg.endpoint) + ' | model=' + cfg.model);
 
         var _genConfig = { temperature: cfg.temperature };
         if (typeof maxTokens === 'number') {
@@ -773,7 +774,7 @@ var apiService = (function() {
         }, messages, true, cfg);
         var response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.apiKey },
             body: JSON.stringify(requestBody),
             signal: signal
         });
@@ -823,9 +824,10 @@ var apiService = (function() {
     }
 
     async function _fetchGeminiModels(endpoint, apiKey, requestConfig) {
-        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models?key=' + encodeURIComponent(apiKey), requestConfig);
+        var url = _resolveUrl(endpoint.replace(/\/+$/, '') + '/models', requestConfig);
         var response = await fetch(url, {
-            method: 'GET'
+            method: 'GET',
+            headers: { 'x-goog-api-key': apiKey }
         });
         if (!response.ok) {
             var text = '';
@@ -898,15 +900,15 @@ var apiService = (function() {
         });
         var toolMode = cfg.toolOutputEnabled === true;
         var stream = toolMode && cfg.streamMode === 'stream';
-        var method = stream ? ':streamGenerateContent?alt=sse&key=' : ':generateContent?key=';
-        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + method + encodeURIComponent(cfg.apiKey), cfg);
+        var method = stream ? ':streamGenerateContent?alt=sse' : ':generateContent';
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + method, cfg);
         var requestBody = _wrapToolRequest({
             contents: contents,
             generationConfig: { temperature: cfg.temperature || 0.85, maxOutputTokens: toolMode ? 512 : 100 }
         }, messages, true, cfg);
         var response = await fetch(url, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.apiKey },
             body: JSON.stringify(requestBody)
         });
         if (!response.ok) {
@@ -1065,7 +1067,7 @@ var apiService = (function() {
             };
         });
 
-        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':streamGenerateContent?alt=sse&key=' + encodeURIComponent(cfg.apiKey), cfg);
+        var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':streamGenerateContent?alt=sse', cfg);
         var fullContent = '';
         var _streamGenConfig = { temperature: cfg.temperature };
         if (typeof maxTokens === 'number') {
@@ -1085,7 +1087,7 @@ var apiService = (function() {
         try {
             var response = await fetch(url, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 'Content-Type': 'application/json', 'x-goog-api-key': cfg.apiKey },
                 body: JSON.stringify(requestBody),
                 signal: controller.signal
             });

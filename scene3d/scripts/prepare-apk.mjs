@@ -2,6 +2,13 @@ import fs from 'node:fs/promises';
 import path from 'node:path';
 import { assert, absolute, safeRelative, uniquePaths, noSymlinks, exists, fileInfo, readJson, atomicJson, copyFiles, verifyFiles, verifyRelease, sha256 } from './artifact-utils.mjs';
 import { withRun, requireStep, isMain, runCli } from './run-record.mjs';
+// Windows AV/indexer can briefly lock fresh trees; retry only transient rename errors.
+async function renameDir(from, to) {
+  for (let attempt = 0; ; attempt++) {
+    try { return await fs.rename(from, to); }
+    catch (error) { if (attempt >= 20 || !['EPERM', 'EBUSY', 'EACCES'].includes(error.code)) throw error; await new Promise(r => setTimeout(r, 500 * (attempt + 1))); }
+  }
+}
 
 export const WEB_DIRS = ['module', 'assets', 'img', 'bgm', 'music', 'worker', 'ui', 'tools'];
 // Root resources are reviewed explicitly: never copy arbitrary root files/secrets.
@@ -42,7 +49,7 @@ export function parseGradleIdentity(code) {
   const applicationId = /\bapplicationId\s*(?:=\s*)?["']([^"']+)["']/.exec(code)?.[1];
   const versionCode = Number(/\bversionCode\s*(?:=\s*)?(\d+)/.exec(code)?.[1]);
   const versionName = /\bversionName\s*(?:=\s*)?["']([^"']+)["']/.exec(code)?.[1];
-  assert(applicationId === 'com.jihaitang.jxz' && versionCode === 6 && versionName === '1.5', 'Unapproved Android application/version change');
+  assert(applicationId === 'com.jihaitang.jxz' && versionCode === 7 && versionName === '1.6', 'Unapproved Android application/version change');
   return { applicationId, versionCode, versionName };
 }
 export function apkPaths(record, runDir) {
@@ -120,7 +127,7 @@ export async function prepareApk(record, { runDir }) {
   await atomicJson(inputManifest, input, { exclusive: true });
   await fs.mkdir(stage); await copyFiles(record.projectRoot, stage, files); await verifyFiles(stage, files);
   // No npm, Capacitor, Gradle, signing, installation, or writes to source apk/www occur here.
-  await fs.rename(stage, paths.isolatedRoot);
+  await renameDir(stage, paths.isolatedRoot);
   return { ...paths, inputManifest, inputManifestSha256: (await fileInfo(inputManifest)).sha256, sourceFileCount: Object.keys(files).length, next: 'Run the copied apk/build.js with this same --runRecord; then npm ci and cap sync in the copy. Supply SDK via ANDROID_HOME/ANDROID_SDK_ROOT; machine local.properties is intentionally excluded.' };
 }
 function verifyLocalEntrypointReferences(files, html, filename) {
@@ -167,7 +174,7 @@ export async function buildApkWww(record, { runDir }, invokedApkRoot) {
   await verifyRelease(path.join(stage, 'assets/sect3d', record.buildId), record.buildId, pointer.manifestSha256);
   const manifest = { schemaVersion: 1, runId: record.runId, buildId: record.buildId, wwwRoot: paths.wwwRoot, files: expected, mappings, native: input.native, release: { pointer, manifestSha256: pointer.manifestSha256 } };
   await atomicJson(paths.wwwExpectedManifest, manifest, { exclusive: true });
-  await fs.rename(stage, paths.wwwRoot);
+  await renameDir(stage, paths.wwwRoot);
   return { wwwRoot: paths.wwwRoot, wwwExpectedManifest: paths.wwwExpectedManifest, wwwExpectedManifestSha256: (await fileInfo(paths.wwwExpectedManifest)).sha256, fileCount: Object.keys(expected).length };
 }
 export async function loadWwwExpected(record, runDir) {
