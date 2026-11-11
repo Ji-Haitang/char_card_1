@@ -66,29 +66,48 @@ var idbStorage = (function() {
      * @returns {Promise<void>}
      */
     function put(key, value) {
-        return new Promise(function(resolve, reject) {
-            if (!_db) { reject(new Error('IDB not open')); return; }
-            var tx = _db.transaction(STORE_NAME, 'readwrite');
-            var store = tx.objectStore(STORE_NAME);
-            var request = store.put(value, key);
-            request.onsuccess = function() { resolve(); };
-            request.onerror = function() { reject(request.error); };
+        return putMany([[key, value]]);
+    }
+
+    /**
+     * 在同一个事务中写入多条记录；只有事务真正提交（oncomplete）后才 resolve。
+     * request.onsuccess 并不代表数据已落盘，配额不足等错误会在之后以事务 abort 的形式出现。
+     * @param {Array<[string, any]>} entries
+     * @returns {Promise<void>}
+     */
+    function putMany(entries) {
+        return _write(function(store) {
+            for (var i = 0; i < entries.length; i++) store.put(entries[i][1], entries[i][0]);
         });
     }
 
     /**
-     * 删除值
+     * 删除值（事务提交后 resolve）
      * @param {string} key
      * @returns {Promise<void>}
      */
     function remove(key) {
+        return _write(function(store) { store.delete(key); });
+    }
+
+    function _write(fill) {
         return new Promise(function(resolve, reject) {
             if (!_db) { reject(new Error('IDB not open')); return; }
-            var tx = _db.transaction(STORE_NAME, 'readwrite');
-            var store = tx.objectStore(STORE_NAME);
-            var request = store.delete(key);
-            request.onsuccess = function() { resolve(); };
-            request.onerror = function() { reject(request.error); };
+            var tx;
+            try {
+                tx = _db.transaction(STORE_NAME, 'readwrite');
+                fill(tx.objectStore(STORE_NAME));
+            } catch (e) {
+                try { if (tx) tx.abort(); } catch (_) {}
+                reject(e);
+                return;
+            }
+            tx.oncomplete = function() { resolve(); };
+            tx.onabort = function() { reject(tx.error || new Error('IDB transaction aborted')); };
+            tx.onerror = function(event) {
+                // 交给 onabort 统一 reject；这里只阻止错误继续冒泡到 window。
+                if (event && event.stopPropagation) event.stopPropagation();
+            };
         });
     }
 
@@ -135,6 +154,7 @@ var idbStorage = (function() {
         open: open,
         get: get,
         put: put,
+        putMany: putMany,
         remove: remove,
         getAllKeys: getAllKeys,
         getAll: getAll

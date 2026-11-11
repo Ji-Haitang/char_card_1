@@ -67,19 +67,49 @@ var storageService = (function() {
     var _snapshotCache = null;
     var _idbSnapshotAvailable = false;
 
+    // --- 写入错误与旧副本清理记录（诊断用，只含 key 名与错误类型，不含数据内容）---
+    var _lastWriteError = null;
+    var _notifiedWriteError = {};
+    var _legacyCleanup = null;
+    var _snapshotLsUnpersisted = false;
+    // 旧 localStorage 副本备份到主库时使用的 key 前缀（不加载进内存缓存）
+    var LS_BACKUP_PREFIX = 'lsBackup:';
+
     // --- 辅助函数 ---
-    function _logErr(context, err) {
-        console.warn('[Storage][IDB] ' + context + ' 异步写入失败:', err && err.message || err);
+    function _errorCode(err) {
+        if (err && (err.name === 'QuotaExceededError' || err.name === 'NS_ERROR_DOM_QUOTA_REACHED' || err.code === 22 || err.code === 1014)) return 'QuotaExceededError';
+        if (err && err.name) return String(err.name);
+        return 'Error';
+    }
+
+    /**
+     * 记录持久化失败：只输出 key 与错误类型；每种存储每次会话最多弹一次提示，避免刷屏。
+     * @param {'indexedDB'|'snapshotDB'|'localStorage'} target
+     */
+    function _reportWriteError(target, key, err) {
+        var code = _errorCode(err);
+        _lastWriteError = { target: target, key: String(key), code: code, at: Date.now() };
+        console.error('[Storage] ' + target + ' 写入失败 [' + code + '] key=' + key);
+        if (_notifiedWriteError[target]) return;
+        _notifiedWriteError[target] = true;
+        var msg = '游戏进度未能写入浏览器存储（' + code + '）。请尽快导出存档备份，不要直接清除网站数据。';
+        try {
+            if (typeof showToast === 'function') showToast(msg, { duration: 8000 });
+        } catch (e) {}
     }
 
     function _idbPut(key, value) {
         if (!_idbAvailable) return;
-        idbStorage.put(key, value).catch(function(e) { _logErr('put ' + key, e); });
+        idbStorage.put(key, value).catch(function(e) { _reportWriteError('indexedDB', key, e); });
     }
 
     function _idbRemove(key) {
         if (!_idbAvailable) return;
-        idbStorage.remove(key).catch(function(e) { _logErr('remove ' + key, e); });
+        idbStorage.remove(key).catch(function(e) { _reportWriteError('indexedDB', key, e); });
+    }
+
+    function _lsRaw(key) {
+        try { return localStorage.getItem(key); } catch (e) { return null; }
     }
 
     function _lsGet(key) {
@@ -90,8 +120,24 @@ var storageService = (function() {
         } catch (e) { return null; }
     }
 
+    /**
+     * localStorage 只作为 IndexedDB 不可用时的降级存储。
+     * IDB 可用时不再镜像游戏数据：这些副本会随游玩持续膨胀，挤占 API 配置等小配置的 localStorage 配额。
+     */
     function _lsSet(key, value) {
-        try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+        if (_idbAvailable) return;
+        _lsWrite(key, value);
+    }
+
+    /** 快照降级副本：仅在快照库不可用时写 localStorage */
+    function _lsSnapSet(key, value) {
+        if (_idbSnapshotAvailable) return;
+        _lsWrite(key, value);
+    }
+
+    function _lsWrite(key, value) {
+        try { localStorage.setItem(key, JSON.stringify(value)); }
+        catch (e) { _reportWriteError('localStorage', key, e); }
     }
 
     function _lsRemove(key) {
@@ -113,8 +159,12 @@ var storageService = (function() {
             _idbAvailable = true;
             console.log('[Storage] IndexedDB 可用');
 
-            // 从 IDB 加载全部数据到缓存
+            // 从 IDB 加载全部数据到缓存（旧 localStorage 副本的备份不进内存缓存）
             var allData = await idbStorage.getAll();
+            var backupKeys = [];
+            Object.keys(allData).forEach(function(k) {
+                if (k.indexOf(LS_BACKUP_PREFIX) === 0) { backupKeys.push(k); delete allData[k]; }
+            });
             var idbKeyCount = Object.keys(allData).length;
 
             if (idbKeyCount > 0) {
@@ -150,8 +200,14 @@ var storageService = (function() {
                     var oldLsSnap = _lsGet(LS_SNAPSHOT_APPSTATE);
                     if (oldLsSnap) {
                         _snapshotCache = { appState: oldLsSnap };
-                        idbSnapshot.put('appState', oldLsSnap).catch(function() {});
-                        console.log('[Storage] 已从 localStorage 迁移旧 snapshot 到 snapshot_db');
+                        try {
+                            await idbSnapshot.put('appState', oldLsSnap);
+                            console.log('[Storage] 已从 localStorage 迁移旧 snapshot 到 snapshot_db');
+                        } catch (snapMigrateErr) {
+                            // 未迁移成功：清理阶段会把它当作不一致副本处理（先备份再删），这里不让 cache 假装已同步
+                            _snapshotCache = { appState: oldLsSnap };
+                            _snapshotLsUnpersisted = true;
+                        }
                     }
                 }
             }
@@ -166,6 +222,171 @@ var storageService = (function() {
         }
 
         _initialized = true;
+
+        // IDB 可用时，把旧版本镜像到 localStorage 的游戏数据安全移出，释放给 API 配置等小配置使用
+        if (_idbAvailable) {
+            try {
+                await _cleanupLegacyLocalStorage();
+            } catch (cleanupErr) {
+                console.warn('[Storage] 旧 localStorage 副本清理中止 [' + _errorCode(cleanupErr) + ']，原数据保留');
+            }
+        }
+    }
+
+    function _saveIndexEntry(id, s) {
+        return {
+            id: id,
+            saveName: s.saveName,
+            previewWeek: s.previewWeek,
+            previewLocation: s.previewLocation,
+            createdAt: s.createdAt
+        };
+    }
+
+    // 明确列出由本服务写过的 localStorage 游戏数据 key（只处理这些，绝不按前缀批量删除）
+    function _legacyMirrorKeys() {
+        return [
+            [LS_APP_STATE, KEY_APP_STATE], [LS_UI_CONV, KEY_UI_CONV],
+            [LS_SUMMARY_HISTORY, KEY_SUMMARY_HISTORY], [LS_WEEK_HISTORY, KEY_WEEK_HISTORY],
+            [LS_MARK_WEEK_UI_INDEX, KEY_MARK_WEEK_UI_INDEX], [LS_SUMMARY_BUFF, KEY_SUMMARY_BUFF],
+            [LS_EVENT_HISTORY, KEY_EVENT_HISTORY], [LS_EVENT_META, KEY_EVENT_META],
+            [LS_EVENT_WATERMARK, KEY_EVENT_WATERMARK], [LS_EVENT_STEP, KEY_EVENT_STEP],
+            [LS_LOCATION_MEMORY, KEY_LOCATION_MEMORY], [LS_LOCATION_BUFF, KEY_LOCATION_BUFF],
+            [LS_PROMPT_OVERRIDES, KEY_PROMPT_OVERRIDES],
+            [LS_CUSTOM_WORLDBOOK, KEY_CUSTOM_WORLDBOOK], [LS_CUSTOM_WORLDBOOK_2, KEY_CUSTOM_WORLDBOOK_2],
+            [LS_SAVES + '_index', KEY_SAVE_INDEX]
+        ];
+    }
+
+    function _sameJson(raw, value) {
+        if (value === undefined) return false;
+        try { return raw === JSON.stringify(value); } catch (e) { return false; }
+    }
+
+    /**
+     * 旧 localStorage 副本 → IndexedDB 的保守清理（可重复执行，中途中断也安全）：
+     * 1. 与 IDB 当前数据完全一致的副本：直接删除 localStorage 副本。
+     * 2. 与 IDB 不一致或 IDB 缺失的副本：无法判断新旧，原样备份到 IDB 的 lsBackup:<key>，
+     *    事务提交并读回校验一致后，才删除 localStorage 副本；当前游戏使用的 IDB 数据保持不变。
+     * 3. 存档索引里只能从 localStorage 读到的完整存档：先补写进 IDB（与索引 id 同名）并校验，再删除。
+     * 任一步写入/校验失败：该 key 的 localStorage 原数据保留。
+     */
+    async function _cleanupLegacyLocalStorage() {
+        var report = { removedKeys: 0, backedUpKeys: 0, restoredSaves: 0, keptKeys: 0, freedChars: 0, errors: [] };
+        _legacyCleanup = report;
+
+        async function backupThenRemove(lsKey, raw) {
+            var backupKey = LS_BACKUP_PREFIX + lsKey;
+            var existing = await idbStorage.get(backupKey);
+            if (existing !== raw) {
+                if (typeof existing === 'string') backupKey += ':' + Date.now();
+                await idbStorage.put(backupKey, raw);
+                if ((await idbStorage.get(backupKey)) !== raw) throw new Error('backup verify failed');
+                report.backedUpKeys++;
+            }
+            removeLs(lsKey, raw);
+        }
+
+        function removeLs(lsKey, raw) {
+            // 删除前再次确认内容未被其他标签页改动
+            if (_lsRaw(lsKey) !== raw) { report.keptKeys++; return; }
+            _lsRemove(lsKey);
+            report.removedKeys++;
+            report.freedChars += lsKey.length + raw.length;
+        }
+
+        async function handle(lsKey, idbValue) {
+            var raw = _lsRaw(lsKey);
+            if (raw === null) return;
+            try {
+                if (_sameJson(raw, idbValue)) removeLs(lsKey, raw);
+                else await backupThenRemove(lsKey, raw);
+            } catch (e) {
+                report.keptKeys++;
+                report.errors.push(lsKey + ':' + _errorCode(e));
+            }
+        }
+
+        var simple = _legacyMirrorKeys();
+        for (var i = 0; i < simple.length; i++) {
+            await handle(simple[i][0], _cache[simple[i][1]]);
+        }
+
+        // 完整存档列表：确保索引中的每个存档都能从 IDB 读取，再处理 localStorage 副本
+        var savesRaw = _lsRaw(LS_SAVES);
+        if (savesRaw !== null) {
+            try {
+                var lsSaves = JSON.parse(savesRaw);
+                if (Array.isArray(lsSaves)) {
+                    var indexIds = {};
+                    _getSaveIndex().forEach(function(e) { if (e && e.id) indexIds[e.id] = true; });
+                    for (var j = 0; j < lsSaves.length; j++) {
+                        var s = lsSaves[j];
+                        if (!s || !s.id || !indexIds[s.id] || _cache[s.id]) continue;
+                        // 旧迁移把存档写在 'save_' + id 下、索引却用 id，loadSave 一直靠 localStorage 兜底读取
+                        var copy = s;
+                        await idbStorage.put(s.id, copy);
+                        var check = await idbStorage.get(s.id);
+                        if (!_sameJson(JSON.stringify(copy), check)) throw new Error('save verify failed');
+                        _cache[s.id] = copy;
+                        report.restoredSaves++;
+                    }
+                }
+            } catch (e) {
+                report.keptKeys++;
+                report.errors.push(LS_SAVES + ':' + _errorCode(e));
+                savesRaw = null; // 存档补写未完成：不动 localStorage 中的存档
+            }
+            if (savesRaw !== null) {
+                var expected = [];
+                _getSaveIndex().forEach(function(e) { if (e && _cache[e.id]) expected.push(_cache[e.id]); });
+                await handle(LS_SAVES, expected);
+            }
+        }
+
+        // 快照降级副本：快照库可用时同样移出
+        if (_idbSnapshotAvailable) {
+            var snapOk = _snapshotCache && !_snapshotLsUnpersisted;
+            await handle(LS_SNAPSHOT_APPSTATE, snapOk ? _snapshotCache.appState : undefined);
+            await handle(LS_SNAPSHOT_LAST_MSG, snapOk ? _snapshotCache.lastUserMessage : undefined);
+        }
+
+        if (report.removedKeys || report.errors.length) {
+            console.log('[Storage] 旧 localStorage 副本清理：移除 ' + report.removedKeys + ' 个 key（约 ' +
+                Math.round(report.freedChars / 1024) + 'K 字符），备份到 IndexedDB ' + report.backedUpKeys +
+                ' 个，补写存档 ' + report.restoredSaves + ' 个，保留 ' + report.keptKeys + ' 个' +
+                (report.errors.length ? '，失败: ' + report.errors.join(', ') : ''));
+        }
+        return report;
+    }
+
+    /**
+     * 存储诊断：只返回分类、字符数与错误类型，不含 Key、配置或对话内容。
+     * localStorage 按 UTF-16 存储，字符数约等于实际占用的一半字节量级，仅作相对参考。
+     */
+    function getStorageDiagnostics() {
+        var legacy = {};
+        _legacyMirrorKeys().forEach(function(p) { legacy[p[0]] = true; });
+        legacy[LS_SAVES] = true; legacy[LS_SNAPSHOT_APPSTATE] = true; legacy[LS_SNAPSHOT_LAST_MSG] = true;
+        var usage = { total: 0, apiConfig: 0, legacyGameData: 0, other: 0, keyCount: 0 };
+        try {
+            for (var i = 0; i < localStorage.length; i++) {
+                var k = localStorage.key(i);
+                var size = k.length + (localStorage.getItem(k) || '').length;
+                usage.total += size;
+                usage.keyCount++;
+                if (/^jxz_apiConfig/.test(k)) usage.apiConfig += size;
+                else if (legacy[k]) usage.legacyGameData += size;
+                else usage.other += size;
+            }
+        } catch (e) { usage.error = _errorCode(e); }
+        return {
+            indexedDB: _idbAvailable,
+            snapshotDB: _idbSnapshotAvailable,
+            localStorageChars: usage,
+            lastWriteError: _lastWriteError ? Object.assign({}, _lastWriteError) : null,
+            legacyCleanup: _legacyCleanup ? JSON.parse(JSON.stringify(_legacyCleanup)) : null
+        };
     }
 
     async function _migrateFromLocalStorage() {
@@ -196,22 +417,34 @@ var storageService = (function() {
             migrated++;
         }
 
-        // 迁移存档列表（拆分为独立 key）
+        // 迁移其他旧版本镜像过的数据（事件层、地点层、提示词、世界书等），避免清理副本时与当前数据脱节
+        var extra = [
+            [LS_WEEK_HISTORY, KEY_WEEK_HISTORY], [LS_MARK_WEEK_UI_INDEX, KEY_MARK_WEEK_UI_INDEX],
+            [LS_SUMMARY_BUFF, KEY_SUMMARY_BUFF], [LS_EVENT_HISTORY, KEY_EVENT_HISTORY],
+            [LS_EVENT_META, KEY_EVENT_META], [LS_EVENT_WATERMARK, KEY_EVENT_WATERMARK],
+            [LS_EVENT_STEP, KEY_EVENT_STEP], [LS_LOCATION_MEMORY, KEY_LOCATION_MEMORY],
+            [LS_LOCATION_BUFF, KEY_LOCATION_BUFF], [LS_PROMPT_OVERRIDES, KEY_PROMPT_OVERRIDES],
+            [LS_CUSTOM_WORLDBOOK, KEY_CUSTOM_WORLDBOOK], [LS_CUSTOM_WORLDBOOK_2, KEY_CUSTOM_WORLDBOOK_2]
+        ];
+        for (var x = 0; x < extra.length; x++) {
+            var v = _lsGet(extra[x][0]);
+            if (v === null) continue;
+            _cache[extra[x][1]] = v;
+            await idbStorage.put(extra[x][1], v);
+            migrated++;
+        }
+
+        // 迁移存档列表（拆分为独立 key；key 必须与索引 id 一致，loadSave 才能命中缓存）
         var saves = _lsGet(LS_SAVES);
         if (saves && Array.isArray(saves) && saves.length > 0) {
             var index = [];
             for (var i = 0; i < saves.length; i++) {
                 var s = saves[i];
-                var saveKey = 'save_' + (s.id || Date.now() + '_' + i);
+                if (!s || typeof s !== 'object') continue;
+                var saveKey = s.id || ('save_' + Date.now() + '_' + i);
                 _cache[saveKey] = s;
                 await idbStorage.put(saveKey, s);
-                index.push({
-                    id: s.id || saveKey,
-                    saveName: s.saveName,
-                    previewWeek: s.previewWeek,
-                    previewLocation: s.previewLocation,
-                    createdAt: s.createdAt
-                });
+                index.push(_saveIndexEntry(saveKey, s));
             }
             _cache[KEY_SAVE_INDEX] = index;
             await idbStorage.put(KEY_SAVE_INDEX, index);
@@ -234,6 +467,9 @@ var storageService = (function() {
 
         var summaryHistory = _lsGet(LS_SUMMARY_HISTORY);
         if (summaryHistory) _cache[KEY_SUMMARY_HISTORY] = summaryHistory;
+
+        var weekHistory = _lsGet(LS_WEEK_HISTORY);
+        if (Array.isArray(weekHistory)) _cache[KEY_WEEK_HISTORY] = weekHistory;
 
         // 降级：从 localStorage 读取快照 appState
         var snapAppState = _lsGet(LS_SNAPSHOT_APPSTATE);
@@ -279,15 +515,10 @@ var storageService = (function() {
             var index = [];
             for (var i = 0; i < saves.length; i++) {
                 var s = saves[i];
-                var saveKey = 'save_' + (s.id || i);
+                if (!s || typeof s !== 'object') continue;
+                var saveKey = s.id || ('save_' + i);
                 _cache[saveKey] = s;
-                index.push({
-                    id: s.id || saveKey,
-                    saveName: s.saveName,
-                    previewWeek: s.previewWeek,
-                    previewLocation: s.previewLocation,
-                    createdAt: s.createdAt
-                });
+                index.push(_saveIndexEntry(saveKey, s));
             }
             _cache[KEY_SAVE_INDEX] = index;
         }
@@ -649,7 +880,7 @@ var storageService = (function() {
     function _idbSnapshotPut(key, value) {
         if (!_idbSnapshotAvailable) return;
         idbSnapshot.put(key, value).catch(function(e) {
-            console.warn('[Storage][IDB-Snapshot] put ' + key + ' 失败:', e && e.message || e);
+            _reportWriteError('snapshotDB', key, e);
         });
     }
 
@@ -701,9 +932,9 @@ var storageService = (function() {
                 idbSnapshot.put('locationBuff',    snap.locationBuff)
             ]);
         }
-        // localStorage 降级：仅存体积可控的字段
-        _lsSet(LS_SNAPSHOT_APPSTATE, snap.appState);
-        _lsSet(LS_SNAPSHOT_LAST_MSG, snap.lastUserMessage);
+        // localStorage 降级：仅在快照库不可用时存体积可控的字段
+        _lsSnapSet(LS_SNAPSHOT_APPSTATE, snap.appState);
+        _lsSnapSet(LS_SNAPSHOT_LAST_MSG, snap.lastUserMessage);
         console.log('[Storage] 全量快照已写入 snapshot_db');
     }
 
@@ -804,7 +1035,7 @@ var storageService = (function() {
         if (!_snapshotCache) return;
         _snapshotCache.lastUserMessage = msg;
         _idbSnapshotPut('lastUserMessage', msg);
-        _lsSet(LS_SNAPSHOT_LAST_MSG, msg);
+        _lsSnapSet(LS_SNAPSHOT_LAST_MSG, msg);
     }
     // --- markWeekUiIndex（周总结优化：记录上次写入初版总结时 uiConversation 的长度）---
 
@@ -1317,6 +1548,7 @@ var storageService = (function() {
 
     return {
         init: init,
+        getStorageDiagnostics: getStorageDiagnostics,
         loadAppState: loadAppState,
         saveAppState: saveAppState,
         loadUIConversation: loadUIConversation,

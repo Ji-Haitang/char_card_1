@@ -51,26 +51,31 @@ var idbSnapshot = (function() {
         });
     }
 
-    function put(key, value) {
+    // 写入/删除在事务提交（oncomplete）后才 resolve；配额不足等错误以事务 abort 形式 reject。
+    function _write(fill) {
         return new Promise(function(resolve, reject) {
             if (!_db) { reject(new Error('IDB-Snapshot not open')); return; }
-            var tx = _db.transaction(STORE_NAME, 'readwrite');
-            var store = tx.objectStore(STORE_NAME);
-            var request = store.put(value, key);
-            request.onsuccess = function() { resolve(); };
-            request.onerror = function() { reject(request.error); };
+            var tx;
+            try {
+                tx = _db.transaction(STORE_NAME, 'readwrite');
+                fill(tx.objectStore(STORE_NAME));
+            } catch (e) {
+                try { if (tx) tx.abort(); } catch (_) {}
+                reject(e);
+                return;
+            }
+            tx.oncomplete = function() { resolve(); };
+            tx.onabort = function() { reject(tx.error || new Error('IDB-Snapshot transaction aborted')); };
+            tx.onerror = function(event) { if (event && event.stopPropagation) event.stopPropagation(); };
         });
     }
 
+    function put(key, value) {
+        return _write(function(store) { store.put(value, key); });
+    }
+
     function remove(key) {
-        return new Promise(function(resolve, reject) {
-            if (!_db) { reject(new Error('IDB-Snapshot not open')); return; }
-            var tx = _db.transaction(STORE_NAME, 'readwrite');
-            var store = tx.objectStore(STORE_NAME);
-            var request = store.delete(key);
-            request.onsuccess = function() { resolve(); };
-            request.onerror = function() { reject(request.error); };
-        });
+        return _write(function(store) { store.delete(key); });
     }
 
     function getAllKeys() {
