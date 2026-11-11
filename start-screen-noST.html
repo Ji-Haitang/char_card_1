@@ -525,10 +525,10 @@
     <script src="module/vendor/jsonrepair.min.js"></script>
     <script src="module/json-repair-helper.js"></script>
     <script src="module/summary-history-service.js"></script>
-    <script src="module/api-service.js"></script>
+    <script src="module/api-service.js?v=config-save-2"></script>
     <script src="module/embedding-service.js"></script>
     <script src="module/memory-recall.js"></script>
-    <script src="ui/config-modal.js"></script>
+    <script src="ui/config-modal.js?v=config-save-2"></script>
     <script>
     (function() {
         const $ = (sel) => document.querySelector(sel);
@@ -641,6 +641,8 @@
         };
 
         async function initGame() {
+            // 开局页也需要读取已保存的主/副 API；否则刷新后弹窗只显示默认空配置。
+            if (typeof apiService !== 'undefined') apiService.loadConfig();
             try {                // Phase 2.2：初始化存储服务（IDB + 缓存）
                 if (typeof storageService !== 'undefined' && storageService.init) {
                     await storageService.init();

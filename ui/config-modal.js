@@ -376,7 +376,7 @@ var _CFG_SECTION_NAMES = { primary: '主 API', secondary: '副 API', embedding: 
 
 function _cfgSectionActions(section, label) {
     return '<div class="cfg-section-actions">' +
-        '<span id="cfg-' + section + '-save-status" class="cfg-save-status"></span>' +
+        '<span id="cfg-' + section + '-save-status" class="cfg-save-status" role="status" aria-live="polite"></span>' +
         '<button id="cfg-' + section + '-save-btn" class="cfg-btn cfg-btn-green" onclick="_cfgSaveSection(\'' + section + '\')">💾 保存' + label + '</button>' +
         '</div>';
 }
@@ -447,12 +447,34 @@ function _saveEmbeddingConfig() {
 
 var _CFG_SAVERS = { primary: _savePrimaryConfig, secondary: _saveSecondaryConfig, embedding: _saveEmbeddingConfig };
 
+// 只记录固定错误类型，不能把异常 message/对象中的 Key 或配置值带入日志。
+function _cfgSaveErrorCode(error) {
+    if (error && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED' || error.code === 22 || error.code === 1014)) return 'QuotaExceededError';
+    if (error && error.name === 'SecurityError') return 'SecurityError';
+    if (error && error.name === 'TypeError') return 'TypeError';
+    return 'Error';
+}
+
 /**
  * 单独保存某一部分（不关闭弹窗，不影响其他部分的未保存修改）
  * @param {'primary'|'secondary'|'embedding'} section
  */
 function _cfgSaveSection(section) {
-    var error = _CFG_SAVERS[section]();
+    var error;
+    try {
+        error = _CFG_SAVERS[section]();
+    } catch (cause) {
+        var code = _cfgSaveErrorCode(cause);
+        if (code === 'QuotaExceededError') {
+            error = '配置未保存：浏览器本地存储已满（QuotaExceededError）。请先导出存档备份，不要直接清除网站数据。';
+        } else if (code === 'SecurityError') {
+            error = '配置未保存：浏览器禁止写入本地存储（SecurityError）。请检查网站存储权限或浏览器隐私设置。';
+        } else {
+            error = '保存失败（' + code + '），请刷新页面后重试；刷新前请自行保留表单中的修改。';
+        }
+        _cfgDirty[section] = true;
+        console.error('[ConfigModal] ' + _CFG_SECTION_NAMES[section] + ' 保存失败 [' + code + ']');
+    }
     if (error) {
         _cfgSetStatus(section, '✖ ' + error, 'error');
         alert(error);
@@ -621,42 +643,50 @@ function _escapeHtml(str) {
 function _loadConfigHistory() {
     try {
         var raw = localStorage.getItem('jxz_apiConfigHistory');
-        return raw ? JSON.parse(raw) : [];
+        var history = raw ? JSON.parse(raw) : [];
+        if (!Array.isArray(history)) return [];
+        // 历史记录不是核心配置；旧数据或损坏条目不能阻断主/副 API 保存。
+        return history.filter(function(entry) {
+            return entry && typeof entry === 'object' && !Array.isArray(entry) &&
+                typeof entry.endpoint === 'string' && typeof entry.model === 'string' &&
+                (entry.apiKey === undefined || typeof entry.apiKey === 'string');
+        }).map(function(entry) {
+            var clean = Object.assign({}, entry);
+            if (typeof clean._label !== 'string') clean._label = clean.model;
+            return clean;
+        });
     } catch (e) {
         return [];
     }
 }
 
 function _saveConfigHistory(cfg) {
-    var history = _loadConfigHistory();
-    // 生成标签：模型名 · 域名（或类型）
-    var domain = '';
+    // 核心配置已保存；历史记录是可选副本，整个更新过程都不能中断成功反馈。
     try {
-        domain = cfg.type === 'gemini' ? 'Gemini' : new URL(cfg.endpoint).hostname.replace(/^www\./, '');
-    } catch (e) {
-        domain = cfg.type || 'OpenAI';
-    }
-    // 标签加保存时间：同 endpoint+model 重复保存时只更新不新增条目，
-    // 时间戳让「已更新」在下拉框中可见（否则 label 不变，用户会误以为历史没更新）
-    var _now = new Date();
-    var _pad = function(n) { return (n < 10 ? '0' : '') + n; };
-    var timeStr = (_now.getMonth() + 1) + '-' + _pad(_now.getDate()) + ' ' + _pad(_now.getHours()) + ':' + _pad(_now.getMinutes());
-    var label = (cfg.model || '未知模型') + ' · ' + domain + ' · ' + timeStr;
-    // 移除相同 endpoint+model 的旧记录（去重）
-    history = history.filter(function(h) {
-        return !(h.endpoint === cfg.endpoint && h.model === cfg.model);
-    });
-    // 新配置插到最前面（后台请求分流属于副 API 槽位本身，不进入可回填的历史参数）
-    var entry = Object.assign({}, cfg, { _label: label });
-    delete entry.backgroundTasks;
-    history.unshift(entry);
-    // 最多保留 3 条（先进先出）
-    if (history.length > 3) history = history.slice(0, 3);
-    try {
+        var history = _loadConfigHistory();
+        // 生成标签：模型名 · 域名（或类型）
+        var domain = '';
+        try {
+            domain = cfg.type === 'gemini' ? 'Gemini' : new URL(cfg.endpoint).hostname.replace(/^www\./, '');
+        } catch (e) {
+            domain = cfg.type || 'OpenAI';
+        }
+        // 同 endpoint+model 重复保存时只更新不新增条目，时间戳让更新可见。
+        var now = new Date();
+        var pad = function(n) { return (n < 10 ? '0' : '') + n; };
+        var timeStr = (now.getMonth() + 1) + '-' + pad(now.getDate()) + ' ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+        var label = (cfg.model || '未知模型') + ' · ' + domain + ' · ' + timeStr;
+        history = history.filter(function(h) {
+            return !(h.endpoint === cfg.endpoint && h.model === cfg.model);
+        });
+        // 后台请求分流属于副 API 槽位本身，不进入可回填的历史参数。
+        var entry = Object.assign({}, cfg, { _label: label });
+        delete entry.backgroundTasks;
+        history.unshift(entry);
+        if (history.length > 3) history = history.slice(0, 3);
         localStorage.setItem('jxz_apiConfigHistory', JSON.stringify(history));
     } catch (e) {
-        // 写入失败（localStorage 已满/不可用）时历史会冻结在旧数据，必须留日志便于排查
-        console.warn('[ConfigModal] 历史配置写入失败：', e);
+        console.warn('[ConfigModal] 配置已保存，但历史配置更新失败 [' + _cfgSaveErrorCode(e) + ']');
     }
 }
 

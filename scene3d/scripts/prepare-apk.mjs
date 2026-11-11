@@ -49,7 +49,7 @@ export function parseGradleIdentity(code) {
   const applicationId = /\bapplicationId\s*(?:=\s*)?["']([^"']+)["']/.exec(code)?.[1];
   const versionCode = Number(/\bversionCode\s*(?:=\s*)?(\d+)/.exec(code)?.[1]);
   const versionName = /\bversionName\s*(?:=\s*)?["']([^"']+)["']/.exec(code)?.[1];
-  assert(applicationId === 'com.jihaitang.jxz' && versionCode === 7 && versionName === '1.6', 'Unapproved Android application/version change');
+  assert(applicationId === 'com.jihaitang.jxz' && versionCode === 8 && versionName === '1.6.1', 'Unapproved Android application/version change');
   return { applicationId, versionCode, versionName };
 }
 export function apkPaths(record, runDir) {

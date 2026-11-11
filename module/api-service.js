@@ -92,8 +92,10 @@ var apiService = (function() {
     }
 
     function updateConfig(newConfig) {
-        Object.assign(config, newConfig);
-        saveConfig();
+        // 持久化成功后再更新共享对象；写入失败不能让未保存的配置提前生效。
+        var next = Object.assign({}, config, newConfig);
+        localStorage.setItem('jxz_apiConfig', JSON.stringify(next));
+        Object.assign(config, next);
     }
 
     function getSecondaryConfig() {
@@ -101,10 +103,11 @@ var apiService = (function() {
     }
 
     function updateSecondaryConfig(newConfig) {
-        Object.assign(secondaryConfig, newConfig);
-        if (!Array.isArray(secondaryConfig.backgroundTasks)) secondaryConfig.backgroundTasks = [];
-        secondaryConfig.enabled = secondaryConfig.enabled === true;
-        localStorage.setItem(SECONDARY_STORAGE_KEY, JSON.stringify(secondaryConfig));
+        var next = Object.assign({}, secondaryConfig, newConfig);
+        if (!Array.isArray(next.backgroundTasks)) next.backgroundTasks = [];
+        next.enabled = next.enabled === true;
+        localStorage.setItem(SECONDARY_STORAGE_KEY, JSON.stringify(next));
+        Object.assign(secondaryConfig, next);
     }
 
     function _isValidEndpoint(url) {
