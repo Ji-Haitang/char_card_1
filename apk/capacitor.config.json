@@ -2,6 +2,7 @@
   "appId": "com.jihaitang.jxz",
   "appName": "瀚海",
   "webDir": "www",
+  "loggingBehavior": "none",
   "server": {
     "androidScheme": "https",
     "hostname": "localhost"

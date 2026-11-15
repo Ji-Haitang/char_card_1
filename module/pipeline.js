@@ -16,6 +16,7 @@ var pipeline = (function() {
     var _externalBusyExpandDisplay = null;
     var _externalBusyMaskZIndex = null;
     var _currentSummarySource = null; // 当前提交的摘要来源（null 时默认 'llm'）
+    var _speechRequest = null, _lastPresentationReceipt = null;
     var _autoSaveGeneration = 0;     // 每轮提交递增，废弃上一回合尚未落定的延迟自动存档
 
     // 入库/查询侧共用的字段 key 列表
@@ -617,6 +618,13 @@ var pipeline = (function() {
             'currentBattleEvent=' + (currentBattleEvent ? currentBattleEvent['事件类型'] : 'null')
         );
 
+        if(_speechRequest){
+            var speechInstruction=speechTurn.instruction(_speechRequest);
+            messages=messages.map(function(m){return Object.assign({},m);});
+            for(var speechIndex=messages.length-1;speechIndex>=0;speechIndex--)if(messages[speechIndex].role==='user'){
+                messages[speechIndex].content+='\n\n'+speechInstruction;break;
+            }
+        }
         // === 完整 prompt log ===
         window._lastPipelineMessages = messages;
         console.groupCollapsed('[Pipeline] 发送消息（共 ' + messages.length + ' 条）');
@@ -683,6 +691,7 @@ var pipeline = (function() {
         }
 
         // === 提交阶段（有副作用，按顺序可控）===
+        if(typeof speechTurn!=='undefined')return await speechTurn.finish(_speechRequest,preprocessed,rawText,isRegenerate,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
         return await _commitResponse(preprocessed, rawText, isRegenerate);
     }
 
@@ -709,6 +718,7 @@ var pipeline = (function() {
             _abortRequested = false;
 
             function doRender() {
+                if(_speechRequest)return;
                 try {
                     var cleaned = responseParser.removeThinkingContent(accumulatedText);
                     var mainText = responseParser.extractMainText(cleaned);
@@ -756,7 +766,8 @@ var pipeline = (function() {
                     if (accumulatedThinking === '') _setStreamLog('施延年蹙眉沉吟');
                     accumulatedThinking += delta;
                 },
-                onComplete: function(fullText, usage) {
+                onComplete: function(fullText, usage, completion) {
+                    if(typeof speechTurn!=='undefined')speechTurn.setCompletion(_speechRequest,completion);
                     _setStreamLog('施延年题尾落款');
                     _isStreaming = false;
                     aborted = _abortRequested;
@@ -770,7 +781,7 @@ var pipeline = (function() {
                     try {
                         var cleaned = responseParser.removeThinkingContent(fullText);
                         var mainText = responseParser.extractMainText(cleaned);
-                        if (mainText && typeof renderMainText === 'function') renderMainText(mainText);
+                        if (!_speechRequest && mainText && typeof renderMainText === 'function') renderMainText(mainText);
                     } catch (e) {}
                     resolve({ text: fullText, aborted: aborted, thinking: accumulatedThinking });
                 },
@@ -812,13 +823,14 @@ var pipeline = (function() {
         _currentAbort = { abort: function() { _abortRequested = true; controller.abort(); } };
         try {
             var result = await apiService.sendMessages(messages, { signal: controller.signal });
+            if(typeof speechTurn!=='undefined')speechTurn.setCompletion(_speechRequest,result);
             _isStreaming = false;
             _currentAbort = null;
             // 渲染完整结果
             try {
                 var cleaned = responseParser.removeThinkingContent(result.content);
                 var mainText = responseParser.extractMainText(cleaned);
-                if (mainText && typeof renderMainText === 'function') {
+                if (!_speechRequest && mainText && typeof renderMainText === 'function') {
                     renderMainText(mainText);
                 }
             } catch (e) {}
@@ -838,7 +850,7 @@ var pipeline = (function() {
     /**
      * 提交阶段（阶段 B）
      */
-    async function _commitResponse(preprocessed, rawText, isRegenerate) {
+    async function _commitResponse(preprocessed, rawText, isRegenerate, media) {
         try {
             // 1. 写入用户消息到 UI 历史
             // 重生成时快照已还原（本轮 user 消息尚未追加），直接 append 即可，无需替换
@@ -852,6 +864,7 @@ var pipeline = (function() {
 
             // 2. 解析 AI 回复
             var parsed = responseParser.run(rawText);
+            if(media&&typeof media.mainText==='string')parsed.mainText=media.mainText;
 
             // 3. 应用 SIDE_NOTE 和摘要到全局变量
             _applyParsedSideNote(parsed);
@@ -914,7 +927,7 @@ var pipeline = (function() {
                 updateAllDisplays();
             }
             // 5.5 GAL 演出自动进入（仅 commit 路径；流式/回滚的 renderMainText 不调），控制器内部按 G1 判定
-            if (typeof galPresentation !== 'undefined' && galPresentation && typeof galPresentation.onCommit === 'function') {
+            if (!(typeof presentationFlow!=='undefined'&&document.body.classList.contains('layout-landscape'))&&typeof galPresentation !== 'undefined' && galPresentation && typeof galPresentation.onCommit === 'function') {
                 try { galPresentation.onCommit({ commitId: 'commit-' + (++_galCommitSequence) }); } catch (e) { console.warn('[Gal] onCommit 失败', e); }
             }
 
@@ -1006,12 +1019,20 @@ var pipeline = (function() {
                 }
 
                 // 6. 保存 AI 回复到 UI 历史（摘要存在才写入，避免截断内容污染 LatestReply）
+                var _publishedId=typeof _assistantMsgId !== 'undefined' ? _assistantMsgId : ('a' + Date.now());
+                var _readingPlan=null;
+                if(typeof presentationPlan!=='undefined')try{
+                    _readingPlan=media&&media.readingPlan?presentationPlan.withCurrentWorld(parsed.mainText,media.readingPlan):presentationPlan.captureCurrent(parsed.mainText,'committed','');
+                }catch(e){console.warn('[Presentation] 计划未保存:',e.message);}
                 storageService.appendUIConversation({
-                    id: typeof _assistantMsgId !== 'undefined' ? _assistantMsgId : ('a' + Date.now()),
+                    id: _publishedId,
                     role: 'assistant',
                     content: parsed.mainText,
                     week: currentWeek,
-                    createdAt: Date.now()
+                    createdAt: Date.now(),
+                    ...(_readingPlan?{presentationPlan:_readingPlan}:{}),
+                    ...(media&&media.singleSpeech?{singleSpeech:media.singleSpeech}:{}),
+                    ...(media&&media.roundSpeech?{roundSpeech:media.roundSpeech}:{})
                 });
                 // 6.1 展开态历史页码按最新总页数补刷（renderMainText 早于本追加，标签总页数还是旧的）
                 if (typeof refreshStoryHistoryPageLabel === 'function') refreshStoryHistoryPageLabel();
@@ -1142,6 +1163,8 @@ var pipeline = (function() {
             if (typeof updateFreeActionInputState === 'function') {
                 updateFreeActionInputState();
             }
+            if(parsed.sideNote!==null&&_sideQuestSettled!==false&&_publishedId&&_readingPlan&&typeof mediaContext!=='undefined')
+                _lastPresentationReceipt={workspaceId:mediaContext.workspaceId(),messageId:_publishedId,sourceHash:_readingPlan.sourceHash};
             return parsed.sideNote !== null && _sideQuestSettled !== false;
         } catch (err) {
             console.error('[Pipeline] 提交阶段错误:', err.message);
@@ -1169,6 +1192,7 @@ var pipeline = (function() {
     // ========== 中断控制 ==========
 
     function abortCurrentTurn() {
+        if(typeof speechTurn!=='undefined'&&speechTurn.active())speechTurn.cancel();
         if (_currentAbort && typeof _currentAbort.abort === 'function') {
             console.log('[Pipeline] 用户中断生成');
             _abortRequested = true;
@@ -1252,7 +1276,7 @@ var pipeline = (function() {
     function _blockBusyInteraction(event) {
         if (!isBusy()) return;
         var target = event.target;
-        if (target && target.closest && target.closest('#stream-stop-btn')) return;
+        if (target && target.closest && target.closest('#stream-stop-btn, #presentation-wait-extra, #speech-round-decision-modal')) return;
         if (target && target.closest && target.closest(_BUSY_READONLY_SELECTOR)) return;
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -1515,6 +1539,7 @@ var pipeline = (function() {
         // 操作层表情立绘回默认「平静」（仅 GameMode 0 生效）
         if (typeof resetNpcTurnEmotions === 'function') { try { resetNpcTurnEmotions(); } catch (e) {} }
         _sceneOperationActive = true;
+        var flowTicket=null;_lastPresentationReceipt=null;_speechRequest=null;
         try {
             var expandBtn = document.getElementById('story-expand-btn');
             if (expandBtn) expandBtn.style.visibility = 'hidden';
@@ -1522,18 +1547,30 @@ var pipeline = (function() {
             _showStreamMask();
             _setStreamLog('施延年整理书案');
             if (bridge) bridge.setBusy(token, true);
+            if(operation===runTurn&&typeof speechTurn!=='undefined')_speechRequest=await speechTurn.begin();
+            if(typeof presentationFlow!=='undefined')flowTicket=presentationFlow.pipelineStart();
+            if(_speechRequest&&_speechRequest.kind==='round')return await speechRound.withLease(_speechRequest.workspaceId,function(){return operation.apply(null,args);});
             return await operation.apply(null, args);
         } finally {
+            if(typeof speechTurn!=='undefined')speechTurn.release(_speechRequest);
+            _speechRequest=null;
             _sceneOperationActive = false;
             _hideStreamControls();
             if (bridge) {
                 bridge.setBusy(token, false);
                 bridge.notify('pipeline-finished');
             }
+            if(typeof presentationFlow!=='undefined')presentationFlow.pipelineEnd(flowTicket,_lastPresentationReceipt);
         }
+    }
+    async function resumeSpeech(id,options){
+        return speechTurn.resume(id,options,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
     }
     return { 
         runTurn: function() { return withSceneGuard(runTurn, arguments); },
+        resumeRoundSpeech: function(){return withSceneGuard(resumeSpeech,arguments);},
+        showPresentationWait: function(){_showStreamMask();},
+        hidePresentationWait: function(){if(!isBusy())_hideStreamControls();},
         abortCurrentTurn: abortCurrentTurn, 
         isStreaming: isStreaming,
         isBusy: isBusy,

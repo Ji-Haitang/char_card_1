@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
-
-const root = new URL('../', import.meta.url);
-const read = (name) => fs.readFileSync(new URL(name, root), 'utf8');
+import { readSource as read, loadBackgroundPromptBuilder } from './side-quest-fixture.mjs';
 
 class FakeTimers {
     constructor() {
@@ -179,6 +176,7 @@ function makeRunnerHarness({ active = true, streamMode = 'non-stream', responses
         showToast() {}
     };
 
+    loadBackgroundPromptBuilder(context);
     vm.runInNewContext(read('module/side-quest-runner.js'), context, { filename: 'side-quest-runner.js' });
     return { context, runner: context.sideQuestRunner, state, clock };
 }
@@ -437,6 +435,7 @@ function makePipelineHarness({ streamMode = 'non-stream', active = true, judgeRe
 
     // Keep the production contract visible to the test: UI refreshes consult pipeline.isBusy.
     context.pipeline = {};
+    loadBackgroundPromptBuilder(context);
     vm.runInNewContext(read('module/side-quest-runner.js'), context, { filename: 'side-quest-runner.js' });
     vm.runInNewContext(read('module/pipeline.js'), context, { filename: 'pipeline.js' });
     return { context, pipeline: context.pipeline, runner: context.sideQuestRunner, state, controls, clock };
@@ -730,7 +729,8 @@ test('busy capture blocks click and keyboard activation, permits Stop, and relea
         harness.state.listeners[type](event);
         assert.ok(prevented && stopped, `${type} must not activate covered controls`);
         prevented = stopped = false;
-        event.target.closest = selector => selector === '#stream-stop-btn' ? {} : null;
+        // Element.closest accepts selector lists, including the reader's additional busy-safe controls.
+        event.target.closest = selector => selector.split(',').some(part => part.trim() === '#stream-stop-btn') ? {} : null;
         harness.state.listeners[type](event);
         assert.equal(prevented || stopped, false, 'narrative Stop remains operable');
         // 只读的正文翻页控件（箭头/页码点/正文点击区）在生成中仍可用

@@ -1,0 +1,21 @@
+/* Original controls are leased, not copied. Forced events never unlock ordinary input. */
+#presentation-reader #pr-free{margin-top:12px;border-top:1px solid #4d412b38;padding-top:10px}
+#presentation-reader #pr-free .free-action-row{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr));position:static!important;gap:8px;width:100%;height:auto!important;min-height:0!important}
+#presentation-reader #pr-free .free-action-input{display:block;position:static;width:100%;min-height:60px;max-height:150px;box-sizing:border-box;background:#fffaf0;color:#292e2b;border:1px solid #9b8b6f;padding:8px;font:14px/1.6 sans-serif;resize:vertical}
+#presentation-reader #pr-free .free-action-input{grid-column:1/-1}
+#presentation-reader #pr-free .free-action-send-btn{display:flex!important;position:relative!important;inset:auto!important;transform:none!important;flex:1;min-width:0!important;height:42px!important;min-height:42px!important;margin:0!important;align-items:center;justify-content:center;background-size:contain!important;background-repeat:no-repeat!important}
+#presentation-reader #pr-free.presentation-controls-forced .free-action-input,#presentation-reader #pr-free.presentation-controls-forced #free-action-send-btn{display:none!important}
+#pr-events .presentation-controls-event:not([hidden]){display:block!important;position:static!important;width:100%;margin:10px 0;padding:10px;box-sizing:border-box}
+#pr-events [hidden]{display:none!important}
+#pr-events .event-option-btn,#pr-events .battle-action-btn{width:100%;position:static;margin:5px 0;white-space:normal}
+#pr-events .battle-actions{display:flex;flex-direction:column}
+#pr-live-event-description{white-space:pre-wrap;color:#5f412b!important;font-size:13px!important}
+body.layout-landscape.presentation-wait-active .viewport-wrapper{flex:1 1 100%;width:100%;max-width:none}
+body.layout-landscape.presentation-wait-active .viewport{aspect-ratio:auto}
+body.presentation-wait-active .story-area,body.presentation-wait-active #presentation-open-btn{display:none!important}
+body.presentation-wait-active #viewport-dock-layer{visibility:hidden}
+body.presentation-wait-active #stream-mask{display:flex!important}
+body.presentation-wait-active #stream-controls{display:flex!important;position:static!important;justify-content:center;margin:0}
+body.presentation-wait-active #stream-mask[data-presentation-wait="ready"] .stream-spinner,body.presentation-wait-active #stream-mask[data-presentation-wait="ready"] #stream-controls{display:none!important}
+#presentation-wait-extra{color:#fff;text-shadow:0 1px 3px #000;text-align:center;font-size:12px;max-width:85%}
+#presentation-wait-extra button{padding:8px 12px;border:1px solid #ac956c;background:#f3ecdd;color:#383b32;cursor:pointer;font:14px KaiTi,serif}

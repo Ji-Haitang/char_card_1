@@ -41,6 +41,7 @@
 
 // 在文件开头添加翻页相关的状态变量
 let storyPages = [];  // 存储分页后的文本
+var storySpeechPages = []; // Source text aligned with the existing HTML pages; reading/audio never parse innerHTML.
 let currentPage = 0;  // 当前页码
 let isStoryExpanded = false;  // 是否展开显示全文
 let storyHistoryOffset = 0;  // 展开态历史回看偏移：0=最新回合（直播源 storyPages），≥1=uiConversation 倒数第 offset+1 条 assistant 原文
@@ -538,6 +539,7 @@ const galPresentation = (() => {
 
     /** enter({ source, pageIndex, curtain }) → Promise<boolean>；已在演出中则等价 goto。 */
     function enter(opts) {
+        if (typeof presentationAdapter !== 'undefined' && presentationAdapter.blocksOriginal()) return Promise.resolve(false);
         opts = opts || {};
         const list = frames();
         if (!list.length) { galLog('enter ignored: no frames', { source: opts.source }); return Promise.resolve(false); }
@@ -602,6 +604,7 @@ const galPresentation = (() => {
      * 新文本/reset/外部清层/切模式/展开阅读后，旧任务不得重新挂回图层，但已盖的纸仍须揭开。
      */
     function gotoSlg(i, opts) {
+        if (typeof presentationAdapter !== 'undefined' && presentationAdapter.blocksOriginal()) return false;
         const list = frames(), vp = viewportEl();
         if (!vp || !list.length) return false;
         opts = opts || {};
@@ -655,6 +658,7 @@ const galPresentation = (() => {
      * 同页幂等（同步 true）；非 playing 同步 false；其余返回 Promise<boolean>。
      */
     function goto(i) {
+        if (typeof presentationAdapter !== 'undefined' && presentationAdapter.blocksOriginal()) return false;
         if (state !== 'playing') return false;
         const list = frames();
         const target = clamp(i);
@@ -713,6 +717,7 @@ const galPresentation = (() => {
     }
     /** commit 完成后的自动进入判定（G1/G4）：同一 commitId 只进一次。 */
     function onCommit(info) {
+        if (typeof presentationAdapter !== 'undefined' && presentationAdapter.blocksOriginal()) return false;
         const id = (info && has(info.commitId)) ? info.commitId : null;
         const mode = (typeof GameMode !== 'undefined') ? GameMode : 1;
         const expanded = (typeof isStoryExpanded !== 'undefined') && !!isStoryExpanded;
@@ -726,6 +731,7 @@ const galPresentation = (() => {
     }
     /** GameMode 切换 / 存档恢复等硬重置：同步清层、清 commit 记忆。 */
     function reset() {
+        if (typeof presentationHost !== 'undefined') presentationHost.invalidate();
         slgSession = null;
         exit({ reason: 'reset', curtain: false });
         clearLayers(viewportEl());
@@ -737,6 +743,7 @@ const galPresentation = (() => {
         get index() { return index; },
         enter, goto, gotoSlg, exit, onCommit, reset, isPlaying,
         renderLayers, clearLayers, sceneUrlFor, cnNumber,
+        whenSettled: () => chain, // Drain the existing queue before a reading host acquires the shared curtain.
     });
 })();
 // ==== GAL_PRESENTATION_END ====
@@ -1161,6 +1168,10 @@ function renderMainText(text) {
 
 // 更新故事文本（支持分页）
 function updateStoryText(text) {
+    if (typeof presentationHost !== 'undefined') presentationHost.onStoryChange(text);
+    if (typeof speechService !== 'undefined' && text !== currentStoryText) speechService.stop();
+    if (typeof speechInlinePlayer !== 'undefined' && text !== currentStoryText) speechInlinePlayer.invalidate();
+    storySpeechPages = [];
     const storyElement = document.getElementById('story-text');
     currentStoryText = text;
     storyHistoryOffset = 0;  // 新文本到达：回看偏移归零，展开态始终落在最新回合
@@ -1182,7 +1193,11 @@ function updateStoryText(text) {
     if (GameMode === 1) {
         if (parsed && parsed.length > 0) {
             slgModeData = parsed;
-            storyPages = slgModeData.map(data => md.render(data.text || ''));
+            storyPages = slgModeData.map(data => {
+                const text = data.text || '', html = md.render(text);
+                storySpeechPages.push({text, html, wrapped:false, htmlEnabled:true, event:false});
+                return html;
+            });
         } else {
             // 解析不到有效页时，回退到普通文本渲染，避免显示空白
             slgModeData = [];
@@ -1190,10 +1205,15 @@ function updateStoryText(text) {
             processedText = processedText.replace(/(\r\n)+/g, '\n');
             processedText = processedText.replace(/\r+/g, '\n');
             storyPages = [md.render(processedText)];
+            storySpeechPages.push({text:processedText, html:storyPages[0], wrapped:false, htmlEnabled:true, event:false});
         }
     } else if (hasFrames) {
         slgModeData = parsed;
-        storyPages = slgModeData.map(data => `<div class="story-paragraph">${md.render(data.text || '')}</div>`);
+        storyPages = slgModeData.map(data => {
+            const text = data.text || '', html = `<div class="story-paragraph">${md.render(text)}</div>`;
+            storySpeechPages.push({text, html, wrapped:true, htmlEnabled:true, event:false});
+            return html;
+        });
     } else {
         // 普通模式：按自然段分页，并丢弃每段“|”分隔的补充信息
         slgModeData = [];
@@ -1207,12 +1227,15 @@ function updateStoryText(text) {
         if (cleanedParagraphs.length > 0) {
             storyPages = cleanedParagraphs.map(p => {
                 const rendered = md.render(p);
-                return `<div class="story-paragraph">${rendered}</div>`;
+                const html = `<div class="story-paragraph">${rendered}</div>`;
+                storySpeechPages.push({text:p, html, wrapped:true, htmlEnabled:true, event:false});
+                return html;
             });
         } else {
             const stripped = processedText.split('\n').map(line => line.split('|')[0].trim()).join('\n');
             const rendered = md.render(stripped);
             storyPages = [rendered];
+            storySpeechPages.push({text:stripped, html:rendered, wrapped:false, htmlEnabled:true, event:false});
         }
     }
 
@@ -1242,6 +1265,7 @@ function updateStoryText(text) {
             const mdAppend = window.markdownit({ html: true, breaks: true, linkify: true, typographer: true }).disable('strikethrough');
             const eventHtml = mdAppend.render(activeEvent.事件描述);
             storyPages.push(`<div class="story-paragraph">${eventHtml}</div>`);
+            storySpeechPages.push({text:activeEvent.事件描述, html:storyPages[storyPages.length - 1], wrapped:true, htmlEnabled:true, event:true});
         }
     } catch (e) {}
 
@@ -1304,10 +1328,11 @@ function updateStoryDisplay() {
     const storyWrapper = storyElement ? storyElement.parentElement : null;
     
     // GameMode 0 演出中：图层由 galPresentation 维护，这里不清、只同步页码；goto 内部按 G19 判定是否播翻页纸
+    const readingLease = typeof presentationAdapter !== 'undefined' && presentationAdapter.blocksOriginal();
     const galPlaying = GameMode === 0 && galPresentation.isPlaying();
-    if (galPlaying) {
+    if (!readingLease && galPlaying) {
         galPresentation.goto(currentPage);
-    } else if (GameMode !== 1 || !Array.isArray(slgModeData) || !slgModeData.length) {
+    } else if (!readingLease && (GameMode !== 1 || !Array.isArray(slgModeData) || !slgModeData.length)) {
         // GM1 换段由 gotoSlg 在纸页盖好后清层；这里提前清会丢失上一帧并让视窗闪回操作层。
         galPresentation.clearLayers(viewport);
         // 退出SLG相关全局标记
@@ -1333,7 +1358,7 @@ function updateStoryDisplay() {
         // SLG模式展开：无现存图层容器时按当前页（展开时通常为第0页）补建图层——
         // 修复展开状态下 GameMode 0→1 切换、或展开中收到新回复时永远"场景加载中"；
         // 有现存图层（toggle 切入展开）则不重建，保持"展开保持当前页图"的原设计
-        if (GameMode === 1 && slgModeData && slgModeData.length > 0
+        if (!readingLease && GameMode === 1 && slgModeData && slgModeData.length > 0
             && viewport && !viewport.querySelector('.slg-layer-container')) {
             const expandIndex = Math.min(currentPage, slgModeData.length - 1);
             galPresentation.gotoSlg(expandIndex, _slgLayerOptsGm1());
@@ -1386,7 +1411,7 @@ function updateStoryDisplay() {
         if (historyJumpBtn) historyJumpBtn.style.display = 'none';
 
         // 如果是SLG模式，显示对应的图片（事件页使用“最后验证有效”的图层）
-        if (GameMode === 1 && slgModeData && slgModeData.length > 0) {
+        if (!readingLease && GameMode === 1 && slgModeData && slgModeData.length > 0) {
             const effectiveIndex = Math.min(currentPage, slgModeData.length - 1);
             galPresentation.gotoSlg(effectiveIndex, _slgLayerOptsGm1());
         }
@@ -1394,8 +1419,9 @@ function updateStoryDisplay() {
         // GameMode 0 且本轮有演出帧：正文中间 1/3 点击 = 进入 GAL 演出（G2），单页时也要挂点击
         const galEnterable = GameMode === 0 && Array.isArray(slgModeData) && slgModeData.length > 0;
         const multiPage = storyPages.length > 1;
+        const readerEnterable = typeof presentationReader !== 'undefined' && document.body.classList.contains('layout-landscape');
         // 翻页控件逻辑
-        if (multiPage || galEnterable) {
+        if (multiPage || galEnterable || readerEnterable) {
             if (storyWrapper) storyWrapper.style.cursor = 'pointer';
             storyElement.style.cursor = 'pointer';
             if (storyWrapper) storyWrapper.onclick = function(e) {
@@ -1411,6 +1437,8 @@ function updateStoryDisplay() {
                     if (multiPage) doPrevPage();
                 } else if (zone === 'right') {
                     if (multiPage) doNextPage();
+                } else if (readerEnterable && presentationReader.resumeFromOperation()) {
+                    return;
                 } else if (galEnterable && !_turnBusy()) {
                     // 演出中再点 = goto 当前页（幂等）；事件页越界由控制器 clamp 到末帧
                     galPresentation.enter({ source: 'page', pageIndex: Math.min(currentPage, slgModeData.length - 1), curtain: true });
@@ -1441,7 +1469,7 @@ function updateStoryDisplay() {
                 nextBtn.disabled = currentPage === storyPages.length - 1;
             }
         } else {
-            if (!galEnterable) {
+            if (!galEnterable && !readerEnterable) {
                 storyElement.style.cursor = 'default';
                 if (storyWrapper) storyWrapper.style.cursor = 'default';
                 if (storyWrapper) storyWrapper.onclick = null;
@@ -1460,10 +1488,13 @@ function updateStoryDisplay() {
         const battleContainer = document.getElementById('battle-event-container');
         const sidequestContainer = document.getElementById('sidequest-interaction-container');
 
-        if (viewportEl && randomContainer && randomContainer.parentElement !== viewportEl) {
+        const controls = typeof presentationControls !== 'undefined' ? presentationControls : null;
+        const randomBorrowed = !!(controls && controls.owns(randomContainer));
+        const battleBorrowed = !!(controls && controls.owns(battleContainer));
+        if (viewportEl && randomContainer && !randomBorrowed && randomContainer.parentElement !== viewportEl) {
             viewportEl.appendChild(randomContainer);
         }
-        if (viewportEl && battleContainer && battleContainer.parentElement !== viewportEl) {
+        if (viewportEl && battleContainer && !battleBorrowed && battleContainer.parentElement !== viewportEl) {
             viewportEl.appendChild(battleContainer);
         }
         if (viewportEl && sidequestContainer && sidequestContainer.parentElement !== viewportEl) {
@@ -1496,12 +1527,13 @@ function updateStoryDisplay() {
             ? (hasBattle || hasRandom || hasSqChoice)
             : ((storyPages && storyPages.length > 0) && currentPage === storyPages.length - 1 && (hasBattle || hasRandom || hasSqChoice));
 
-        if (randomContainer) {
+        if (randomContainer && !randomBorrowed) {
             randomContainer.classList.toggle('show', shouldShowByMode && hasRandom);
         }
-        if (battleContainer) {
+        if (battleContainer && !battleBorrowed) {
             battleContainer.classList.toggle('show', shouldShowByMode && hasBattle);
         }
+        if ((randomBorrowed || battleBorrowed) && controls) controls.refresh();
         if (sidequestContainer) {
             if (!hasSqChoice && typeof _sideQuestChoiceNode !== 'undefined' && _sideQuestChoiceNode) {
                 hideSideQuestChoice();
@@ -1529,6 +1561,9 @@ function updateStoryDisplay() {
         }
     } catch (e) {}
     
+    if (typeof speechInlinePlayer !== 'undefined') speechInlinePlayer.render(storyElement, {
+        source:currentStoryText, pages:storySpeechPages, pageIndex:currentPage, expanded:isStoryExpanded, historyOffset:storyHistoryOffset
+    });
     storyElement.style.opacity = '0';
     setTimeout(() => {
         storyElement.style.transition = 'opacity 0.5s ease';
@@ -1736,7 +1771,12 @@ function updateSideQuestStatusBar() {
 // 翻页函数（注意函数名改为doXXX避免冲突）
 function doGoToPage(pageNum) {
     if (pageNum >= 0 && pageNum < storyPages.length) {
+        if (pageNum !== currentPage && typeof speechService !== 'undefined') speechService.stop();
         currentPage = pageNum;
+        if (!isStoryExpanded && typeof presentationReader !== 'undefined' && presentationReader.openFromPage(currentPage)) {
+            updateStoryDisplay();
+            return;
+        }
         // GameMode 0 且本轮有演出帧：翻页（正文左右 1/3 / 箭头 / 页码点）即进入演出；已在演出中则 enter 退化为 goto，
         // 展开态不响应。事件描述页越界由控制器 clamp 到末帧。生成中只翻正文、不进演出。
         if (GameMode === 0 && !isStoryExpanded && Array.isArray(slgModeData) && slgModeData.length > 0 && !_turnBusy()) {
@@ -1747,6 +1787,7 @@ function doGoToPage(pageNum) {
 }
 
 function doPrevPage() {
+    if (typeof speechService !== 'undefined') speechService.stop();
     // 展开态：左翻=上一回合原文（更旧），回看偏移+1
     if (isStoryExpanded) {
         const turns = _getAssistantTurns();
@@ -1760,6 +1801,7 @@ function doPrevPage() {
 }
 
 function doNextPage() {
+    if (typeof speechService !== 'undefined') speechService.stop();
     // 展开态：右翻=下一回合原文（更新），回看偏移-1
     if (isStoryExpanded) {
         if (storyHistoryOffset > 0) {
@@ -1773,6 +1815,7 @@ function doNextPage() {
 
 // 切换展开/收起
 function doToggleStoryExpand() {
+    if (typeof speechService !== 'undefined') speechService.stop();
     isStoryExpanded = !isStoryExpanded;
     // 收起/再展开都回到最新回合原文（回看偏移归零）
     storyHistoryOffset = 0;

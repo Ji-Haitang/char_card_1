@@ -44,6 +44,7 @@
 // 显示随机事件
 function displayRandomEvent(event) {
     const container = document.getElementById('random-event-container');
+    container._presentationEvent = event;
     const options = document.getElementById('event-options');
     
     // 不再在事件框中显示事件描述，描述已作为最后一页附加到正文
@@ -78,6 +79,7 @@ function hideRandomEvent() {
 
 // 处理事件选项
 async function handleEventOption(optionIndex, option) {
+    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
     if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
     if (!currentRandomEvent) return;
     
@@ -172,6 +174,7 @@ function applyEventReward(reward) {
 // 显示战斗事件
 function displayBattleEvent(event) {
     const container = document.getElementById('battle-event-container');
+    container._presentationEvent = event;
     const description = document.getElementById('battle-event-description');
     const enemyName = document.getElementById('enemy-name-display');
     const enemyAttack = document.getElementById('enemy-attack-display');

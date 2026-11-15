@@ -2,9 +2,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
+import { readSource as read, testAssetRoot } from './side-quest-fixture.mjs';
 
-const root = new URL('../', import.meta.url);
-const read = (name) => fs.readFileSync(new URL(name, root), 'utf8');
+const assetRoot = testAssetRoot();
 const categories = ['正派弟子', '反派弟子', '游侠', '军士', '匪徒', '平民', '蒙面人', '野兽'];
 const quiet = Object.fromEntries(['log', 'warn', 'error', 'groupCollapsed', 'groupEnd'].map((key) => [key, () => {}]));
 
@@ -149,7 +149,7 @@ test('side quest encounters reach the battle URL and all four portrait states', 
         for (const state of ['待机', '攻击', '防御', '受击']) {
             const url = ctx.getEnemyPortraitUrl(state);
             assert.equal(url, `img/战斗差分_webp/${category}-${state}.webp`);
-            assert.ok(fs.existsSync(new URL(url, root)), url);
+            assert.ok(fs.existsSync(new URL(url, assetRoot)), url);
         }
     }
     // 读档后旧节点未经 validateTree，呈现时仍应得到匹配的类别。

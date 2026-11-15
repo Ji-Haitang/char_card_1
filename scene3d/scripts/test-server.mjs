@@ -4,6 +4,9 @@ import { realpath, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { createHash, randomBytes } from 'node:crypto';
 import { EventEmitter, once } from 'node:events';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
+const execGit=promisify(execFile);
 
 const MIME = { '.html':'text/html; charset=utf-8', '.js':'text/javascript; charset=utf-8', '.mjs':'text/javascript; charset=utf-8', '.css':'text/css', '.json':'application/json', '.png':'image/png', '.jpg':'image/jpeg', '.jpeg':'image/jpeg', '.webp':'image/webp', '.gif':'image/gif', '.svg':'image/svg+xml', '.mp3':'audio/mpeg', '.wav':'audio/wav', '.ogg':'audio/ogg', '.woff2':'font/woff2', '.ttf':'font/ttf', '.glb':'model/gltf-binary', '.wasm':'application/wasm' };
 const STATIC_DIRS = new Set(['module','ui','img','bgm','music','assets']);
@@ -18,9 +21,13 @@ export function validateResponse(fixture) {
 }
 
 /** Only this run owns this listener; no static write operation or external proxy exists. */
-export async function startTestServer({ gameRoot, basePath='/' }) {
+export async function startTestServer({ gameRoot, basePath='/', assetRoot=process.env.JXZ_TEST_ASSET_ROOT, assetRevision=process.env.JXZ_TEST_ASSET_REV }) {
   if(typeof basePath!=='string'||!/^\/(?:[a-zA-Z0-9_-]+\/)*$/.test(basePath))throw Error('Invalid local static basePath');
   const root = await realpath(gameRoot);
+  const sharedAssets=assetRoot?await realpath(assetRoot):root;
+  const sharedDirectories=new Set(['assets','img','bgm','music']);
+  if(assetRevision&&!/^[a-f0-9]{7,40}$/i.test(assetRevision))throw Error('Shared asset revision must be a pinned commit');
+  const canonicalAssets=new Map();
   const token = randomBytes(24).toString('hex');
   const events = [], requests = [], pending = new Map(), gates = new Map(), sockets = new Set(), assetRules = new Map();
   const bus = new EventEmitter();
@@ -102,9 +109,22 @@ export async function startTestServer({ gameRoot, basePath='/' }) {
           res.writeHead(rule.status??200,{'Content-Type':rule.contentType||'application/octet-stream','Cache-Control':'no-store'}).end(rule.body??'');return;
         }
       }
-      let actual, info;
-      try { actual = await realpath(target); info = await stat(actual); } catch { res.writeHead(404).end(); return; }
-      if (!isWithin(root,actual) || !info.isFile()) { res.writeHead(403).end(); return; }
+      let actual, info, sourceRoot=root;
+      try { actual = await realpath(target); info = await stat(actual); }
+      catch {
+        if(sharedAssets===root||!sharedDirectories.has(segments[0])){res.writeHead(404).end();return;}
+        const sharedTarget=path.resolve(sharedAssets,relative);
+        if(!isWithin(sharedAssets,sharedTarget)){res.writeHead(403).end();return;}
+        try{actual=await realpath(sharedTarget);info=await stat(actual);sourceRoot=sharedAssets;}
+        catch{res.writeHead(404).end();return;}
+        emit({type:'shared-asset',path:relative});
+      }
+      if (!isWithin(sourceRoot,actual) || !info.isFile()) { res.writeHead(403).end(); return; }
+      let canonical=null;
+      if(assetRevision&&sourceRoot===sharedAssets&&sharedDirectories.has(segments[0])&&/\.(json|m?js|css|html|svg|txt)$/i.test(relative)){
+        if(!canonicalAssets.has(relative))canonicalAssets.set(relative,execGit('git',['-C',sharedAssets,'cat-file','blob',assetRevision+':'+relative],{encoding:'buffer',maxBuffer:32*1024*1024}).then(r=>r.stdout));
+        canonical=await canonicalAssets.get(relative);info={size:canonical.length};
+      }
       const headers = {'Content-Type': MIME[path.extname(actual).toLowerCase()] || 'application/octet-stream', 'Cache-Control':'no-store', 'X-Content-Type-Options':'nosniff'};
       let start = 0, end = info.size - 1, status = 200;
       if (req.headers.range) {
@@ -115,7 +135,7 @@ export async function startTestServer({ gameRoot, basePath='/' }) {
         status = 206; headers['Content-Range'] = `bytes ${start}-${end}/${info.size}`;
       }
       headers['Content-Length'] = Math.max(0, end-start+1); res.writeHead(status,headers);
-      if (req.method === 'HEAD' || !info.size) res.end(); else createReadStream(actual,{start,end}).on('error',() => res.destroy()).pipe(res);
+      if (req.method === 'HEAD' || !info.size) res.end(); else if(canonical)res.end(canonical.subarray(start,end+1));else createReadStream(actual,{start,end}).on('error',() => res.destroy()).pipe(res);
     } catch (error) { emit({type:'server-error',message:error.message}); if (!res.headersSent) res.writeHead(500); res.end(); }
   });
   server.on('connection', socket => { sockets.add(socket); socket.on('close', () => sockets.delete(socket)); });

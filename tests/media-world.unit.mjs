@@ -1,0 +1,10 @@
+import test from 'node:test';import assert from 'node:assert/strict';import {harness} from './media-speech-fixture.mjs';import {timeSlice,read,plain} from './gal/_sandbox.mjs';
+for(const form of ['legacy','first-time-missing'])test(form+': final committed world changes without changing prepared speech ranges or audio identity',async()=>{
+ const h=harness();h.run(timeSlice());h.run(await read('module/gal-scene-resources.js'));h.run("currentGameTime='09:00';dayNightStatus='daytime';");
+ const names=h.get('npcs'),raw=form==='legacy'?`公开台词。【A；轻声】|${names.A.name}|演武场|平静|none`:`公开台词。【A；轻声】|演武场|25:00|${names.A.name}:平静|none\n第二句。【B；平静】|演武场|20:00|${names.B.name}:平静|none`;
+ const speech=await h.get('speechPlan').fromMainText(raw,h.get('speechRound').characters()),api=h.get('presentationPlan'),before=api.captureCurrent(speech.source,'committed',''),original=JSON.stringify(before);
+ const compile=reading=>h.get('speechRoundPlan').compile(raw,h.get('speechRound').characters(),{finishReason:'stop',readingPlan:reading});const soundBefore=await compile(before);
+ h.sandbox.__source=speech.source;h.run("applyTurnTime(resolveTurnTime(parseSlgMainText(__source,0),{'时间':'20:00'}));");assert.equal(h.get('dayNightStatus'),'night');
+ const after=api.withCurrentWorld(speech.source,before),soundAfter=await compile(after);assert.equal(JSON.stringify(before),original);assert.equal(after.world.dayNightStatus,'night');assert.equal(after.sourceHash,before.sourceHash);assert.notEqual(after.planHash,before.planHash);assert.deepEqual(plain(after.frames),plain(before.frames));assert.deepEqual(plain(after.units),plain(before.units));assert.deepEqual(plain(soundAfter.units),plain(soundBefore.units));assert.equal(soundAfter.planHash,soundBefore.planHash);assert.equal(await h.get('speechPlan').renderHash(soundAfter.units),await h.get('speechPlan').renderHash(soundBefore.units));assert.equal(soundAfter.issues.length,0);
+ const selected=h.get('galSceneResources').sceneFor(after.frames[0],{...plain(after.world),locationNames:{yanwuchang:'演武场'},frameIndex:0,frames:plain(after.frames)});assert.equal(selected.background,'img/location/演武场_夜.webp');
+});

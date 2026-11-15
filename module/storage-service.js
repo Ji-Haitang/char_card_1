@@ -945,6 +945,7 @@ var storageService = (function() {
     function restoreFromSnapshot() {
         var snap = _snapshotCache;
         if (!snap || !snap.appState) return false;
+        if(typeof mediaContext!=='undefined')mediaContext.invalidate();
 
         // 还原 gameData
         if (snap.appState.gameData) {

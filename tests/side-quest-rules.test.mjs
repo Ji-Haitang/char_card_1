@@ -1,10 +1,7 @@
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import vm from 'node:vm';
 import test from 'node:test';
-
-const root = new URL('../', import.meta.url);
-const read = (name) => fs.readFileSync(new URL(name, root), 'utf8');
+import { readSource as read, loadBackgroundPromptBuilder } from './side-quest-fixture.mjs';
 
 function loadService() {
     const context = {
@@ -129,6 +126,7 @@ function makeRunner(options = {}) {
         },
         showModal: (message) => state.notices.push(String(message))
     };
+    loadBackgroundPromptBuilder(context);
     vm.runInNewContext(read('module/side-quest-runner.js'), context, { filename: 'side-quest-runner.js' });
     return { runner: context.sideQuestRunner, state, context };
 }

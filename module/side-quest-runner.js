@@ -215,6 +215,7 @@ var sideQuestRunner = (function() {
      * @returns {Promise<Array|null>} rumors 数组；失败/被拦截返回 null
      */
     async function generateRumors() {
+        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return null;
         if (!sideQuestService.isEnabled()) { _notify('支线系统未启用'); return null; }
         if (_generating) { console.log('[SideQuest] 生成中，忽略重复触发'); return null; }
         if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) {
@@ -357,6 +358,7 @@ var sideQuestRunner = (function() {
      * @returns {Promise<boolean>} 是否接取成功
      */
     async function acceptRumor(idx) {
+        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return false;
         if (!sideQuestService.isEnabled()) { _notify('支线系统未启用'); return false; }
         if (_generating) return false;
         if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) {

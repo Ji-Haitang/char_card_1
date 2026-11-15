@@ -23,6 +23,7 @@ const ALLOWED_HEADERS = [
   'anthropic-version',
   'anthropic-beta',
   'x-goog-api-key',
+  'model',
 ];
 
 const CORS_HEADERS = {
@@ -78,8 +79,14 @@ export default {
       if (val) forwardHeaders.set(key, val);
     }
 
-    // 转发请求
+    const isFishSpeech=targetUrl.origin==='https://api.fish.audio'&&targetUrl.pathname==='/v1/tts';
     let upstreamResponse;
+    function speechError(status,message){
+      try{if(upstreamResponse?.body)Promise.resolve(upstreamResponse.body.cancel()).catch(()=>{});}catch(_){}
+      return new Response(JSON.stringify({error:message}),{status,headers:{...CORS_HEADERS,'Content-Type':'application/json'}});
+    }
+    if(isFishSpeech&&request.signal.aborted)return speechError(499,'Speech request cancelled');
+    // 转发请求
     try {
       upstreamResponse = await fetch(targetUrl.toString(), {
         method: request.method,
@@ -87,14 +94,21 @@ export default {
         body: request.method !== 'GET' && request.method !== 'HEAD' ? request.body : undefined,
         // 保持流式传输
         duplex: 'half',
+        ...(isFishSpeech?{redirect:'manual',signal:request.signal}:{}),
       });
     } catch (e) {
+      if(isFishSpeech)return speechError(request.signal.aborted?499:502,request.signal.aborted?'Speech request cancelled':'Speech upstream request failed');
       return new Response(JSON.stringify({ error: 'Upstream request failed: ' + e.message }), {
         status: 502,
         headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
       });
     }
 
+    if(isFishSpeech){
+      if(request.signal.aborted)return speechError(499,'Speech request cancelled');
+      if(upstreamResponse.redirected||(upstreamResponse.status>=300&&upstreamResponse.status<400))return speechError(502,'Speech upstream redirect refused');
+      if(!upstreamResponse.ok)return speechError(upstreamResponse.status,'Speech upstream returned an error');
+    }
     // 构建响应头：透传上游响应头 + 添加 CORS 头
     const responseHeaders = new Headers(upstreamResponse.headers);
     for (const [key, val] of Object.entries(CORS_HEADERS)) {

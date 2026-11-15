@@ -741,7 +741,9 @@ var apiService = (function() {
         console.log('[API] OpenAI 响应, usage:', data.usage);
         return {
             content: toolMode ? _unwrapToolResponse(data, false) : data.choices[0].message.content,
-            usage: data.usage
+            usage: data.usage,
+            finishReason: data.choices && data.choices[0] ? data.choices[0].finish_reason || null : null,
+            toolOutput: toolMode
         };
     }
 
@@ -790,7 +792,9 @@ var apiService = (function() {
         console.log('[API] Gemini 响应, usage:', data.usageMetadata);
         return {
             content: toolMode ? _unwrapToolResponse(data, true) : data.candidates[0].content.parts[0].text,
-            usage: data.usageMetadata
+            usage: data.usageMetadata,
+            finishReason: data.candidates && data.candidates[0] ? data.candidates[0].finishReason || null : null,
+            toolOutput: toolMode
         };
     }
 
@@ -956,7 +960,7 @@ var apiService = (function() {
     async function _streamOpenAI(messages, callbacks, controller, maxTokens, cfg) {
         cfg = cfg || config;
         var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/chat/completions', cfg);
-        var fullContent = '';
+        var fullContent = '', finishReason = null;
         var fullThinking = '';
 
         var requestBody = {
@@ -1003,7 +1007,8 @@ var apiService = (function() {
 
             if (toolMode) {
                 await _readToolStream(response, false, callbacks, toolState);
-                callbacks.onComplete(controller.signal.aborted ? '' : toolState.content, toolState.usage);
+                callbacks.onComplete(controller.signal.aborted ? '' : toolState.content, toolState.usage,
+                    {finishReason:controller.signal.aborted?'aborted':toolState.diag.finishReason,toolOutput:true});
                 return;
             }
             var reader = response.body.getReader();
@@ -1023,11 +1028,12 @@ var apiService = (function() {
                     if (!line || !line.startsWith('data: ')) continue;
                     var dataStr = line.substring(6);
                     if (dataStr === '[DONE]') {
-                        callbacks.onComplete(fullContent, null);
+                        callbacks.onComplete(fullContent, null, {finishReason:controller.signal.aborted?'aborted':finishReason,toolOutput:false});
                         return;
                     }
                     try {
                         var chunk = JSON.parse(dataStr);
+                        if(chunk.choices&&chunk.choices[0]&&chunk.choices[0].finish_reason)finishReason=chunk.choices[0].finish_reason;
                         var delta = chunk.choices && chunk.choices[0] && chunk.choices[0].delta;
                         if (!delta) continue;
 
@@ -1047,11 +1053,11 @@ var apiService = (function() {
                 }
             }
             // 流结束但没收到 [DONE]
-            callbacks.onComplete(fullContent, null);
+            callbacks.onComplete(fullContent, null, {finishReason:controller.signal.aborted?'aborted':finishReason,toolOutput:false});
         } catch (err) {
             if (toolMode ? controller.signal.aborted : err.name === 'AbortError') {
                 // 取消沿用 onComplete 契约，避免触发正文自动重试；工具预览不作为可提交结果。
-                callbacks.onComplete(toolMode ? '' : fullContent, toolMode ? toolState.usage : null);
+                callbacks.onComplete(toolMode ? '' : fullContent, toolMode ? toolState.usage : null, {finishReason:'aborted',toolOutput:toolMode});
             } else {
                 callbacks.onError(err);
             }
@@ -1071,7 +1077,7 @@ var apiService = (function() {
         });
 
         var url = _resolveUrl(cfg.endpoint.replace(/\/+$/, '') + '/models/' + cfg.model + ':streamGenerateContent?alt=sse', cfg);
-        var fullContent = '';
+        var fullContent = '', finishReason = null;
         var _streamGenConfig = { temperature: cfg.temperature };
         if (typeof maxTokens === 'number') {
             _streamGenConfig.maxOutputTokens = maxTokens;
@@ -1104,7 +1110,8 @@ var apiService = (function() {
 
             if (toolMode) {
                 await _readToolStream(response, true, callbacks, toolState);
-                callbacks.onComplete(controller.signal.aborted ? '' : toolState.content, toolState.usage);
+                callbacks.onComplete(controller.signal.aborted ? '' : toolState.content, toolState.usage,
+                    {finishReason:controller.signal.aborted?'aborted':toolState.diag.finishReason,toolOutput:true});
                 return;
             }
             var reader = response.body.getReader();
@@ -1125,6 +1132,7 @@ var apiService = (function() {
                     var dataStr = line.substring(6);
                     try {
                         var chunk = JSON.parse(dataStr);
+                        if(chunk.candidates&&chunk.candidates[0]&&chunk.candidates[0].finishReason)finishReason=chunk.candidates[0].finishReason;
                         var parts = chunk.candidates && chunk.candidates[0] &&
                                     chunk.candidates[0].content && chunk.candidates[0].content.parts;
                         if (parts && parts.length > 0 && parts[0].text) {
@@ -1137,10 +1145,10 @@ var apiService = (function() {
                     }
                 }
             }
-            callbacks.onComplete(fullContent, null);
+            callbacks.onComplete(fullContent, null, {finishReason:controller.signal.aborted?'aborted':finishReason,toolOutput:false});
         } catch (err) {
             if (toolMode ? controller.signal.aborted : err.name === 'AbortError') {
-                callbacks.onComplete(toolMode ? '' : fullContent, toolMode ? toolState.usage : null);
+                callbacks.onComplete(toolMode ? '' : fullContent, toolMode ? toolState.usage : null, {finishReason:'aborted',toolOutput:toolMode});
             } else {
                 callbacks.onError(err);
             }
