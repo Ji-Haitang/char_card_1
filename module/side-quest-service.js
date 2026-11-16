@@ -497,7 +497,7 @@ var sideQuestService = (function() {
      * 放弃支线（无惩罚，记 abandoned 入 history）
      */
     function abandonQuest() {
-        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return false;
+        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return false;
         var sq = _sq();
         if (!sq || !sq.active) return false;
         var title = sq.active.title;
@@ -760,7 +760,7 @@ var sideQuestService = (function() {
      * @returns {object|null} 选中的 option（含 label/next），非法时 null
      */
     function applyChoice(optionId) {
-        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return null;
+        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return null;
         var active = getActive();
         if (!active || active.status !== 'active') return null;
         if (!checkStageGates(active)) {

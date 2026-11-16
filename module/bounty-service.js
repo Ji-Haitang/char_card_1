@@ -322,7 +322,7 @@ var bountyService = (function() {
     }
 
     async function generateBountyTasks() {
-        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
         if (_generating) return;
         if (_bountyWeeklyUsed()) { showModal('本周已接取过悬赏任务，下周再来吧'); _renderBountyModal(); return; }
         if (typeof activeBounty !== 'undefined' && activeBounty) { showModal('已有进行中的悬赏任务'); _renderBountyModal(); return; }
@@ -373,7 +373,7 @@ var bountyService = (function() {
     }
 
     function acceptBounty(idx) {
-        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
         var task = _currentBountyList[idx];
         if (!task) return;
         if (_bountyWeeklyUsed()) { showModal('本周已接取过悬赏任务，下周再来吧'); _renderBountyModal(); return; }
@@ -382,7 +382,7 @@ var bountyService = (function() {
             '声望+' + _escapeHtml(task.reputationReward) + '　赏金+' + _escapeHtml(task.goldReward) + '<br>' +
             '（每周限接1次，接下后无论成败本周不可再接）';
         showConfirmModal('接下悬赏', msg, function() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             activeBounty = {
                 enemyName: task.enemyName,
                 locationName: task.locationName,
@@ -401,11 +401,11 @@ var bountyService = (function() {
     }
 
     function abandonBounty(onDone) {
-        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
         if (typeof activeBounty === 'undefined' || !activeBounty) return;
         var enemyName = activeBounty.enemyName;
         showConfirmModal('放弃悬赏', '确定要放弃当前悬赏任务"' + _escapeHtml(enemyName) + '"吗？', function() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             activeBounty = null;
             if (typeof syncGameDataFromVariables === 'function') syncGameDataFromVariables();
             if (typeof updateTaskInfoButton === 'function') updateTaskInfoButton();

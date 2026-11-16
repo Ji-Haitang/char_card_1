@@ -1,0 +1,42 @@
+#speech-round-controls {
+    border-top: 1px solid #a9916644;
+    margin-top: 12px;
+    padding-top: 8px;
+}
+#speech-round-controls button {
+    margin: 4px 4px 4px 0;
+}
+#speech-round-controls p {
+    overflow-wrap: anywhere;
+}
+#pr-round-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    font-size: 12px;
+    line-height: 1.4;
+    margin-top: 3px;
+}
+#pr-round-controls[hidden] {
+    display: none !important;
+}
+#pr-round-play {
+    font: inherit;
+    color: #624e32;
+    background: #cbb78a30;
+    border: 1px solid #9c825e70;
+    border-radius: 3px;
+    padding: 3px 8px;
+    cursor: pointer;
+}
+#pr-round-play[aria-pressed='true'] {
+    background: #cbb78a70;
+}
+#pr-round-play:focus-visible {
+    outline: 2px solid #8b6c3a;
+    outline-offset: 2px;
+}
+#pr-round-voice {
+    color: #77674e;
+}

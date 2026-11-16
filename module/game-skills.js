@@ -300,7 +300,7 @@ function closeSkillLibraryModal() {
 }
 
 async function learnSkill(skillId) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     const skill = skillList?.[skillId];
     if (!skill) return;
 
@@ -326,7 +326,7 @@ async function learnSkill(skillId) {
         '确认学习',
         `确定花费 ${levelData.cost} 金学习 ${skill.name} Lv${nextLevel} 吗？<br><br>${levelData.effectDesc}`,
         async () => {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             playerStats.金钱 -= levelData.cost;
             learnedSkills[skillId] = nextLevel;
             if (equippedSkills?.[skillId]) {
@@ -456,7 +456,7 @@ async function persistSkillState() {
 }
 
 async function equipSkill(skillId) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     const skill = skillList?.[skillId];
     const learnedLevel = getLearnedSkillLevel(skillId);
     const targetLevel = learnedLevel;
@@ -484,7 +484,7 @@ async function equipSkill(skillId) {
 }
 
 async function unequipSkill(skillId) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     if (!equippedSkills || !equippedSkills[skillId]) return;
     delete equippedSkills[skillId];
     await persistSkillState();

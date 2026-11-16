@@ -26,7 +26,7 @@ function harness(handler=success,extra={}){
     const env={Blob,URL,Uint8Array,TextEncoder,TextDecoder,Headers,Response,ReadableStream,AbortController:TrackedController,DOMException,crypto:webcrypto,btoa,
         atob:value=>{decoded.push(value.length);return atob(value);},setTimeout:(callback,ms)=>{const id=++timerId;timers.set(id,{callback,ms});return id;},clearTimeout:id=>timers.delete(id),
         fetch:(...args)=>{web.push(args);throw Error('Forbidden browser network');},Capacitor:{isNativePlatform:()=>true,getPlatform:()=> 'android',isPluginAvailable:()=>true,Plugins:{CapacitorHttp:{request:request=>{calls.push(request);return handler(request);}}}},...extra};
-    vm.createContext(env);for(const file of ['illustration-http.js','speech-msgpack.js','speech-drama3.js','speech-transport.js'])vm.runInContext(fs.readFileSync(new URL('../module/'+file,import.meta.url),'utf8'),env,{filename:file});
+    vm.createContext(env);for(const file of ['illustration-http.js','speech/msgpack.js','speech/provider.js'])vm.runInContext(fs.readFileSync(new URL('../module/'+file,import.meta.url),'utf8'),env,{filename:file});
     const synthesize=(signal,request=input)=>env.speechDrama3.synthesize(config,request,{signal,fetch:env.speechTransport.fetch});
     function clean(){assert.equal(web.length,0,'no browser fallback');assert.equal(timers.size,0,'wall-clock timer released');for(const{listeners}of signals)assert.equal(listeners.size,0,'abort listeners removed');}
     return{env,calls,timers,signals,decoded,web,synthesize,clean};

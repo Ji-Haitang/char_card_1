@@ -29,8 +29,8 @@ var presentationActions=(function(){
         }}
     }
     function checked(id,args,expected,s){require(expected&&expected.workspaceId===s.workspaceId&&mediaContext.isCurrent(expected.context)&&expected.mode===s.mode&&expected.location===s.location,'游戏上下文、模式或地点已改变');require(!dispatching,'动作正在派发');require(!s.busy,'当前操作尚未结束');require(!mediaContext.pendingChoice(),'请先在原界面处理支线抉择');require(!(typeof presentationHost!=='undefined'&&presentationHost.hasOverlay()),'请先关闭当前弹窗');
-        if(!['skills','inventory','equipment','skill-equipment','settings','config','stats','relationships','saves','history','logs','bounty','trade'].includes(id)&&typeof speechTurn!=='undefined'){
-            var reason=speechTurn.progressReason();require(!reason,reason);
+        if(!['skills','inventory','equipment','skill-equipment','settings','config','stats','relationships','saves','history','logs','bounty','trade'].includes(id)&&typeof speechService!=='undefined'){
+            var reason=speechService.progressReason();require(!reason,reason);
         }
         var eventAction=['event-option','battle-start','battle-flee'].includes(id);if(!eventAction&&id!=='regenerate'){require(!currentRandomEvent&&!currentBattleEvent,'请先处理当前事件');require(s.inputEnabled,'当前不能行动');}return route(id,args,s);}
     function preflight(id,args,expected){var s=getState();try{checked(id,args,expected,s);return{ok:true,reason:'',state:s};}catch(error){return{ok:false,reason:error.message,state:s};}}

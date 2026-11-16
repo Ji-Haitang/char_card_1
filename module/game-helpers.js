@@ -160,7 +160,7 @@ async function handleMessageOutput(message) {
 
 // 显示21点游戏
 function showBlackjackGame() {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     const modal = document.getElementById('blackjack-modal');
     const iframe = document.getElementById('blackjack-iframe');
     
@@ -295,7 +295,7 @@ function showBattleGame(battleData) {
 
 // 显示农场游戏
 function showFarmGame() {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     const modal = document.getElementById('farm-modal');
     const iframe = document.getElementById('farm-iframe');
     
@@ -324,7 +324,7 @@ function showFarmGame() {
 
 // 显示炼丹游戏
 function showAlchemyGame() {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     // 检查是否已经炼丹过
     if (alchemyDone) {
         showModal('本周已经进行过炼丹，请等待下周！');
@@ -1317,7 +1317,7 @@ window.updateLocationHeadcountLabels = updateLocationHeadcountLabels;
 
 // 使用道具
 async function useItem(itemName) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     const item = item_list[itemName];
     if (!item || !item.可使用 || inventory[itemName] <= 0) return;
 
@@ -1397,7 +1397,7 @@ async function useItem(itemName) {
 
 // 装备道具（简化逻辑：直接修改属性值）
 async function equipItem(itemName, returnToInventory = false) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     const item = item_list[itemName];
     if (!item || !item.可装备 || inventory[itemName] <= 0) return;
     
@@ -1468,7 +1468,7 @@ async function equipItem(itemName, returnToInventory = false) {
 
 // 卸下装备（简化逻辑：直接修改属性值）
 async function unequipItem(itemName) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     let slot = null;
     for (const [key, value] of Object.entries(equipment)) {
         if (value === itemName) {

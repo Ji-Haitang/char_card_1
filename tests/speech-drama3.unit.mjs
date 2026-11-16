@@ -7,7 +7,7 @@ import { createHash, webcrypto } from 'node:crypto';
 function scope(extra = {}) {
     const env = vm.createContext({ Blob, Uint8Array, DataView, TextEncoder, TextDecoder,
         crypto: webcrypto, ...extra });
-    for (const file of ['speech-msgpack.js', 'speech-drama3.js'])
+    for (const file of ['speech/msgpack.js', 'speech/provider.js'])
         vm.runInContext(readFileSync(new URL('../module/' + file, import.meta.url), 'utf8'), env);
     return env;
 }
@@ -60,8 +60,8 @@ test('fixed public constants and explicit config; never reinterpret old provider
     assert.equal(api.normalizeConfig(config).speed, 1);
     for (const speed of [0.5, 1, 2]) assert.equal(api.normalizeConfig({ ...config, speed }).speed, speed);
     for (const bad of [{ apiKey: secret }, { provider: 'fish-drama3', apiKey: secret },
-        { kind: 'volcengine', apiKey: secret }, { kind: 'fish-drama3', appId: 'old', accessToken: secret },
-        { ...config, provider: 'volcengine' }, { ...config, apiKey: '' }, { ...config, apiKey: '\n' },
+        { kind: 'other-tts', apiKey: secret }, { kind: 'fish-drama3', token: secret },
+        { ...config, provider: 'other-tts' }, { ...config, apiKey: '' }, { ...config, apiKey: '\n' },
         { ...config, apiKey: secret + '\r\nheader' }, { ...config, apiKey: 42 },
         ...[0.49, 2.01, NaN, Infinity, null, '1'].map(speed => ({ ...config, speed })),
         { ...config, endpoint: 'https://evil.invalid' }, { ...config, model: 's2.1-pro-free' },
@@ -127,11 +127,11 @@ test('voiceIdentity is stable, binds audio SHA and exact transcript, never conta
     assert.deepEqual(JSON.parse(identity), ['fish-drama3', 'reference-sha256-v1', original.reference.sha256, original.reference.text]);
     assert.deepEqual(v, original); assert.ok(!identity.includes(secret));
 });
-test('voice rejects legacy slots, ambiguous binding, corrupt hash and oversized/invalid reference before network', async () => {
+test('voice rejects invalid identifiers, ambiguous binding, corrupt hashes and oversized references before network', async () => {
     const v = dynamic(); let calls = 0;
-    const bad = [{ referenceId: voice.referenceId }, { kind: 'volcengine', referenceId: voice.referenceId },
-        { kind: 'fish-drama3', speakerId: 'S_slot' }, { kind: 'fish-drama3' },
-        ...['', 'S_slot', 's_slot', ' has-space', 'a/b', '../x', 'https://fish.audio/a', 'a'.repeat(129), '音色'].map(referenceId => ({ ...voice, referenceId })),
+    const bad = [{ referenceId: voice.referenceId }, { kind: 'other-tts', referenceId: voice.referenceId },
+        { kind: 'fish-drama3', speakerId: 'wrong-property' }, { kind: 'fish-drama3' },
+        ...['', '?invalid', '#invalid', ' has-space', 'a/b', '../x', 'https://fish.audio/a', 'a'.repeat(129), '音色'].map(referenceId => ({ ...voice, referenceId })),
         { ...voice, reference: v.reference }, { ...voice, referenceId: [] },
         ...[
             { audio: [0, 127, 128, 255] }, { audio: new Uint8Array() }, { audio: new Uint8Array(10 * 1024 * 1024 + 1) },

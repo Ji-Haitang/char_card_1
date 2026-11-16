@@ -6,7 +6,7 @@ import { webcrypto } from 'node:crypto';
 import { makeSandbox, parserSlice, read } from './gal/_sandbox.mjs';
 export const FAKE_KEY='media-public-fixture-not-a-real-key';
 export const mp3=fs.readFileSync(new URL('./scene3d/fixtures/audio/silence.mp3',import.meta.url));
-export const sourceFiles=['media-context','speech-plan','speech-msgpack','speech-drama3','speech-transport','speech-config','speech-service','speech-round-plan','presentation-adapter','presentation-plan','speech-round','response-parser','speech-turn'];
+export const sourceFiles=['media-context','speech/plan','speech/msgpack','speech/provider','speech/config','presentation-adapter','presentation-plan','speech/runtime','speech/service','response-parser'];
 const sources=Object.fromEntries(await Promise.all(sourceFiles.map(async name=>[name,await read('module/'+name+'.js')])));
 export const deferred=()=>{let resolve,reject;const promise=new Promise((a,b)=>{resolve=a;reject=b;});return{promise,resolve,reject};};
 export const flush=()=>new Promise(resolve=>setImmediate(resolve));

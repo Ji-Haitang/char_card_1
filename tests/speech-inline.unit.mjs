@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {webcrypto,createHash} from 'node:crypto';
 const env={crypto:webcrypto,TextEncoder,structuredClone,fetch(){throw Error('network forbidden');},apiService:{createClient(){throw Error('extra LLM forbidden');}}};
-vm.createContext(env);vm.runInContext(fs.readFileSync(new URL('../module/speech-plan.js',import.meta.url),'utf8'),env);
+vm.createContext(env);vm.runInContext(fs.readFileSync(new URL('../module/speech/plan.js',import.meta.url),'utf8'),env);
 const p=env.speechPlan,chars=[{id:'D',name:'萧白瑚'},{id:'M',name:'玄天青'}];
 const parse=s=>p.fromMainText(s,chars),plain=x=>JSON.parse(JSON.stringify(x));
 test('one NPC yields existing TTS plan fields, exact text and emotion',async()=>{

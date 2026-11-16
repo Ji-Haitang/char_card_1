@@ -1,0 +1,39 @@
+/* Only an exact, available cached line is decorated; original text and paragraph geometry remain. */
+body.layout-portrait #story-text .speech-replay-unit {
+    cursor: pointer;
+    border-radius: 3px;
+    text-decoration-line: underline;
+    text-decoration-style: dotted;
+    text-decoration-color: #8a7151;
+    text-underline-offset: 4px;
+    touch-action: manipulation;
+    user-select: text;
+}
+body.layout-portrait #story-text .speech-replay-unit::after {
+    content: ' ♫';
+    font-size: 0.72em;
+    color: #8a7151;
+    text-decoration: none;
+    white-space: nowrap;
+}
+body.layout-portrait #story-text .speech-replay-unit:focus-visible {
+    outline: 2px solid #8a7151;
+    outline-offset: 3px;
+}
+body.layout-portrait #story-text .speech-replay-unit[data-speech-state='loading'] {
+    background: #ae936322;
+}
+body.layout-portrait #story-text .speech-replay-unit[data-speech-state='playing'] {
+    background: #ae936344;
+    text-decoration-style: solid;
+}
+#speech-replay-status {
+    padding: 3px 10px;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #79664c;
+    overflow-wrap: anywhere;
+}
+#speech-replay-status[hidden] {
+    display: none !important;
+}

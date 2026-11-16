@@ -104,11 +104,11 @@
     <link rel="stylesheet" href="module/equipment-panel.css?v=1">
     <link rel="stylesheet" href="module/dialog-panel.css?v=1">
     <link rel="stylesheet" href="module/side-quest-panel.css?v=4">
-    <link rel="stylesheet" href="ui/presentation-host.css?v=voice-stage-20261115">
-    <link rel="stylesheet" href="ui/presentation-reader.css?v=voice-stage-20261115">
-    <link rel="stylesheet" href="ui/presentation-flow.css?v=voice-stage-20261115">
-    <link rel="stylesheet" href="ui/speech-inline-player.css?v=voice-stage-20261115">
-    <link rel="stylesheet" href="ui/speech-round.css?v=voice-stage-20261115">
+    <link rel="stylesheet" href="ui/presentation-host.css?v=voice-tidy-20261116a">
+    <link rel="stylesheet" href="ui/presentation-reader.css?v=voice-tidy-20261116a">
+    <link rel="stylesheet" href="ui/presentation-flow.css?v=voice-tidy-20261116a">
+    <link rel="stylesheet" href="ui/speech/playback.css?v=voice-tidy-20261116a">
+    <link rel="stylesheet" href="ui/speech/settings.css?v=voice-tidy-20261116a">
     <!-- 全局滚动条皮肤（古风/扁平）：须保持为最后一个样式表 -->
     <link rel="stylesheet" href="module/scrollbar-skin.css?v=1">
     <script src="module/inventory-panel.js?v=1" defer></script>
@@ -640,7 +640,7 @@
                     <div class="gs-panel-wrap">
                         <div class="gs-panel" id="gs-panel-speech">
                             <h3>语音配置</h3>
-                            <button type="button" id="speech-single-open" class="modal-btn" onclick="speechSingleTest.open()">单NPC单句测试</button>
+                            <button type="button" id="speech-single-open" class="modal-btn" onclick="speechUI.openSingle()">单NPC单句测试</button>
                             <div id="speech-panel-root"></div>
                         </div>
                         <!-- 通用设置 -->
@@ -1360,11 +1360,11 @@
     <script src="module/skill-list.js"></script>
     <script src="module/game-utils.js"></script>
     <script src="module/game-state.js"></script>
-    <script src="module/game-ui.js?v=voice-stage-20261115"></script>
-    <script src="module/game-helpers.js?v=voice-stage-20261115"></script>
-    <script src="module/game-events.js?v=voice-stage-20261115"></script>
+    <script src="module/game-ui.js?v=voice-tidy-20261116a"></script>
+    <script src="module/game-helpers.js?v=voice-tidy-20261116a"></script>
+    <script src="module/game-events.js?v=voice-tidy-20261116a"></script>
     <script src="module/special-event.js"></script>
-    <script src="module/game-skills.js?v=voice-stage-20261115"></script>
+    <script src="module/game-skills.js?v=voice-tidy-20261116a"></script>
     
     <!-- 独立前端新增模块 -->
     <script src="module/variable-system.js"></script>
@@ -1375,7 +1375,7 @@
     <script src="module/prompt-data-extra.js"></script>
     <script src="module/prompt-overrides.js"></script>
     <script src="module/token-utils.js"></script>
-    <script src="module/api-service.js?v=voice-stage-20261115"></script>
+    <script src="module/api-service.js?v=voice-tidy-20261116a"></script>
     <script src="module/worldbook-engine.js"></script>
     <script src="module/custom-worldbook.js"></script>
     <script src="module/prompt-builder.js"></script>
@@ -1385,12 +1385,12 @@
     <script src="module/summary-history-service.js"></script>
     <script src="module/week-history-service.js"></script>
     <script src="module/summary-runner.js"></script>
-    <script src="module/bounty-service.js?v=voice-stage-20261115"></script>
+    <script src="module/bounty-service.js?v=voice-tidy-20261116a"></script>
     <script src="module/embedding-service.js"></script>
     <script src="module/reranker.js"></script>
     <script src="module/idb-storage.js?v=storage-slim-1"></script>
     <script src="module/idb-snapshot.js?v=storage-slim-1"></script>
-    <script src="module/storage-service.js?v=voice-stage-20261115"></script>
+    <script src="module/storage-service.js?v=voice-tidy-20261116a"></script>
     <script src="module/event-history-service.js"></script>
     <script src="module/st-converter.js"></script>
     <script src="module/st-exporter.js"></script>
@@ -1398,46 +1398,40 @@
     <script src="module/memory-recall.js"></script>
     <script src="module/event-runner.js"></script>
     <script src="module/location-runner.js"></script>
-    <script src="module/side-quest-service.js?v=voice-stage-20261115"></script>
-    <script src="module/side-quest-runner.js?v=voice-stage-20261115"></script>
+    <script src="module/side-quest-service.js?v=voice-tidy-20261116a"></script>
+    <script src="module/side-quest-runner.js?v=voice-tidy-20261116a"></script>
     <script src="module/side-quest-panel.js?v=task-info-1"></script>
-    <script src="module/pipeline.js?v=voice-stage-20261115"></script>
+    <script src="module/pipeline.js?v=voice-tidy-20261116a"></script>
     
     <!-- UI 模块 -->
     <script src="ui/config-modal.js?v=config-save-2"></script>
     <script src="ui/prompt-manager-modal.js"></script>
     <script src="module/bgm-manager.js"></script>
-    <script src="module/scene3d-bridge.js?v=voice-stage-20261115"></script>
-    <script src="module/media-context.js?v=voice-stage-20261115"></script>
-    <script src="module/illustration-http.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-store.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-player.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-plan.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-msgpack.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-drama3.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-transport.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-voice-defaults.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-config.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-service.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-adapter.js?v=voice-stage-20261115"></script>
-    <script src="module/gal-scene-resources.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-plan.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-view.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-actions.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-overlays.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-host.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-controls.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-flow.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-replay.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-round-plan.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-round.js?v=voice-stage-20261115"></script>
-    <script src="module/speech-turn.js?v=voice-stage-20261115"></script>
-    <script src="ui/speech-panel.js?v=voice-stage-20261115"></script>
-    <script src="ui/speech-single-test.js?v=voice-stage-20261115"></script>
-    <script src="ui/speech-round-panel.js?v=voice-stage-20261115"></script>
-    <script src="ui/speech-inline-player.js?v=voice-stage-20261115"></script>
-    <script src="ui/speech-round-playback.js?v=voice-stage-20261115"></script>
-    <script src="module/presentation-reader.js?v=voice-stage-20261115"></script>
+    <script src="module/scene3d-bridge.js?v=voice-tidy-20261116a"></script>
+    <script src="module/media-context.js?v=voice-tidy-20261116a"></script>
+    <script src="module/illustration-http.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/msgpack.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/provider.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/plan.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/config.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/store.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/playback.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/runtime.js?v=voice-tidy-20261116a"></script>
+    <script src="module/speech/service.js?v=voice-tidy-20261116a"></script>
+
+    <script src="module/presentation-adapter.js?v=voice-tidy-20261116a"></script>
+    <script src="module/gal-scene-resources.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-plan.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-view.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-actions.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-overlays.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-host.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-controls.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-flow.js?v=voice-tidy-20261116a"></script>
+
+    <script src="ui/speech/settings.js?v=voice-tidy-20261116a"></script>
+    <script src="ui/speech/playback.js?v=voice-tidy-20261116a"></script>
+    <script src="module/presentation-reader.js?v=voice-tidy-20261116a"></script>
 
     <script>
         // 记录原始渲染环境状态
@@ -2177,7 +2171,7 @@ const outPut = `
         // 切换NPC可见性
         function toggleNpcVisibility(npcId) {
             const checkbox = document.getElementById(`visibility-${npcId}`);
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress()){checkbox.checked=!!npcVisibility[npcId];return;}
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress()){checkbox.checked=!!npcVisibility[npcId];return;}
             npcVisibility[npcId] = checkbox.checked;
             
             // 如果NPC被设置为不显示，立即将其位置设为none
@@ -2218,7 +2212,7 @@ const outPut = `
 
         // 送礼函数
         async function giveGift(npcId) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const npc = npcs[npcId];
             const currentFavorability = npcFavorability[npcId];
             
@@ -2256,13 +2250,13 @@ const outPut = `
 
         // 修改 skipWeek 函数，在跳过周时重置送礼状态并检查特殊事件
         function skipWeek() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             showConfirmModal(
                 '确认跳过',
                 '确定要跳过这一周吗？',
                 async () => {
-                    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                     if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
                     currentWeek++;
                     actionPoints = 3;
@@ -2336,7 +2330,7 @@ const outPut = `
 
         // 执行互动
         async function performAction(action, location) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             // 新增：如果是SLG模式，不执行任何操作
             if (GameMode === 1) {
                 return;
@@ -2406,7 +2400,7 @@ const outPut = `
 
         let _rollActionRunning = false;
         async function confirmRollAction(quick) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const pending = window._pendingRollAction;
             window._pendingRollAction = null;
             closeModal();
@@ -2442,7 +2436,7 @@ const outPut = `
 
         // roll 点 + 结算；quick=true 时不触发 LLM，只弹结算结果并存档
         async function executeRollAction(action, location, quick) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             let actionPointConsumed = true;
             let mindMessageShown = false;
             const totalTalents = getTotalTalents();
@@ -2736,14 +2730,14 @@ const outPut = `
 
         // 修改 backToMap 函数
         function backToMap() {
-            if(typeof speechTurn!=='undefined'&&speechTurn.progressReason()){
+            if(typeof speechService!=='undefined'&&speechService.progressReason()){
                 const page=document.querySelector('.scene.active');
                 if(page&&['player-stats-scene','relationships-scene'].includes(page.id)){
                     // Closing a read-only panel must not move a paused game's logical location.
                     const prior=previousScene&&!['player-stats','relationships'].includes(previousScene)?previousScene:(userLocation==='tianshanpai'?'map':userLocation);
                     switchScene(prior);if(GameMode===1)updateStoryDisplay();wasInSLGMode=false;return;
                 }
-                if(!speechTurn.guardProgress())return;
+                if(!speechService.guardProgress())return;
             }
             // 移除返回按钮的偏移类
             const backBtns = document.querySelectorAll('.back-btn.slg-mode-offset');
@@ -2803,7 +2797,7 @@ const outPut = `
 
         // 发送互动内容
         async function sendInteraction() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const interactionContent = document.getElementById('interaction-input').value.trim();
             
             if (!interactionContent) {
@@ -2850,7 +2844,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加10点攻击力？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.攻击力 += 10;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2871,7 +2865,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加25点生命值？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.生命值 += 25;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2891,7 +2885,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加15%暴击率？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.暴击率 += 15;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2911,7 +2905,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加20%暴击伤害？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.暴击伤害 += 20;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2931,7 +2925,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加10点格挡？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.格挡 += 10;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2951,7 +2945,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加10点穿甲？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.穿甲 += 10;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2971,7 +2965,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加15%吸血？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.吸血 += 15;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -2991,7 +2985,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加15%反伤？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.反伤 += 15;
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -3011,7 +3005,7 @@ const outPut = `
                     '确认加点',
                     '消耗1点分配点数，增加0.10回转？',
                     () => {
-                        if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                        if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                         combatStats.回转 = Number((combatStats.回转 + 0.1).toFixed(2));
                         checkAllValueRanges();
                         updateStatsDisplay();
@@ -3030,7 +3024,7 @@ const outPut = `
                 '属性重置',
                 '确定要重置所有战斗数值？<br>已消耗的属性点将全部返还。',
                 () => {
-                    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+                    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
                     combatStats.攻击力 = 20;
                     combatStats.生命值 = 50;
                     combatStats.暴击率 = 10;
@@ -3047,7 +3041,7 @@ const outPut = `
 
         // NPC动作
         function npcAction(npcId, action) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const popup = document.getElementById('npc-info-popup');
             popup.classList.remove('show');
             document.removeEventListener('click', closeNpcInfo);
@@ -3088,7 +3082,7 @@ const outPut = `
 
         // 前往地点
         function goToLocation(locationId) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             // 新增：如果是SLG模式，不允许切换场景
             if (GameMode === 1) {
                 return;
@@ -3104,7 +3098,7 @@ const outPut = `
 
         // 发送自由行动
         async function sendFreeAction() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             const inputElement = document.getElementById('free-action-input');
             const actionContent = inputElement.value.trim();
@@ -3230,7 +3224,7 @@ const outPut = `
 
         // 发起战斗
         function startBattle() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             if (!currentBattleEvent || !currentBattleEvent.敌方信息) return;
             
@@ -3267,7 +3261,7 @@ const outPut = `
 
         // 放弃战斗
         async function fleeBattle() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             if (!currentBattleEvent) return;
 
@@ -3325,7 +3319,7 @@ const outPut = `
         }
         // 从SLG模式返回
         async function returnFromSLG(options) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             options = options || {};
             if (GameMode !== 1 || (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy())) return;
             const _sideQuestActive = typeof sideQuestService !== 'undefined' && sideQuestService.getReturnRisk
@@ -4304,7 +4298,7 @@ function buildSaveName() {
 
         // 保存难度设置
         async function saveDifficulty() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const selectedDifficulty = document.querySelector('input[name="difficulty"]:checked').value;
             difficulty = selectedDifficulty;
             
@@ -4385,7 +4379,7 @@ function buildSaveName() {
 
         // 保存金手指数值
         async function saveCheatValues() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             // 更新角色名称
             var newName = document.getElementById('cheat-playername').value.trim();
             gameData.playerName = newName || '主角';
@@ -4597,7 +4591,7 @@ function buildSaveName() {
 
         // 购买物品
         async function buyItem(itemName) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const item = item_list[itemName];
             if (!item || (playerStats?.金钱 || 0) < item.买入价格) return;
             playerStats.金钱 -= item.买入价格;
@@ -4609,7 +4603,7 @@ function buildSaveName() {
 
         // 卖出物品
         async function sellItem(itemName) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const item = item_list[itemName];
             if (!item || !inventory[itemName] || inventory[itemName] <= 0) return;
             // 检查是否是已装备的物品
@@ -4798,7 +4792,7 @@ function buildSaveName() {
 
         // 保存编辑的输入
         async function saveEditedInput() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const editArea = document.getElementById('last-input-edit');
             const newMessage = editArea.value.trim();
             
@@ -4865,7 +4859,7 @@ function buildSaveName() {
 
         // 显示世界地图
         function showWorldMap() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const modal = document.getElementById('worldmap-modal');
             const iframe = document.getElementById('worldmap-iframe');
             
@@ -5201,7 +5195,7 @@ function buildSaveName() {
 
         // 支线剧情总开关：关闭即停注入/停判定；重新开启时顺带清除判定熔断（judgeDisabled）
         function gsOnSideQuest(el) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress()){el.checked=gameData.sideQuestConfig?.enabled!==false;return;}
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress()){el.checked=gameData.sideQuestConfig?.enabled!==false;return;}
             if (typeof gameData === 'undefined' || !gameData) return;
             gameData.sideQuestConfig = gameData.sideQuestConfig || { enabled: true, confidenceThreshold: 0.7, deadlineWeeks: 10 };
             gameData.sideQuestConfig.enabled = !!el.checked;
@@ -5217,7 +5211,7 @@ function buildSaveName() {
 
         // 支线判定置信度（0.5–0.9）：低于阈值的后台判定一律按 continue 处理
         function gsOnSideQuestConfidence(el) {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress()){el.value=String((gameData.sideQuestConfig?.confidenceThreshold||0.7)*100);return;}
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress()){el.value=String((gameData.sideQuestConfig?.confidenceThreshold||0.7)*100);return;}
             if (typeof gameData === 'undefined' || !gameData) return;
             const v = Math.max(50, Math.min(90, parseInt(el.value, 10) || 70));
             gameData.sideQuestConfig = gameData.sideQuestConfig || { enabled: true, confidenceThreshold: 0.7, deadlineWeeks: 10 };
@@ -5230,7 +5224,7 @@ function buildSaveName() {
         }
 
         function gsOnSaveDifficulty() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             const sel = document.querySelector('input[name="gs-difficulty"]:checked');
             if (!sel) return;
             difficulty = sel.value;
@@ -5486,7 +5480,7 @@ function buildSaveName() {
 
         // 重生成按钮：删除最后一条回复并重新触发生成
         async function handleRegenerate() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             // SR 链路保持原有逻辑
             if (isInRenderEnvironment()) {
@@ -5531,7 +5525,7 @@ function buildSaveName() {
         }
 
         async function _confirmRegenerate() {
-            if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+            if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
             if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
             var ta = document.getElementById('regen-msg-input');
             var editedMsg = ta ? ta.value.trim() : '';
@@ -5720,7 +5714,7 @@ function buildSaveName() {
             if (isStandalone) {
                 await storageService.init();
                 // Resolve the synchronous new-action gate before initialization exposes operational controls.
-                if(typeof speechRound!=='undefined')try{await speechRound.load();}catch(error){console.warn('[Speech] 待办读取暂不可用:',error.message);}
+                if(typeof speechService!=='undefined')try{await speechService.loadPending();}catch(error){console.warn('[Speech] 待办读取暂不可用:',error.message);}
                 // Phase 3：初始化向量召回缓存
                 if (typeof memoryRecall !== 'undefined') {
                     await memoryRecall.init();

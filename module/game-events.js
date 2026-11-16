@@ -79,7 +79,7 @@ function hideRandomEvent() {
 
 // 处理事件选项
 async function handleEventOption(optionIndex, option) {
-    if(typeof speechTurn!=='undefined'&&!speechTurn.guardProgress())return;
+    if(typeof speechService!=='undefined'&&!speechService.guardProgress())return;
     if (typeof pipeline !== 'undefined' && pipeline.isBusy && pipeline.isBusy()) return;
     if (!currentRandomEvent) return;
     

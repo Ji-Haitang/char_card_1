@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import vm from 'node:vm';
 
 const env = vm.createContext({ Uint8Array, TextEncoder, DataView });
-vm.runInContext(readFileSync(new URL('../module/speech-msgpack.js', import.meta.url), 'utf8'), env);
+vm.runInContext(readFileSync(new URL('../module/speech/msgpack.js', import.meta.url), 'utf8'), env);
 const encode = env.speechMsgpack.encode;
 const hex = value => Buffer.from(encode(value)).toString('hex');
 

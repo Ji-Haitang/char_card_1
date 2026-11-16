@@ -619,7 +619,7 @@ var pipeline = (function() {
         );
 
         if(_speechRequest){
-            var speechInstruction=speechTurn.instruction(_speechRequest);
+            var speechInstruction=speechService.turnInstruction(_speechRequest);
             messages=messages.map(function(m){return Object.assign({},m);});
             for(var speechIndex=messages.length-1;speechIndex>=0;speechIndex--)if(messages[speechIndex].role==='user'){
                 messages[speechIndex].content+='\n\n'+speechInstruction;break;
@@ -691,7 +691,7 @@ var pipeline = (function() {
         }
 
         // === 提交阶段（有副作用，按顺序可控）===
-        if(typeof speechTurn!=='undefined')return await speechTurn.finish(_speechRequest,preprocessed,rawText,isRegenerate,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
+        if(typeof speechService!=='undefined')return await speechService.finishTurn(_speechRequest,preprocessed,rawText,isRegenerate,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
         return await _commitResponse(preprocessed, rawText, isRegenerate);
     }
 
@@ -767,7 +767,7 @@ var pipeline = (function() {
                     accumulatedThinking += delta;
                 },
                 onComplete: function(fullText, usage, completion) {
-                    if(typeof speechTurn!=='undefined')speechTurn.setCompletion(_speechRequest,completion);
+                    if(typeof speechService!=='undefined')speechService.setTurnCompletion(_speechRequest,completion);
                     _setStreamLog('施延年题尾落款');
                     _isStreaming = false;
                     aborted = _abortRequested;
@@ -823,7 +823,7 @@ var pipeline = (function() {
         _currentAbort = { abort: function() { _abortRequested = true; controller.abort(); } };
         try {
             var result = await apiService.sendMessages(messages, { signal: controller.signal });
-            if(typeof speechTurn!=='undefined')speechTurn.setCompletion(_speechRequest,result);
+            if(typeof speechService!=='undefined')speechService.setTurnCompletion(_speechRequest,result);
             _isStreaming = false;
             _currentAbort = null;
             // 渲染完整结果
@@ -1192,7 +1192,7 @@ var pipeline = (function() {
     // ========== 中断控制 ==========
 
     function abortCurrentTurn() {
-        if(typeof speechTurn!=='undefined'&&speechTurn.active())speechTurn.cancel();
+        if(typeof speechService!=='undefined'&&speechService.hasActiveTurn())speechService.cancelTurn();
         if (_currentAbort && typeof _currentAbort.abort === 'function') {
             console.log('[Pipeline] 用户中断生成');
             _abortRequested = true;
@@ -1547,12 +1547,12 @@ var pipeline = (function() {
             _showStreamMask();
             _setStreamLog('施延年整理书案');
             if (bridge) bridge.setBusy(token, true);
-            if(operation===runTurn&&typeof speechTurn!=='undefined')_speechRequest=await speechTurn.begin();
+            if(operation===runTurn&&typeof speechService!=='undefined')_speechRequest=await speechService.beginTurn();
             if(typeof presentationFlow!=='undefined')flowTicket=presentationFlow.pipelineStart();
-            if(_speechRequest&&_speechRequest.kind==='round')return await speechRound.withLease(_speechRequest.workspaceId,function(){return operation.apply(null,args);});
+            if(_speechRequest&&_speechRequest.kind==='round')return await speechService.withRoundLease(_speechRequest.workspaceId,function(){return operation.apply(null,args);});
             return await operation.apply(null, args);
         } finally {
-            if(typeof speechTurn!=='undefined')speechTurn.release(_speechRequest);
+            if(typeof speechService!=='undefined')speechService.releaseTurn(_speechRequest);
             _speechRequest=null;
             _sceneOperationActive = false;
             _hideStreamControls();
@@ -1564,7 +1564,7 @@ var pipeline = (function() {
         }
     }
     async function resumeSpeech(id,options){
-        return speechTurn.resume(id,options,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
+        return speechService.resumeTurn(id,options,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
     }
     return { 
         runTurn: function() { return withSceneGuard(runTurn, arguments); },

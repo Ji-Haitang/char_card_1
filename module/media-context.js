@@ -13,10 +13,10 @@ var mediaContext = (function () {
     function invalidate(){
         epoch++;
         if(typeof presentationFlow!=='undefined')presentationFlow.cancel();
-        if(typeof speechTurn!=='undefined')speechTurn.cancel();
+        if(typeof speechService!=='undefined')speechService.cancelTurn();
         if(typeof speechService!=='undefined')speechService.stop();
-        if(typeof speechSingleTest!=='undefined')speechSingleTest.close();
-        if(typeof speechInlinePlayer!=='undefined')speechInlinePlayer.invalidate();
+        if(typeof speechUI!=='undefined')speechUI.closeSingle();
+        if(typeof speechPlaybackUI!=='undefined')speechPlaybackUI.invalidate();
         if(typeof presentationHost!=='undefined')presentationHost.invalidate();
     }
     function sorted(value){
@@ -26,7 +26,7 @@ var mediaContext = (function () {
     }
     async function publicationFingerprint(){
         var state=structuredClone(gameData);delete state.presentationCursor;
-        return speechPlan.hash(JSON.stringify(sorted({history:structuredClone(storageService.loadUIConversation()),state:state})));
+        return speechService.hash(JSON.stringify(sorted({history:structuredClone(storageService.loadUIConversation()),state:state})));
     }
     return Object.freeze({workspaceId:workspaceId,capture:capture,isCurrent:isCurrent,isBusy:busy,
         pendingChoice:pendingChoice,invalidate:invalidate,publicationFingerprint:publicationFingerprint});

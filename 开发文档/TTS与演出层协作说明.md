@@ -45,11 +45,11 @@
 → 原回合完成回执 → 横屏演出
 ```
 
-`speech-turn`协调准备并调用原commit，游戏继续持有资源、奖励、事件和支线结算权。单句模式只记录可测试台词，用户确认后才生成声音。
+游戏通过`speechService`进入语音流程，`module/speech/runtime.js`协调准备并调用原commit；资源、奖励、事件和支线结算仍由原游戏持有。单句模式只记录可测试台词，用户确认后才生成声音。
 
 待办保存在本机，可刷新后继续或无声发布。已成功片段可复用；已发布证据用于防止重复提交。`committing`结果不确定时保留核对状态，而不是自动重跑结算。
 
-未发布待办存在时，新业务入口在扣资源前检查`speechTurn.guardProgress()`。原设置、只读面板及待办处理仍可访问；已经启动事务的结果归还和内部奖励/尾清理沿原流程执行。`pipeline.isBusy()`仍表示实际处理中状态。
+未发布待办存在时，新业务入口在扣资源前检查`speechService.guardProgress()`。原设置、只读面板及待办处理仍可访问；已经启动事务的结果归还和内部奖励/尾清理沿原流程执行。`pipeline.isBusy()`仍表示实际处理中状态。
 
 ### 2.4 演出、存储与恢复
 
@@ -63,13 +63,26 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 
 ## 3. 文件职责与必须保持的接口
 
-| 层 | 主要文件 | 修改时需要同时核对 |
+语音核心集中在`module/speech/`，共8个文件。游戏层只通过`speechService`调用核心能力；设置界面入口为`speechUI`，显示层回放入口为`speechPlaybackUI`。同目录内部对象用于各职责之间协作和白盒测试，不再分散接入游戏业务文件。
+
+| 文件 | 职责 | 重点合同 |
 |---|---|---|
-| 台词协议 | `speech-plan`、`speech-round-plan` | 原文/清洁投影、说话人、UTF-16范围、结束原因；单句与整轮保持一套规则 |
-| 语音核心 | `speech-drama3/msgpack/config/store/player/service` | 凭证归属、预检、缓存身份、取消和晚到结果 |
-| 平台与回合 | `speech-transport/round/turn`、`media-context` | 路由快照、待办阶段、进度指纹、原commit调用 |
-| 演出 | `presentation-*`、`gal-scene-resources` | 原控制器租约、原输入/事件节点、阅读游标、昼夜与资源选择 |
-| 游戏挂点 | `pipeline/api-service/game-ui/game-events/storage-service/index`及业务入口 | 上游afterCommit、恢复生命周期、提交回执、扣资源前守卫 |
+| `service.js` | 对外入口、串行合成调度及缓存复用 | 预检、账号/路由身份、取消与晚到结果 |
+| `runtime.js` | 持久待办、准备和原commit协调 | 待办阶段、进度指纹、一次提交、入口守卫 |
+| `plan.js` | 单句解析与整轮切片 | 清洁投影、说话人、UTF-16范围、结束原因 |
+| `provider.js` | Drama 3请求和Web/Android运输 | 固定模型、JSON/参考请求、平台能力与安全错误 |
+| `msgpack.js` | 参考音频的二进制编码 | 字节一致性、类型与大小限制 |
+| `config.js` | 声线预设、玩家配置及本地参考 | 保存归属、数据校验、已有绑定优先 |
+| `store.js` | IndexedDB事务和10轮音频保留 | 归属/身份冲突、原子落库、明确字段保存 |
+| `playback.js` | 单音轨播放器及已有录音解析 | 定位校验、停播、迟到保护、纯缓存回听 |
+
+`ui/speech/settings.js`包含配置、单句测试和待办决策；`ui/speech/playback.js`负责原正文与演出段落的播放控件。对应样式分别是`settings.css`、`playback.css`。HTML按编码/提供商/计划/配置/存储/播放/回合/入口顺序加载核心，随后加载UI，继续采用普通脚本。
+
+常用核心接口：`beginTurn`、`turnInstruction`、`setTurnCompletion`、`finishTurn`、`resumeTurn`、`releaseTurn`、`cancelTurn`、`loadPending`、`guardProgress`；配置与播放接口仍由同一个`speechService`提供。调用者的业务挂点保留在`pipeline/index`及原动作入口。
+
+现行D3数据合同保留`jxz_speech_v1`数据库、`drama3-v1`声音版本、`inline-v1/round-v1`台词版本及`d3-m2a:/m3:`录音标识。文件组织不改变已有D3缓存身份。配置与回放按D3合同校验，未知版本报错并保留原记录；原游戏旧正文及存档读取规则继续沿用。
+
+演出职责仍在`presentation-*`和`gal-scene-resources`，`media-context`提供活动游戏上下文。修改游戏挂点时同时核对上游afterCommit、读档与布局生命周期、提交回执及扣资源前守卫。
 
 协作者修改时应保持：
 
@@ -122,7 +135,9 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 
 ## 7. 验证证据与快速复查
 
-功能提交`42a75ae`：根/gal单元与合同461项、浏览器26组通过，覆盖原主副API、工具输出、支线、配音准备/提交、双输入、布局与读档失效、刷新续配、待办前置门控及真实3D。`95dacb4`另有共享资源2项定向检查与file设置入口验证；未因此重复整套测试。
+基础功能提交`42a75ae`：根/gal单元与合同461项、浏览器26组通过，覆盖原主副API、工具输出、支线、配音准备/提交、双输入、布局与读档失效、刷新续配、待办前置门控及真实3D。`95dacb4`另有共享资源2项定向检查与file设置入口验证。
+
+本地目录与入口整理采用定向验证：153项语音/媒体/适配单元，主回合8组、刷新待办2组、双视口阅读与共用输入4组通过；整理前版本生成的2片D3录音在整理后直接复用，新增请求/缓存写入均为0，音频字节及清单保持一致。未重复运行整套历史测试。
 
 模型与Fish响应采用公开夹具；IndexedDB、浏览器解码、DOM和原业务真实执行。Android桥为模拟边界，不能当作真机、真实音质或现网Worker验收。
 

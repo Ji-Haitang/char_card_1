@@ -1170,7 +1170,7 @@ function renderMainText(text) {
 function updateStoryText(text) {
     if (typeof presentationHost !== 'undefined') presentationHost.onStoryChange(text);
     if (typeof speechService !== 'undefined' && text !== currentStoryText) speechService.stop();
-    if (typeof speechInlinePlayer !== 'undefined' && text !== currentStoryText) speechInlinePlayer.invalidate();
+    if (typeof speechPlaybackUI !== 'undefined' && text !== currentStoryText) speechPlaybackUI.invalidate();
     storySpeechPages = [];
     const storyElement = document.getElementById('story-text');
     currentStoryText = text;
@@ -1561,7 +1561,7 @@ function updateStoryDisplay() {
         }
     } catch (e) {}
     
-    if (typeof speechInlinePlayer !== 'undefined') speechInlinePlayer.render(storyElement, {
+    if (typeof speechPlaybackUI !== 'undefined') speechPlaybackUI.render(storyElement, {
         source:currentStoryText, pages:storySpeechPages, pageIndex:currentPage, expanded:isStoryExpanded, historyOffset:storyHistoryOffset
     });
     storyElement.style.opacity = '0';
