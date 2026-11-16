@@ -119,6 +119,7 @@ export async function startTestServer({ gameRoot, basePath='/', assetRoot=proces
         catch{res.writeHead(404).end();return;}
         emit({type:'shared-asset',path:relative});
       }
+      if(sharedAssets!==root&&sharedDirectories.has(segments[0])&&isWithin(sharedAssets,actual))sourceRoot=sharedAssets;
       if (!isWithin(sourceRoot,actual) || !info.isFile()) { res.writeHead(403).end(); return; }
       let canonical=null;
       if(assetRevision&&sourceRoot===sharedAssets&&sharedDirectories.has(segments[0])&&/\.(json|m?js|css|html|svg|txt)$/i.test(relative)){
