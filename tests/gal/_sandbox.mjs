@@ -8,8 +8,9 @@ const root = new URL('../../', import.meta.url);
 export const read = rel => readFile(new URL(rel, root), 'utf8');
 export const readFixture = name => read(`tests/gal/fixtures/${name}`);
 
-const [configSource, utilsSource, uiSource, eventsSource] = await Promise.all([
+const [configSource, utilsSource, uiSource, eventsSource, resourcesSource] = await Promise.all([
   read('module/game-config.js'), read('module/game-utils.js'), read('module/game-ui.js'), read('module/game-events.js'),
+  read('module/gal-scene-resources.js'),
 ]);
 
 const PARSER_BEGIN = '// ==== GAL_PARSER_BEGIN ====', PARSER_END = '// ==== GAL_PARSER_END ====';
@@ -175,6 +176,7 @@ export function loadPresentation(globals = {}, extra = {}) {
   };
   const box = makeSandbox(globals, { document: dom.document, GameSceneBridge, ...extra });
   box.run(parserSlice());
+  box.run(resourcesSource); // galPresentation.renderLayers 的素材规则收口在 galSceneResources
   box.run(presentationSlice());
   box.dom = dom;
   box.bridgeCalls = bridgeCalls;

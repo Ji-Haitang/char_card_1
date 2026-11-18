@@ -6,17 +6,20 @@
 #presentation-reader button{font:inherit;cursor:pointer;touch-action:manipulation}
 #presentation-reader button:disabled{cursor:default;opacity:.42}
 #presentation-reader button:focus-visible,#pr-dialogue:focus-visible{outline:2px solid #b39765;outline-offset:3px}
-#presentation-reader .pr-background,#presentation-reader .pr-wash,#presentation-reader .pr-cast,#presentation-reader .pr-cg,#presentation-reader .pr-vignette{position:absolute;inset:0;pointer-events:none}
-#presentation-reader .pr-background img{width:100%;height:100%;object-fit:cover;filter:saturate(.78) brightness(.85)}
-#presentation-reader .pr-wash{background:linear-gradient(0deg,#17292e 3%,transparent 60%),linear-gradient(90deg,#072b3044,transparent 55%,#072b3025)}
-#presentation-reader .pr-cast{z-index:2}
-#presentation-reader .pr-actor{position:absolute;bottom:16%;transform:translateX(-50%);width:64%;height:80%;filter:brightness(.9) saturate(.86)}
-#presentation-reader .pr-actor img{width:100%;height:100%;object-fit:contain;object-position:bottom center}
-#presentation-reader[data-skin="pixel"] .pr-actor{height:57%;bottom:24%}
-#presentation-reader[data-skin="pixel"] .pr-actor img{image-rendering:pixelated}
-#presentation-reader[data-skin="pixel"] .pr-actor[data-mirror="true"] img{transform:scaleX(-1)}
-#presentation-reader .pr-cg{z-index:3;background:#102528}
-#presentation-reader .pr-cg img{width:100%;height:100%;object-fit:contain}
+/* Stage: the shared GAL layer DOM (galPresentation.renderLayers → .slg-layer-container) restyled for the landscape sheet.
+   ID-scoped selectors outrank every global .slg-* / .gal-3dver rule in game-styles.css; seats arrive as inline left:% anchors. */
+#presentation-reader .pr-stage,#presentation-reader .pr-wash,#presentation-reader .pr-vignette{position:absolute;inset:0;pointer-events:none}
+#presentation-reader .slg-layer-container{z-index:auto}
+#presentation-reader .slg-scene-layer{z-index:1}
+#presentation-reader .slg-scene-layer img{transform:none;filter:saturate(.78) brightness(.85)}
+#presentation-reader .pr-wash{z-index:1;background:linear-gradient(0deg,#17292e 3%,transparent 60%),linear-gradient(90deg,#072b3044,transparent 55%,#072b3025)}
+#presentation-reader .slg-emotion-layer{top:auto;left:50%;bottom:16%;z-index:2;transform:translateX(-50%);width:64%;height:80%;filter:brightness(.9) saturate(.86)}
+#presentation-reader .slg-emotion-layer img{position:static;top:auto;bottom:auto;left:auto;transform:none;width:100%;height:100%;max-width:none;object-fit:contain;object-position:bottom center;background:none}
+#presentation-reader[data-skin="pixel"] .slg-emotion-layer{height:57%;bottom:24%}
+#presentation-reader[data-skin="pixel"] .slg-emotion-layer img{image-rendering:pixelated}
+#presentation-reader[data-skin="pixel"] .slg-emotion-layer.slg-cast-left img{transform:scaleX(-1)}
+#presentation-reader .slg-cg-layer{z-index:3;background:#102528}
+#presentation-reader .slg-cg-layer img{object-fit:contain}
 #presentation-reader .pr-vignette{z-index:5;background:linear-gradient(0deg,#071d25b5,transparent 39%,transparent 74%,#071d2570);box-shadow:inset 0 0 0 1px #dec69c55}
 #presentation-reader:after{content:'';position:absolute;inset:10px;z-index:5;border:1px solid #d2bf9250;pointer-events:none}
 #presentation-reader .pr-chapter{position:absolute;top:5%;left:4%;z-index:6;display:flex;gap:15px;align-items:center;color:#f1e9d6;text-shadow:0 2px 8px #14282a;pointer-events:none;max-width:70%}

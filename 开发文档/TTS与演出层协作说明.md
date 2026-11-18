@@ -84,6 +84,8 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 
 演出职责仍在`presentation-*`和`gal-scene-resources`，`media-context`提供活动游戏上下文。修改游戏挂点时同时核对上游afterCommit、读档与布局生命周期、提交回执及扣资源前守卫。
 
+舞台只有一个渲染器：`galPresentation.renderLayers`（game-ui.js）同时服务竖屏演出与横屏阅卷，素材路径规则（场景图/立绘/CG/地点匾、季节昼夜、像素皮肤）全部收口在`gal-scene-resources.js`。竖屏按实时全局取世界状态并沿用站位记忆；阅卷把冻结的`presentationPlan.world`经`opts.context`传入、用帧上预算的`anchor`定位、`sceneTag:false`不画匾额、`missing`集合记忆缺图，图层挂在`#pr-stage`下再由`ui/presentation-reader.css`的ID作用域规则改成横屏样式。`clearLayers`只清传入容器的直系子层，原演出与阅卷互不穿透。改素材目录或图层结构只需动这两处，不要在阅卷里另起绘制代码。
+
 协作者修改时应保持：
 
 1. **一次结算**：准备成功不等于剧情已提交；未知提交不能通过重试按钮重放。原文本通道已有的网络回退也不能误称为“所有网络请求严格一次”。

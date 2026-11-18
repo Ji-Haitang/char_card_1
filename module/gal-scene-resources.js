@@ -1,4 +1,5 @@
-/** Pure resource selection for a captured reading world. No storage, random or settlement. */
+/** Pure resource selection for a stage world (live GAL globals or a frozen reading snapshot). The single source of
+ *  scene/portrait/CG path rules shared by galPresentation.renderLayers and the landscape reader. No storage, random or settlement. */
 var galSceneResources = (function () {
     'use strict';
     function asset(path, context) { return context.assetUrl ? context.assetUrl(path) : path; }
@@ -46,7 +47,7 @@ var galSceneResources = (function () {
         var focus = cast.find(function (a) { return a.id === frame.cgOwnerId; }) || cast[0];
         if (!context.cgEnabled || !frame.cg || frame.cg === 'none' || !focus) return null;
         var variant = context.cgVariant === undefined ? 1 : context.cgVariant;
-        return {key:focus.id + ':' + frame.cg + ':' + variant, url:asset('img/表情差分和CG/' + focus.npc + '/色图/' + frame.cg + variant + '.webp', context)};
+        return {key:focus.id + ':' + frame.cg + ':' + variant, npc:focus.npc, variant:variant, url:asset('img/表情差分和CG/' + focus.npc + '/色图/' + frame.cg + variant + '.webp', context)};
     }
     return Object.freeze({isSectLocation:isSectLocation, sceneFor:sceneFor, portraitCandidates:portraitCandidates, cgFor:cgFor});
 })();

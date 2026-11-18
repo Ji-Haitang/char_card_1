@@ -113,7 +113,9 @@ try{
         await p.waitForFunction(()=>{const sheet=document.querySelector('.scene3d-page-turn');return sheet&&!sheet.hidden&&!__life.queueDone;});
         await p.evaluate(()=>{presentationReader.open().then(ok=>__life.readerDone=ok);});
         await p.waitForFunction(()=>__life.readerDone&&__life.queueDone&&presentationHost.getDiagnostics().phase==='open');
-        assert.equal(await p.$$eval('.slg-layer-container',nodes=>nodes.length),0,'drained old queue cannot repaint behind the reader');
+        // The reader paints its own stage through the same renderer inside #pr-stage; only viewport-level layers are the original GAL display.
+        assert.equal(await p.$$eval('#main-viewport > .slg-layer-container',nodes=>nodes.length),0,'drained old queue cannot repaint behind the reader');
+        assert.equal(await p.$$eval('#pr-stage > .slg-layer-container',nodes=>nodes.length),1,'reader stage is rendered by the shared GAL renderer');
         await p.click('#pr-touch-operation');await p.waitForFunction(()=>!presentationHost.isActive()&&!!document.querySelector('.slg-layer-container'));
         const exited=await p.evaluate(()=>({mode:GameMode,layers:document.querySelectorAll('.slg-layer-container').length,masks:document.querySelectorAll('.slg-interaction-mask').length,inert:document.getElementById('public-inert-sentinel').inert,lock:GameSceneBridge.getDiagnostics().snapshot.blockReasons.includes('generation:public-independent-lock')}));
         assert.deepEqual(exited,{mode:1,layers:1,masks:1,inert:true,lock:true});

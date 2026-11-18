@@ -294,7 +294,6 @@ const galPresentation = (() => {
     const frames = () => (typeof slgModeData !== 'undefined' && Array.isArray(slgModeData)) ? slgModeData : [];
     const viewportEl = () => { const d = doc(); return d ? d.getElementById('main-viewport') : null; };
     const assetUrl = p => (typeof _assetUrl === 'function') ? _assetUrl(p) : p;
-    const SEASON_CN = { spring: '春', summer: '夏', autumn: '秋', winter: '冬' };
 
     let state = 'idle';
     let gen = 0;
@@ -306,92 +305,98 @@ const galPresentation = (() => {
     let chain = Promise.resolve();
     let slgSession = null; // GM1 当前已显示帧与排队换帧的所有权；新文本/清层/reset 后旧任务失效
 
+    // 只清直系子层：横屏阅卷把同一套图层挂在 #main-viewport 内更深一层的自有舞台上，
+    // 原演出清层不得穿透进去（反之阅卷清自己的舞台也不碰视窗直系层）。
     function removeLayers(viewport) {
         if (!viewport) return;
-        viewport.querySelectorAll('.slg-layer-container').forEach(el => el.remove());
-        viewport.querySelectorAll('.slg-interaction-mask').forEach(el => el.remove());
+        Array.from(viewport.children || []).forEach(el => {
+            if (el.classList && (el.classList.contains('slg-layer-container') || el.classList.contains('slg-interaction-mask'))) el.remove();
+        });
     }
     function clearLayers(viewport) {
         if (slgSession && slgSession.viewport === viewport) slgSession = null;
         removeLayers(viewport);
     }
 
-    // GM0 门派子场景中文名集合（G6 判定同源：命中→子场景图/标签显示子场景名；否则回退天山派图/显示天山派）
-    function sectSceneNames() {
-        return (typeof locationNames !== 'undefined' && locationNames)
-            ? Object.keys(locationNames).filter(id => id !== 'none' && id !== 'tianshanpai').map(id => locationNames[id])
-            : [];
+    // 舞台世界上下文：素材规则（场景图/立绘/CG/地点匾、昼夜、季节、像素皮肤）全部收口在 galSceneResources，
+    // 这里只负责把"从哪取世界状态"说清楚——原演出从实时全局取（像素皮肤跟 3D 可见性联动），
+    // 横屏阅卷传入冻结的 presentationPlan.world（阅卷中执行行动后画面不随当前地点漂移）。
+    function liveContext(mode, frame) {
+        const list = frames();
+        return {
+            mode,
+            skin: (mode === 0 && use3dVer()) ? 'pixel' : 'normal',
+            seasonStatus: (typeof seasonStatus !== 'undefined') ? seasonStatus : '',
+            dayNightStatus: (typeof dayNightStatus !== 'undefined') ? dayNightStatus : 'daytime',
+            mapLocation: (typeof mapLocation !== 'undefined' && mapLocation) || '',
+            cgEnabled: (typeof cgContentEnabled !== 'undefined') && !!cgContentEnabled,
+            cgVariant: (typeof randIdx !== 'undefined') ? randIdx : undefined,
+            frames: list, frameIndex: frame ? list.indexOf(frame) : -1,
+        };
     }
-    // 逐页昼夜：本帧 time → 同一 frames 列表中逆序最近的前序帧 time → 全局 dayNightStatus。
-    // 昼夜阈值与 applyTurnTime 一致（6:00–17:59 为昼）。frame 不在当前列表中时（如单测直接构造）只看自身 time。
-    function dayNightCNFor(frame) {
-        let time = frame && frame.time;
-        if (!time) {
-            const list = frames();
-            const idx = frame ? list.indexOf(frame) : -1;
-            for (let i = idx - 1; i >= 0 && !time; i--) time = list[i] && list[i].time;
-        }
-        const m = time ? /^(\d{1,2})[:：](\d{2})$/.exec(String(time).trim()) : null;
-        if (m && +m[1] < 24) return (+m[1] >= 6 && +m[1] < 18) ? '昼' : '夜';
-        return (typeof dayNightStatus !== 'undefined' && dayNightStatus === 'night') ? '夜' : '昼';
+    function contextFor(mode, frame, frozen) {
+        const base = frozen ? Object.assign({ mode }, frozen) : liveContext(mode, frame);
+        return Object.assign(base, {
+            assetUrl,
+            locationNames: (typeof locationNames !== 'undefined' && locationNames) ? locationNames : {},
+            legacySceneOptions: (typeof legacySceneOptions !== 'undefined' && Array.isArray(legacySceneOptions)) ? legacySceneOptions : [],
+        });
     }
-    // 场景图URL：GameMode 1 沿用 SLG 路径 / legacySceneOptions 分支；GameMode 0 按 G6 只认门派地点，否则回退天山派四季图。
+    // 场景图URL（GM1 无场景帧为 null）：对外签名不变，供 G19 翻页纸判定与单测使用。
     function sceneUrlFor(frame, mode) {
-        const dayNightCN = dayNightCNFor(frame);
-        const sceneName = frame && frame.scene;
-        if (mode === 0) {
-            const season = SEASON_CN[(typeof seasonStatus !== 'undefined') ? seasonStatus : ''] || '冬';
-            const isSectScene = sceneName && sceneName !== 'none' && sectSceneNames().includes(sceneName);
-            // 3D 显示中：改用 3D.ver 目录（<场景>-<季>-<昼夜>.webp，13 场景×4季×昼夜全齐，含厢房）；
-            // 毛玻璃效果由 .gal-3dver 的 CSS 承担。G6 回退口径不变：非门派场景 → 天山派主图。
-            if (use3dVer()) {
-                return assetUrl(isSectScene
-                    ? `img/location/3D.ver/${sceneName}-${season}-${dayNightCN}.webp`
-                    : `img/location/3D.ver/天山派-${season}-${dayNightCN}.webp`);
-            }
-            if (isSectScene) {
-                return assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`);
-            }
-            return assetUrl(`img/location/天山派_${season}_${dayNightCN}.webp`);
-        }
-        if (!sceneName || sceneName === 'none') return null;
-        const locName = (typeof mapLocation !== 'undefined' && mapLocation) || '天山派外堡';
-        const isLegacyScene = (typeof legacySceneOptions !== 'undefined') && legacySceneOptions.includes(sceneName);
-        return isLegacyScene
-            ? assetUrl(`img/location/${sceneName}_${dayNightCN}.webp`)
-            : assetUrl(`img/location/scene_webp/${locName}/${dayNightCN}/${sceneName}.webp`);
-    }
-
-    // 演出层右上角地点名（与场景图判定同源）：
-    // GM0 跟 G6 命中口径——子场景帧显示子场景名，回退天山派图的帧显示「天山派」；
-    // GM1 恒显示当前 mapLocation（GM1 场景图是随行子场景图，地点标识与帧 scene 无关）。
-    function sceneLabelFor(frame, mode) {
-        if (mode === 0) {
-            const sceneName = frame && frame.scene;
-            return (sceneName && sceneName !== 'none' && sectSceneNames().includes(sceneName)) ? sceneName : '天山派';
-        }
-        return (typeof mapLocation !== 'undefined' && mapLocation) || '';
+        return galSceneResources.sceneFor(frame || {}, contextFor(mode, frame)).background || null;
     }
 
     // 帧的立绘成员：优先 cast（≤2），兼容只有 npc/emotion 的旧消费者；过滤掉花名册外的名字。
+    // 冻结帧（阅卷）自带 anchor（30/70/50 站位百分比），原演出帧没有。
     function castOf(frame) {
         const nameToId = (typeof npcNameToId !== 'undefined' && npcNameToId) ? npcNameToId : {};
         let list = Array.isArray(frame.cast) && frame.cast.length ? frame.cast : [];
         if (!list.length && frame.npc && frame.npc !== 'none') list = [{ npc: frame.npc, emotion: frame.emotion }];
         return list.filter(c => c && c.npc && c.npc !== 'none' && nameToId[c.npc]).slice(0, 2)
-            .map(c => ({ npc: c.npc, id: nameToId[c.npc], emotion: (c.emotion && c.emotion !== 'none') ? c.emotion : '平静' }));
+            .map(c => ({ npc: c.npc, id: nameToId[c.npc], emotion: (c.emotion && c.emotion !== 'none') ? c.emotion : '平静',
+                anchor: (typeof c.anchor === 'number') ? c.anchor : null }));
+    }
+
+    // 候选链去重并剔除已知缺图（missing 由阅卷持有：同一轮内不重复请求已 404 的素材，避免换段闪裂图）
+    function candidatesOf(urls, missing) {
+        const out = [];
+        urls.forEach(u => { if (u && out.indexOf(u) < 0 && !(missing && missing.has(u))) out.push(u); });
+        return out;
+    }
+    // 一个图层一张 img：按候选链逐个尝试；缺图记入 missing；链耗尽时 removeOnFail 决定整层移除（CG 层、阅卷）还是保留（原演出场景/立绘口径）
+    function mountImage(layer, urls, alt, missing, removeOnFail) {
+        const d = doc();
+        const img = d.createElement('img');
+        let at = 0;
+        img.src = urls[0];
+        img.alt = alt;
+        if (urls.length > 1 || missing || removeOnFail) {
+            img.onerror = function () {
+                if (missing) missing.add(urls[at]);
+                if (img.isConnected === false) { img.onerror = null; return; }
+                at++;
+                if (at < urls.length) img.src = urls[at];
+                else { img.onerror = null; if (removeOnFail) layer.remove(); }
+            };
+        }
+        layer.appendChild(img);
+        return img;
     }
 
     /**
      * 渲染一帧图层到 viewport（不清旧层，调用方决定何时 clearLayers）。
-     * opts = { mask, allowEnamor, recordLastValid, mode, portraitFallback, onMaskClick }
+     * opts = { mask, allowEnamor, recordLastValid, mode, portraitFallback, onMaskClick,
+     *          context（冻结世界快照；缺省取实时全局）, missing（Set，缺图记忆）, sceneTag（false 不画地点匾） }
      */
     function renderLayers(viewport, frame, opts) {
         const d = doc();
         if (!viewport || !frame || !d) return null;
         opts = opts || {};
         const mode = has(opts.mode) ? opts.mode : ((typeof GameMode !== 'undefined') ? GameMode : 1);
-        const ver3d = mode === 0 && use3dVer();
+        const ctx = contextFor(mode, frame, opts.context);
+        const ver3d = ctx.skin === 'pixel';
+        const missing = opts.missing || null;
 
         if (opts.mask) {
             const mask = d.createElement('div');
@@ -404,24 +409,27 @@ const galPresentation = (() => {
         container.dataset.galMode = String(mode);
         if (ver3d) container.classList.add('gal-3dver'); // 毛玻璃场景 + 左侧立绘镜像的作用域类
 
-        // 1) 场景图层
-        const sceneUrl = sceneUrlFor(frame, mode);
-        if (sceneUrl) {
+        // 1) 场景图层（像素皮肤缺图回退常规场景图；素材齐全时候选链只有一项）
+        const scene = galSceneResources.sceneFor(frame, ctx);
+        const sceneUrl = scene.background || null;
+        const sceneUrls = candidatesOf([sceneUrl, ver3d ? galSceneResources.sceneFor(frame, Object.assign({}, ctx, { skin: 'normal' })).background : null], missing);
+        if (sceneUrls.length) {
             const sceneLayer = d.createElement('div');
             sceneLayer.className = 'slg-layer slg-scene-layer';
-            const sceneImg = d.createElement('img');
-            sceneImg.src = sceneUrl;
-            sceneImg.alt = `${frame.scene || 'none'}`;
             if (opts.recordLastValid) { try { window.__lastValidSceneUrl = sceneUrl; } catch (e) {} }
-            sceneLayer.appendChild(sceneImg);
+            mountImage(sceneLayer, sceneUrls, `${frame.scene || 'none'}`, missing, !!missing);
             container.appendChild(sceneLayer);
         }
 
-        // 2) NPC 表情图层：1 人居中；2 人 .slg-cast-left / .slg-cast-right（默认顺序 = cast 顺序，首个为焦点；
-        //    与上一双人帧同两人仅主次互换时沿用旧站位，避免左右对调；焦点/CG 仍认 cast[0]，不受站位影响）
+        // 2) NPC 表情图层：1 人居中；2 人 .slg-cast-left / .slg-cast-right。
+        //    冻结帧按 anchor 排位（阅卷可随机跳段，站位必须可重算）；
+        //    原演出帧沿用站位记忆：与上一双人帧同两人仅主次互换时不左右对调；焦点/CG 仍认 cast[0]，不受站位影响。
         const members = castOf(frame);
         let displayMembers = members;
-        if (members.length === 2) {
+        const anchored = members.length > 0 && members.every(m => m.anchor !== null);
+        if (anchored) {
+            displayMembers = members.slice().sort((a, b) => a.anchor - b.anchor);
+        } else if (members.length === 2) {
             const samePair = lastPairOrder && members.every(m => lastPairOrder.indexOf(m.npc) >= 0);
             if (samePair) displayMembers = lastPairOrder.map(name => members.find(m => m.npc === name));
             lastPairOrder = displayMembers.map(m => m.npc);
@@ -431,28 +439,23 @@ const galPresentation = (() => {
             emotionLayer.className = 'slg-layer slg-emotion-layer';
             if (members.length === 2) emotionLayer.classList.add(i === 0 ? 'slg-cast-left' : 'slg-cast-right');
             if (/^特殊CG\d+$/.test(m.emotion)) emotionLayer.classList.add('slg-emotion-special-cg');
+            if (anchored) emotionLayer.style.left = m.anchor + '%';
             if (opts.allowEnamor && m.emotion === '发情' && typeof enamor !== 'undefined' && enamor === 0) enamor = 1;
-            const emotionImg = d.createElement('img');
-            // 3D 显示中改用像素立绘（目录扁平：像素/<npc>/<表情>.webp，15 NPC 全齐）；
-            // 「特殊CGn」在像素目录不存在，照走 portraitFallback 回退常规立绘，与现状一致。
-            const emoUrl = ver3d
-                ? assetUrl(`img/表情差分和CG/像素/${m.npc}/${m.emotion}.webp`)
-                : assetUrl(`img/表情差分和CG/${m.npc}/表情差分/${m.emotion}.webp`);
-            emotionImg.src = emoUrl;
-            emotionImg.alt = `${m.npc}-${m.emotion}`;
-            if (opts.portraitFallback && typeof npcPortraits !== 'undefined' && npcPortraits && npcPortraits[m.id]) {
-                const fallback = assetUrl(npcPortraits[m.id]);
-                emotionImg.onerror = function () { this.onerror = null; this.src = fallback; };
-            }
+            // 像素皮肤走像素目录；「特殊CGn」在像素目录不存在，照走 portraitFallback 回退常规立绘，与现状一致。
+            const base = (opts.portraitFallback && typeof npcPortraits !== 'undefined' && npcPortraits && npcPortraits[m.id]) ? npcPortraits[m.id] : null;
+            const urls = galSceneResources.portraitCandidates(m, { skin: ctx.skin, assetUrl, basePortrait: base });
+            const emoUrl = urls[0];
             // __lastValidNpcEmotionUrl 始终记焦点（cast[0]）而非视觉左侧——站位记忆可能调换显示顺序
             if (m === members[0] && opts.recordLastValid) { try { window.__lastValidNpcEmotionUrl = emoUrl; } catch (e) {} }
-            emotionLayer.appendChild(emotionImg);
+            const shown = candidatesOf(urls, missing);
+            if (!shown.length) return;
+            mountImage(emotionLayer, shown, `${m.npc}-${m.emotion}`, missing, !!missing);
             container.appendChild(emotionLayer);
         });
 
         // 2.5) 场景标签：右上角地点名匾额（复用 .scene-title 类，古风/扁平主题样式自动生效）+ 其下小字时间（该帧无时间则不渲染）。
-        //      与立绘同 z:2、DOM 在其后（压立绘）；CG 层 z:3 在其上——有 CG 的帧标签被盖住。
-        const labelText = sceneLabelFor(frame, mode);
+        //      与立绘同 z:2、DOM 在其后（压立绘）；CG 层 z:3 在其上——有 CG 的帧标签被盖住。阅卷自带章头，传 sceneTag:false。
+        const labelText = opts.sceneTag === false ? '' : scene.sceneLabel;
         if (labelText) {
             const tag = d.createElement('div');
             tag.className = 'slg-scene-tag';
@@ -469,21 +472,13 @@ const galPresentation = (() => {
             container.appendChild(tag);
         }
 
-        // 3) 特殊CG图层（按焦点 NPC）
-        const focus = members[0];
-        const cgEnabled = (typeof cgContentEnabled !== 'undefined') && cgContentEnabled;
-        if (cgEnabled && frame.cg && frame.cg !== 'none' && focus) {
-            const idx = (typeof randIdx !== 'undefined') ? randIdx : 1;
+        // 3) 特殊CG图层（按焦点 NPC）；素材缺口兜底：色图 404 时移除整个 CG 层，不留裂图
+        const cg = galSceneResources.cgFor(frame, members, ctx);
+        if (cg && !(missing && missing.has(cg.url))) {
             const cgLayer = d.createElement('div');
             cgLayer.className = 'slg-layer slg-cg-layer';
-            const cgImg = d.createElement('img');
-            const cgUrl = assetUrl(`img/表情差分和CG/${focus.npc}/色图/${frame.cg}${idx}.webp`);
-            cgImg.src = cgUrl;
-            cgImg.alt = `${focus.npc}-${frame.cg}${idx}`;
-            // 素材缺口兜底：色图 404（NPC 无色图目录 / 姿势索引越界）时移除整个 CG 层，不留裂图
-            cgImg.onerror = function () { this.onerror = null; cgLayer.remove(); };
-            if (opts.recordLastValid) { try { window.__lastValidCgUrl = cgUrl; } catch (e) {} }
-            cgLayer.appendChild(cgImg);
+            if (opts.recordLastValid) { try { window.__lastValidCgUrl = cg.url; } catch (e) {} }
+            mountImage(cgLayer, [cg.url], `${cg.npc}-${frame.cg}${cg.variant}`, missing, true);
             container.appendChild(cgLayer);
         }
 

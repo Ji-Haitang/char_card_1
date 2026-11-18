@@ -1,7 +1,6 @@
 /** Landscape short-unit reader. Scene data is frozen; actions use only current original game state. */
 var presentationReader=(function(){
     'use strict';var live=null;
-    function asset(path){return typeof _assetUrl==='function'?_assetUrl(path):path;}
     function stopAudio(){if(typeof speechService!=='undefined')speechService.stop();}
     function announce(error){var text=document.createElement('span');text.textContent=error&&error.message||String(error);showModal(text.innerHTML);}
     function modelForCurrent(){var saved=presentationPlan.current(),context=mediaContext.capture();
@@ -28,7 +27,7 @@ var presentationReader=(function(){
     function mount(content,model,signal){
         content.parentElement.classList.add('presentation-reader-host');
         content.innerHTML='<section id="presentation-reader" aria-label="剧情阅卷">'+
-            '<div class="pr-background"><img id="pr-background" alt="剧情场景"></div><div class="pr-wash"></div><div id="pr-cast" class="pr-cast"></div><div id="pr-cg" class="pr-cg" hidden></div><div class="pr-vignette"></div>'+
+            '<div id="pr-stage" class="pr-stage"></div><div class="pr-wash"></div><div class="pr-vignette"></div>'+
             '<div class="pr-touch-zones"><button id="pr-touch-previous" tabindex="-1" aria-label="上一小段"></button><button id="pr-touch-operation" tabindex="-1" aria-label="切换到原操作界面"></button><button id="pr-touch-next" tabindex="-1" aria-label="下一小段"></button></div>'+
             '<header class="pr-chapter"><span class="pr-seal">剧情</span><div><small>姬侠传 · 阅卷</small><h2 id="pr-scene-title"></h2><p id="pr-scene-caption"></p></div></header>'+
             '<div class="pr-menu"><button type="button" id="pr-menu-toggle" aria-expanded="false" aria-controls="pr-drawer">☰<span>卷目</span></button><aside id="pr-drawer" class="pr-drawer" hidden><h3>卷目</h3><section id="pr-menu-input" aria-label="菜单对话输入"><h4>对话输入</h4></section>'+
@@ -55,14 +54,14 @@ var presentationReader=(function(){
             if(!owned||!valid()||ui.overlayOpen||presentationHost.hasOverlay())return;var visible=active.isConnected&&!active.disabled&&!active.closest('[hidden],[inert]')&&active.getClientRects().length&&getComputedStyle(active).visibility!=='hidden';(visible?active:$('pr-menu-toggle')).focus({preventScroll:true});if(visible&&selection)input.setSelectionRange(selection.start,selection.end,selection.direction);
         }
         function toggleMenu(on){if(!valid()||ui.menuOpen===on)return;ui.menuOpen=on;$('pr-drawer').hidden=!on;$('pr-menu-toggle').setAttribute('aria-expanded',String(on));if(ui.roundAudio){if(on)ui.roundAudio.stop();else ui.roundAudio.update(true);}placeInput();if(on&&ui.actionView)renderActions();if(on)$('pr-drawer').scrollTop=0;syncSurface();if(on)cancelType();else if(typing&&revealed<chars.length&&!ui.full&&!ui.composer&&!ui.overlayOpen)step();}
-        function drawImage(parent,urls,label){if(!urls.length)return;var img=document.createElement('img'),at=0;img.alt=label;img.src=urls[0];img.onerror=function(){if(!valid()||!img.isConnected||img.parentElement!==parent)return;missing.add(urls[at]);at++;if(at<urls.length)img.src=urls[at];else{img.onerror=null;parent.hidden=true;}};parent.appendChild(img);}
+        // Stage = the same GAL layer renderer as portrait, fed a frozen world instead of live globals. The reader owns
+        // only the wash/vignette/chapter header around it; seats come from the frame's precomputed anchors.
         function paintScene(frame,frames,index){var world=model.plan.world,skin=model.pixel?'pixel':'normal';
-            var context=Object.assign({},world,{skin:skin,assetUrl:asset,locationNames:locationNames,legacySceneOptions:legacySceneOptions,cgEnabled:cgContentEnabled,frames:frames,frameIndex:index});
-            var scene=galSceneResources.sceneFor(frame,context),fallback=galSceneResources.sceneFor(frame,Object.assign({},context,{skin:'normal'})).background;
-            var candidates=Array.from(new Set([scene.background,fallback])).filter(Boolean).filter(function(url){return !missing.has(url);}),background=root.querySelector('.pr-background');background.replaceChildren();background.hidden=!candidates.length;if(candidates.length)drawImage(background,candidates,'剧情场景');
+            var context=Object.assign({},world,{skin:skin,cgEnabled:cgContentEnabled,frames:frames,frameIndex:index}),stage=$('pr-stage');
+            galPresentation.clearLayers(stage);
+            galPresentation.renderLayers(stage,frame,{mode:world.mode,context:context,missing:missing,sceneTag:false,portraitFallback:true,allowEnamor:false,recordLastValid:false,mask:false});
+            var scene=galSceneResources.sceneFor(frame,Object.assign({},context,{locationNames:locationNames}));
             root.dataset.skin=skin;root.dataset.castCount=String(frame.cast.length);$('pr-scene-title').textContent=scene.sceneLabel||'剧情场景';$('pr-scene-caption').textContent=[frame.time||'未标时间',world.mode===1&&frame.scene!=='none'?frame.scene:'',model.note].filter(Boolean).join(' · ');
-            var cast=$('pr-cast');cast.replaceChildren();frame.cast.forEach(function(a){var layer=document.createElement('div');layer.className='pr-actor';layer.dataset.actorId=a.id;layer.dataset.emotion=a.emotion;layer.style.left=a.anchor+'%';layer.dataset.mirror=String(skin==='pixel'&&a.anchor<50);var urls=galSceneResources.portraitCandidates(a,{skin:skin,assetUrl:asset,basePortrait:npcPortraits[a.id]}).filter(function(url){return !missing.has(url);});if(urls.length){drawImage(layer,urls,a.npc);cast.appendChild(layer);}});
-            var cg=galSceneResources.cgFor(frame,frame.cast,context),cgRoot=$('pr-cg');cgRoot.replaceChildren();cgRoot.hidden=!cg||missing.has(cg.url);if(!cgRoot.hidden)drawImage(cgRoot,[cg.url],'剧情CG');
         }
         async function execute(id,args,expected){if(!valid())return;var ticket=null;try{if(id==='return'){var check=presentationActions.preflight(id,args,expected);if(!check.ok)throw new Error(check.reason);ticket=presentationFlow.begin(false);}await presentationActions.run(id,args,expected);}
             catch(error){if(valid())status(error.message);else if(mediaContext.isCurrent(model.context))announce(error);}

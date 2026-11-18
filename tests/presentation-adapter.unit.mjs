@@ -167,3 +167,27 @@ test('flow never auto-opens failed publication, changed context, or asynchronous
         b.flow.pipelineEnd(ticket,reason==='failure'?null:b.receipt);b.flushTimers();assert.equal(b.opens(),0);assert.equal(b.flow.isWaiting(),false);assert.equal(b.controls.parentNode,b.story);
     }
 });
+
+test('shared renderer paints a frozen reading frame: snapshot world, anchor seats, no scene tag, missing-asset memory',()=>{
+    const b=setup(),pres=b.get('galPresentation'),plan=b.get('presentationPlan').create(line(b,'正文','20:00')+'\n'+line(b,'第二段','21:00',['B']),{mode:0});
+    b.set('seasonStatus','summer');b.set('dayNightStatus','daytime');b.set('randIdx',3); // live globals differ from the frozen world on purpose
+    const stage=b.dom.document.createElement('div');stage.id='pr-stage';b.dom.viewport.appendChild(stage);
+    const frozen={...plan.world,skin:'normal',cgEnabled:true,frames:plan.frames,frameIndex:0},missing=new Set();
+    const first=pres.renderLayers(stage,plan.frames[0],{mode:0,context:frozen,missing,sceneTag:false,portraitFallback:true});
+    assert.equal(first.querySelector('.slg-scene-layer img').src,'img/location/演武场_夜.webp','frozen clock wins over live dayNightStatus');
+    assert.equal(first.querySelector('.slg-scene-tag'),null,'reader draws its own chapter header');
+    assert.deepEqual(first.querySelectorAll('.slg-emotion-layer').map(l=>[l.style.left,l.classes.has('slg-cast-left'),l.classes.has('slg-cast-right')]),[['30%',true,false],['70%',false,true]]);
+    // Second frame: frozen 21:00 clock (not the live daytime) and the single seat stays centred.
+    const second=pres.renderLayers(stage,plan.frames[1],{mode:0,context:{...frozen,frameIndex:1},missing,sceneTag:false});
+    assert.equal(second.querySelector('.slg-scene-layer img').src,'img/location/演武场_夜.webp');assert.equal(second.querySelector('.slg-emotion-layer').style.left,'50%');
+    // A 404 is remembered: the candidate chain advances and the next paint skips the dead URL instead of re-requesting it.
+    const img=second.querySelector('.slg-emotion-layer img'),dead=img.src;img.dispatch('error');assert.equal(missing.has(dead),true);
+    const third=pres.renderLayers(stage,plan.frames[1],{mode:0,context:{...frozen,frameIndex:1},missing,sceneTag:false});assert.equal(third.querySelector('.slg-emotion-layer'),null,'no base portrait configured → seat omitted, no broken image');
+    // Viewport-level clearing never reaches the reader's nested stage, and clearing the stage never touches viewport layers.
+    pres.renderLayers(b.dom.viewport,plan.frames[0],{mode:0});
+    pres.clearLayers(b.dom.viewport);assert.equal(stage.querySelectorAll('.slg-layer-container').length,3);assert.equal(b.dom.viewport.children.filter(c=>c.classes.has('slg-layer-container')).length,0);
+    pres.clearLayers(stage);assert.equal(stage.children.length,0);
+    // Live path is unchanged: no inline seats, scene tag present, live season/clock used.
+    const live=pres.renderLayers(b.dom.viewport,{scene:'none',time:null,cast:[{npc:b.names.A.name,emotion:'平静'},{npc:b.names.B.name,emotion:'平静'}]},{mode:0});
+    assert.equal(live.querySelector('.slg-scene-layer img').src,'img/location/天山派_夏_昼.webp');assert.ok(live.querySelector('.slg-scene-tag'));assert.deepEqual(live.querySelectorAll('.slg-emotion-layer').map(l=>l.style.left),[undefined,undefined]);
+});
