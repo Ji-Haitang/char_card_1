@@ -38,7 +38,7 @@
 #pr-actions .pr-action-group{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:12px 0}
 #pr-actions h5{grid-column:1/-1;margin:0 0 3px;color:#76664c;font-size:12px}
 #presentation-reader .pr-action-button{min-height:38px;padding:7px 6px;border:1px solid var(--pr-hair);background:#fcf8ed80;color:#343b35;font-size:13px}
-#presentation-reader .pr-dialogue{position:absolute;z-index:8;left:5%;right:5%;bottom:4%;min-height:23%;max-height:87dvh;display:flex;gap:26px;align-items:flex-start;padding:38px 35px 15px;border:8px solid transparent;border-image:url('../assets/image/static/边框-fill.png') 28 fill / 8px / 0 stretch;background:var(--pr-paper);box-shadow:0 12px 35px #091a2355;cursor:pointer}
+#presentation-reader .pr-dialogue{position:absolute;z-index:8;left:5%;right:5%;bottom:4%;min-height:23%;max-height:87dvh;display:flex;gap:26px;align-items:flex-start;padding:32px 35px 15px;border:8px solid transparent;border-image:url('../assets/image/static/边框-fill.png') 28 fill / 8px / 0 stretch;background:var(--pr-paper);box-shadow:0 12px 35px #091a2355;cursor:pointer}
 #presentation-reader .pr-dialogue:before{content:'';position:absolute;inset:0;background:url('../assets/image/static/文字框or弹窗底部的水墨背景建议加透明度使用-fade.png') right bottom/auto 90% no-repeat;opacity:.1;pointer-events:none;z-index:-1}
 #presentation-reader .pr-label{flex:0 0 105px;border-right:1px solid var(--pr-hair);padding-right:20px;min-height:78px}
 #presentation-reader .pr-label small{display:block;color:#8b7b5e;font-size:11px;letter-spacing:.15em;margin-bottom:10px}
@@ -53,8 +53,15 @@
 #presentation-reader .pr-touch-zones button{height:100%;border:0;background:transparent;padding:0;touch-action:pan-y}
 #pr-touch-previous,#pr-touch-next{width:35%}
 #pr-touch-operation{width:30%}
-#presentation-reader .pr-bubble-tools{position:absolute;left:12px;right:12px;top:2px;display:flex;align-items:center;gap:8px}
-#presentation-reader .pr-bubble-tools button{min-height:32px;min-width:38px;padding:3px 10px;border:1px solid #75664a55;background:#fff9;color:var(--pr-ink);font-size:13px}
+/* Bubble tools: ink bookmarks clipped onto the sheet's top edge, same family as the 卷目 toggle (ink fill, gold hairline,
+   offset outline). Arrows at both ends, the two text tabs centred; ≥38px targets; open state = paper fill + red underline. */
+#presentation-reader .pr-bubble-tools{position:absolute;left:26px;right:26px;top:-16px;display:flex;align-items:stretch;gap:10px;pointer-events:none}
+#presentation-reader .pr-bubble-tools button{pointer-events:auto;min-height:38px;min-width:46px;padding:0 16px;border:1px solid #b49b67;outline:1px solid #b49b6738;outline-offset:2px;background:#15282bf0;color:#eaddbd;font:14px KaiTi,STKaiti,serif;letter-spacing:.2em;text-indent:.2em;box-shadow:0 5px 14px #0a1a1e5c;transition:background-color .15s,color .15s,border-color .15s,transform .15s}
+#presentation-reader .pr-bubble-tools button:hover:not(:disabled){background:#23403ff5;border-color:#dcc18f;transform:translateY(-1px)}
+#presentation-reader .pr-bubble-tools button:active:not(:disabled){transform:none}
+#presentation-reader .pr-bubble-tools button[aria-expanded="true"]{background:var(--pr-paper);color:var(--pr-red);border-color:var(--pr-red);outline-color:#903c3033;box-shadow:inset 0 -3px 0 var(--pr-red),0 5px 14px #0a1a1e3a}
+#presentation-reader .pr-bubble-tools button:disabled{opacity:.3;box-shadow:none;outline:0}
+#presentation-reader #pr-previous,#presentation-reader #pr-next{min-width:50px;padding:0 14px;font:22px/1 KaiTi,STKaiti,serif;letter-spacing:0;text-indent:0}
 #pr-full-toggle,#pr-next{margin-left:auto}
 #pr-composer{margin-top:8px;max-height:30dvh;overflow:auto;overscroll-behavior:contain}
 #pr-menu-input{padding:4px 0 12px;border-bottom:1px solid var(--pr-hair)}
@@ -67,7 +74,8 @@
 #pr-events{max-height:28dvh;overflow:auto;overscroll-behavior:contain}
 #pr-live-event-description{max-height:14dvh;overflow:auto}
 #pr-full-text{font-size:calc(clamp(17px,2.6vmin,23px) + var(--pr-text-adjust));line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text;overflow:auto;overscroll-behavior:contain}
-#presentation-reader[data-full="true"] .pr-dialogue{top:2%;bottom:2%;left:2%;right:2%;border:1px solid #ac9974;border-image:none;background:#f2ecdeeb;padding:42px 22px 12px}
+#presentation-reader[data-full="true"] .pr-dialogue{top:2%;bottom:2%;left:2%;right:2%;border:1px solid #ac9974;border-image:none;background:#f2ecdeeb;padding:56px 22px 12px}
+#presentation-reader[data-full="true"] .pr-bubble-tools{top:8px;left:16px;right:16px}
 #presentation-reader[data-full="true"] .pr-label{display:none}
 #presentation-reader[data-full="true"] .pr-copy{display:flex;flex-direction:column;height:100%;min-height:0}
 #presentation-reader[data-full="true"] #pr-full-text{flex:1;min-height:0}
@@ -88,5 +96,5 @@
 .pr-record-modal .pr-record-text{display:block;font-size:18px;line-height:1.8;white-space:pre-wrap;overflow-wrap:anywhere;user-select:text}
 .pr-record-modal .pr-record-footer p{font-size:11px;line-height:1.6;color:#7a776c;margin:0}
 .pr-record-modal #pr-history-confirm{padding:9px 26px;min-height:40px;border:1px solid #6f6656;background:#35423b;color:#f3e9d4;font-size:15px}
-@media(max-height:520px){#presentation-reader .pr-chapter{gap:11px}#presentation-reader .pr-chapter h2{font-size:27px;margin:4px 0}#presentation-reader .pr-chapter p{font-size:10px}#presentation-reader .pr-seal{font-size:17px;padding:6px 4px}#presentation-reader #pr-menu-toggle{min-height:44px;width:42px;padding:5px;font-size:19px!important}#presentation-reader .pr-drawer{width:244px;padding:11px 15px;max-height:88vh}#presentation-reader .pr-drawer>button{padding:8px 0;font-size:14px}#presentation-reader .pr-dialogue{left:3%;right:3%;bottom:2%;padding:34px 13px 8px;gap:10px}#presentation-reader .pr-label{flex-basis:55px;padding-right:8px;min-height:60px}#presentation-reader .pr-label strong{font-size:24px}#presentation-reader #pr-text{max-height:32dvh;min-height:1.7em;font-size:calc(18px + var(--pr-text-adjust));line-height:1.65}#pr-composer{max-height:43dvh}.pr-record-modal{padding:8px}.pr-record-modal .pr-history-paper{width:min(920px,96vw);max-height:94dvh;padding:12px 16px}.pr-record-modal .pr-record-list{max-height:60dvh}.pr-record-modal .pr-record-row{padding:12px 0}.pr-record-modal .pr-record-text{font-size:16px;line-height:1.65}}
+@media(max-height:520px){#presentation-reader .pr-chapter{gap:11px}#presentation-reader .pr-chapter h2{font-size:27px;margin:4px 0}#presentation-reader .pr-chapter p{font-size:10px}#presentation-reader .pr-seal{font-size:17px;padding:6px 4px}#presentation-reader #pr-menu-toggle{min-height:44px;width:42px;padding:5px;font-size:19px!important}#presentation-reader .pr-drawer{width:244px;padding:11px 15px;max-height:88vh}#presentation-reader .pr-drawer>button{padding:8px 0;font-size:14px}#presentation-reader .pr-dialogue{left:3%;right:3%;bottom:2%;padding:28px 13px 8px;gap:10px}#presentation-reader .pr-bubble-tools{left:16px;right:16px;top:-14px}#presentation-reader .pr-bubble-tools button{min-height:34px;padding:0 12px;font-size:13px}#presentation-reader #pr-previous,#presentation-reader #pr-next{min-width:44px;font-size:20px}#presentation-reader .pr-label{flex-basis:55px;padding-right:8px;min-height:60px}#presentation-reader .pr-label strong{font-size:24px}#presentation-reader #pr-text{max-height:32dvh;min-height:1.7em;font-size:calc(18px + var(--pr-text-adjust));line-height:1.65}#pr-composer{max-height:43dvh}.pr-record-modal{padding:8px}.pr-record-modal .pr-history-paper{width:min(920px,96vw);max-height:94dvh;padding:12px 16px}.pr-record-modal .pr-record-list{max-height:60dvh}.pr-record-modal .pr-record-row{padding:12px 0}.pr-record-modal .pr-record-text{font-size:16px;line-height:1.65}}
 @media(prefers-reduced-motion:reduce){#presentation-reader *{animation:none!important;transition:none!important}}
