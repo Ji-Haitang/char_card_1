@@ -30,7 +30,7 @@ try{
     const u=new URL(String(url));if(u.origin!=='https://proxy.example')return nativeFetch.call(this,url,options);
     const target=u.searchParams.get('target'),headers=new Headers(options.headers),body=JSON.parse(options.body);
     if(target==='https://model.example/v1/chat/completions'){
-     __mediaRun.main++;__mediaRun.messages=body.messages;__mediaRun.mainKeyOK=headers.get('Authorization')==='Bearer PUBLIC_MAIN_KEY';
+     __mediaRun.main++;__mediaRun.messages=body.messages;__mediaRun.wireBody=options.body;__mediaRun.mainKeyOK=headers.get('Authorization')==='Bearer PUBLIC_MAIN_KEY';
      const choice=kind==='tool-round'?{message:{content:null,tool_calls:[{id:'public-call',type:'function',function:{name:'submit_game_output',arguments:JSON.stringify({display_stream:reply})}}]},finish_reason:'tool_calls'}:{message:{content:reply},finish_reason:'stop'};
      return new Response(JSON.stringify({choices:[choice],usage:{total_tokens:1}}),{headers:{'Content-Type':'application/json'}});
     }
@@ -55,11 +55,8 @@ try{
    }
    const after=sideQuestRunner.afterCommit;sideQuestRunner.afterCommit=async function(...args){__mediaRun.side++;__mediaRun.sideEntered=true;await new Promise(resolve=>__mediaRun.releaseSide=resolve);return after.apply(this,args);};
    document.getElementById('free-action-input').value='公开测试行动';
-  },{kind,source,reply:envelope(kind==='off'?plain:kind==='world-round'?legacyMarked:marked,kind==='world-round'?'20:00':'12:30'),bytes:mp3});
-  if(kind==='round'||kind==='native-round'){
-   await p.click('.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');
-   await p.click(kind==='round'?'#pr-input-toggle':'#pr-menu-toggle');
-  }
+  },{kind,source,reply:envelope(kind==='world-round'?legacyMarked:marked,kind==='world-round'?'20:00':'12:30'),bytes:mp3});
+   await p.click('#stage-input');
   await p.click('#free-action-send-btn');
   if(kind.includes('round')){
    await p.waitForFunction(()=>__mediaRun.voice.length===1);
@@ -68,8 +65,8 @@ try{
     await p.click('#stream-stop-btn');await p.waitForFunction(()=>!pipeline.isBusy());
     await p.evaluate(()=>__mediaRun.releaseVoice());await p.waitForFunction(()=>__mediaRun.voiceReturned);
     await p.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));
-    const cancelled=await p.evaluate(async()=>({source:currentStoryText,rows:storageService.loadUIConversation().length,side:__mediaRun.side,voice:__mediaRun.voice.length,phase:(await speechRound.load()).phase,turns:(await speechStore.listTurns('main')).length,host:presentationHost.isActive()}));
-    assert.deepEqual(cancelled,{source,rows:1,side:0,voice:1,phase:'paused',turns:0,host:false});
+    const cancelled=await p.evaluate(async()=>({source:currentStoryText,rows:storageService.loadUIConversation().length,side:__mediaRun.side,voice:__mediaRun.voice.length,phase:(await speechRound.load()).phase,turns:(await speechStore.listTurns('main')).length,host:stageStory.reading()}));
+    assert.deepEqual(cancelled,{source,rows:1,side:0,voice:1,phase:'paused',turns:0,host:true});
     checks.push({kind,status:'PASS',state:cancelled});assertSessionSafe(session,server,'media-turn-'+kind);await session.close();session=null;continue;
    }
    await p.evaluate(()=>__mediaRun.releaseVoice());
@@ -80,21 +77,21 @@ try{
    }
   }
   await p.waitForFunction(()=>__mediaRun.sideEntered);
-  assert.equal(await p.evaluate(()=>pipeline.isBusy()),true);assert.equal(await p.evaluate(()=>presentationHost.isActive()),false);
-  assert.equal(await p.evaluate(()=>document.body.classList.contains('presentation-wait-active')),true);
+  assert.equal(await p.evaluate(()=>pipeline.isBusy()),true);assert.equal(await p.evaluate(()=>stageStory.reading()),false);
+  assert.equal(await p.evaluate(()=>document.body.classList.contains('stage-turn-wait')),true);
   await p.evaluate(()=>__mediaRun.releaseSide());
-  await p.waitForFunction(()=>!pipeline.isBusy()&&presentationHost.getDiagnostics().phase==='open');
-  const state=await p.evaluate(async()=>{const rows=storageService.loadUIConversation(),last=rows.filter(m=>m.role==='assistant').at(-1),draft=await speechRound.load();return {nativeCalls:__mediaRun.nativeCalls||0,main:__mediaRun.main,mainKeyOK:__mediaRun.mainKeyOK,voice:__mediaRun.voice,side:__mediaRun.side,users:rows.filter(m=>m.role==='user').length,assistants:rows.filter(m=>m.role==='assistant').length,content:last.content,plan:!!last.presentationPlan,world:last.presentationPlan?.world.dayNightStatus,actualWorld:dayNightStatus,replayable:last.roundSpeech?.status==='ready'?!!(await speechRound.replay(last,last.presentationPlan,0)):null,single:last.singleSpeech?.renderVersion,round:last.roundSpeech?.status,finish:last.roundSpeech?.finishReason,draft:draft?.phase};});
-  assert.equal(state.main,1);assert.equal(state.mainKeyOK,true);assert.equal(state.side,1);assert.equal(state.users,1);assert.equal(state.assistants,2);assert.equal(state.content,kind==='world-round'?legacyPlain:plain);assert.equal(state.plan,true);
-  if(kind==='world-round'){assert.equal(state.world,'night');assert.equal(state.actualWorld,'night');assert.equal(state.replayable,true);assert.match(await p.$eval('#pr-stage .slg-scene-layer img',n=>n.getAttribute('src')),/演武场_夜\.webp/);}
+  await p.waitForFunction(()=>!pipeline.isBusy()&&stageStory.reading());
+  const state=await p.evaluate(async()=>{const rows=storageService.loadUIConversation(),last=rows.filter(m=>m.role==='assistant').at(-1),draft=await speechRound.load(),promptText=String(__mediaRun.wireBody||'');return {nativeCalls:__mediaRun.nativeCalls||0,main:__mediaRun.main,mainKeyOK:__mediaRun.mainKeyOK,hasExtraInject:/\[整轮台词标记 round-v1|\[单句语音测试格式/.test(promptText),hasFormatRule:promptText.includes('标记顺序: 段落正文【ID；情绪】'),voice:__mediaRun.voice,side:__mediaRun.side,users:rows.filter(m=>m.role==='user').length,assistants:rows.filter(m=>m.role==='assistant').length,content:last.content,plan:!!last.presentationPlan,world:last.presentationPlan?.world.dayNightStatus,actualWorld:dayNightStatus,replayable:last.roundSpeech?.status==='ready'?!!(await speechRound.replay(last,last.presentationPlan,0)):null,single:last.singleSpeech?.renderVersion,round:last.roundSpeech?.status,finish:last.roundSpeech?.finishReason,draft:draft?.phase};});
+  assert.equal(state.main,1);assert.equal(state.mainKeyOK,true);assert.equal(state.hasExtraInject,false);assert.equal(state.hasFormatRule,true);assert.equal(state.side,1);assert.equal(state.users,1);assert.equal(state.assistants,2);assert.equal(state.content,kind==='world-round'?legacyPlain:plain);assert.equal(state.plan,true);
+  if(kind==='world-round'){assert.equal(state.world,'night');assert.equal(state.actualWorld,'night');assert.equal(state.replayable,true);assert.match(await p.$eval('.stage-story-layers .slg-scene-layer img',n=>n.getAttribute('src')),/演武场_夜\.webp/);}
   if(kind.includes('round')){assert.deepEqual(state.voice,[{text:'[轻声] 第一句公开对白。',id:'voice-D',model:'drama-3',keyOK:true},{text:'[平静] 第二句公开对白。',id:'voice-M',model:'drama-3',keyOK:true}]);assert.equal(state.round,kind==='round-fail'?'silent':'ready');assert.equal(state.finish,kind==='tool-round'?'tool_calls':'stop');assert.equal(state.draft,'published');}
   else assert.equal(state.voice.length,0);
   if(kind==='native-round')assert.equal(state.nativeCalls,2);
   if(kind==='single'){
    assert.equal(state.single,'drama3-v1');
    p.removeAllListeners('dialog');p.on('dialog',dialog=>dialog.accept().catch(()=>{}));
-   await p.click('#pr-menu-toggle');await p.waitForFunction(()=>{const n=document.getElementById('pr-drawer');return n&&!n.hidden&&getComputedStyle(n).opacity==='1';});
-   await p.click('#pr-speech-single');await p.waitForSelector('#sst-generate',{visible:true});
+    await p.click('#viewport-dock-gear');await p.locator('#viewport-dock-menu .be-seal-system').click();await p.locator('#system-dropdown button:first-child').click();await p.click('.gs-tab[data-tab="speech"]');
+   await p.click('#speech-single-open');await p.waitForSelector('#sst-generate',{visible:true});
    await p.waitForFunction(()=>{const b=document.getElementById('sst-generate');return b&&!b.disabled&&!b.closest('[inert]');});
    await p.click('#sst-generate');await p.waitForFunction(()=>__mediaRun.voice.length===1);await p.evaluate(()=>__mediaRun.releaseVoice());
    await p.waitForFunction(()=>document.getElementById('sst-play')&&!document.getElementById('sst-play').disabled&&!document.getElementById('sst-generate').disabled);
@@ -106,5 +103,5 @@ try{
   checks.push({kind,status:'PASS',state});await session.close();session=null;
  }
  await writeFile(path.join(out,'report.json'),JSON.stringify({status:'PASS',checks},null,2));console.log(JSON.stringify({out,passed:checks.length}));
-}catch(error){if(session){await session.page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});const state=await session.page.evaluate(()=>({run:window.__mediaRun,host:typeof presentationHost==='undefined'?null:presentationHost.getDiagnostics(),flow:typeof presentationFlow==='undefined'?null:presentationFlow.getDiagnostics(),text:typeof currentStoryText==='undefined'?null:currentStoryText,status:document.getElementById('stream-log')?.textContent,decision:Array.from(document.querySelectorAll('#speech-round-decision-modal button')).map(b=>({id:b.id,disabled:b.disabled,inert:!!b.closest('[inert]'),rect:(()=>{const r=b.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,200)}})()}))})).catch(()=>null);await writeFile(path.join(out,'failure.json'),JSON.stringify({message:error.message,state,logs:session.logs,violations:session.violations},null,2));}throw error;}
+}catch(error){if(session){await session.page.screenshot({path:path.join(out,'failure.png')}).catch(()=>{});const state=await session.page.evaluate(()=>({run:window.__mediaRun,reading:stageStory.reading(),wait:stageStory.isWaiting(),text:typeof currentStoryText==='undefined'?null:currentStoryText,status:document.getElementById('stream-log')?.textContent,decision:Array.from(document.querySelectorAll('#speech-round-decision-modal button')).map(b=>({id:b.id,disabled:b.disabled,inert:!!b.closest('[inert]'),rect:(()=>{const r=b.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width,height:r.height,hit:document.elementFromPoint(r.x+r.width/2,r.y+r.height/2)?.outerHTML.slice(0,200)}})()}))})).catch(()=>null);await writeFile(path.join(out,'failure.json'),JSON.stringify({message:error.message,state,logs:session.logs,violations:session.violations},null,2));}throw error;}
 finally{if(session)await session.close();await browser.close();await server.close();}

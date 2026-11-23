@@ -1,21 +1,14 @@
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-
-const ui = await readFile('module/game-ui.js', 'utf8');
-const css = await readFile('module/relationship-feedback.css', 'utf8');
+const ui = await readFile('module/profile-folio.js', 'utf8');
+const css = await readFile('ui/profile-folio.css', 'utf8');
 const index = await readFile('index.html', 'utf8');
-
-assert.match(ui, /relationship-value-number/);
-assert.doesNotMatch(ui.slice(ui.indexOf('function updateRelationshipsDisplay'), ui.indexOf('function showTooltip')), /gift-btn|giveGift/);
-assert.match(ui, /showRelationshipTooltip\(card, text\)/);
-assert.match(ui, /document\.getElementById\('main-viewport'\)/);
-assert.match(ui, /position:fixed/);
-assert.match(css, /white-space:\s*nowrap/);
-assert.match(css, /font-size: 14px !important/);
-assert.match(css, /@media \(max-width: 600px\) \{[^}]+\}[^}]+font-size: 11px !important/);
-assert.match(css, /white-space:\s*pre-wrap/);
-assert.match(css, /overflow-y:\s*auto/);
-assert.match(ui, /max-height:\$\{bottom - top\}px/);
-assert.match(index, /module\/relationship-feedback\.css/);
-
+assert.match(ui, /DialogPanel\.mount\(panel\)/);
+assert.match(ui, /npcFavorability\[id\]/);
+assert.match(ui, /toggleNpcVisibility\(id\)/);
+assert.doesNotMatch(ui, /gift-btn|giveGift|switchScene\(/);
+assert.match(ui, /grid\.scrollTop = offset/);
+assert.match(css, /@container folio/);
+assert.match(css, /white-space:pre-wrap/);
+assert.match(index, /ui\/profile-folio\.css/);
 console.log('relationship-feedback.unit: ok');

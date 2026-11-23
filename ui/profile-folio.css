@@ -1,0 +1,40 @@
+/* Layout responds to the game window, not the phone screen. A portrait host
+   can still have a short, wide viewport above its story transcript. */
+.dialog-panel.profile-folio { container: folio / size; font-size: clamp(13px, var(--panel-font), 20px); }
+.profile-folio [hidden] { display:none !important; }
+.profile-folio .dialog-panel-shell { gap:.35em; }
+.profile-folio .dialog-panel-header { padding:0; }
+.profile-folio .folio-nav,.profile-folio .folio-foot { display:flex; gap:.5em; align-items:center; }
+.profile-folio .folio-nav button,.profile-folio .folio-foot button { padding:.28em .95em; min-height:30px; }
+.profile-folio #folio-points,.profile-folio .folio-foot button { margin-left:auto; }
+.profile-folio .folio-scroll { flex:1; min-height:0; overflow:auto; overscroll-behavior:contain; }
+.profile-folio .folio-columns,.profile-folio .folio-roster { display:grid; grid-template-columns:minmax(0,1fr); align-content:start; gap:.55em; }
+.profile-folio .folio-group,.profile-folio .folio-card { border:1px solid var(--panel-line); padding:.45em .75em; min-width:0; }
+.profile-folio h3 { font-family:inherit; font-size:1.05em; font-weight:700; line-height:1.5; margin:0 0 .3em; }
+.profile-folio .folio-row { display:flex; align-items:center; gap:.6em; justify-content:space-between; width:100%; min-height:2.1em; border:0; border-bottom:1px solid color-mix(in srgb,var(--panel-line) 35%,transparent); border-radius:0; background:transparent; padding:.15em .25em; color:inherit; font:inherit; }
+.profile-folio .folio-row b { font-variant-numeric:tabular-nums; margin-left:auto; }
+.profile-folio .folio-row button { width:2.4em; min-height:2em; }
+.profile-folio .folio-track { display:block; flex:1; background:var(--panel-selected); border-radius:9px; overflow:hidden; height:.43em; }
+.profile-folio .folio-track i { display:block; height:100%; background:currentColor; opacity:.65; }
+.profile-folio #folio-tier { border-left:3px solid var(--panel-line); padding:.35em .7em; }
+.profile-folio #learned-skills:empty::after { content:'暂无'; opacity:.65; }
+.profile-folio .folio-foot { margin:.75em 0 .4em; }
+.profile-folio .folio-card { display:flex; align-items:center; gap:.4em; padding:.3em .5em; }
+.profile-folio .folio-card label { display:flex; gap:.25em; align-items:center; white-space:nowrap; min-height:36px; cursor:pointer; }
+.profile-folio .folio-npc { flex:1; display:flex; gap:.65em; align-items:center; text-align:left; background:transparent; padding:0; border:0; }
+.profile-folio .folio-npc img { width:4.2em; height:4.4em; object-fit:cover; object-position:center 12%; }
+.profile-folio .folio-npc span { display:grid; flex:1; min-width:0; gap:.25em; }
+.profile-folio .folio-npc small { font-size:.92em; }
+.profile-folio #folio-bio { flex:1; overflow:hidden; }
+.profile-folio #folio-bio p { white-space:pre-wrap; }
+@container folio (min-width: 520px) and (min-aspect-ratio: 3/2) {
+    .profile-folio .folio-columns,.profile-folio .folio-roster { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+@container folio (min-width: 320px) and (max-width: 519px) and (max-height: 310px) {
+    .profile-folio .folio-group { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 .85em; padding:.22em .55em; }
+    .profile-folio .folio-group h3 { grid-column:1/-1; margin:0; }
+}
+@container folio (max-height: 310px) {
+    .profile-folio .dialog-panel-header h2 { font-size:1.3em; }
+    .profile-folio .folio-row { min-height:1.9em; }
+}

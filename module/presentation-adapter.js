@@ -39,17 +39,15 @@ var presentationAdapter = (function () {
     'use strict';
     var lease = null;
     function bridge() { return typeof window !== 'undefined' && window.GameSceneBridge; }
-    function valid(op) { return !!op && mediaContext.isCurrent(op.context) && GameMode === op.mode && currentStoryText === op.source; }
     function blocksOriginal() { return !!lease; }
-    async function suspend() {
+    function claim() {
         if (lease) throw new Error('原演出显示已被接管');
-        var op = {context:mediaContext.capture(), mode:GameMode, source:currentStoryText};
+        var op = {};
         lease = op;
         try {
             // exit is GM0-only upstream. clearLayers also invalidates GM1's queued slgSession.
-            await galPresentation.exit({curtain:false, reason:'presentation-host'});
+            galPresentation.exit({curtain:false, reason:'stage-reading'}); // no-curtain exit clears synchronously
             galPresentation.clearLayers(document.getElementById('main-viewport'));
-            if (typeof galPresentation.whenSettled === 'function') await galPresentation.whenSettled();
             return op;
         } catch (error) { if (lease === op) lease = null; throw error; }
     }
@@ -66,23 +64,10 @@ var presentationAdapter = (function () {
         }
         return true;
     }
-    function resume(op) {
-        if (lease !== op) return false;
-        release(op);
-        if (!valid(op) || mediaContext.isBusy()) return false;
-        // GM0 returns to the original operational scene. GM1 restores its persistent GAL via its own renderer.
-        return restoreCurrent();
-    }
-    function curtain(cover, owner, label) {
-        var b = bridge();
-        return b && b.playCurtain ? Promise.resolve(b.playCurtain(cover, label || '', '', '话本', owner)) : Promise.resolve(false);
-    }
-    function cancelCurtain(owner) { var b = bridge(); if (b && b.cancelCurtain) b.cancelCurtain(owner); }
     function pixelMode(mode) {
         if (mode !== 0) return false;
         try { var b = bridge(), d = b && b.getDiagnostics(); return !!(d && d.preferences && d.preferences.enabled && d.snapshot && d.snapshot.visible); }
         catch (_) { return false; }
     }
-    return Object.freeze({suspend:suspend, resume:resume, release:release, valid:valid, blocksOriginal:blocksOriginal,
-        restoreCurrent:restoreCurrent, curtain:curtain, cancelCurtain:cancelCurtain, pixelMode:pixelMode});
+    return Object.freeze({claim,release,blocksOriginal,restoreCurrent,pixelMode});
 })();

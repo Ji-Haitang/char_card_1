@@ -107,7 +107,14 @@
       position: relative;
     }
     
-    /* 大屏幕限制已由JS控制 */
+    /* The portrait host embeds a ~1.46 viewport; only the wide stage exposes
+       the two scenery columns on each side. Plot IDs and saved rows never move. */
+    .tile.wing { display: none; }
+    @media (min-aspect-ratio: 8/5) {
+      #grid { --tile-size: min(6.25vw, 11.111111vh); grid-template-columns: repeat(16, var(--tile-size)); }
+      #grid .wing { display: block; pointer-events: none; }
+      #grid .crop-glow { padding: 6px; } /* match the actual crop sprite's content box */
+    }
     
     #decorLayer {
       position: absolute;
@@ -774,7 +781,7 @@
       __decorLayerEl.id = 'decorLayer';
       
       for (let r = 0; r < sceneRows; r++) {
-        for (let c = 0; c < sceneCols; c++) {
+        for (let c = -2; c < sceneCols + 2; c++) {
           const tile = document.createElement('div');
           tile.className = 'tile';
           tile.dataset.sceneR = r; 
@@ -787,6 +794,15 @@
           ground.src = isFarm ? 'assets/image/ground/grass_farm.png' : 'assets/image/ground/grass.png';
           tile.appendChild(ground);
 
+          if (c < 0 || c >= sceneCols) {
+            tile.classList.add('wing');tile.setAttribute('aria-hidden','true');
+            // Fixed ornamental scatter: rotating or opening a wide farm must not consume gameplay RNG.
+            const kind = ['plant0','rock0','trunk0'][(r + c + 2) % 3];
+            if ((r + c + 2) % 4 === 0) {
+              const decor = document.createElement('img');decor.className='decor';
+              decor.src=`assets/image/static/${kind}.png`;tile.appendChild(decor);
+            }
+          }
           if (isFarm) {
             tile.classList.add('farm');
             const crop = document.createElement('img');

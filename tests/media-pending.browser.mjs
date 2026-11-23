@@ -30,28 +30,24 @@ try{
     const after=sideQuestRunner.afterCommit;sideQuestRunner.afterCommit=function(...args){__pending.side++;return after.apply(this,args);};
    },{reply,bytes});
    assert.equal(await p.evaluate(()=>speechRound.pendingState().ready),true,'startup warmed the synchronous gate');
-   await p.type('#free-action-input','公开准备待办');await clickReady(p,'#free-action-send-btn');await clickReady(p,'#srd-pause');await p.waitForFunction(()=>!pipeline.isBusy()&&!speechService.isBusy());
+   await clickReady(p,'#stage-input');await p.type('#free-action-input','公开准备待办');await clickReady(p,'#free-action-send-btn');await clickReady(p,'#srd-pause');await p.waitForFunction(()=>!pipeline.isBusy()&&!speechService.isBusy());
    const before=await business(p);assert.deepEqual(await p.evaluate(()=>({phase:speechRound.pendingState().phase,blocked:speechRound.pendingState().pending,busy:pipeline.isBusy(),main:__pending.main})),{phase:'paused',blocked:true,busy:false,main:1});
-   await clickReady(p,'#yanwuchang-scene .scene-btn');assert.match(await p.$eval('#modal-text',n=>n.textContent),/先处理声音待办/);await dismiss(p);assert.deepEqual(await business(p),before);
+   await clickReady(p,'#stage-operation');await clickReady(p,'#yanwuchang-scene .scene-btn');assert.match(await p.$eval('#modal-text',n=>n.textContent),/先处理声音待办/);await dismiss(p);assert.deepEqual(await business(p),before);
    // A confirmation opened before a pending transition must also recheck, including the quick branch.
    for(const quick of [false,true]){
     await p.evaluate(()=>showRollActionConfirm('练武','yanwuchang'));
     await clickReady(p,`#modal button[onclick="confirmRollAction(${quick})"]`);assert.match(await p.$eval('#modal-text',n=>n.textContent),/先处理声音待办/);await dismiss(p);assert.deepEqual(await business(p),before);
    }
    await p.evaluate(()=>executeRollAction('练武','yanwuchang',false));await dismiss(p);assert.deepEqual(await business(p),before,'direct entry cannot bypass the synchronous check');
-   await p.type('#free-action-input','仍保留的输入');await clickReady(p,'#free-action-send-btn');await dismiss(p);assert.equal(await p.$eval('#free-action-input',n=>n.value),'仍保留的输入');assert.deepEqual(await business(p),before);
-   await clickReady(p,'.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');await clickReady(p,'#pr-menu-toggle');await clickReady(p,'#pr-action-toggle');
-   assert.equal(await p.$eval('#pr-actions button[data-command="local"]',n=>n.disabled),true);
-   const shortcut=await p.evaluate(()=>{const expected=presentationActions.getState();try{presentationActions.run('local',{action:'练武'},expected);return 'unexpected';}catch(error){return error.message;}});assert.match(shortcut,/先处理声音待办/);assert.deepEqual(await business(p),before);
-   // Read-only panels and their original return path remain usable without moving the paused location.
-   await clickReady(p,'#pr-actions button[data-command="stats"]');await clickReady(p,'#player-stats-scene .back-btn');await p.waitForFunction(()=>!presentationHost.hasOverlay());assert.equal(await p.evaluate(()=>userLocation),before.location);
-   await clickReady(p,'#pr-actions button[data-command="settings"]');await clickReady(p,'.gs-tab[data-tab="speech"]');await p.waitForSelector('#sr-resume',{visible:true});
+   await clickReady(p,'#stage-book');await clickReady(p,'#stage-input');await p.type('#free-action-input','仍保留的输入');await clickReady(p,'#free-action-send-btn');await dismiss(p);assert.equal(await p.$eval('#free-action-input',n=>n.value),'仍保留的输入');assert.deepEqual(await business(p),before);
+    await clickReady(p,'#viewport-dock-gear');await clickReady(p,'#viewport-dock-menu [onclick*="attribute-dropdown"]');await clickReady(p,'#attribute-dropdown [onclick="showPlayerStats()"]');await clickReady(p,'#player-stats-scene [data-dialog-close]');await p.waitForFunction(()=>stageStory.reading());assert.equal(await p.evaluate(()=>userLocation),before.location);
+    await clickReady(p,'#viewport-dock-gear');await clickReady(p,'#viewport-dock-menu .be-seal-system');await clickReady(p,'#system-dropdown button:first-child');await clickReady(p,'.gs-tab[data-tab="speech"]');await p.waitForSelector('#sr-resume',{visible:true});
    assert.deepEqual(await p.evaluate(()=>['sr-resume','sr-silent','sr-discard'].map(id=>document.getElementById(id).disabled)),[false,false,false]);
    assert.equal(await p.evaluate(()=>__pending.main),1,'blocked actions did not request the main model');
    if(mode==='discard'){
     await clickReady(p,'#sr-discard');await p.waitForFunction(()=>speechRound.pendingState().phase==='discarded'&&!speechRound.pendingState().pending);
-    await clickReady(p,'#game-settings-modal button[onclick="closeGameSettings()"]');await p.waitForFunction(()=>!presentationHost.hasOverlay());
-    await clickReady(p,'#pr-operation-toggle');await p.waitForFunction(()=>!presentationHost.isActive());
+    await clickReady(p,'#game-settings-modal button[onclick="closeGameSettings()"]');
+    await clickReady(p,'#stage-operation');await p.waitForFunction(()=>!stageStory.reading());
     await clickReady(p,'#yanwuchang-scene .scene-btn');
     const expected=await p.evaluate(()=>{const state=__scene3dTest.rng().state;const one=(Math.imul(1664525,state)+1013904223)>>>0,two=(Math.imul(1664525,one)+1013904223)>>>0;
       const value=(two/4294967296*100+getTotalTalents()[actionConfigs['练武'].talentBonus]/2)*(playerMood+10)/100;
@@ -64,13 +60,13 @@ try{
     assert.deepEqual(await p.evaluate(()=>({ap:actionPoints,mood:playerMood,stats:structuredClone(playerStats)})),{ap:before.ap,mood:before.mood,stats:before.stats});
    }
    const result=await p.evaluate(async()=>({phase:(await speechRound.load()).phase,blocked:speechRound.pendingState().pending,time:currentGameTime,day:dayNightStatus,favor:npcFavorability.D,
-     event:currentRandomEvent?.事件描述,eventButtons:document.querySelectorAll('#event-options button').length,eventOwner:document.getElementById('random-event-container')._presentationEvent===currentRandomEvent,
+     event:currentRandomEvent?.事件描述,eventButtons:document.querySelectorAll('#event-options button').length,eventOwner:document.querySelector('#stage-event-tail #event-description')?.textContent===currentRandomEvent?.事件描述,
      input:inputEnable,main:__pending.main,voice:__pending.voices,side:__pending.side,latest:storageService.loadUIConversation().filter(m=>m.role==='assistant').at(-1)?.roundSpeech?.status}));
    assert.equal(result.phase,'published');assert.equal(result.blocked,false);assert.equal(result.time,'20:00');assert.equal(result.day,'night');assert.equal(result.favor,before.favor.D+1,'real SIDE_NOTE favor gain was not blocked in committing');
    assert.equal(result.event,'公开已提交事件');assert.equal(result.eventButtons,1);assert.equal(result.eventOwner,true);assert.equal(result.input,0,'original event-specific input lock remains');
    assert.equal(result.main,mode==='discard'?2:1);assert.equal(result.side,1);assert.equal(result.latest,mode==='silent'?'silent':'ready');
    assertSessionSafe(session,server,channel);await p.screenshot({path:path.join(out,mode+'.png')});checks.push({mode,status:'PASS',result});
-  }catch(error){const state=session?await session.page.evaluate(()=>({host:presentationHost.getDiagnostics(),gate:speechRound.pendingState(),net:window.__pending,modal:document.getElementById('modal-text')?.textContent,status:document.getElementById('sr-status')?.textContent,location:userLocation})).catch(()=>null):null;
+  }catch(error){const state=session?await session.page.evaluate(()=>({reading:stageStory.reading(),gate:speechRound.pendingState(),net:window.__pending,modal:document.getElementById('modal-text')?.textContent,status:document.getElementById('sr-status')?.textContent,location:userLocation})).catch(()=>null):null;
    checks.push({mode,status:'FAIL',message:error.message,state});if(session){await session.page.screenshot({path:path.join(out,mode+'-failure.png')}).catch(()=>{});await writeFile(path.join(out,mode+'-failure.json'),JSON.stringify({message:error.message,state,logs:session.logs,violations:session.violations},null,2));}
   }finally{if(session){await session.close();session=null;}}
  }

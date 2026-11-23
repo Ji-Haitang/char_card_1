@@ -53,9 +53,9 @@
 
 ### 2.4 演出、存储与恢复
 
-完整回复进入横屏短段演出；中区完整返回原操作布局。原正文点击续读，原分页按有序原文定位，兼容重复文本。气泡和菜单借用同一输入节点、发送及重生成处理，原事件按钮仍执行原业务。
+横屏的地图、地点、阅读气泡共用一个居中 16:9 主视窗。GM0 退出后点书本续读；GM1 通过原齿轮返回门派。无演出帧时在原场景上展开全文。当前选项放在本轮全文末尾；历史只读。气泡不复制原输入、发送、重生成或中断按钮。
 
-演出适配器复用上游GalParser、GAL控制器和3D渲染器，接管时持有自己的显示/幕布租约，退出归还原DOM、焦点、inert及独立锁。GM1保留原队列和逐帧时间规则；等待支线选择时沿原界面操作。
+`stage-story` 持有临时书签和显示租约，布局切回竖屏时归还节点。生成等待与调用绑定；横竖切换只移动同一中断控件。详细旅程和验收证据见[横屏迭代跟踪](./横屏统一舞台与故事气泡-迭代方案与现状跟踪.md)。
 
 声音准备阶段确定文本切片；提交后采集最终阅读world，使SIDE_NOTE时间、季节、地点等与保存的阅读环境一致，同时保持音频片段身份。阅读、翻段和播放本身不执行剧情结算。
 
@@ -63,7 +63,7 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 
 ## 3. 文件职责与必须保持的接口
 
-语音核心集中在`module/speech/`，共8个文件。游戏层只通过`speechService`调用核心能力；设置界面入口为`speechUI`，显示层回放入口为`speechPlaybackUI`。同目录内部对象用于各职责之间协作和白盒测试，不再分散接入游戏业务文件。
+语音核心集中在`module/speech/`，共8个文件。游戏层只通过`speechService`调用核心能力；设置界面入口为`speechUI`，竖屏正文回放入口为`speechPlaybackUI`，横屏缓存回听由`stageStoryMedia`管理。同目录内部对象用于各职责之间协作和白盒测试，不再分散接入游戏业务文件。
 
 | 文件 | 职责 | 重点合同 |
 |---|---|---|
@@ -76,15 +76,15 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 | `store.js` | IndexedDB事务和10轮音频保留 | 归属/身份冲突、原子落库、明确字段保存 |
 | `playback.js` | 单音轨播放器及已有录音解析 | 定位校验、停播、迟到保护、纯缓存回听 |
 
-`ui/speech/settings.js`包含配置、单句测试和待办决策；`ui/speech/playback.js`负责原正文与演出段落的播放控件。对应样式分别是`settings.css`、`playback.css`。HTML按编码/提供商/计划/配置/存储/播放/回合/入口顺序加载核心，随后加载UI，继续采用普通脚本。
+`ui/speech/settings.js`包含配置、单句测试和待办决策；`ui/speech/playback.js`负责竖屏原正文的播放控件。对应样式分别是`settings.css`、`playback.css`。HTML按编码/提供商/计划/配置/存储/播放/回合/入口顺序加载核心，随后加载UI，继续采用普通脚本。
 
 常用核心接口：`beginTurn`、`turnInstruction`、`setTurnCompletion`、`finishTurn`、`resumeTurn`、`releaseTurn`、`cancelTurn`、`loadPending`、`guardProgress`；配置与播放接口仍由同一个`speechService`提供。调用者的业务挂点保留在`pipeline/index`及原动作入口。
 
 现行D3数据合同保留`jxz_speech_v1`数据库、`drama3-v1`声音版本、`inline-v1/round-v1`台词版本及`d3-m2a:/m3:`录音标识。文件组织不改变已有D3缓存身份。配置与回放按D3合同校验，未知版本报错并保留原记录；原游戏旧正文及存档读取规则继续沿用。
 
-演出职责仍在`presentation-*`和`gal-scene-resources`，`media-context`提供活动游戏上下文。修改游戏挂点时同时核对上游afterCommit、读档与布局生命周期、提交回执及扣资源前守卫。
+`presentation-plan` 提供可校验的冻结计划和旧档游标，`presentation-adapter` 提供帧投影与原 GAL 显示租约；`media-context` 管活动上下文。`stage-story` 从帧的原文区间派生句页，`stage-story-media` 按回合身份和区间播放已发布的缓存。翻句或切回合不合成语音。
 
-舞台只有一个渲染器：`galPresentation.renderLayers`（game-ui.js）同时服务竖屏演出与横屏阅卷，素材路径规则（场景图/立绘/CG/地点匾、季节昼夜、像素皮肤）全部收口在`gal-scene-resources.js`。竖屏按实时全局取世界状态并沿用站位记忆；阅卷把冻结的`presentationPlan.world`经`opts.context`传入、用帧上预算的`anchor`定位、`sceneTag:false`不画匾额、`missing`集合记忆缺图，图层挂在`#pr-stage`下再由`ui/presentation-reader.css`的ID作用域规则改成横屏样式。`clearLayers`只清传入容器的直系子层，原演出与阅卷互不穿透。改素材目录或图层结构只需动这两处，不要在阅卷里另起绘制代码。
+`galPresentation.renderLayers` 同时服务竖屏原演出和横屏气泡。横屏将冻结的 `world`、帧与站位交给同一渲染器，图层直接挂在 `#main-viewport`。`gal-scene-resources` 继续负责昼夜、普通／像素素材和 CG；舞台样式归 `ui/stage-story.css`。旧绘卷和嵌套图像舞台已移除。
 
 协作者修改时应保持：
 
@@ -93,7 +93,7 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 3. **上游时序**：生成、媒体准备、主提交、支线后处理和自动入场分别落定，不能仅在某个按钮上阻止提前进入。
 4. **上下文保护**：读档、同正文替换、方向切换及晚到结果均按对应生命周期处理；不能用全局解锁代替归还自身租约。
 5. **业务入口**：新增会变更进度的用户操作，在资源修改前接同步守卫；二级确认需复查。低层奖励函数和既有事务完成回调不应被当作新动作拦截。
-6. **原界面所有权**：保持一份GalParser/GAL控制器，输入和事件采用原节点。幕布接口保留原四参语义，媒体owner使用附加参数。
+6. **原界面所有权**：保持一份GalParser/GAL控制器，输入和事件采用原节点。竖屏 GAL 保留原幕布接口，横屏气泡不使用独立幕布。
 7. **默认文字能力**：配音关闭或可选音库不可用时保留原文字路径；已知未处理待办的读取失败不能据此放行新剧情。
 
 ## 4. 建议的协作方式（待双方确认）
@@ -155,7 +155,7 @@ Key、参考和最近10轮录音存于独立本机语音库。普通存档保存
 
 ```powershell
 npm ci --prefix scene3d
-node --test "tests/*.test.mjs" "tests/*.unit.mjs" "tests/gal/*.unit.mjs"
+node --test --test-concurrency=1 "tests/*.test.mjs" "tests/*.unit.mjs" "tests/gal/*.unit.mjs"
 node tests/media-stage.browser.mjs
 node tests/media-turn.browser.mjs
 node tests/media-lifecycle.browser.mjs

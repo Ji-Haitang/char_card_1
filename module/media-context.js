@@ -12,12 +12,11 @@ var mediaContext = (function () {
     }
     function invalidate(){
         epoch++;
-        if(typeof presentationFlow!=='undefined')presentationFlow.cancel();
+        if(typeof stageStory!=='undefined')stageStory.reset();
         if(typeof speechService!=='undefined')speechService.cancelTurn();
         if(typeof speechService!=='undefined')speechService.stop();
         if(typeof speechUI!=='undefined')speechUI.closeSingle();
         if(typeof speechPlaybackUI!=='undefined')speechPlaybackUI.invalidate();
-        if(typeof presentationHost!=='undefined')presentationHost.invalidate();
     }
     function sorted(value){
         if(Array.isArray(value))return value.map(sorted);

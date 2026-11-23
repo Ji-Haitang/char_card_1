@@ -28,7 +28,9 @@ body {
 }
 
 .game-container {
-    /* 通过JS动态设置宽高，保持4:3比例 */
+    /* Legacy portrait host; wide iframe uses the 16:9 stage below. */
+    width: min(100vw, 146vh);
+    aspect-ratio: 1.46;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -37,6 +39,18 @@ body {
     background-repeat: no-repeat;
     margin-top: 0;  /* 确保紧贴顶部 */
     overflow: hidden;  /* 防止子元素溢出 */
+}
+
+/* The HUD and backdrop use the full stage. Actor art is composed on a
+   narrower transparent plate; anchor that plate and all its FX as one unit. */
+.combat-plane { position: absolute; inset-block: 0; width: 100%; pointer-events: none; }
+.player-plane { left: 0; }
+.enemy-plane { right: 0; }
+@media (min-aspect-ratio: 8/5) {
+    .game-container { width: min(100vw, 177.777778vh); aspect-ratio: 16/9; container-type: size; }
+    .combat-plane { width: 146cqh; }
+    .game-container .screen-flash { position: absolute; inset: 0; width: auto; height: auto; }
+    .game-container .command-buttons-floating { width: min(64%, 98cqh); padding-right: 0; padding-bottom: 0; max-width: none; }
 }
 
 /* 背景毛玻璃层 */
@@ -1470,34 +1484,34 @@ body {
 </head>
 <body data-responsive-page="battle">
     <div class="game-container">
-        <!-- 主角图层 -->
-        <div class="player-portrait-layer"></div>
-        <!-- NPC图层 -->
-        <div class="npc-portrait-layer"></div>
+        <!-- Each actor and its effects share the original 1.46 registration plane.
+             No transforms/stacking contexts on these wrappers: keep screen blending and shake intact. -->
+        <div class="combat-plane player-plane">
+            <div class="player-portrait-layer"></div>
+            <div class="battle-effect player-taunt-effect" id="player-taunt-effect">
+                <img src="assets/image/static/嘴炮.png" alt="嘴炮">
+            </div>
+            <div class="battle-effect player-gather-effect" id="player-gather-effect">
+                <img src="assets/image/static/集气.gif" alt="集气">
+            </div>
+            <div class="battle-effect player-hit-effect" id="player-hit-effect">
+                <img src="assets/image/static/攻击.gif" alt="攻击">
+            </div>
+        </div>
+        <div class="combat-plane enemy-plane">
+            <div class="npc-portrait-layer"></div>
+            <div class="battle-effect enemy-taunt-effect" id="enemy-taunt-effect">
+                <img src="assets/image/static/嘴炮.png" alt="嘴炮">
+            </div>
+            <div class="battle-effect enemy-gather-effect" id="enemy-gather-effect">
+                <img src="assets/image/static/集气.gif" alt="集气">
+            </div>
+            <div class="battle-effect enemy-hit-effect" id="enemy-hit-effect">
+                <img src="assets/image/static/攻击.gif" alt="攻击">
+            </div>
+        </div>
         <div class="screen-flash"></div>
-        
-        <!-- 战斗特效图层 -->
-        <!-- 玩家特效 -->
-        <div class="battle-effect player-taunt-effect" id="player-taunt-effect">
-            <img src="assets/image/static/嘴炮.png" alt="嘴炮">
-        </div>
-        <div class="battle-effect player-gather-effect" id="player-gather-effect">
-            <img src="assets/image/static/集气.gif" alt="集气">
-        </div>
-        <div class="battle-effect player-hit-effect" id="player-hit-effect">
-            <img src="assets/image/static/攻击.gif" alt="攻击">
-        </div>
-        <!-- 敌人特效 -->
-        <div class="battle-effect enemy-taunt-effect" id="enemy-taunt-effect">
-            <img src="assets/image/static/嘴炮.png" alt="嘴炮">
-        </div>
-        <div class="battle-effect enemy-gather-effect" id="enemy-gather-effect">
-            <img src="assets/image/static/集气.gif" alt="集气">
-        </div>
-        <div class="battle-effect enemy-hit-effect" id="enemy-hit-effect">
-            <img src="assets/image/static/攻击.gif" alt="攻击">
-        </div>
-        
+
         <!-- 战斗场景 -->
         <div class="battle-scene">
  
@@ -1697,6 +1711,7 @@ body {
         </div>
     </div>
     <script>
+const portraitImageCache = new Map();
 // //回合制系统集成更新 - 获取URL参数
 const urlParams = new URLSearchParams(window.location.search);
 
@@ -2998,6 +3013,7 @@ function getCategoryPortrait(category) {
 function updateEnemyPortrait(portraitUrl) {
     const npcPortraitLayer = document.querySelector('.npc-portrait-layer');
     npcPortraitLayer.style.backgroundImage = `url('${portraitUrl}')`;
+    getCachedPortraitImage(new URL(portraitUrl, document.baseURI).href);
 }
 
 // 清除敌人立绘
@@ -3011,6 +3027,7 @@ function updatePlayerPortrait(portraitUrl) {
     const playerPortraitLayer = document.querySelector('.player-portrait-layer');
     if (playerPortraitLayer) {
         playerPortraitLayer.style.backgroundImage = `url('${portraitUrl}')`;
+        getCachedPortraitImage(new URL(portraitUrl, document.baseURI).href);
     }
 }
 
@@ -3293,8 +3310,6 @@ function setupButtonEvents() {
     }
 }
 
-const portraitImageCache = new Map();
-
 function getBackgroundImageUrl(element) {
     if (!element) return '';
     const bg = window.getComputedStyle(element).backgroundImage || '';
@@ -3320,9 +3335,7 @@ function isClickOnOpaqueBackground(event, layer) {
     if (!url) return false;
 
     const cache = getCachedPortraitImage(url);
-    if (!cache || !cache.img.complete || cache.img.naturalWidth === 0) {
-        return true;
-    }
+    if (!cache || !cache.img.complete || cache.img.naturalWidth === 0) return false;
 
     try {
         const rect = layer.getBoundingClientRect();
@@ -5177,56 +5190,6 @@ function handleKeyPress(event) {
 }
 
 // 初始化游戏 
-// 动态设置1.46比例的函数 
-function setAspectRatio() { 
-    const gameContainer = document.querySelector('.game-container'); 
-    if (!gameContainer) return;
-
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-
-    // 计算1.46比例的尺寸（与主界面viewport一致）
-    const aspectRatio = 1.46;
-    let gameWidth, gameHeight;
-
-    // 优先基于宽度计算（高度为宽度的 1/1.46 ≈ 0.685）
-    gameWidth = viewportWidth;
-    gameHeight = viewportWidth / aspectRatio;
-
-    // 如果计算出的高度超过视口高度，则根据高度反推宽度
-    if (gameHeight > viewportHeight) {
-        gameHeight = viewportHeight;
-        gameWidth = viewportHeight * aspectRatio;
-    }
-
-    // 确保不会超出边界
-    gameWidth = Math.min(gameWidth, viewportWidth);
-    gameHeight = Math.min(gameHeight, viewportHeight);
-
-    // 应用尺寸
-    gameContainer.style.width = `${gameWidth}px`;
-    gameContainer.style.height = `${gameHeight}px`;
-    
-    // 确保容器紧贴顶部
-    gameContainer.style.marginTop = '0';
-    
-    // 水平居中（如果宽度小于视口宽度）
-    if (gameWidth < viewportWidth) {
-        gameContainer.style.marginLeft = `${(viewportWidth - gameWidth) / 2}px`;
-        gameContainer.style.marginRight = 'auto';
-    } else {
-        gameContainer.style.marginLeft = '0';
-        gameContainer.style.marginRight = '0';
-    }
-
-    console.log(`游戏容器尺寸: ${gameWidth}x${gameHeight}, 视口: ${viewportWidth}x${viewportHeight}, 比例: ${(gameWidth/gameHeight).toFixed(2)}`);
-}
-
-// 窗口大小变化时重新设置比例 
-function handleResize() { 
-    setAspectRatio(); 
-}
-
 function installSkillTestBattleHelper() {
     if (window.skillTestBattleHelper) {
         return window.skillTestBattleHelper;
@@ -6384,23 +6347,7 @@ function installSkillTestMessageBridge() {
     console.log('[SkillTestHelper] battle bridge ready');
 }
 
-// 初始化尺寸设置 
-function initAspectRatio() { 
-    setAspectRatio();
-
-    // 监听窗口大小变化
-    window.addEventListener('resize', handleResize);
-    window.addEventListener('orientationchange', () => {
-        // 延迟执行，等待方向变化完成
-        setTimeout(setAspectRatio, 100);
-    });
-}
-
-// 修改原有的DOMContentLoaded事件监听 
-document.addEventListener('DOMContentLoaded', () => { 
-    // 首先设置4:3比例 
-    initAspectRatio();
-
+document.addEventListener('DOMContentLoaded', () => {
     // 设置主背景
     const gameContainer = document.querySelector('.game-container');
     if (gameContainer) {

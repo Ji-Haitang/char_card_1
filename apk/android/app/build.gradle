@@ -7,8 +7,8 @@ android {
         applicationId "com.jihaitang.jxz"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 8
-        versionName "1.6.1"
+        versionCode 10
+        versionName "1.6.3"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -31,6 +31,11 @@ android {
             signingConfig signingConfigs.debug
         }
         release {
+            // Published builds: not debuggable (also disables WebView remote debugging).
+            // Deliberately left unsigned here: 打包APK.ps1 signs it with apksigner like the
+            // Godot export (V1+V2+V3). V1/V2 use the legacy key, V3 the release key plus
+            // the .signing/ lineage, so existing installs upgrade in place everywhere.
+            debuggable false
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

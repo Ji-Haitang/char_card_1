@@ -83,7 +83,7 @@ try{
                 await speechRound.savePreferences({enabled:true});await speechStore.setSetting('single-test:main',{provider:'fish-drama3',enabled:false,targetNpcId:'D'});
             });
             baseline=await probe(p);await installBoundary(p,'before');
-            await p.type('#free-action-input','公开暂停后续配行动');await clickReady(p,'#free-action-send-btn');
+            await clickReady(p,'#stage-input');await p.type('#free-action-input','公开暂停后续配行动');await clickReady(p,'#free-action-send-btn');
             await p.waitForSelector('#srd-pause',{visible:true});
             assert.equal(await p.evaluate(()=>__resumeNet.voice.length),2);
             await clickReady(p,'#srd-pause');await p.waitForFunction(()=>!pipeline.isBusy()&&!speechService.isBusy());

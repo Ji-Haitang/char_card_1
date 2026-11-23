@@ -49,13 +49,13 @@ export function parseGradleIdentity(code) {
   const applicationId = /\bapplicationId\s*(?:=\s*)?["']([^"']+)["']/.exec(code)?.[1];
   const versionCode = Number(/\bversionCode\s*(?:=\s*)?(\d+)/.exec(code)?.[1]);
   const versionName = /\bversionName\s*(?:=\s*)?["']([^"']+)["']/.exec(code)?.[1];
-  assert(applicationId === 'com.jihaitang.jxz' && versionCode === 8 && versionName === '1.6.1', 'Unapproved Android application/version change');
+  assert(applicationId === 'com.jihaitang.jxz' && versionCode === 10 && versionName === '1.6.3', 'Unapproved Android application/version change');
   return { applicationId, versionCode, versionName };
 }
 export function apkPaths(record, runDir) {
   const isolatedRoot = path.join(runDir, 'apk-copy');
   const apkRoot = path.join(isolatedRoot, 'apk'), androidRoot = path.join(apkRoot, 'android');
-  return { isolatedRoot, apkRoot, androidRoot, wwwRoot: path.join(apkRoot, 'www'), assetsRoot: path.join(androidRoot, 'app/src/main/assets'), apkPath: path.join(androidRoot, 'app/build/outputs/apk/debug/app-debug.apk'), wwwExpectedManifest: path.join(runDir, 'www-expected-manifest.json') };
+  return { isolatedRoot, apkRoot, androidRoot, wwwRoot: path.join(apkRoot, 'www'), assetsRoot: path.join(androidRoot, 'app/src/main/assets'), apkPath: path.join(androidRoot, 'app/build/outputs/apk/release/app-release-unsigned.apk'), wwwExpectedManifest: path.join(runDir, 'www-expected-manifest.json') };
 }
 export async function loadPrepared(record, runDir) {
   const prepared = requireStep(record, 'prepare:apk');

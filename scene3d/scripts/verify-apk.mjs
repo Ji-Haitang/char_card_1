@@ -195,8 +195,12 @@ export function verifyApkEntries(entries, staging) {
   assert(!Object.hasOwn(staging.assetFiles, 'native-bridge.js'), 'App staging collides with library native-bridge.js');
   const actualAssets = [...entries.keys()].filter(name => name.startsWith('assets/')).sort();
   const expectedAssets = [...Object.keys(staging.assetFiles).map(name => `assets/${name}`), 'assets/native-bridge.js'].sort();
-  const missing = expectedAssets.filter(name => !entries.has(name)), expectedSet = new Set(expectedAssets);
-  const extra = actualAssets.filter(name => !expectedSet.has(name));
+  const expectedSet = new Set(expectedAssets);
+  // assembleRelease adds AGP-generated ART baseline profiles (androidx.profileinstaller).
+  // Only these exact binary paths are tolerated; they never come from www/public.
+  const allowedGenerated = new Set(['assets/dexopt/baseline.prof', 'assets/dexopt/baseline.profm']);
+  const missing = expectedAssets.filter(name => !entries.has(name));
+  const extra = actualAssets.filter(name => !expectedSet.has(name) && !allowedGenerated.has(name));
   assert(!missing.length && !extra.length, `APK assets exact file set mismatch: ${JSON.stringify({ missing, extra })}`);
   const bridge = entries.get('assets/native-bridge.js');
   assert(bridge.length === BRIDGE_INFO.bytes && sha256(bridge) === BRIDGE_INFO.sha256, 'APK library native-bridge.js bytes mismatch');

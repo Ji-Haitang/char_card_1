@@ -1,0 +1,110 @@
+/* The original story column and dock return to their original homes outside the landscape stage. */
+#stage-tools,.story-area > .stage-line,#stage-book,#stage-backdrop { display:none !important }
+body.stage-sight #main-viewport > .stage-bubble {display:none !important}
+body.stage-operation #main-viewport:not([data-scene3d-sightseeing="true"]):not(:has(#player-stats-scene.active,#relationships-scene.active)) #stage-book {display:grid !important;place-items:center;position:absolute;left:12px;bottom:12px;z-index:945;width:40px;height:40px;box-sizing:border-box;padding:0;border:1px solid #816e5266;border-radius:50%;background:#f6eedfed;color:#403528;box-shadow:0 1px 4px #30231555;cursor:pointer;touch-action:manipulation}
+#stage-book svg{width:21px;height:21px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+body.stage-reading #stage-backdrop {display:block !important;position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:none;background:transparent;z-index:790;touch-action:manipulation}
+body.stage-reading #stage-backdrop:not(:focus-visible){outline:0}
+body.stage-reading #main-viewport > :is(.slg-loading-layer,.scene3d-reset,.scene3d-sightseeing),body.stage-reading #sect-3d-root :is(.scene3d-reset,.scene3d-sightseeing){visibility:hidden}
+body.stage-reading.slg-global #main-viewport:not(:has(.stage-story-layers)) > .scene.active{display:block !important}
+body.stage-reading .stage-story-layers {z-index:780;overflow:hidden;background:#252720}
+.stage-story-layers .slg-emotion-layer:not(.slg-emotion-special-cg){transform:translateX(-50%)}
+.stage-story-layers .slg-emotion-layer:not(.slg-emotion-special-cg) img{height:98%}
+.stage-story-layers .slg-cast-left:not(.slg-emotion-special-cg){transform:translateX(-59%)}
+.stage-story-layers .slg-cast-right:not(.slg-emotion-special-cg){transform:translateX(-41%)}
+.stage-story-layers :is(.slg-emotion-special-cg,.slg-cg-layer){left:0 !important;transform:none;backdrop-filter:blur(10px)}
+.stage-story-layers :is(.slg-emotion-special-cg,.slg-cg-layer) img{width:100%;height:100%;object-fit:contain;object-position:center}
+.stage-story-layers:has(.slg-emotion-special-cg,.slg-cg-layer) :is(.slg-scene-tag,.slg-emotion-layer:not(.slg-emotion-special-cg)),.stage-story-layers:has(.slg-cg-layer) .slg-emotion-special-cg{visibility:hidden}
+/* A translucent paper sheet, fine ink double rule and a short cinnabar edge mark.
+   The mark lives in the border instead of reserving a heading row. */
+body.layout-landscape #main-viewport {--stage-paper:linear-gradient(90deg,#933d31 0 24px,transparent 24px) 8px 0 / 36px 2px no-repeat,linear-gradient(110deg,#f4eddddb,#e6ddcbbd);--stage-rules:inset 0 0 0 2px #faf4e1a6,inset 0 0 0 3px #71614957,0 -1px 5px #27190c33}
+body.layout-landscape #main-viewport > .stage-bubble {position:absolute;z-index:810;left:0;right:0;bottom:0;width:auto;height:auto;min-height:0;max-height:90%;overflow:visible;container-type:normal;gap:0;padding:clamp(5px,1.1vmin,12px) clamp(8px,2vmin,24px);color:#33281c;background:var(--stage-paper) !important;border:1px solid #5b4e3da6;border-radius:0 !important;box-shadow:var(--stage-rules);backdrop-filter:blur(3px);--tool-size:36px;--tool-gap:8px}
+body.layout-landscape #main-viewport > .stage-full:not(.stage-editing){inset:0;max-height:none;background-color:#eee7d8 !important}
+/* The bubble owns misses between buttons and up to 14px above them. Never forward
+   these taps to the backdrop; sight mode hides the entire bubble including this strip. */
+body.stage-reading #main-viewport > .stage-bubble:not(.stage-full,.stage-editing)::before{content:'';position:absolute;inset:auto 0 100%;height:calc(var(--tool-size) + var(--tool-gap) + 14px);background:transparent;pointer-events:auto}
+body.stage-reading #stage-tools {position:relative;display:flex !important;align-items:center;gap:clamp(4px,1vmin,12px);min-height:var(--tool-size);padding-left:0;border-bottom:1px solid #90795166;flex:0 0 auto}
+#stage-tools > button{display:grid;place-items:center;flex:none;width:var(--tool-size);height:var(--tool-size);padding:0;border:1px solid #816e524d;border-radius:50%;background:#f6eedfed;color:#403528;box-shadow:0 1px 4px #30231555;cursor:pointer;touch-action:manipulation}
+#stage-tools > button svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+#stage-tools > button:is([aria-expanded=true],[aria-pressed=true]){background:#725043;color:#fff7e6}
+#stage-tools > button:focus-visible{outline:2px solid #993e24;outline-offset:2px}
+#stage-tools > #stage-event{background:#943f30;color:#fff6e0}
+.stage-count {margin-left:auto;font:13px/1.4 Georgia,serif;color:#625340;white-space:nowrap}
+body.stage-reading .stage-bubble:not(.stage-full,.stage-editing) #stage-tools{position:absolute;bottom:calc(100% + var(--tool-gap));left:6px;right:6px;border:0;pointer-events:none}
+body.stage-reading #stage-tools > button{pointer-events:auto}
+.stage-bubble:not(.stage-full,.stage-editing) .stage-count{background:#f6eedfe0;border-radius:12px;padding:2px 8px}
+.stage-bubble .stage-count:empty{display:none}
+body.stage-reading #stage-tools :is(#stage-menu-slot,#stage-task-slot){flex:none;width:var(--tool-size);height:var(--tool-size)}
+body.stage-reading #stage-tools #viewport-dock-layer{position:static;container-type:normal;pointer-events:none;overflow:visible}
+body.stage-reading #stage-tools #viewport-dock{position:static;justify-content:flex-start;align-items:center}
+body.stage-reading #main-viewport #stage-tools :is(.viewport-dock-gear,.viewport-task-btn){width:var(--tool-size);height:var(--tool-size)}
+body.stage-reading #main-viewport #stage-tools .viewport-task-btn{position:static;transform:none}
+body.stage-reading #stage-tools #viewport-dock-menu{position:absolute;left:0;bottom:calc(100% + 6px);width:min(100%,740px);padding:4px;background:#f1e6d4f5;border-radius:3px;box-sizing:border-box}
+.stage-full:not(.stage-editing) #stage-tools #viewport-dock-menu{top:calc(100% + 4px);bottom:auto}
+body.stage-reading .stage-full:not(.stage-editing) #stage-tools #viewport-dock-menu{bottom:auto}
+.stage-full:not(.stage-editing) #stage-tools .dropdown-menu{top:100%;bottom:auto}
+body.stage-reading #stage-tools #viewport-dock-menu .control-btn{max-height:36px}
+body.stage-reading #stage-tools .dropdown-menu{max-height:min(37dvh,190px)}
+body.stage-reading .stage-bubble:not(.stage-editing,.stage-full) > .stage-line{display:flex !important;align-items:center;gap:clamp(6px,1.5vmin,16px)}
+.stage-line p{flex:1;min-width:0;margin:.35em 0;font-size:calc(var(--story-font-size,16px) + clamp(1px,.65vmin,5px));line-height:1.55;min-height:1.8em;max-height:19dvh;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.stage-line button{align-self:stretch;min-width:32px;border:0;background:transparent;color:#754032;font:32px/1 Georgia,serif;cursor:pointer}.stage-line button:disabled{opacity:.27}
+body.stage-reading .stage-bubble:not(.stage-full) .story-content-wrapper,body.stage-reading .stage-editing .story-content-wrapper,body.stage-reading .stage-bubble:not(.stage-editing) .free-action-row,body.stage-reading .stage-bubble:not(.stage-full,.stage-editing) .free-action-container,body.stage-reading .stage-editing .story-expand-bar,body.stage-reading .stage-bubble :is(.story-expand-slot,#story-history-page-input,#story-history-jump-btn){display:none !important}
+body.stage-reading .stage-bubble .story-content-wrapper{padding:6px 0;overscroll-behavior:contain}
+body.stage-reading .stage-bubble .story-text{cursor:text !important;opacity:1 !important;background:none;color:inherit;border:0;box-shadow:none}
+body.stage-reading .stage-bubble .free-action-container{padding:4px 0 0;background:none;border:0;box-shadow:none}
+body.stage-reading .stage-bubble .free-action-row{display:flex;align-items:center;gap:4px}
+body.stage-reading .stage-bubble .free-action-input{flex:1;min-width:0;min-height:30px;max-height:24dvh}
+body.stage-reading .stage-bubble .free-action-send-btn{flex:0 0 auto;width:auto;min-height:30px;padding:2px 10px}
+body.stage-reading .stage-bubble .story-expand-bar{margin:0;justify-content:space-between}
+#stage-event-tail:empty,#stage-event-tail[inert],#stage-tools > [hidden]{display:none !important}
+#stage-event-tail{flex:none}
+body.stage-turn-wait .container > .story-area{display:none !important}
+#stage-media-status:empty,body:not(.stage-reading) #stage-media-status{display:none}
+#stage-media-status{padding:2px 0;color:#684532}
+#stage-tools > button:disabled{opacity:.48;cursor:default}
+/* Read-only previous turn behind the original progress and interrupt controls. */
+.stage-wait-view{position:absolute;inset:0;overflow:hidden;pointer-events:none}
+.stage-wait-view .stage-story-layers{position:absolute;inset:0;z-index:0;overflow:hidden;background:#252720}
+.stage-wait-footer{position:absolute;inset:auto 0 0;z-index:2;display:flex;flex-direction:column;align-items:stretch;gap:6px;pointer-events:none}
+.stage-wait-footer #stream-controls{align-self:flex-start;pointer-events:auto;margin:0 0 0 8px;padding:0}
+.stage-wait-footer #stream-controls:last-child{margin-bottom:8px}
+body.stage-turn-wait #stream-mask #stream-stop-btn{position:relative;inset:auto;display:grid;place-items:center;box-sizing:border-box;width:40px;height:40px;min-width:0;margin:0 !important;padding:0 !important;background:#973c30 !important;border:1px solid #fff3da99 !important;border-radius:50% !important;box-shadow:0 1px 4px #30231566 !important;color:white !important;font-size:0 !important;transform:none}
+body.stage-turn-wait #stream-mask #stream-stop-btn::after{content:'';position:absolute;width:12px;height:12px;box-sizing:border-box;border:2px solid white;border-radius:1px}
+.stage-wait-prose{box-sizing:border-box;margin:0;max-height:35dvh;overflow:auto;white-space:pre-line;overflow-wrap:anywhere;padding:.55em clamp(16px,4vw,60px);font:clamp(16px,3.4vmin,23px)/1.5 serif;color:#33281c;background:var(--stage-paper);border:1px solid #5b4e3da6;box-shadow:var(--stage-rules);backdrop-filter:blur(3px);pointer-events:auto;overscroll-behavior:contain}
+.stage-wait-pages{position:relative;pointer-events:auto}
+.stage-wait-pages .stage-wait-prose{padding-inline:42px;min-height:38px}
+.stage-wait-pages button{position:absolute;z-index:1;inset:0 auto 0 0;width:38px;padding:0;border:0;background:transparent;color:#754032;font:26px/1 Georgia,serif;cursor:pointer}
+.stage-wait-pages button:last-child{inset:0 0 0 auto}.stage-wait-pages button:disabled{opacity:.27}
+body.stage-turn-wait #stream-mask{gap:8px;background:transparent}
+body.stage-turn-wait #stream-mask .stream-spinner,body.stage-turn-wait #stream-log{z-index:1}
+body.stage-turn-wait #stream-log{min-height:24px;align-content:center;background:#2e241bd9;border-radius:14px;padding:3px 10px;font-size:14px;color:#fff6e4}
+body.stage-turn-wait #stream-log:empty{display:none}
+.stage-story-layers.gal-3dver > .slg-emotion-layer:not(.slg-emotion-special-cg) img{height:73%;bottom:12%}
+
+/* Compact options stay in the prose scroll; long descriptions wrap, never clip. */
+#stage-event-tail > .show{position:static;height:auto;max-height:none;overflow:visible;box-sizing:border-box;width:100%;max-width:54rem;margin:6px auto;padding:6px 10px !important;border-width:3px !important;border-image-width:3px !important}
+#stage-event-tail :is(.event-title,.battle-event-title){margin:0 0 4px;padding:0 0 3px;font-size:clamp(15px,2.6vmin,19px) !important;line-height:1.25}
+#stage-event-tail :is(.event-description,.battle-event-description):not(:empty){display:block;white-space:pre-line;margin:3px 0 5px;padding:0;font-size:clamp(13px,2.2vmin,16px) !important;line-height:1.4}
+#stage-event-tail .event-options{gap:4px}
+#stage-event-tail .event-option-btn{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:2px 10px;min-height:36px;box-sizing:border-box;padding:4px 9px !important;border-width:2px !important;border-image-width:2px !important;text-align:left}
+#stage-event-tail .event-option-btn .option-desc{flex:1 1 10em;margin:0;font-size:clamp(14px,2.4vmin,17px) !important;line-height:1.35}
+#stage-event-tail .event-option-btn :is(.option-reward,.option-success-rate){margin:0;font-size:clamp(12px,2vmin,14px) !important;line-height:1.35}
+#stage-event-tail :is(.battle-enemy-info,.battle-reward,.battle-actions){display:flex;flex-wrap:wrap;align-items:center;gap:3px 12px;margin:4px 0;padding:2px 5px;min-height:0}
+#stage-event-tail :is(.enemy-info-item,.battle-reward-text){margin:0;font-size:14px !important}
+#stage-event-tail .battle-action-btn{min-height:36px;padding:3px 12px !important}
+@media(orientation:landscape) and (max-height:520px){
+body.stage-reading #main-viewport > .stage-bubble{padding:4px 6px}
+body.stage-reading .stage-bubble:not(.stage-full,.stage-editing) > .stage-line{gap:2px}
+body.stage-reading .stage-line p{font-size:max(14px,var(--story-font-size,16px));margin:0;line-height:1.4;min-height:0}
+body.stage-reading .stage-line button{min-width:26px;min-height:32px;padding:0;font-size:24px}
+body.stage-reading .stage-bubble .story-text{padding:2px 6px;font-size:clamp(14px,2cqw,16px)}
+body.stage-reading .stage-bubble .story-content-wrapper{padding:3px 0}
+.stage-wait-prose{padding:7px 12px;font-size:15px}
+body.stage-reading #stage-tools{gap:4px}.stage-bubble:not(.stage-full,.stage-editing) #stage-tools .stage-count{font-size:12px}}
+
+
+/* All eight map plates are 3:2. The original locations were traced on a centred
+   1460×1000 crop of that plate. Scale this registration plane with the art,
+   not with the cropped 16:9 visible window. HUD/popups stay viewport-relative. */
+.map-registration {display:contents}
+body.layout-landscape .map-registration {display:block;position:absolute;left:calc(50% - 100% * 730 / 1500);top:calc(50% - 100cqw / 3);width:calc(100% * 1460 / 1500);aspect-ratio:1460 / 1000}

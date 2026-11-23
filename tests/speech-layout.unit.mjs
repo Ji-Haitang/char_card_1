@@ -10,7 +10,7 @@ test('speech has eight core files, a single ordered HTML load and one game-facin
     const html = fs.readFileSync(new URL('index.html', root), 'utf8');
     const scripts = [...html.matchAll(/src="(module\/speech\/[^"?]+)\?/g)].map(m => m[1]);
     assert.deepEqual(scripts, ['msgpack', 'provider', 'plan', 'config', 'store', 'playback', 'runtime', 'service'].map(n => 'module/speech/' + n + '.js'));
-    for (const name of ['pipeline', 'game-ui', 'presentation-actions', 'presentation-reader', 'media-context']) {
+    for (const name of ['pipeline', 'game-ui', 'stage-story', 'media-context']) {
         const source = fs.readFileSync(new URL('module/' + name + '.js', root), 'utf8');
         assert.doesNotMatch(source, /\bspeech(?:Turn|Round|Plan|InlinePlayer|SingleTest|RoundPlayback)\b/);
     }

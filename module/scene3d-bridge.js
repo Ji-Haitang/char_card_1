@@ -36,7 +36,6 @@
     let page = null, pageParts = null, pageAnimation = null;
     // GAL 演出翻页纸持有中（cover 开始 → reveal 结束）：这段时间纸张归演出层，3D 的 abortTurn 不得掐掉它。
     let curtainHeld = false;
-    let curtainOwner = null; // Optional reading-host lease; old four-argument GAL calls remain supported.
     // 观景模式：只留 3D 场景本体。NPC 从投影中整体摘除（见 snapshot），2D 业务层 / 右下角 HUD /
     // 3D 自带的地名、悬浮按钮、镜头归位由 data-scene3d-sightseeing 的样式规则隐藏；
     // 铺满视窗的透明退出层吃掉一切点击，点哪里都退出。换房 / 视窗失格 / 任何业务遮罩出现时自动退出。
@@ -213,7 +212,6 @@
         // reveal, pin it flat synchronously instead of starting another translucent cover.
         if (turn && turn.phase !== 'revealing') return turn;
         const interruptedReveal = Boolean(turn || curtainHeld);
-        curtainOwner = null;
         cancelPageAnimation();
         curtainHeld = false; // 3D 换房接管纸张；演出层后续的 playCurtain 会因 turn 非空直接 resolve
         const owner = { phase: interruptedReveal ? 'covered' : 'covering', covered: null };
@@ -249,23 +247,11 @@
         return runPageTurn(cover, label, detailText, '山门图志');
     }
     // GAL 演出的翻页纸：不受 3D 偏好门控；bridge 未 start（无 viewport）或 3D 换房正在翻页（turn 非空）时不播、直接 resolve。
-    function playCurtain(cover, label, detailText, seal, owner) {
+    function playCurtain(cover, label, detailText, seal) {
         if (!viewport || turn) return Promise.resolve(false);
-        // A stale unleased GAL reveal may not uncover the reader's sheet, and vice versa.
-        const token = owner || null;
-        if (curtainHeld && curtainOwner !== token) return Promise.resolve(false);
-        if (!cover && owner && curtainOwner !== owner) return Promise.resolve(false);
-        if (cover) { curtainHeld = true; curtainOwner = token; }
+        if (cover) curtainHeld = true;
         const done = runPageTurn(cover, label, detailText, seal || '话本');
-        return cover ? done : done.finally(() => {
-            if (curtainOwner === token) { curtainHeld = false; curtainOwner = null; }
-        });
-    }
-    function cancelCurtain(owner) {
-        if (!owner || curtainOwner !== owner) return;
-        curtainOwner = null; curtainHeld = false;
-        cancelPageAnimation();
-        if (page) page.hidden = true;
+        return cover ? done : done.finally(() => { curtainHeld = false; });
     }
     function runPageTurn(cover, label, detailText, sealText) {
         const { page, sheet, seal, title, detail } = pageSheet();
@@ -815,7 +801,7 @@
         });
         notify('start', true);
     }
-    window.GameSceneBridge = Object.freeze({ start, notify, invalidate, afterRestore, captureTime, publishNpcs, setBusy, setPreference, openSettings, retry, showNpcInfoAtAnchor, showLocationInfoAtAnchor, playCurtain, cancelCurtain, setSightseeing,
+    window.GameSceneBridge = Object.freeze({ start, notify, invalidate, afterRestore, captureTime, publishNpcs, setBusy, setPreference, openSettings, retry, showNpcInfoAtAnchor, showLocationInfoAtAnchor, playCurtain, setSightseeing,
         isSightseeing() { return sightseeing; },
         // 仅“真正在换房”才算：turn 非空，或在飞的 apply 目标场景 ≠ 已就绪场景。普通的锁/解锁重投影
         // （setBusy('gal') 本身就会触发一次）不应抑制演出退出时的翻页纸。

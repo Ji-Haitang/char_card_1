@@ -726,7 +726,6 @@ const galPresentation = (() => {
     }
     /** GameMode 切换 / 存档恢复等硬重置：同步清层、清 commit 记忆。 */
     function reset() {
-        if (typeof presentationHost !== 'undefined') presentationHost.invalidate();
         slgSession = null;
         exit({ reason: 'reset', curtain: false });
         clearLayers(viewportEl());
@@ -876,139 +875,10 @@ function updateStatsDisplay() {
 }
 
 // 更新关系显示
-function updateRelationshipsDisplay() {
-    const grid = document.getElementById('relationship-grid');
-    hideTooltip();
-    grid.innerHTML = '';
-    
-    Object.keys(npcs).forEach(npcId => {
-        const npc = npcs[npcId];
-        const favorability = npcFavorability[npcId];
-        const isVisible = npcVisibility[npcId];
-        
-        const card = document.createElement('div');
-        card.className = 'relationship-card';
-        
-        card.innerHTML = `
-            <div class="relationship-portrait">
-                <img src="${npcPortraits[npcId]}" alt="${npc.name}">
-            </div>
-            <div class="relationship-info">
-                <div class="relationship-name">${npc.name}</div>
-                <div class="relationship-bar">
-                    <div class="relationship-fill" style="width: ${Math.max(0, Math.min(100, favorability))}%"></div>
-                </div>
-                <div class="relationship-value">好感度: <span class="relationship-value-number">${favorability}</span></div>
-                <div class="relationship-controls">
-                    <label class="visibility-checkbox">
-                        <input type="checkbox" id="visibility-${npcId}" ${isVisible ? 'checked' : ''} 
-                               onchange="toggleNpcVisibility('${npcId}')">
-                        <span class="checkbox-label">出场</span>
-                    </label>
-                </div>
-            </div>
-        `;
-        
-        card.tabIndex = 0;
-        card.addEventListener('pointerenter', function(e) {
-            if (e.pointerType === 'mouse') showTooltip(e, npc.description);
-        });
-        card.addEventListener('pointerleave', function(e) {
-            if (e.pointerType === 'mouse' && !relationshipTooltipPinned &&
-                !document.getElementById('tooltip').contains(e.relatedTarget)) hideTooltip();
-        });
-        card.addEventListener('click', function(e) {
-            if (e.target.closest('input, label, button')) {
-                hideTooltip();
-                return;
-            }
-            if (relationshipTooltipAnchor === card && relationshipTooltipPinned) {
-                hideTooltip();
-            } else {
-                showTooltip(e, npc.description);
-                relationshipTooltipPinned = true;
-            }
-        });
-        card.addEventListener('keydown', function(e) {
-            if (e.target !== card || !['Enter', ' '].includes(e.key)) return;
-            e.preventDefault();
-            card.click();
-        });
-        
-        grid.appendChild(card);
-    });
-}
-
-
-let relationshipTooltipAnchor = null;
-let relationshipTooltipPinned = false;
-let relationshipTooltipCleanup = null;
-
-// Relationship descriptions use viewport coordinates and an independently scrollable body.
-function showRelationshipTooltip(card, text) {
-    hideTooltip();
-    const tooltip = document.getElementById('tooltip');
-    const viewport = document.getElementById('main-viewport');
-    if (!tooltip || !viewport) return;
-    const bounds = viewport.getBoundingClientRect();
-    const left = Math.max(0, bounds.left) + 8;
-    const top = Math.max(0, bounds.top) + 8;
-    const right = Math.min(window.innerWidth, bounds.right) - 8;
-    const bottom = Math.min(window.innerHeight, bounds.bottom) - 8;
-    if (right <= left || bottom <= top) return;
-    tooltip.classList.add('relationship-tooltip', 'show');
-    tooltip.replaceChildren();
-    const close = document.createElement('button');
-    close.type = 'button';
-    close.className = 'relationship-tooltip-close';
-    close.textContent = '\u00d7';
-    close.setAttribute('aria-label', '关闭介绍');
-    close.onclick = hideTooltip;
-    const content = document.createElement('div');
-    content.className = 'tooltip-item';
-    content.textContent = text || '';
-    tooltip.append(close, content);
-    tooltip.setAttribute('role', 'tooltip');
-    tooltip.style.cssText = `position:fixed;transform:none;left:${left}px;top:${top}px;width:${Math.min(340, right - left)}px;max-width:${right - left}px;max-height:${bottom - top}px;`;
-    const rect = card.getBoundingClientRect();
-    const tip = tooltip.getBoundingClientRect();
-    tooltip.style.left = Math.max(left, Math.min(right - tip.width, rect.left + (rect.width - tip.width) / 2)) + 'px';
-    const preferredTop = rect.top - tip.height - 8 >= top ? rect.top - tip.height - 8 : rect.bottom + 8;
-    tooltip.style.top = Math.max(top, Math.min(bottom - tip.height, preferredTop)) + 'px';
-    relationshipTooltipAnchor = card;
-    card.setAttribute('aria-describedby', 'tooltip');
-    const outside = e => {
-        if (!tooltip.contains(e.target) && !card.contains(e.target)) hideTooltip();
-    };
-    const scroll = e => {
-        if (!tooltip.contains(e.target)) hideTooltip();
-    };
-    const escape = e => { if (e.key === 'Escape') hideTooltip(); };
-    const observer = new MutationObserver(() => {
-        if (!card.isConnected || !card.closest('.scene.active')) hideTooltip();
-    });
-    observer.observe(document.getElementById('relationships-scene'), { attributes: true, attributeFilter: ['class', 'style'] });
-    document.addEventListener('click', outside);
-    document.addEventListener('scroll', scroll, true);
-    document.addEventListener('keydown', escape);
-    window.addEventListener('resize', hideTooltip);
-    relationshipTooltipCleanup = () => {
-        observer.disconnect();
-        document.removeEventListener('click', outside);
-        document.removeEventListener('scroll', scroll, true);
-        document.removeEventListener('keydown', escape);
-        window.removeEventListener('resize', hideTooltip);
-    };
-}
-
 // 显示悬停提示
 function showTooltip(event, text) {
     const tooltip = document.getElementById('tooltip');
     const card = event.currentTarget;
-    if (card.matches('.relationship-card')) {
-        showRelationshipTooltip(card, text);
-        return;
-    }
     hideTooltip();
     const rect = card.getBoundingClientRect();
     const viewportRect = document.querySelector('.viewport').getBoundingClientRect();
@@ -1041,19 +911,7 @@ function showTooltip(event, text) {
 
 function hideTooltip() {
     const tooltip = document.getElementById('tooltip');
-    if (relationshipTooltipCleanup) relationshipTooltipCleanup();
-    relationshipTooltipCleanup = null;
-    if (relationshipTooltipAnchor) relationshipTooltipAnchor.removeAttribute('aria-describedby');
-    relationshipTooltipAnchor = null;
-    relationshipTooltipPinned = false;
-    if (!tooltip) return;
-    tooltip.classList.remove('show');
-    if (tooltip.classList.contains('relationship-tooltip')) {
-        tooltip.classList.remove('relationship-tooltip');
-        tooltip.removeAttribute('style');
-        tooltip.replaceChildren();
-        tooltip.removeAttribute('role');
-    }
+    if (tooltip) tooltip.classList.remove('show');
 }
 
 // 显示"属性查看-角色属性"里 7 项属性（根骨/悟性/心性/魅力/武学/学识/声望）当前数值对应的分档文案
@@ -1078,15 +936,47 @@ function _getAssistantTurns() {
         const conv = (typeof storageService !== 'undefined' && storageService && typeof storageService.loadUIConversation === 'function')
             ? storageService.loadUIConversation()
             : ((typeof loadUIConversation === 'function') ? loadUIConversation() : []);
-        return (conv || []).filter(m => m && m.role === 'assistant' && typeof m.content === 'string' && m.content.trim());
+        const turns = (conv || []).filter(m => m && m.role === 'assistant' && typeof m.content === 'string' && m.content.trim());
+        // A local weekly report may be live but not appended to the conversation. Keep the newest stored turn browsable.
+        if (typeof stageStory !== 'undefined' && stageStory.engaged() && currentStoryText && turns.at(-1)?.content !== currentStoryText) turns.push({content:currentStoryText});
+        return turns;
     } catch (e) {
         return [];
     }
 }
 
+// 剥离每行正文末尾（第一个“|”前或纯正文行末）的【ID；情绪】配音标记；供未开启 TTS 的流式预览、提交归一化与历史回看复用
+const INLINE_SPEECH_MARKER_RE = /【([A-Z][A-Z0-9_]{0,31})[；;]([^【】；;|<>\x00-\x1f]{1,24})】([ \t]*)$/u;
+function stripInlineSpeechMarkers(text, options) {
+    if (!text || typeof text !== 'string') return text;
+    const streaming = !!(options && options.streaming);
+    return text.replace(/\r\n?/g, '\n').split('\n').map((line, index, list) => {
+        const fields = line.split('|');
+        if (fields.length !== 1 && fields.length !== 5) return line;
+        let body = fields[0];
+        const mark = INLINE_SPEECH_MARKER_RE.exec(body);
+        if (mark && !(mark.index > 0 && body[mark.index - 1] === '\\')) {
+            const spoken = body.slice(0, mark.index);
+            if (spoken.trim()) {
+                fields[0] = spoken + mark[3];
+                return fields.join('|');
+            }
+        }
+        // 流式最末行尚未闭合“】”且无“|”时，隐藏半截配音标记尾巴（如“……【A；平”或“……【NARR”）
+        if (streaming && index === list.length - 1 && fields.length === 1) {
+            const partial = /【(?:[A-Z][A-Z0-9_]{0,31}[；;][^【】；;|<>\x00-\x1f]{0,24}|[A-Z][A-Z0-9_]{0,31})$/u.exec(body);
+            if (partial && !(partial.index > 0 && body[partial.index - 1] === '\\') && body.slice(0, partial.index).trim()) {
+                return body.slice(0, partial.index);
+            }
+        }
+        return line;
+    }).join('\n');
+}
+
 // 把一回合 assistant 原文渲染为与当时观看体验一致的分页 HTML（不含事件描述页/图层逻辑）：
 // 复刻 updateStoryText 核心——帧解析 + markdownit；有标记帧→页=帧；无标记→自然段分页并剥离“|”段尾
 function _buildHistoryPages(text) {
+    text = stripInlineSpeechMarkers(text);
     const md = window.markdownit({
         html: true,
         breaks: true,
@@ -1163,7 +1053,7 @@ function renderMainText(text) {
 
 // 更新故事文本（支持分页）
 function updateStoryText(text) {
-    if (typeof presentationHost !== 'undefined') presentationHost.onStoryChange(text);
+    text = stripInlineSpeechMarkers(text);
     if (typeof speechService !== 'undefined' && text !== currentStoryText) speechService.stop();
     if (typeof speechPlaybackUI !== 'undefined' && text !== currentStoryText) speechPlaybackUI.invalidate();
     storySpeechPages = [];
@@ -1313,6 +1203,7 @@ function updateStoryText(text) {
 
 // 修改 updateStoryDisplay 函数
 function updateStoryDisplay() {
+    if (typeof stageStory !== 'undefined' && stageStory.beforeDisplay()) return;
     const storyElement = document.getElementById('story-text');
     const pageIndicator = document.getElementById('page-indicator');
     const prevBtn = document.getElementById('story-prev-btn');
@@ -1323,6 +1214,7 @@ function updateStoryDisplay() {
     const storyWrapper = storyElement ? storyElement.parentElement : null;
     
     // GameMode 0 演出中：图层由 galPresentation 维护，这里不清、只同步页码；goto 内部按 G19 判定是否播翻页纸
+    const stageReading = typeof stageStory !== 'undefined' && stageStory.reading();
     const readingLease = typeof presentationAdapter !== 'undefined' && presentationAdapter.blocksOriginal();
     const galPlaying = GameMode === 0 && galPresentation.isPlaying();
     if (!readingLease && galPlaying) {
@@ -1348,7 +1240,7 @@ function updateStoryDisplay() {
             const turnIndex = historyTurns.length - 1 - storyHistoryOffset;
             storyElement.innerHTML = _buildHistoryPages(historyTurns[turnIndex].content).join('');
         } else {
-            storyElement.innerHTML = storyPages.join('');
+            storyElement.innerHTML = (stageReading ? storyPages.filter((_,i) => !storySpeechPages[i]?.event) : storyPages).join('');
         }
         // SLG模式展开：无现存图层容器时按当前页（展开时通常为第0页）补建图层——
         // 修复展开状态下 GameMode 0→1 切换、或展开中收到新回复时永远"场景加载中"；
@@ -1414,9 +1306,8 @@ function updateStoryDisplay() {
         // GameMode 0 且本轮有演出帧：正文中间 1/3 点击 = 进入 GAL 演出（G2），单页时也要挂点击
         const galEnterable = GameMode === 0 && Array.isArray(slgModeData) && slgModeData.length > 0;
         const multiPage = storyPages.length > 1;
-        const readerEnterable = typeof presentationReader !== 'undefined' && document.body.classList.contains('layout-landscape');
         // 翻页控件逻辑
-        if (multiPage || galEnterable || readerEnterable) {
+        if (multiPage || galEnterable) {
             if (storyWrapper) storyWrapper.style.cursor = 'pointer';
             storyElement.style.cursor = 'pointer';
             if (storyWrapper) storyWrapper.onclick = function(e) {
@@ -1432,8 +1323,7 @@ function updateStoryDisplay() {
                     if (multiPage) doPrevPage();
                 } else if (zone === 'right') {
                     if (multiPage) doNextPage();
-                } else if (readerEnterable && presentationReader.resumeFromOperation()) {
-                    return;
+
                 } else if (galEnterable && !_turnBusy()) {
                     // 演出中再点 = goto 当前页（幂等）；事件页越界由控制器 clamp 到末帧
                     galPresentation.enter({ source: 'page', pageIndex: Math.min(currentPage, slgModeData.length - 1), curtain: true });
@@ -1464,7 +1354,7 @@ function updateStoryDisplay() {
                 nextBtn.disabled = currentPage === storyPages.length - 1;
             }
         } else {
-            if (!galEnterable && !readerEnterable) {
+            if (!galEnterable) {
                 storyElement.style.cursor = 'default';
                 if (storyWrapper) storyWrapper.style.cursor = 'default';
                 if (storyWrapper) storyWrapper.onclick = null;
@@ -1478,18 +1368,15 @@ function updateStoryDisplay() {
 
     // 确保事件容器位于 main-viewport 下，并按模式控制显示
     try {
-        const viewportEl = document.getElementById('main-viewport');
+        const viewportEl = stageReading ? document.getElementById('stage-event-tail') : viewport;
         const randomContainer = document.getElementById('random-event-container');
         const battleContainer = document.getElementById('battle-event-container');
         const sidequestContainer = document.getElementById('sidequest-interaction-container');
 
-        const controls = typeof presentationControls !== 'undefined' ? presentationControls : null;
-        const randomBorrowed = !!(controls && controls.owns(randomContainer));
-        const battleBorrowed = !!(controls && controls.owns(battleContainer));
-        if (viewportEl && randomContainer && !randomBorrowed && randomContainer.parentElement !== viewportEl) {
+        if (viewportEl && randomContainer && randomContainer.parentElement !== viewportEl) {
             viewportEl.appendChild(randomContainer);
         }
-        if (viewportEl && battleContainer && !battleBorrowed && battleContainer.parentElement !== viewportEl) {
+        if (viewportEl && battleContainer && battleContainer.parentElement !== viewportEl) {
             viewportEl.appendChild(battleContainer);
         }
         if (viewportEl && sidequestContainer && sidequestContainer.parentElement !== viewportEl) {
@@ -1518,17 +1405,16 @@ function updateStoryDisplay() {
             displaySideQuestChoice(sqChoiceNode, { silent: true });
         }
 
-        const shouldShowByMode = isStoryExpanded
+        const shouldShowByMode = stageReading ? isStoryExpanded && storyHistoryOffset === 0 : isStoryExpanded
             ? (hasBattle || hasRandom || hasSqChoice)
             : ((storyPages && storyPages.length > 0) && currentPage === storyPages.length - 1 && (hasBattle || hasRandom || hasSqChoice));
 
-        if (randomContainer && !randomBorrowed) {
+        if (randomContainer) {
             randomContainer.classList.toggle('show', shouldShowByMode && hasRandom);
         }
-        if (battleContainer && !battleBorrowed) {
+        if (battleContainer) {
             battleContainer.classList.toggle('show', shouldShowByMode && hasBattle);
         }
-        if ((randomBorrowed || battleBorrowed) && controls) controls.refresh();
         if (sidequestContainer) {
             if (!hasSqChoice && typeof _sideQuestChoiceNode !== 'undefined' && _sideQuestChoiceNode) {
                 hideSideQuestChoice();
@@ -1542,7 +1428,7 @@ function updateStoryDisplay() {
         if (sidequestContainer) {
             const otherContainer = (battleContainer && battleContainer.classList.contains('show')) ? battleContainer
                 : ((randomContainer && randomContainer.classList.contains('show')) ? randomContainer : null);
-            if (otherContainer && sidequestContainer.classList.contains('show')) {
+            if (!stageReading && otherContainer && sidequestContainer.classList.contains('show')) {
                 otherContainer.style.maxHeight = '40%';
                 const lift = (otherContainer.offsetHeight || 0) + 8;  // 设完限高再读，强制重排拿到新高度
                 sidequestContainer.style.bottom = `calc(clamp(10px, 3vw, 16px) + ${lift}px)`;
@@ -1559,6 +1445,7 @@ function updateStoryDisplay() {
     if (typeof speechPlaybackUI !== 'undefined') speechPlaybackUI.render(storyElement, {
         source:currentStoryText, pages:storySpeechPages, pageIndex:currentPage, expanded:isStoryExpanded, historyOffset:storyHistoryOffset
     });
+    if (typeof stageStory !== 'undefined') stageStory.sync();
     storyElement.style.opacity = '0';
     setTimeout(() => {
         storyElement.style.transition = 'opacity 0.5s ease';
@@ -1613,7 +1500,8 @@ function displaySideQuestChoice(node, opts) {
     // afterCommit 异步呈现时 updateStoryDisplay 本轮不会再跑，须手动 show；
     // silent 模式（updateStoryDisplay 补渲染）交由其 toggle 统一控制
     if (!opts || !opts.silent) {
-        container.classList.add('show');
+        if (typeof stageStory !== 'undefined' && stageStory.engaged()) updateStoryDisplay();
+        else container.classList.add('show');
     }
 }
 
@@ -1680,7 +1568,8 @@ function presentSideQuestBattle(node) {
     if (typeof updateFreeActionInputState === 'function') updateFreeActionInputState();
     if (typeof displayBattleEvent === 'function') displayBattleEvent(battleEvt);
     const container = document.getElementById('battle-event-container');
-    if (container) container.classList.add('show');
+    if (typeof stageStory !== 'undefined' && stageStory.engaged()) updateStoryDisplay();
+    else if (container) container.classList.add('show');
 }
 
 // sideQuestRunner._presentInteraction 的 UI 钩子（未注册时 runner 仅做状态翻转，安全空操作）
@@ -1768,10 +1657,6 @@ function doGoToPage(pageNum) {
     if (pageNum >= 0 && pageNum < storyPages.length) {
         if (pageNum !== currentPage && typeof speechService !== 'undefined') speechService.stop();
         currentPage = pageNum;
-        if (!isStoryExpanded && typeof presentationReader !== 'undefined' && presentationReader.openFromPage(currentPage)) {
-            updateStoryDisplay();
-            return;
-        }
         // GameMode 0 且本轮有演出帧：翻页（正文左右 1/3 / 箭头 / 页码点）即进入演出；已在演出中则 enter 退化为 goto，
         // 展开态不响应。事件描述页越界由控制器 clamp 到末帧。生成中只翻正文、不进演出。
         if (GameMode === 0 && !isStoryExpanded && Array.isArray(slgModeData) && slgModeData.length > 0 && !_turnBusy()) {

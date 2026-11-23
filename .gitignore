@@ -33,3 +33,6 @@ scene3d/resources/
 # 自动生成的浏览器测试报告
 /tests/scene3d/reports/
 
+
+# Release signing keys / passwords / lineage (never commit; back up offline)
+.signing/

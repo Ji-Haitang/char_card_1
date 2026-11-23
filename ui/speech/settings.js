@@ -160,7 +160,6 @@ var speechRoundUI = (function () {
                 signal.removeEventListener('abort', abort);
                 if (node._unbindFit) node._unbindFit();
                 node.remove();
-                if (typeof presentationHost !== 'undefined') presentationHost.syncOverlays();
                 resolve(choice);
             }
             function abort() {
@@ -182,7 +181,6 @@ var speechRoundUI = (function () {
             document.body.appendChild(node);
             if (typeof fitModalToViewport === 'function') fitModalToViewport(node);
             if (typeof bindModalAutoFit === 'function') bindModalAutoFit(node);
-            if (typeof presentationHost !== 'undefined') presentationHost.syncOverlays();
             node.querySelector('#srd-pause').focus();
         });
     }
@@ -224,9 +222,7 @@ var speechSingleTest = (function () {
             isStoryExpanded,
             typeof storyHistoryOffset === 'undefined' ? 0 : storyHistoryOffset,
             document.body.classList.contains('layout-landscape'),
-            typeof presentationReader === 'undefined'
-                ? null
-                : presentationReader.getDiagnostics().index,
+            typeof stageStory === 'undefined' ? null : stageStory.sentence(),
         ]);
     }
     function stop() {

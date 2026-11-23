@@ -495,48 +495,14 @@ body.ui-style-ancient .story-expand-bar .story-history-page-input {
 .story-expand-bar > #story-next-btn { margin-left: auto; }
 
 /* ============================================================
- * 3. 横屏模式：视窗在左、文本区在右（body.layout-landscape）
- *    视窗上下填满页面（保持 1.46），右侧剩余宽度全给文本区
+ * 3. 横屏：地图、地点和故事共享一个居中 16:9 视窗。
  * ============================================================ */
+body.layout-landscape { height:100%;overflow:hidden }
+body.layout-landscape .container { position:fixed;inset:var(--stage-top,0) 0 auto;height:var(--stage-height,100dvh);display:flex;align-items:center;justify-content:center;background:#080909;overflow:hidden }
+body.layout-landscape .viewport-wrapper { flex:0 0 auto;width:min(100vw,calc(var(--stage-height,100dvh) * 16 / 9));height:min(var(--stage-height,100dvh),calc(100vw * 9 / 16));max-width:none;margin:0;overflow:hidden }
+body.layout-landscape .viewport { width:100%;height:100%;margin:0;aspect-ratio:16 / 9 }
+body.layout-landscape .container > .story-area { display:none }
 
-body.layout-landscape {
-    height: 100%;
-    overflow: hidden;
-}
-
-/* 视窗与文本区贴紧（无空隙） */
-body.layout-landscape .container {
-    display: flex;
-    flex-direction: row;
-    align-items: stretch;
-    gap: 0;
-    height: 100vh;
-    height: 100dvh;
-    overflow: hidden;
-}
-
-/* 视窗优先：上下填满页面，宽度按 1.46 推出，贴右（紧贴文本区）。
-   显式 width/flex-basis（覆盖旧 .viewport-wrapper 的 width:100%）确保只占 1.46×高。 */
-body.layout-landscape .viewport-wrapper {
-    flex: 0 0 calc(100dvh * 1.46);
-    width: calc(100dvh * 1.46);
-    max-width: none;
-    height: 100%;
-    margin: 0;
-    display: flex;
-    align-items: stretch;
-    overflow: hidden;
-}
-
-body.layout-landscape .viewport {
-    flex: 0 0 auto;
-    width: 100%;
-    height: 100%;
-    aspect-ratio: 1.46;
-    margin: 0;
-}
-
-/* 文本区吃掉右侧剩余宽度：贴边无横向 padding，纵向 flex column（内容滚动、输入栏固定底部） */
 body.layout-landscape .story-area {
     flex: 1 1 0;
     min-width: 0;

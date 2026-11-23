@@ -447,7 +447,7 @@ var speechRound = (function () {
             renderVersion: turn.renderVersion,
             renderHash: turn.renderHash,
             units: plan.units.filter(function (u) {
-                return u.readingIndex === index;
+                return index === null || u.readingIndex === index; // null requests this record’s entire verified playlist
             }),
         };
     }

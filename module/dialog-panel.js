@@ -51,7 +51,7 @@
         modal.addEventListener('keydown', function (event) {
             if (event.key === 'Escape') { event.preventDefault(); api.close(); }
             if (event.key === 'Tab') {
-                const buttons = [...modal.querySelectorAll('button:not(:disabled)')];
+                const buttons = [...modal.querySelectorAll('button:not(:disabled), input:not(:disabled), [tabindex="0"]')].filter(el => el.getClientRects().length);
                 if (!buttons.length) return;
                 const first = buttons[0], last = buttons[buttons.length - 1];
                 if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }

@@ -21,20 +21,11 @@ try{
    storageService.replaceUIConversation([{id:'public-media-'+mode,role:'assistant',content:source,createdAt:1,presentationPlan:plan}]);gameData.presentationCursor=null;
    document.getElementById('free-action-input').value='公开草稿';window.__originalFree=document.querySelector('.free-action-row');window.__originalParent=__originalFree.parentElement;
   },mode);
-  await p.click('.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');
-  assert.equal(await p.$eval('#presentation-reader',n=>Number(n.dataset.unit)),0);
-  await p.click('#pr-next');assert.equal(await p.$eval('#presentation-reader',n=>Number(n.dataset.unit)),1);
-  await p.click('#pr-touch-operation');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='closed');
-  assert.equal(await p.$('#pr-dialogue'),null);
-  assert.deepEqual(await p.evaluate(()=>({same:document.querySelector('.free-action-row')===__originalFree,parent:__originalFree.parentElement===__originalParent,draft:document.getElementById('free-action-input').value,mode:GameMode})),{same:true,parent:true,draft:'公开草稿',mode});
-  await p.click('.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');
-  assert.equal(await p.$eval('#presentation-reader',n=>Number(n.dataset.unit)),1);
-  await p.click('#pr-input-toggle');
-  await p.evaluate(()=>{window.__originalInput=document.getElementById('free-action-input');__originalInput.focus();__originalInput.setSelectionRange(1,3);});
-  await p.click('#pr-menu-toggle');
-  assert.deepEqual(await p.evaluate(()=>({same:document.getElementById('free-action-input')===__originalInput,count:document.querySelectorAll('#free-action-input').length,inMenu:document.getElementById('pr-menu-input').contains(__originalInput),draft:__originalInput.value})),{same:true,count:1,inMenu:true,draft:'公开草稿'});
-  await p.click('#pr-menu-toggle');assert.equal(await p.evaluate(()=>document.getElementById('pr-composer').contains(__originalInput)),true);
-  await p.click('#pr-input-toggle');
+   await p.waitForFunction(()=>stageStory.reading());await p.click('.stage-line button:last-child');
+   if(mode===0){await p.click('#stage-operation');await p.click('#stage-book');}else{await p.click('#stage-view');await p.click('#stage-backdrop');}
+   assert.equal(await p.$eval('.stage-line p',n=>n.textContent),'重复正文。');
+   await p.click('#stage-input');assert.deepEqual(await p.evaluate(()=>({same:document.querySelector('.free-action-row')===__originalFree,count:document.querySelectorAll('#free-action-input').length,draft:document.getElementById('free-action-input').value})),{same:true,count:1,draft:'公开草稿'});
+   await p.click('#stage-input');
   await p.screenshot({path:path.join(out,'mode-'+mode+'-'+width+'.png')});assertSessionSafe(session,server,'media-stage-'+width+'-'+mode);
   results.push({mode,width,status:'PASS'});await session.close();session=null;
  }

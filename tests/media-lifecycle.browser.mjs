@@ -54,7 +54,7 @@ async function runCase(name,mode,operation){
         await p.screenshot({path:path.join(out,name+'.png')});assertSessionSafe(session,server,'media-life-'+name);
         checks.push({name,status:'PASS',state});
     }catch(error){
-        const state=session?await session.page.evaluate(()=>({host:typeof presentationHost==='undefined'?null:presentationHost.getDiagnostics(),flow:typeof presentationFlow==='undefined'?null:presentationFlow.getDiagnostics(),mode:typeof GameMode==='undefined'?null:GameMode,text:typeof currentStoryText==='undefined'?null:currentStoryText,
+        const state=session?await session.page.evaluate(()=>({reading:stageStory.reading(),wait:stageStory.isWaiting(),mode:typeof GameMode==='undefined'?null:GameMode,text:typeof currentStoryText==='undefined'?null:currentStoryText,
             life:window.__life?{requests:__life.requests,speechDone:__life.speechDone,speechError:__life.speechError,readerDone:__life.readerDone}:null,
             layers:document.querySelectorAll('.slg-layer-container').length,choice:document.getElementById('sidequest-interaction-container')?.outerHTML,
             bridge:window.GameSceneBridge?.getDiagnostics()})).catch(()=>null):null;
@@ -66,7 +66,7 @@ async function runCase(name,mode,operation){
 try{
     await runCase('same-text-snapshot',0,async p=>{
         await p.evaluate(async()=>{await storageService.saveFullSnapshot();window.__oldMedia=mediaContext.capture();window.__oldState=gameData;window.__originalRow=document.querySelector('.free-action-row');window.__originalParent=__originalRow.parentElement;});
-        await p.click('.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');
+        await p.waitForFunction(()=>stageStory.reading());
         await p.evaluate(async()=>{
             const raw='公开同文恢复语音。【D；平静】';const plan=await speechPlan.fromMainText(raw,speechRound.characters());__life.voiceHold=true;
             __life.speechPromise=speechService.prepare({workspaceId:'main',turnId:'public-snapshot-audio',sourceHash:plan.sourceHash,createdAt:1},plan,{manual:true})
@@ -74,16 +74,16 @@ try{
         });
         await p.waitForFunction(()=>typeof __life.releaseVoice==='function');
         assert.equal(await p.evaluate(()=>storageService.restoreFromSnapshot()),true);
-        await p.waitForFunction(()=>!presentationHost.isActive()&&__life.speechDone&&!speechService.isBusy());
+        await p.waitForFunction(()=>__life.speechDone&&!speechService.isBusy());
         await p.evaluate(async()=>{__life.releaseVoice();await __life.speechPromise;await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
-        const state=await p.evaluate(async()=>({sameText:currentStoryText===__life.source,newReference:gameData!==__oldState,oldContextValid:mediaContext.isCurrent(__oldMedia),host:presentationHost.getDiagnostics().phase,
+        const state=await p.evaluate(async()=>({sameText:currentStoryText===__life.source,newReference:gameData!==__oldState,oldContextValid:mediaContext.isCurrent(__oldMedia),
             speechError:__life.speechError,voiceCalls:__life.requests.filter(r=>r.kind==='voice').length,clips:(await speechStore.listTurns('main')).length,
             sameRow:document.querySelector('.free-action-row')===__originalRow,sameParent:__originalRow.parentElement===__originalParent,draft:document.getElementById('free-action-input').value}));
-        assert.deepEqual(state,{sameText:true,newReference:true,oldContextValid:false,host:'closed',speechError:'AbortError',voiceCalls:1,clips:0,sameRow:true,sameParent:true,draft:'公开生命周期草稿'});return state;
+        assert.deepEqual(state,{sameText:true,newReference:true,oldContextValid:false,speechError:'AbortError',voiceCalls:1,clips:0,sameRow:true,sameParent:true,draft:'公开生命周期草稿'});return state;
     });
 
     await runCase('async-upstream-choice',1,async p=>{
-        await p.click('.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');
+        await p.waitForFunction(()=>stageStory.reading());
         await p.evaluate(()=>{
             // Public serialized quest state, not a replacement of applyChoice/runner/pipeline.
             gameData.sideQuest.active={questId:'public-choice',title:'公开抉择',background:'公开测试',playerGoal:'问明去向',difficulty:'普通',acceptedWeek:currentWeek,deadlineWeek:currentWeek+10,
@@ -94,9 +94,9 @@ try{
             __life.mainReply='<MAIN_TEXT>公开选择已经推进。|街道|20:00|萧白瑚:平静|none</MAIN_TEXT><SUMMARY>公开抉择测试摘要。</SUMMARY><SIDE_NOTE>{"时间":"20:00","用户":{"位置变动":"none"}}</SIDE_NOTE>';
             setTimeout(()=>{const active=sideQuestService.getActive();active.pendingInteraction={kind:'choice',nodeId:'choice',state:'awaiting'};displaySideQuestChoice(active.nodes.choice);},0);
         });
-        await p.waitForFunction(()=>!presentationHost.isActive()&&mediaContext.pendingChoice());
-        const button=await p.waitForSelector('#sidequest-choice-options button',{visible:true});assert.equal(await button.evaluate(el=>!!el.closest('[inert]')),false);
-        assert.equal(await p.evaluate(()=>presentationReader.resumeFromOperation()),false,'waiting choice cannot be covered by reentry');
+        await p.waitForFunction(()=>stageStory.reading()&&mediaContext.pendingChoice());
+        await p.click('#stage-event');const button=await p.waitForSelector('#sidequest-choice-options button',{visible:true});assert.equal(await button.evaluate(el=>!!el.closest('[inert]')),false);
+        assert.equal(await p.evaluate(()=>stageStory.open()),false,'waiting choice cannot be covered by reentry');
         await button.click();
         await p.waitForFunction(()=>!pipeline.isBusy()&&sideQuestService.getActive()?.currentNodeId==='next'&&__life.requests.some(r=>r.kind==='judge'));
         const state=await p.evaluate(()=>{const active=sideQuestService.getActive(),rows=storageService.loadUIConversation();return{node:active.currentNodeId,pending:active.pendingInteraction,choiceLogs:active.log.filter(e=>e.result==='choice').length,turns:active.turnsInNode,
@@ -106,27 +106,19 @@ try{
 
     await runCase('gm1-queue-orientation',1,async p=>{
         await p.evaluate(()=>{
-            const sentinel=document.createElement('div');sentinel.id='public-inert-sentinel';sentinel.inert=true;document.getElementById('main-viewport').appendChild(sentinel);
+            applyLayoutMode(0);const sentinel=document.createElement('div');sentinel.id='public-inert-sentinel';sentinel.inert=true;document.getElementById('main-viewport').appendChild(sentinel);
             GameSceneBridge.setBusy('public-independent-lock',true);
             __life.queueDone=false;Promise.all([galPresentation.gotoSlg(1,_slgLayerOptsGm1()),galPresentation.gotoSlg(2,_slgLayerOptsGm1())]).then(()=>__life.queueDone=true);
         });
         await p.waitForFunction(()=>{const sheet=document.querySelector('.scene3d-page-turn');return sheet&&!sheet.hidden&&!__life.queueDone;});
-        await p.evaluate(()=>{presentationReader.open().then(ok=>__life.readerDone=ok);});
-        await p.waitForFunction(()=>__life.readerDone&&__life.queueDone&&presentationHost.getDiagnostics().phase==='open');
-        // The reader paints its own stage through the same renderer inside #pr-stage; only viewport-level layers are the original GAL display.
-        assert.equal(await p.$$eval('#main-viewport > .slg-layer-container',nodes=>nodes.length),0,'drained old queue cannot repaint behind the reader');
-        assert.equal(await p.$$eval('#pr-stage > .slg-layer-container',nodes=>nodes.length),1,'reader stage is rendered by the shared GAL renderer');
-        await p.click('#pr-touch-operation');await p.waitForFunction(()=>!presentationHost.isActive()&&!!document.querySelector('.slg-layer-container'));
-        const exited=await p.evaluate(()=>({mode:GameMode,layers:document.querySelectorAll('.slg-layer-container').length,masks:document.querySelectorAll('.slg-interaction-mask').length,inert:document.getElementById('public-inert-sentinel').inert,lock:GameSceneBridge.getDiagnostics().snapshot.blockReasons.includes('generation:public-independent-lock')}));
-        assert.deepEqual(exited,{mode:1,layers:1,masks:1,inert:true,lock:true});
-        assert.deepEqual(await p.evaluate(()=>({index:window.__lastValidSlgIndex,day:decodeURIComponent(document.querySelector('.slg-scene-layer img').src).includes('/昼/')})),{index:0,day:true},'restore uses the original page, not a stale queued night frame');
-        await p.click('.story-content-wrapper');await p.waitForFunction(()=>presentationHost.getDiagnostics().phase==='open');
-        await p.evaluate(()=>applyLayoutMode(0));await p.waitForFunction(()=>!presentationHost.isActive());
+        await p.evaluate(()=>applyLayoutMode(1));await p.waitForFunction(()=>__life.queueDone && stageStory.reading());
+        assert.equal(await p.$$eval('#main-viewport > .slg-layer-container',n=>n.length),1);assert.equal(await p.$$eval('#main-viewport > .stage-story-layers',n=>n.length),1);
+        await p.evaluate(()=>applyLayoutMode(0));await p.waitForFunction(()=>!stageStory.reading());
         // The original GM1 image/mask must be restored automatically, not by a test updateStoryDisplay call.
         await p.waitForFunction(()=>!!document.querySelector('.slg-layer-container'),{timeout:5000});
         const portrait=await p.evaluate(()=>({mode:GameMode,portrait:document.body.classList.contains('layout-portrait'),layers:document.querySelectorAll('.slg-layer-container').length,masks:document.querySelectorAll('.slg-interaction-mask').length,inert:document.getElementById('public-inert-sentinel').inert,lock:GameSceneBridge.getDiagnostics().snapshot.blockReasons.includes('generation:public-independent-lock'),lease:presentationAdapter.blocksOriginal()}));
         assert.deepEqual(portrait,{mode:1,portrait:true,layers:1,masks:1,inert:true,lock:true,lease:false});
-        await p.evaluate(()=>GameSceneBridge.setBusy('public-independent-lock',false));return{exited,portrait};
+        await p.evaluate(()=>GameSceneBridge.setBusy('public-independent-lock',false));return{portrait};
     });
 
     await runCase('metadata-save-roundtrip',0,async p=>{

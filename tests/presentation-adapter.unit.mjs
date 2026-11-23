@@ -4,7 +4,7 @@ import vm from 'node:vm';
 import { createHash } from 'node:crypto';
 import { loadPresentation, plain, read } from './gal/_sandbox.mjs';
 
-const source = Object.fromEntries(await Promise.all(['presentation-adapter','gal-scene-resources','presentation-plan','presentation-view','presentation-actions','presentation-host','presentation-flow','media-context'].map(async name => [name,await read(`module/${name}.js`)])));
+const source = Object.fromEntries(await Promise.all(['presentation-adapter','gal-scene-resources','presentation-plan','media-context'].map(async name => [name,await read(`module/${name}.js`)])));
 function setup(mode=0) {
     let busy=false,choice=false;const saved=[];
     const box=loadPresentation({GameMode:mode,gameData:{},mapLocation:'天山派外堡',currentStoryText:'正文',userLocation:'yanwuchang',currentRandomEvent:null,currentBattleEvent:null,currentSpecialEvent:null,inputEnable:1,npcTurnEmotions:{},storyHistoryOffset:0},{
@@ -79,93 +79,16 @@ test('resources use the original special-emotion portrait and first-NPC CG paths
     assert.match(r.cgFor({cg:'测试',cgOwnerId:'A'},[a],{cgEnabled:true,cgVariant:2}).url,/测试2\.webp$/);
 });
 
-test('GM1 suspend invalidates/drains queued pages; unlease resumes once via the original display',async()=>{
-    const b=setup(1);b.set('companionNPC',[b.names.A.name]);b.setFrames(line(b)+'\n'+line(b,'第二段','19:00',['A']));
-    const p=b.pres();p.gotoSlg(0,{mode:1});let releaseCover;const firstCover=new Promise(resolve=>{releaseCover=resolve;});
-    b.sandbox.GameSceneBridge.playCurtain=(cover)=>cover?firstCover:Promise.resolve();
-    const page=p.gotoSlg(1,{mode:1});await Promise.resolve();let redraw=0;b.sandbox.updateStoryDisplay=()=>{redraw++;p.gotoSlg(0,{mode:1});};
-    const a=b.get('presentationAdapter'),pending=a.suspend();assert.equal(a.blocksOriginal(),true);assert.equal(p.gotoSlg(0,{mode:1}),false);
-    releaseCover();const op=await pending;await page;assert.equal(b.layers().length,0);assert.equal(a.resume(op),true);assert.equal(redraw,1);assert.equal(b.layers().length,1);
-});
-
-test('GM0 suspension returns to operation; GM1 stale epoch, mode and same-text gameData replacement never redraw',async()=>{
-    const home=setup();home.setFrames(line(home));await home.pres().enter({curtain:false});const a=home.get('presentationAdapter');const op=await a.suspend();let renders=0;home.sandbox.updateStoryDisplay=()=>renders++;a.resume(op);assert.equal(home.pres().isPlaying(),false);assert.equal(renders,0);
-    for(const change of ['epoch','mode','state']){const b=setup(1),adapter=b.get('presentationAdapter');let redraw=0;b.sandbox.updateStoryDisplay=()=>redraw++;const token=await adapter.suspend();if(change==='epoch')b.get('mediaContext').invalidate();else if(change==='mode')b.set('GameMode',0);else b.set('gameData',{});assert.equal(adapter.resume(token),false);assert.equal(redraw,0);assert.equal(adapter.blocksOriginal(),false);}
-});
-
 test('restoring GM1 re-presents an awaiting choice through its original UI hook without selecting it',()=>{
     const b=setup(1),node={id:'choice-1',options:[]};let rendered=null;
     b.sandbox.sideQuestService={getActive:()=>({pendingInteraction:{kind:'choice',state:'awaiting',nodeId:'choice-1'},nodes:{'choice-1':node}})};
     b.sandbox.displaySideQuestChoice=value=>{rendered=value;};b.get('presentationAdapter').restoreCurrent();assert.equal(rendered,node);assert.equal(b.get('currentPage'),0);
 });
 
-test('broader busy prevents restore and action dispatch even when isStreaming is false',async()=>{
-    const b=setup(1),a=b.get('presentationAdapter'),token=await a.suspend();b.setBusy(true);assert.equal(a.resume(token),false);
-    b.run(source['presentation-actions']);const actions=b.get('presentationActions');const state=actions.getState();assert.equal(state.busy,true);assert.equal(actions.preflight('return',{},state).ok,false);
-});
-
-test('actions reject old captured state and pending upstream choices before calling business',()=>{
-    const b=setup();b.run(source['presentation-actions']);const a=b.get('presentationActions'),state=a.getState();b.get('mediaContext').invalidate();assert.match(a.preflight('move',{locationId:'huofang'},state).reason,/上下文/);
-    const current=a.getState();b.setChoice(true);assert.match(a.preflight('move',{locationId:'huofang'},current).reason,/支线/);
-});
-
-test('bridge preserves four-argument seal while fifth-argument lease owns reveal/cancel',async()=>{
+test('native GAL curtain releases the sheet after reveal and retains its seal',async()=>{
     const bridge=await read('module/scene3d-bridge.js'),start=bridge.indexOf('    function playCurtain('),end=bridge.indexOf('    function runPageTurn(',start);
-    const calls=[],box=vm.createContext({Promise,calls});vm.runInContext(`let viewport={},turn=null,curtainHeld=false,curtainOwner=null,page={hidden:false};function runPageTurn(...args){calls.push(args);return Promise.resolve();}function cancelPageAnimation(){calls.push('cancel');}${bridge.slice(start,end)};globalThis.api={playCurtain,cancelCurtain,held:()=>curtainHeld};`,box);
+    const calls=[],box=vm.createContext({Promise,calls});vm.runInContext(`let viewport={},turn=null,curtainHeld=false;function runPageTurn(...args){calls.push(args);return Promise.resolve();}${bridge.slice(start,end)};globalThis.api={playCurtain,held:()=>curtainHeld};`,box);
     const {api}=box;await api.playCurtain(true,'第一回','','话本');await api.playCurtain(false);assert.equal(calls[0][3],'话本');assert.equal(api.held(),false);
-    const lease={};await api.playCurtain(true,'入卷','','话本',lease);const count=calls.length;await api.playCurtain(false);assert.equal(calls.length,count);assert.equal(api.held(),true);api.cancelCurtain({});assert.equal(api.held(),true);api.cancelCurtain(lease);assert.equal(api.held(),false);
-});
-
-function hostBox(){
-    const b=setup(1),dom=b.dom,observers=[];
-    dom.Element.prototype.contains=function(n){for(;n;n=n.parentNode)if(n===this)return true;return false;};
-    dom.Element.prototype.focus=function(){dom.document.activeElement=this;};
-    Object.defineProperty(dom.Element.prototype,'isConnected',{configurable:true,get(){return dom.body.contains(this);}});
-    dom.Element.prototype.getClientRects=function(){return [{}];};
-    const story=new dom.Element('div');story.className='story-area';dom.body.appendChild(story);dom.document.activeElement=story;dom.body.classList.add('layout-landscape');
-    b.sandbox.MutationObserver=class{constructor(fn){this.fn=fn;this.live=true;observers.push(this);}observe(){}disconnect(){this.live=false;}};
-    b.sandbox.getComputedStyle=()=>({visibility:'visible'});b.sandbox.addEventListener=()=>{};
-    b.run(source['presentation-view']);b.run(source['presentation-host']);
-    const snapshot=b.get('presentationView').captureReading({mode:1,workspaceId:'main',sourceText:'正文',frames:[{text:'正文',cast:[]}],dayNightStatus:'daytime'});
-    return Object.assign(b,{snapshot,observers,story,flush(){for(const o of observers)if(o.live)o.fn([]);}});
-}
-
-test('host restores original DOM/locks on exit and closes for an asynchronously appearing choice',async()=>{
-    const b=hostBox(),host=b.get('presentationHost');let disposed=0,redraw=0;b.sandbox.updateStoryDisplay=()=>redraw++;
-    assert.equal(await host.enter({snapshot:b.snapshot,mount(){return()=>disposed++;}}),true);assert.equal(b.story.inert,true);b.setChoice(true);b.flush();assert.equal(host.isActive(),false);assert.equal(disposed,1);assert.equal(b.story.inert,undefined);assert.equal(b.get('presentationAdapter').blocksOriginal(),false);assert.equal(redraw,1);
-    b.setChoice(false);await host.enter({snapshot:b.snapshot,mount(){return()=>disposed++;}});await host.exit();assert.equal(disposed,2);assert.equal(redraw,2);assert.equal(host.isActive(),false);assert.deepEqual(b.bridgeCalls.busy.at(-1),['presentation-host',false]);
-});
-
-test('host invalidation during opening cannot strand an adapter lease or mount stale content',async()=>{
-    const b=hostBox(),host=b.get('presentationHost');let mounted=0;const pending=host.enter({snapshot:b.snapshot,mount(){mounted++;}});host.invalidate();await pending;assert.equal(mounted,0);assert.equal(host.isActive(),false);assert.equal(b.get('presentationAdapter').blocksOriginal(),false);
-});
-
-function flowBox(){
-    const b=hostBox(),dom=b.dom,timers=[],rafs=[];let opens=0;
-    dom.Element.prototype.before=function(n){this.parentNode.insertBefore(n,this);};
-    dom.document.createComment=()=>new dom.Element('comment');
-    const mask=new dom.Element('div');mask.id='stream-mask';dom.viewport.appendChild(mask);
-    const controls=new dom.Element('div');controls.id='stream-controls';b.story.appendChild(controls);
-    b.sandbox.performance={now:()=>0};b.sandbox.requestAnimationFrame=fn=>{rafs.push(fn);return rafs.length;};b.sandbox.cancelAnimationFrame=()=>{};
-    b.sandbox.setTimeout=fn=>{timers.push(fn);return timers.length;};b.sandbox.clearTimeout=()=>{};
-    b.sandbox.presentationOverlays={attach:()=>({hasOpen:()=>false,handleKey:()=>false})};
-    b.sandbox.presentationReader={open:async()=>{opens++;return true;}};
-    b.run(source['presentation-actions']);b.run(source['presentation-flow']);
-    const plan=b.get('presentationPlan').captureCurrent('正文');b.saved.push({id:'reply-1',role:'assistant',content:'正文',presentationPlan:plan});
-    return Object.assign(b,{flow:b.get('presentationFlow'),receipt:{workspaceId:'main',messageId:'reply-1',sourceHash:plan.sourceHash},mask,controls,opens:()=>opens,flushTimers(){while(timers.length)timers.shift()();},flushFrame(){rafs.shift()?.();}});
-}
-
-test('flow waits for final publication receipt and broader busy before opening, then restores leased controls',async()=>{
-    const b=flowBox(),ticket=b.flow.pipelineStart();assert.equal(b.opens(),0);assert.equal(b.controls.parentNode,b.mask);
-    b.setBusy(true);b.flow.pipelineEnd(ticket,b.receipt);b.flushTimers();assert.equal(b.opens(),0);
-    b.setBusy(false);b.flushFrame();await Promise.resolve();assert.equal(b.opens(),1);assert.equal(b.controls.parentNode,b.story);assert.equal(b.flow.isWaiting(),false);
-});
-
-test('flow never auto-opens failed publication, changed context, or asynchronously presented choice',()=>{
-    for(const reason of ['failure','context','choice']){const b=flowBox(),ticket=b.flow.pipelineStart();
-        if(reason==='context')b.get('mediaContext').invalidate();if(reason==='choice')b.setChoice(true);
-        b.flow.pipelineEnd(ticket,reason==='failure'?null:b.receipt);b.flushTimers();assert.equal(b.opens(),0);assert.equal(b.flow.isWaiting(),false);assert.equal(b.controls.parentNode,b.story);
-    }
 });
 
 test('shared renderer paints a frozen reading frame: snapshot world, anchor seats, no scene tag, missing-asset memory',()=>{

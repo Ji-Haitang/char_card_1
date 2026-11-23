@@ -1133,6 +1133,7 @@ function switchScene(sceneName) {
     }
     
     updateSLGReturnButton();
+    if (typeof stageStory !== 'undefined') stageStory.sceneChanged();
     if (window.GameSceneBridge) GameSceneBridge.notify('switch-scene');
 }
 

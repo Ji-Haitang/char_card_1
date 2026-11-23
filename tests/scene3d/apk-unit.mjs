@@ -88,7 +88,7 @@ async function syntheticSync(f) {
   await atomicJson(path.join(p.assetsRoot, 'capacitor.config.json'), Object.fromEntries(Object.entries(config).reverse()));
   await atomicJson(path.join(p.assetsRoot, 'capacitor.plugins.json'), [...EXPECTED_PLUGINS].reverse());
 }
-function binaryManifest({ applicationId = 'com.jihaitang.jxz', versionCode = 4, versionName = '1.3' } = {}) {
+function binaryManifest({ applicationId = 'com.jihaitang.jxz', versionCode = 10, versionName = '1.6.3' } = {}) {
   const strings = ['manifest', 'package', applicationId, 'http://schemas.android.com/apk/res/android', 'versionCode', 'versionName', versionName];
   const encoded = strings.map(value => { const bytes = Buffer.from(value); assert.ok(bytes.length < 128); return Buffer.concat([Buffer.from([value.length, bytes.length]), bytes, Buffer.from([0])]); });
   const pool = Buffer.alloc(28 + 4 * strings.length + encoded.reduce((sum, bytes) => sum + bytes.length, 0));
@@ -132,7 +132,7 @@ async function syntheticApk(f, mutate = () => {}) {
   items.push({ name: 'AndroidManifest.xml', bytes: binaryManifest() });
   items.push({ name: 'assets/native-bridge.js', bytes: await fs.readFile(path.join(f.prepared.apkRoot, 'node_modules/@capacitor/android/capacitor/src/main/assets/native-bridge.js')) });
   items.push({ name: 'classes.dex', bytes: dexWithClasses([...EXPECTED_PLUGINS.map(plugin => plugin.classpath), 'com.getcapacitor.Bridge']) });
-  mutate(items); await put(f.prepared.androidRoot, 'app/build/outputs/apk/debug/app-debug.apk', zip(items));
+  mutate(items); await put(f.prepared.androidRoot, 'app/build/outputs/apk/release/app-release-unsigned.apk', zip(items));
 }
 
 test('prepare copies only current version and full native inputs without source writes/secrets', async t => {
@@ -252,7 +252,7 @@ test('ZIP accepts Chinese stored/deflated data, rejects traversal/case/duplicate
   assert.throws(() => readZip(zip([{ name: 'encrypted', bytes: Buffer.from('x'), flags: 0x801 }])), /Encrypted/);
   const corrupt = zip([{ name: 'a', bytes: Buffer.from('abc') }]); corrupt[31] ^= 1;
   assert.throws(() => readZip(corrupt), /CRC/);
-  assert.deepEqual(parseAndroidManifest(binaryManifest()), { applicationId: 'com.jihaitang.jxz', versionCode: 4, versionName: '1.3' });
+  assert.deepEqual(parseAndroidManifest(binaryManifest()), { applicationId: 'com.jihaitang.jxz', versionCode: 10, versionName: '1.6.3' });
 });
 
 test('library bridge contract rejects missing/changed/unrelated extras and requires native Bridge definition', async t => {

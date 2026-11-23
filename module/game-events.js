@@ -44,10 +44,10 @@
 // 显示随机事件
 function displayRandomEvent(event) {
     const container = document.getElementById('random-event-container');
-    container._presentationEvent = event;
     const options = document.getElementById('event-options');
     
-    // 不再在事件框中显示事件描述，描述已作为最后一页附加到正文
+    // The stage shows the description with its live controls; the legacy view uses its appended page.
+    document.getElementById('event-description').textContent = event.事件描述 || '';
     options.innerHTML = '';
     
     const optionKeys = ['选项一', '选项二', '选项三'];
@@ -61,7 +61,7 @@ function displayRandomEvent(event) {
                 <div class="option-reward">奖励: ${option.奖励}</div>
                 <div class="option-success-rate">成功率: ${option.成功率}</div>
             `;
-            btn.onclick = () => handleEventOption(index + 1, option);
+            btn.onclick = () => { if (event === currentRandomEvent) return handleEventOption(index + 1, option); };
             options.appendChild(btn);
         }
     });
@@ -174,7 +174,6 @@ function applyEventReward(reward) {
 // 显示战斗事件
 function displayBattleEvent(event) {
     const container = document.getElementById('battle-event-container');
-    container._presentationEvent = event;
     const description = document.getElementById('battle-event-description');
     const enemyName = document.getElementById('enemy-name-display');
     const enemyAttack = document.getElementById('enemy-attack-display');
@@ -183,8 +182,7 @@ function displayBattleEvent(event) {
     
     currentBattleEvent = event;
     
-    // 不在事件框中显示事件描述，正文最后一页已显示
-    if (description) description.textContent = '';
+    if (description) description.textContent = event.事件描述 || '';
     
     if (event.敌方信息) {
         enemyName.textContent = event.敌方信息.名称 || '未知敌人';
@@ -693,7 +691,7 @@ function parseLLMResponse(response, mainTextContent) {
     console.log(`NPC好感度 ${npcFavorability}`);
     // 更新关系显示（如果在关系界面）
     const activeScene = document.querySelector('.scene.active');
-    if (activeScene && activeScene.id === 'relationships-scene') {
+    if (document.getElementById('relationships-scene')?.__dp?.isOpen()) {
         updateRelationshipsDisplay();
     }
     console.log(`currentNpcLocations ${currentNpcLocations}`);

@@ -618,13 +618,6 @@ var pipeline = (function() {
             'currentBattleEvent=' + (currentBattleEvent ? currentBattleEvent['事件类型'] : 'null')
         );
 
-        if(_speechRequest){
-            var speechInstruction=speechService.turnInstruction(_speechRequest);
-            messages=messages.map(function(m){return Object.assign({},m);});
-            for(var speechIndex=messages.length-1;speechIndex>=0;speechIndex--)if(messages[speechIndex].role==='user'){
-                messages[speechIndex].content+='\n\n'+speechInstruction;break;
-            }
-        }
         // === 完整 prompt log ===
         window._lastPipelineMessages = messages;
         console.groupCollapsed('[Pipeline] 发送消息（共 ' + messages.length + ' 条）');
@@ -722,6 +715,9 @@ var pipeline = (function() {
                 try {
                     var cleaned = responseParser.removeThinkingContent(accumulatedText);
                     var mainText = responseParser.extractMainText(cleaned);
+                    if (mainText && typeof stripInlineSpeechMarkers === 'function') {
+                        mainText = stripInlineSpeechMarkers(mainText, { streaming: true });
+                    }
                     if (mainText && typeof updateStoryText === 'function') {
                         updateStoryText(mainText);
                         _uiDiag.renders++;
@@ -865,6 +861,7 @@ var pipeline = (function() {
             // 2. 解析 AI 回复
             var parsed = responseParser.run(rawText);
             if(media&&typeof media.mainText==='string')parsed.mainText=media.mainText;
+            else if(parsed.mainText&&typeof stripInlineSpeechMarkers==='function')parsed.mainText=stripInlineSpeechMarkers(parsed.mainText);
 
             // 3. 应用 SIDE_NOTE 和摘要到全局变量
             _applyParsedSideNote(parsed);
@@ -927,7 +924,7 @@ var pipeline = (function() {
                 updateAllDisplays();
             }
             // 5.5 GAL 演出自动进入（仅 commit 路径；流式/回滚的 renderMainText 不调），控制器内部按 G1 判定
-            if (!(typeof presentationFlow!=='undefined'&&document.body.classList.contains('layout-landscape'))&&typeof galPresentation !== 'undefined' && galPresentation && typeof galPresentation.onCommit === 'function') {
+            if (!(typeof stageStory!=='undefined'&&document.body.classList.contains('layout-landscape'))&&typeof galPresentation !== 'undefined' && galPresentation && typeof galPresentation.onCommit === 'function') {
                 try { galPresentation.onCommit({ commitId: 'commit-' + (++_galCommitSequence) }); } catch (e) { console.warn('[Gal] onCommit 失败', e); }
             }
 
@@ -1239,6 +1236,7 @@ var pipeline = (function() {
         if (typeof updateFreeActionInputState === 'function') updateFreeActionInputState();
         else _setInteractionEnabled(true);
         _hideStreamMask();
+        if (typeof stageStory !== 'undefined') stageStory.beforeDisplay();
     }
 
     // ========== 流式控件 UI ==========
@@ -1272,11 +1270,11 @@ var pipeline = (function() {
     // 放行：停止生成；只读的正文翻页控件（左右箭头、页码点、正文点击区、展开态历史页码跳转）——
     // 它们只切换正文显示，不改游戏状态、不发请求（GM0 忙碌期间翻页不进演出，见 game-ui doGoToPage）。
     var _BUSY_READONLY_SELECTOR = '#story-prev-btn, #story-next-btn, #page-indicator, .story-content-wrapper, ' +
-        '#story-history-page-input, #story-history-jump-btn';
+        '#story-history-page-input, #story-history-jump-btn, #stream-mask .stage-wait-pages, #stream-mask .stage-wait-prose';
     function _blockBusyInteraction(event) {
         if (!isBusy()) return;
         var target = event.target;
-        if (target && target.closest && target.closest('#stream-stop-btn, #presentation-wait-extra, #speech-round-decision-modal')) return;
+        if (target && target.closest && target.closest('#stream-stop-btn, #speech-round-decision-modal')) return;
         if (target && target.closest && target.closest(_BUSY_READONLY_SELECTOR)) return;
         event.preventDefault();
         event.stopImmediatePropagation();
@@ -1525,11 +1523,12 @@ var pipeline = (function() {
     var _sceneTurnSequence = 0;
     var _galCommitSequence = 0;
     var _sceneOperationActive = false;
-    async function withSceneGuard(operation, args) {
+    async function withSceneGuard(operation, args, previousView) {
         if (_externalBusyOverlay || _sceneOperationActive) {
             if (typeof showModal === 'function') showModal('当前已有生成任务进行，请稍候。');
             return false;
         }
+        let stageTurn = null;
         var token = 'pipeline-' + (++_sceneTurnSequence);
         var bridge = typeof window !== 'undefined' && window.GameSceneBridge;
         // 新回合开始：退出上一轮的 GAL 演出（不播翻页纸），业务层在流式期间保持可见
@@ -1539,16 +1538,16 @@ var pipeline = (function() {
         // 操作层表情立绘回默认「平静」（仅 GameMode 0 生效）
         if (typeof resetNpcTurnEmotions === 'function') { try { resetNpcTurnEmotions(); } catch (e) {} }
         _sceneOperationActive = true;
-        var flowTicket=null;_lastPresentationReceipt=null;_speechRequest=null;
+        _lastPresentationReceipt=null;_speechRequest=null;
         try {
             var expandBtn = document.getElementById('story-expand-btn');
             if (expandBtn) expandBtn.style.visibility = 'hidden';
             _setInteractionEnabled(false);
             _showStreamMask();
+            if (typeof stageStory !== 'undefined') stageTurn = stageStory.beginWait(previousView);
             _setStreamLog('施延年整理书案');
             if (bridge) bridge.setBusy(token, true);
             if(operation===runTurn&&typeof speechService!=='undefined')_speechRequest=await speechService.beginTurn();
-            if(typeof presentationFlow!=='undefined')flowTicket=presentationFlow.pipelineStart();
             if(_speechRequest&&_speechRequest.kind==='round')return await speechService.withRoundLease(_speechRequest.workspaceId,function(){return operation.apply(null,args);});
             return await operation.apply(null, args);
         } finally {
@@ -1560,17 +1559,15 @@ var pipeline = (function() {
                 bridge.setBusy(token, false);
                 bridge.notify('pipeline-finished');
             }
-            if(typeof presentationFlow!=='undefined')presentationFlow.pipelineEnd(flowTicket,_lastPresentationReceipt);
+            if (stageTurn) stageStory.endWait(stageTurn,_lastPresentationReceipt);
         }
     }
     async function resumeSpeech(id,options){
         return speechService.resumeTurn(id,options,_commitResponse,function(text){_showStreamControls();_setStreamLog(text);});
     }
     return { 
-        runTurn: function() { return withSceneGuard(runTurn, arguments); },
+        runTurn: function(message, options, previousView) { return withSceneGuard(runTurn, [message, options], previousView); },
         resumeRoundSpeech: function(){return withSceneGuard(resumeSpeech,arguments);},
-        showPresentationWait: function(){_showStreamMask();},
-        hidePresentationWait: function(){if(!isBusy())_hideStreamControls();},
         abortCurrentTurn: abortCurrentTurn, 
         isStreaming: isStreaming,
         isBusy: isBusy,

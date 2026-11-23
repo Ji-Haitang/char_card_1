@@ -84,7 +84,7 @@
     <link rel="stylesheet" href="module/game-styles-beautify.css?v=ui-click-title-2" id="beautify-css">
     <link rel="stylesheet" href="module/scene3d-host.css">
     <!-- 布局迭代层：视窗右下角控制面板、文本区输入栏、横屏（左右分栏）布局 -->
-    <link rel="stylesheet" href="module/game-styles-layout.css">
+    <link rel="stylesheet" href="module/game-styles-layout.css?v=stage-story-p4">
     <link rel="stylesheet" href="module/mobile-density-overrides.css">
     <!-- 字体文件较大且 file:// 协议下会被浏览器 CORS 拦截，故仅在线/WebView 环境加载（双击打开时回退本地楷体） -->
     <script>
@@ -104,11 +104,10 @@
     <link rel="stylesheet" href="module/equipment-panel.css?v=1">
     <link rel="stylesheet" href="module/dialog-panel.css?v=1">
     <link rel="stylesheet" href="module/side-quest-panel.css?v=4">
-    <link rel="stylesheet" href="ui/presentation-host.css?v=stage-unify-20261118c">
-    <link rel="stylesheet" href="ui/presentation-reader.css?v=stage-unify-20261118c">
-    <link rel="stylesheet" href="ui/presentation-flow.css?v=stage-unify-20261118c">
-    <link rel="stylesheet" href="ui/speech/playback.css?v=stage-unify-20261118c">
-    <link rel="stylesheet" href="ui/speech/settings.css?v=stage-unify-20261118c">
+    <link rel="stylesheet" href="ui/profile-folio.css">
+    <link rel="stylesheet" href="ui/stage-story.css?v=toolbar-order">
+    <link rel="stylesheet" href="ui/speech/playback.css?v=stage-story-p4">
+    <link rel="stylesheet" href="ui/speech/settings.css?v=stage-story-p4">
     <!-- 全局滚动条皮肤（古风/扁平）：须保持为最后一个样式表 -->
     <link rel="stylesheet" href="module/scrollbar-skin.css?v=1">
     <script src="module/inventory-panel.js?v=1" defer></script>
@@ -141,170 +140,54 @@
                     <!-- 支线常驻状态条（有进行中支线时显示，内容/显隐由 updateSideQuestStatusBar 维护） -->
                     <div class="sidequest-status-bar" id="sidequest-status-bar" style="display:none"></div>
                     <!-- <button class="refresh-npc-btn" onclick="refreshNpcLocations()">刷新NPC位置</button> -->
-                    <div class="location" id="yanwuchang"></div>
-                    <div class="location" id="cangjingge"></div>
-                    <div class="location" id="huofang"></div>
-                    <div class="location" id="houshan"></div>
-                    <div class="location" id="yishiting"></div>
-                    <div class="location" id="tiejiangpu"></div>
-                    <div class="location" id="nandizi"></div>
-                    <div class="location" id="nvdizi"></div>
-                    <div class="location" id="shanmen"></div>
-                    <div class="location" id="gongtian"></div>
-                    <div class="location" id="danfang"></div>
-                    <div class="ink-decoration ink1"></div>
-                    <div class="ink-decoration ink2"></div>
-                    <!-- 建筑轮廓与热区（SVG覆盖层） -->
-                    <svg id="map-hit-areas" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;"></svg>
-                </div>
-
-                <!-- 后续场景保持不变 -->
-                <!-- 角色属性场景 -->
-                <div id="player-stats-scene" class="scene">
-                    <button class="back-btn" onclick="backToMap()">返回</button>
-                    <div class="stats-container">
-                        <div class="stats-group">
-                            <h3>天赋属性</h3>
-                            <div class="stat-item" onmouseenter="showAttrTooltip(event,'根骨')" onmouseleave="hideTooltip()">
-                                <span class="stat-name">根骨</span>
-                                <div class="stat-bar">
-                                    <div class="stat-fill" id="talent-gengu" style="width: 75%"></div>
-                                </div>
-                                <span class="stat-value" id="talent-gengu-value">75</span>
-                            </div>
-                            <div class="stat-item" onmouseenter="showAttrTooltip(event,'悟性')" onmouseleave="hideTooltip()">
-                                <span class="stat-name">悟性</span>
-                                <div class="stat-bar">
-                                    <div class="stat-fill" id="talent-wuxing" style="width: 82%"></div>
-                                </div>
-                                <span class="stat-value" id="talent-wuxing-value">82</span>
-                            </div>
-                            <div class="stat-item" onmouseenter="showAttrTooltip(event,'心性')" onmouseleave="hideTooltip()">
-                                <span class="stat-name">心性</span>
-                                <div class="stat-bar">
-                                    <div class="stat-fill" id="talent-xinxing" style="width: 68%"></div>
-                                </div>
-                                <span class="stat-value" id="talent-xinxing-value">68</span>
-                            </div>
-                            <div class="stat-item" onmouseenter="showAttrTooltip(event,'魅力')" onmouseleave="hideTooltip()">
-                                <span class="stat-name">魅力</span>
-                                <div class="stat-bar">
-                                    <div class="stat-fill" id="talent-meili" style="width: 70%"></div>
-                                </div>
-                                <span class="stat-value" id="talent-meili-value">70</span>
-                            </div>
-                        </div>
-                        
-                        <div class="bottom-stats-row">
-                            <div class="stats-group">
-                                <h3>人物数值</h3>
-                                <div class="simple-stat-item" onmouseenter="showAttrTooltip(event,'武学')" onmouseleave="hideTooltip()">
-                                    <span class="simple-stat-name">武学</span>
-                                    <span class="simple-stat-value" id="stat-wuxue-value">50</span>
-                                </div>
-                                <div class="simple-stat-item" onmouseenter="showAttrTooltip(event,'学识')" onmouseleave="hideTooltip()">
-                                    <span class="simple-stat-name">学识</span>
-                                    <span class="simple-stat-value" id="stat-xueshi-value">35</span>
-                                </div>
-                                <div class="simple-stat-item" onmouseenter="showAttrTooltip(event,'声望')" onmouseleave="hideTooltip()">
-                                    <span class="simple-stat-name">声望</span>
-                                    <span class="simple-stat-value" id="stat-shengwang-value">20</span>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">金钱</span>
-                                    <span class="simple-stat-value" id="stat-jinqian-value">100</span>
-                                </div>
-                            </div>
-                            
-                            <div class="stats-group">
-                                <h3>战斗数值</h3>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">攻击力</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-attack-value">20</span>
-                                        <button class="add-point-btn" id="add-attack-btn" onclick="addAttack()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">生命值</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-hp-value">50</span>
-                                        <button class="add-point-btn" id="add-hp-btn" onclick="addHP()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">暴击率</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-crit-rate-value">10%</span>
-                                        <button class="add-point-btn" id="add-crit-rate-btn" onclick="addCritRate()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">暴击伤害</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-crit-damage-value">150%</span>
-                                        <button class="add-point-btn" id="add-crit-damage-btn" onclick="addCritDamage()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">格挡</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-block-value">0</span>
-                                        <button class="add-point-btn" id="add-block-btn" onclick="addBlock()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">穿甲</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-armor-pen-value">0</span>
-                                        <button class="add-point-btn" id="add-armor-pen-btn" onclick="addArmorPen()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">回转</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-turnover-value">0.00</span>
-                                        <button class="add-point-btn" id="add-turnover-btn" onclick="addTurnover()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">吸血</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-lifesteal-value">0%</span>
-                                        <button class="add-point-btn" id="add-lifesteal-btn" onclick="addLifesteal()">+</button>
-                                    </div>
-                                </div>
-                                <div class="simple-stat-item">
-                                    <span class="simple-stat-name">反伤</span>
-                                    <div class="point-control">
-                                        <span class="simple-stat-value" id="combat-thorns-value">0%</span>
-                                        <button class="add-point-btn" id="add-thorns-btn" onclick="addThorns()">+</button>
-                                    </div>
-                                </div>
-                                <div class="stats-divider"></div>
-                                <div class="simple-stat-item remaining-points-row">
-                                    <span class="simple-stat-name">剩余点数</span>
-                                    <span class="simple-stat-value" id="remaining-points-value">0</span>
-                                </div>
-                                <div class="reset-combat-btn-row">
-                                    <button class="reset-combat-btn" onclick="resetCombatStats()">属性重置</button>
-                                </div>
-                                <div class="skill-list">
-                                    <div id="learned-skills"></div>
-                                </div>
-                            </div>
-                        </div>
+                    <div class="map-registration">
+                        <div class="location" id="yanwuchang"></div>
+                        <div class="location" id="cangjingge"></div>
+                        <div class="location" id="huofang"></div>
+                        <div class="location" id="houshan"></div>
+                        <div class="location" id="yishiting"></div>
+                        <div class="location" id="tiejiangpu"></div>
+                        <div class="location" id="nandizi"></div>
+                        <div class="location" id="nvdizi"></div>
+                        <div class="location" id="shanmen"></div>
+                        <div class="location" id="gongtian"></div>
+                        <div class="location" id="danfang"></div>
+                        <div class="ink-decoration ink1"></div>
+                        <div class="ink-decoration ink2"></div>
+                        <!-- 建筑轮廓与热区（SVG覆盖层） -->
+                        <svg id="map-hit-areas" viewBox="0 0 1460 1000" preserveAspectRatio="xMidYMid slice" style="position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;"></svg>
                     </div>
                 </div>
 
-                <!-- 人际关系场景 -->
-                <div id="relationships-scene" class="scene">
-                    <button class="back-btn" onclick="backToMap()">返回</button>
-                    <div class="relationships-container">
-                        <div class="relationship-grid" id="relationship-grid">
-                            <!-- 动态生成 -->
-                        </div>
-                    </div>
+                <div id="player-stats-scene" class="dialog-panel profile-folio" style="display:none">
+                    <section class="dialog-panel-shell" role="dialog" aria-modal="true" aria-labelledby="player-stats-scene-title">
+                        <header class="dialog-panel-header"><h2 id="player-stats-scene-title">角色属性</h2><button type="button" data-dialog-close>退出</button></header>
+                        <nav class="folio-nav" aria-label="属性分类"><button data-page="person" aria-pressed="true">人物</button><button data-page="combat" aria-pressed="false">战斗</button><span id="folio-points" hidden>剩余点数 <b id="remaining-points-value">0</b></span></nav>
+                        <div class="folio-scroll"><div id="folio-person" class="folio-columns"><section class="folio-group"><h3>天赋属性</h3><button type="button" class="folio-row" data-tier="根骨"><span>根骨</span><i class="folio-track"><i id="talent-gengu"></i></i><b id="talent-gengu-value"></b></button>
+<button type="button" class="folio-row" data-tier="悟性"><span>悟性</span><i class="folio-track"><i id="talent-wuxing"></i></i><b id="talent-wuxing-value"></b></button>
+<button type="button" class="folio-row" data-tier="心性"><span>心性</span><i class="folio-track"><i id="talent-xinxing"></i></i><b id="talent-xinxing-value"></b></button>
+<button type="button" class="folio-row" data-tier="魅力"><span>魅力</span><i class="folio-track"><i id="talent-meili"></i></i><b id="talent-meili-value"></b></button></section><section class="folio-group"><h3>人物数值</h3><button type="button" class="folio-row" data-tier="武学"><span>武学</span><b id="stat-wuxue-value"></b></button>
+<button type="button" class="folio-row" data-tier="学识"><span>学识</span><b id="stat-xueshi-value"></b></button>
+<button type="button" class="folio-row" data-tier="声望"><span>声望</span><b id="stat-shengwang-value"></b></button>
+<div class="folio-row"><span>金钱</span><b id="stat-jinqian-value"></b></div></section></div><p id="folio-tier" aria-live="polite" hidden></p>
+                        <section id="folio-combat" hidden><div class="folio-columns"><div class="folio-row"><span>攻击力</span><b id="combat-attack-value"></b><button type="button" aria-label="提升攻击力" id="add-attack-btn" onclick="addAttack()">＋</button></div>
+<div class="folio-row"><span>生命值</span><b id="combat-hp-value"></b><button type="button" aria-label="提升生命值" id="add-hp-btn" onclick="addHP()">＋</button></div>
+<div class="folio-row"><span>暴击率</span><b id="combat-crit-rate-value"></b><button type="button" aria-label="提升暴击率" id="add-crit-rate-btn" onclick="addCritRate()">＋</button></div>
+<div class="folio-row"><span>暴击伤害</span><b id="combat-crit-damage-value"></b><button type="button" aria-label="提升暴击伤害" id="add-crit-damage-btn" onclick="addCritDamage()">＋</button></div>
+<div class="folio-row"><span>格挡</span><b id="combat-block-value"></b><button type="button" aria-label="提升格挡" id="add-block-btn" onclick="addBlock()">＋</button></div>
+<div class="folio-row"><span>穿甲</span><b id="combat-armor-pen-value"></b><button type="button" aria-label="提升穿甲" id="add-armor-pen-btn" onclick="addArmorPen()">＋</button></div>
+<div class="folio-row"><span>回转</span><b id="combat-turnover-value"></b><button type="button" aria-label="提升回转" id="add-turnover-btn" onclick="addTurnover()">＋</button></div>
+<div class="folio-row"><span>吸血</span><b id="combat-lifesteal-value"></b><button type="button" aria-label="提升吸血" id="add-lifesteal-btn" onclick="addLifesteal()">＋</button></div>
+<div class="folio-row"><span>反伤</span><b id="combat-thorns-value"></b><button type="button" aria-label="提升反伤" id="add-thorns-btn" onclick="addThorns()">＋</button></div></div><div class="folio-foot"><h3>已学武功</h3><button onclick="resetCombatStats()">属性重置</button></div><div id="learned-skills"></div></section></div>
+                    </section>
+                </div>
+
+                <div id="relationships-scene" class="dialog-panel profile-folio" style="display:none">
+                    <section class="dialog-panel-shell" role="dialog" aria-modal="true" aria-labelledby="relationships-scene-title">
+                        <header class="dialog-panel-header"><h2 id="relationships-scene-title">好感列表</h2><button type="button" data-dialog-close>退出</button></header>
+                        <div id="relationship-grid" class="folio-scroll folio-roster"></div>
+                        <section id="folio-bio" class="dialog-detail" hidden><div class="dialog-detail-body"><h3></h3><p></p></div><div class="dialog-detail-actions"><button type="button" id="folio-list-back">返回列表</button></div></section>
+                    </section>
                 </div>
 
                 <!-- 各个场景 -->
@@ -510,6 +393,8 @@
                     </div>
                 </div>
 
+                <button type="button" id="stage-book" aria-label="继续阅读" title="继续阅读" onclick="stageStory.open()"><svg aria-hidden="true" viewBox="0 0 24 24"><path d="M12 6c-3-2-6-2.4-9-1.5v14c3-.9 6-.5 9 1.5 3-2 6-2.4 9-1.5v-14c-3-.9-6-.5-9 1.5Zm0 0v14"/></svg></button>
+                <button type="button" id="stage-backdrop" aria-label="故事画面" onclick="stageStory.background()"></button>
                 <!-- ===== 视窗 HUD：右下角齿轮 + 向左展开的四枚控制按钮 =====
                      位置参照 3D 场景「镜头归位」按钮（scene3d/src/scene3d.css 的 .scene3d-reset）；
                      层级 950：高于 SLG 图层(10)/NPC选框(50)/流式遮罩(900)，低于各类弹窗(2000+)，
@@ -1251,6 +1136,19 @@
 
         <!-- 故事区域 -->
         <div class="story-area">
+            <header id="stage-tools" aria-label="阅读工具">
+                <button type="button" id="stage-input" onclick="stageStory.toggleInput()" title="输入" aria-label="输入"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="m4 16-1 5 5-1L20 8l-4-4z M14 6l4 4"/></svg></button>
+                <button type="button" id="stage-full" onclick="stageStory.toggleFull()" title="全文" aria-label="全文"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 5q5-2 9 1 4-3 9-1v14q-5-2-9 1-4-3-9-1z M12 6v14"/></svg></button>
+                <div id="stage-menu-slot"></div>
+                <button type="button" id="stage-view" onclick="stageStory.sightsee()" title="观景" aria-label="观景"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M2 18l6-9 4 6 3-4 7 9H2z M16 5a2 2 0 1 0 4 0 2 2 0 1 0-4 0"/></svg></button>
+                <button type="button" id="stage-voice" title="语音" aria-label="语音"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M3 9h4l5-4v14l-5-4H3z M16 8q4 4 0 8 M19 5q7 7 0 14"/></svg></button>
+                <div id="stage-task-slot"></div>
+                <button type="button" id="stage-event" onclick="stageStory.showEvent()" hidden title="处理事件" aria-label="处理事件"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M5 21V3m0 1q4-3 8 0t7 0v10q-4 3-8 0t-7 0"/></svg></button>
+                <span class="stage-count"></span>
+                <button type="button" id="stage-operation" onclick="stageStory.operation()" title="返回操作" aria-label="返回操作"><svg viewBox="0 0 24 24" aria-hidden="true" focusable="false"><path d="M9 4h11v16H9 M3 12h12 M7 8l-4 4 4 4"/></svg></button>
+            </header>
+            <small id="stage-media-status" role="status"></small>
+            <div class="stage-line"><button type="button" aria-label="上一句" onclick="stageStory.step(-1)">‹</button><p aria-live="polite"></p><button type="button" aria-label="下一句" onclick="stageStory.step(1)">›</button></div>
             <div class="story-content-wrapper">
                 <!-- 页面指示器 -->
                 <div class="page-indicator" id="page-indicator"></div>
@@ -1259,6 +1157,7 @@
                 <div class="story-text" id="story-text">
                     江湖路远，故事未始...
                 </div>
+                <section id="stage-event-tail" aria-label="本轮事件"></section>
             </div>
             
             <!-- 随机事件容器 -->
@@ -1319,7 +1218,7 @@
                     <div class="story-expand-slot">
                         <button class="story-expand-btn" id="story-expand-btn" onclick="toggleStoryExpand()">▼ 展开全文</button>
                         <div id="stream-controls" style="display:none">
-                            <button class="story-expand-btn" id="stream-stop-btn" type="button" onclick="pipeline.abortCurrentTurn()">■ 中断</button>
+                            <button class="story-expand-btn" id="stream-stop-btn" type="button" aria-label="中断生成" title="中断生成" onclick="pipeline.abortCurrentTurn()">■ 中断</button>
                         </div>
                     </div>
                     <input type="text" class="story-history-page-input" id="story-history-page-input" inputmode="numeric" autocomplete="off" style="display:none" onkeydown="if(event.key==='Enter'){event.preventDefault();jumpToStoryHistoryPage();}">
@@ -1362,9 +1261,10 @@
     <script src="module/game-state.js"></script>
     <!-- 舞台素材规则（场景图/立绘/CG/地点匾）唯一来源：galPresentation.renderLayers 与横屏阅卷共用 -->
     <script src="module/gal-scene-resources.js?v=stage-unify-20261118c"></script>
-    <script src="module/game-ui.js?v=stage-unify-20261118c"></script>
-    <script src="module/game-helpers.js?v=stage-unify-20261118c"></script>
-    <script src="module/game-events.js?v=stage-unify-20261118c"></script>
+    <script src="module/game-ui.js?v=inline-marker-strip"></script>
+    <script src="module/profile-folio.js"></script>
+    <script src="module/game-helpers.js?v=stage-story-p4"></script>
+    <script src="module/game-events.js?v=stage-story-p4"></script>
     <script src="module/special-event.js"></script>
     <script src="module/game-skills.js?v=stage-unify-20261118c"></script>
     
@@ -1403,14 +1303,14 @@
     <script src="module/side-quest-service.js?v=stage-unify-20261118c"></script>
     <script src="module/side-quest-runner.js?v=stage-unify-20261118c"></script>
     <script src="module/side-quest-panel.js?v=task-info-1"></script>
-    <script src="module/pipeline.js?v=stage-unify-20261118c"></script>
+    <script src="module/pipeline.js?v=inline-marker-no-inject"></script>
     
     <!-- UI 模块 -->
     <script src="ui/config-modal.js?v=config-save-2"></script>
     <script src="ui/prompt-manager-modal.js"></script>
     <script src="module/bgm-manager.js"></script>
-    <script src="module/scene3d-bridge.js?v=stage-unify-20261118c"></script>
-    <script src="module/media-context.js?v=stage-unify-20261118c"></script>
+    <script src="module/scene3d-bridge.js?v=stage-story-p4"></script>
+    <script src="module/media-context.js?v=stage-story-p4"></script>
     <script src="module/illustration-http.js?v=stage-unify-20261118c"></script>
     <script src="module/speech/msgpack.js?v=stage-unify-20261118c"></script>
     <script src="module/speech/provider.js?v=stage-unify-20261118c"></script>
@@ -1418,21 +1318,16 @@
     <script src="module/speech/config.js?v=stage-unify-20261118c"></script>
     <script src="module/speech/store.js?v=stage-unify-20261118c"></script>
     <script src="module/speech/playback.js?v=stage-unify-20261118c"></script>
-    <script src="module/speech/runtime.js?v=stage-unify-20261118c"></script>
+    <script src="module/speech/runtime.js?v=stage-story-p4"></script>
     <script src="module/speech/service.js?v=stage-unify-20261118c"></script>
 
-    <script src="module/presentation-adapter.js?v=stage-unify-20261118c"></script>
+    <script src="module/presentation-adapter.js?v=stage-story-p4"></script>
     <script src="module/presentation-plan.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-view.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-actions.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-overlays.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-host.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-controls.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-flow.js?v=stage-unify-20261118c"></script>
 
-    <script src="ui/speech/settings.js?v=stage-unify-20261118c"></script>
-    <script src="ui/speech/playback.js?v=stage-unify-20261118c"></script>
-    <script src="module/presentation-reader.js?v=stage-unify-20261118c"></script>
+    <script src="ui/speech/settings.js?v=stage-story-p4"></script>
+    <script src="ui/speech/playback.js?v=stage-story-p4"></script>
+    <script src="module/stage-story-media.js?v=stage-story-p5"></script>
+    <script src="module/stage-story.js?v=toolbar-order"></script>
 
     <script>
         // 记录原始渲染环境状态
@@ -2111,63 +2006,8 @@ const outPut = `
             }
         }
 
-        // 修改 showPlayerStats 函数
-        function showPlayerStats() {
-            // 只有当前场景不是角色属性或人际关系时才记录
-            const activeScene = document.querySelector('.scene.active');
-            if (activeScene && 
-                activeScene.id !== 'player-stats-scene' && 
-                activeScene.id !== 'relationships-scene') {
-                previousScene = activeScene.id.replace('-scene', '');
-                wasInSLGMode = GameMode === 1;
-            }
-            
-            // 清除SLG相关元素
-            const viewport = document.getElementById('main-viewport');
-            const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
-            existingLayers.forEach(layer => layer.remove());
-            const existingMask = viewport.querySelector('.slg-interaction-mask');
-            if (existingMask) existingMask.remove();
-            
-            // 先切换场景
-            switchScene('player-stats');
-            updateStatsDisplay();
-            
-            // 如果是SLG模式，移除该场景的slg-mode类
-            if (GameMode === 1) {
-                const statsScene = document.getElementById('player-stats-scene');
-                statsScene.classList.remove('slg-mode');
-            }
-        }
-
-        // 修改 showRelationships 函数
-        function showRelationships() {
-            // 只有当前场景不是角色属性或人际关系时才记录
-            const activeScene = document.querySelector('.scene.active');
-            if (activeScene && 
-                activeScene.id !== 'player-stats-scene' && 
-                activeScene.id !== 'relationships-scene') {
-                previousScene = activeScene.id.replace('-scene', '');
-                wasInSLGMode = GameMode === 1;
-            }
-            
-            // 清除SLG相关元素
-            const viewport = document.getElementById('main-viewport');
-            const existingLayers = viewport.querySelectorAll('.slg-layer-container, .slg-layer');
-            existingLayers.forEach(layer => layer.remove());
-            const existingMask = viewport.querySelector('.slg-interaction-mask');
-            if (existingMask) existingMask.remove();
-            
-            // 先切换场景
-            switchScene('relationships');
-            updateRelationshipsDisplay();
-            
-            // 如果是SLG模式，移除该场景的slg-mode类
-            if (GameMode === 1) {
-                const relScene = document.getElementById('relationships-scene');
-                relScene.classList.remove('slg-mode');
-            }
-        }
+        function showPlayerStats() { openProfileFolio('player-stats-scene'); }
+        function showRelationships() { openProfileFolio('relationships-scene'); }
 
         // 切换NPC可见性
         function toggleNpcVisibility(npcId) {
@@ -3380,6 +3220,8 @@ const outPut = `
                     `你结束了山下的游历，回到了天山派`
                 );
             
+            // 业务确认返门后才释放阅读舞台；取消确认仍留在原句。
+            if(typeof stageStory!=='undefined')stageStory.reset();
             // 重置游戏模式
             GameMode = 0;
             if (window.GameSceneBridge) GameSceneBridge.invalidate('return-from-gal');
@@ -4429,8 +4271,7 @@ function buildSaveName() {
             updateAllDisplays();
             
             // 如果在关系界面，更新关系显示
-            const activeScene = document.querySelector('.scene.active');
-            if (activeScene && activeScene.id === 'relationships-scene') {
+            if (document.getElementById('relationships-scene').__dp?.isOpen()) {
                 updateRelationshipsDisplay();
             }
             
@@ -5135,14 +4976,17 @@ function buildSaveName() {
         }
         function applyLayoutMode(mode) {
             const landscape = Number(mode) === 1;
+            const leavingStage = !landscape && typeof stageStory!=='undefined' && stageStory.engaged();
             if(!landscape){
-                if(typeof presentationFlow!=='undefined')presentationFlow.cancel();
-                if(typeof presentationHost!=='undefined')presentationHost.invalidate();
+                if(leavingStage)stageStory.reset();
                 if(typeof speechService!=='undefined')speechService.stop();
             }
             document.body.classList.toggle('layout-landscape', landscape);
             document.body.classList.toggle('layout-portrait', !landscape);
+            fitMapHitAreas();
+            if(typeof stageStory!=='undefined')stageStory.fitWait();
             if(!landscape&&typeof presentationAdapter!=='undefined')presentationAdapter.restoreCurrent();
+            if(leavingStage && GameMode===0)updateStoryDisplay();
             if(landscape&&typeof updateStoryDisplay==='function'&&!(typeof presentationAdapter!=='undefined'&&presentationAdapter.blocksOriginal()))updateStoryDisplay();
             const cap = window.Capacitor;
             if (cap && typeof cap.getPlatform === 'function' && cap.getPlatform() === 'android') {
@@ -5558,6 +5402,7 @@ function buildSaveName() {
             if (typeof sideQuestRunner !== 'undefined') sideQuestRunner.cancel();
 
             // 从全量快照还原所有字段
+            const previousView = stageStory.captureWaitView();
             var ok = storageService.restoreFromSnapshot();
             console.log('[Regenerate] restoreFromSnapshot 结果=' + ok);
             if (!ok) {
@@ -5591,7 +5436,7 @@ function buildSaveName() {
             if (typeof updateLocationHeadcountLabels === 'function') updateLocationHeadcountLabels();
             storageService.saveAppState({ gameData: gameData });
             console.log('[Regenerate] 使用编辑后消息重新发起请求:', editedMsg.substring(0, 50));
-            pipeline.runTurn(editedMsg, { isRegenerate: true }).catch(function(e) {
+            pipeline.runTurn(editedMsg, { isRegenerate: true }, previousView).catch(function(e) {
                 console.error('[Regenerate] 重新生成失败:', e);
             });
         }
@@ -6191,8 +6036,6 @@ function buildSaveName() {
                     mapScene._selectionClickBound = true;
                 }
 
-                // 根据 main-viewport 比例设置动态 viewBox（高度基准=1000）
-                setMapHitAreasViewBox();
 
                 // 示例多边形（请根据实际地图替换为精确点位）
                 const buildingPolygons = [
@@ -6288,29 +6131,17 @@ function buildSaveName() {
             }
         }
 
-        function setMapHitAreasViewBox() {
+        // Polygon points use the original 1460×1000 registration. Portrait retains
+        // its viewport-fitted projection; landscape positions the entire registration plane.
+        function fitMapHitAreas() {
             const svg = document.getElementById('map-hit-areas');
-            const vp = document.getElementById('main-viewport');
-            if (!svg || !vp) return;
-            const rect = vp.getBoundingClientRect();
-            const ratio = rect.width / rect.height || 1.46; // 与 .viewport 的 aspect-ratio 保持一致
-            const baseH = 1000;
-            const vbW = Math.max(1, Math.round(baseH * ratio));
-            svg.setAttribute('viewBox', `0 0 ${vbW} ${baseH}`);
-            svg.setAttribute('preserveAspectRatio', 'xMidYMid slice');
-            svg.dataset.vbWidth = vbW;
-            svg.dataset.vbHeight = baseH;
+            const viewport = document.getElementById('main-viewport');
+            if (!svg || !viewport) return;
+            const r = viewport.getBoundingClientRect();
+            const width = document.body.classList.contains('layout-landscape') || !r.height ? 1460 : Math.round(1000*r.width/r.height);
+            svg.setAttribute('viewBox', `0 0 ${width} 1000`);
         }
-
-        // 窗口变化时自适应 viewBox（防止比率变化导致取点与多边形失配）
-        (function bindResizeForViewBox(){
-            let rafId = null;
-            const onResize = () => {
-                if (rafId) cancelAnimationFrame(rafId);
-                rafId = requestAnimationFrame(() => setMapHitAreasViewBox());
-            };
-            window.addEventListener('resize', onResize, { passive: true });
-        })();
+        window.addEventListener('resize',fitMapHitAreas,{passive:true});
 
         // 开发用取点器（方法A）：点击采集 polygon 点；Z 撤销，C 清空，Enter 输出
         window.enableMapPointPicker = function enableMapPointPicker() {
