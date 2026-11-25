@@ -45,6 +45,16 @@ test('SDK through the real native adapter sends JSON and returns exact public MP
     assert.equal(mp3.length,1224);assert.equal(createHash('sha256').update(mp3).digest('hex'),mp3Hash);const h=harness(),controller=new h.env.AbortController();const result=await h.synthesize(controller.signal);
     assert.equal(h.calls.length,1);checkRequest(h.calls[0]);assert.equal(result.model,'drama-3');assert.equal(result.provider,'fish-drama3');assert.equal(result.blob.type,'audio/mpeg');assert.equal(result.blob.size,1224);assert.deepEqual(Buffer.from(await result.blob.arrayBuffer()),mp3);assert.equal(result.billableBytes,new TextEncoder().encode(jsonBody.text).length);assert.equal(h.decoded.length,1);h.clean();
 });
+test('Android 桥保留玩家选择的 S2.1 Pro，不回退到 D3', async () => {
+    const h = harness();
+    const result = await h.env.speechDrama3.synthesize(
+        { ...config, model: 's2.1-pro' }, input, { fetch: h.env.speechTransport.fetch },
+    );
+    assert.equal(h.calls.length, 1);
+    assert.equal(h.calls[0].headers.model, 's2.1-pro');
+    assert.equal(result.model, 's2.1-pro');
+    h.clean();
+});
 test('Android wrapped base64 is decoded by the real adapter',async()=>{
     const h=harness(()=>({...success(),data:mp3.toString('base64').match(/.{1,76}/g).join('\r\n')+'\n'}));assert.deepEqual(Buffer.from(await(await h.synthesize()).blob.arrayBuffer()),mp3);assert.equal(h.calls.length,1);h.clean();
 });

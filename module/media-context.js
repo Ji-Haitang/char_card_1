@@ -23,8 +23,10 @@ var mediaContext = (function () {
         if(value&&typeof value==='object')return Object.fromEntries(Object.keys(value).sort().map(function(k){return [k,sorted(value[k])];}));
         return value;
     }
-    async function publicationFingerprint(){
+    async function publicationFingerprint(version=2){
         var state=structuredClone(gameData);delete state.presentationCursor;
+        if(version===2)for(const key of ['uiStyle','layoutMode','storyFontFamily','textFontLevel','galPortraitStyle'])delete state[key];
+        else if(version!==1)throw new Error('不支持此待办的进度校验版本');
         return speechService.hash(JSON.stringify(sorted({history:structuredClone(storageService.loadUIConversation()),state:state})));
     }
     return Object.freeze({workspaceId:workspaceId,capture:capture,isCurrent:isCurrent,isBusy:busy,

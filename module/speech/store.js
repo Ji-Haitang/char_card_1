@@ -66,6 +66,7 @@ var speechStore = (function () {
         if (turn.renderVersion !== 'drama3-v1' || !/^[a-f0-9]{64}$/.test(turn.renderHash || ''))
             throw new Error('语音渲染版本或指令指纹无效');
         var render = { renderVersion: turn.renderVersion, renderHash: turn.renderHash };
+        if (turn.model !== undefined) render.model = turn.model;
         turn = {
             workspaceId: turn.workspaceId,
             turnId: turn.turnId,

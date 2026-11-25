@@ -3,7 +3,7 @@ var speechVoiceDefaults = (function () {
     'use strict';
     var ids = Object.freeze({
         A: 'b6e44b2400a84a2d82ac006b2718aeb1', // 破阵子
-        B: '2e86853070c844bf98c37c55ca597844', // 洞庭君
+        B: '2e86853070c844bf98c37c55ca597846', // 洞庭君
         C: '2e801eb2ed5c442da7763ff17df83bff', // 钱塘君
         D: 'bd6f7862753f46908ac19b19ba84eb3c', // 萧白瑚
         E: '085f3ff87ada45db94f3bd316f070f15', // 姬姒
@@ -70,13 +70,20 @@ var speechConfig = (function () {
         return out;
     }
     function project(raw) {
-        if (!raw) return defaults();
+        if (!raw) {
+            const fresh = defaults();
+            fresh.provider.model = 's2.1-pro';
+            return fresh;
+        }
         if (!object(raw) || !raw.provider || raw.provider.kind !== KIND)
             throw new Error('本机语音配置版本不受支持，原记录保持不变');
+        const voices=structuredClone(raw.voices || {});
+        if(voices.B?.kind===KIND && voices.B.speakerId==='2e86853070c844bf98c37c55ca597844')
+            voices.B.speakerId=speechVoiceDefaults.create().B.speakerId;
         return {
             enabled: raw.enabled === true,
             provider: merge(defaults().provider, raw.provider),
-            voices: structuredClone(raw.voices || {}),
+            voices,
         };
     }
     async function get(workspaceId) {

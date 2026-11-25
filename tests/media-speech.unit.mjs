@@ -20,7 +20,7 @@ test('two real NPC units prepare once, then reuse the exact cached blobs without
     });
     assert.equal(h.decoded.length,2,'service metadata validation only for fresh audio');
     assert.deepEqual(h.requests.map(r=>r.body.text),['[轻声、稍慢] 第一句公开对白。','[平静] 第二句公开对白。']);
-    for(const r of h.requests){assert.equal(new URL(r.url).hostname,'proxy.example');assert.equal(r.options.headers.get('model'),'drama-3');assert.equal(r.options.credentials,'omit');}
+    for(const r of h.requests){assert.equal(new URL(r.url).hostname,'proxy.example');assert.equal(r.options.headers.get('model'),'s2.1-pro');assert.equal(r.options.credentials,'omit');}
 });
 
 for(const kind of ['epoch','reference'])test('same-text '+kind+' restore during config read prevents dispatch',async()=>{

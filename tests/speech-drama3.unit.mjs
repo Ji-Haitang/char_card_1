@@ -11,6 +11,10 @@ function scope(extra = {}) {
         vm.runInContext(readFileSync(new URL('../module/' + file, import.meta.url), 'utf8'), env);
     return env;
 }
+test('400 validation path is reported without rejected text or credential',async()=>{
+    const a=scope({setTimeout,clearTimeout}).speechDrama3;
+    await assert.rejects(a.synthesize(config,request,{fetch:async()=>new Response(JSON.stringify({detail:[{loc:['body','reference_id'],type:'missing',input:secret}]}),{status:400,headers:{'content-type':'application/json'}})}),e=>{assert.match(e.message,/reference_id：缺少必填字段/);return safe(e,'http');});
+});
 const api = scope().speechDrama3;
 const secret = 'fixture-not-a-real-key';
 const config = { kind: 'fish-drama3', apiKey: secret };
@@ -30,6 +34,21 @@ function safe(error, code) {
     assert.ok(!JSON.stringify(error).includes(secret));
     assert.equal(error.cause, undefined); return true;
 }
+test('两种显式选择使用相应请求头和价格；旧配置仍走 D3', async () => {
+    for (const [model, rate] of [['s2.1-pro', 15], ['drama-3', 50]]) {
+        let sentModel;
+        const result = await api.synthesize({ ...config, model }, request, {
+            fetch: async (_url, options) => {
+                sentModel = options.headers.model;
+                return response();
+            },
+        });
+        assert.equal(sentModel, model);
+        assert.equal(result.model, model);
+        assert.equal(api.estimate('公开对白', '平静', '2027-01-01', model).usdPerMillionBytes, rate);
+    }
+    assert.equal(api.normalizeConfig(config).model, 'drama-3');
+});
 // Independent minimal test decoder: binary becomes Uint8Array, not numeric arrays.
 function unpack(bytes) {
     let at = 0; const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);

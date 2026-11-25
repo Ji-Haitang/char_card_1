@@ -138,6 +138,13 @@ var speechReplay = (function () {
             return 0;
         }
     }
+    function singleTurnId(messageId, model = 'drama-3') {
+        // 旧 D3 录音沿用原键。另一模型在独立位置保存，不会顶掉已付费的录音。
+        if (model === 'drama-3') return 'd3-m2a:' + messageId;
+        if (model === 's2.1-pro') return 's2-m2a:' + messageId;
+        throw new Error('不支持的单句配音模型');
+    }
+
     async function resolve(options) {
         if (!object(options) || !nonempty(options.workspaceId)) return null;
         var workspaceId = options.workspaceId,
@@ -207,10 +214,17 @@ var speechReplay = (function () {
         } // Malformed historical input is not an invitation to repair or generate it.
 
         if (saved.renderVersion !== 'drama3-v1') return null;
-        var turnId = 'd3-m2a:' + record.id,
-            unitId = unit.id + '/0',
-            turnKey = JSON.stringify([workspaceId, turnId]);
-        var turn = await speechStore.getTurn(workspaceId, turnId);
+        // 试听面板指定模型；历史回听优先读原键，缺失时再查新版单句键。两条路径均只读缓存。
+        const preferred = options.model ?? 'drama-3';
+        let turnId = singleTurnId(record.id, preferred);
+        let turn = await speechStore.getTurn(workspaceId, turnId);
+        if (!turn && (options.model === undefined || preferred === 's2.1-pro')) {
+            turnId = singleTurnId(record.id, preferred === 's2.1-pro' ? 'drama-3' : 's2.1-pro');
+            turn = await speechStore.getTurn(workspaceId, turnId);
+        }
+        if (turn && options.model !== undefined && (turn.model ?? 'drama-3') !== preferred) return null;
+        const unitId = unit.id + '/0';
+        const turnKey = JSON.stringify([workspaceId, turnId]);
         if (
             !object(turn) ||
             turn.id !== turnKey ||
@@ -224,7 +238,7 @@ var speechReplay = (function () {
             return null;
         if (
             turn.renderVersion !== 'drama3-v1' ||
-            turn.renderHash !== (await speechPlan.renderHash([unit]))
+            turn.renderHash !== (await speechPlan.renderHash([unit], turn.model))
         )
             return null;
         var chunk = turn.units[0];
@@ -258,5 +272,5 @@ var speechReplay = (function () {
             clip: structuredClone(clip),
         };
     }
-    return { resolve: resolve };
+    return { resolve, singleTurnId };
 })();

@@ -13,7 +13,7 @@ var speechRoundUI = (function () {
             current();
             if (!root.isConnected) return;
             root.innerHTML =
-                '<h4>Drama 3整轮朗读（横屏阅卷）</h4><p>同一主回复标记每段归属，声音准备完成后按原回合流程提交并展示。每轮最多24个NPC片段、3000字；旁白与玩家不朗读。</p>' +
+                '<h4>Fish 整轮朗读（横屏阅卷）</h4><p>同一主回复标记每段归属，声音准备完成后按原回合流程提交并展示。每轮按已绑定 NPC 的台词总字数计算预算；旁白、玩家和未绑定角色保留文字，不朗读。</p>' +
                 '<label><input type="checkbox" id="sr-enabled"> 后续正文启用整轮朗读</label><button type="button" class="modal-btn" id="sr-save">保存整轮选择</button>' +
                 '<p id="sr-status" role="status"></p><div id="sr-pending" hidden><p id="sr-description"></p><p id="sr-error"></p>' +
                 '<button type="button" class="modal-btn" id="sr-resume">继续准备</button><button type="button" class="modal-btn" id="sr-silent">本轮无声继续</button><button type="button" class="modal-btn" id="sr-discard">放弃待办</button></div>';
@@ -21,6 +21,13 @@ var speechRoundUI = (function () {
                 return root.querySelector('#' + id);
             };
             $('sr-enabled').checked = prefs.enabled;
+            const lastRound=storageService.loadUIConversation().filter(m=>m.role==='assistant').at(-1)?.roundSpeech;
+            if(lastRound?.voiceFailures?.length){
+                const failed=lastRound.voiceFailures[0];
+                $('sr-status').textContent=failed.reason==='missing-reference'
+                    ? `上轮部分对白无录音：${npcs[failed.speakerId]?.name||'该角色'}的声线找不到，请检查绑定。`
+                    : '上轮语音服务暂不可用，已保留正文和准备成功的录音。';
+            }
             function available() {
                 current();
                 if (!root.isConnected || owner() !== workspaceId)
@@ -35,7 +42,7 @@ var speechRoundUI = (function () {
                         enabled &&
                         !prefs.enabled &&
                         !confirm(
-                            '开启后，后续每轮会使用Fish Drama 3为已绑定NPC生成语音，按实际发送的台词＋表现描述UTF-8字节计费；最多24片段/3000字不是费用保证。确认开启？',
+                            '开启后，后续每轮会使用当前选择的 Fish 模型为已绑定NPC生成语音，按实际发送的台词＋表现描述UTF-8字节计费；本轮字数预算不等于费用上限。确认开启？',
                         )
                     ) {
                         $('sr-enabled').checked = false;
@@ -85,35 +92,43 @@ var speechRoundUI = (function () {
                     $('sr-error').textContent =
                         '当前历史已有同一正文；这里只补齐待办状态，不再次结算。';
                 }
+                let approvedFingerprint=null, running=false;
                 async function resume(silent) {
+                    if(running)return;
+                    running=true;
                     try {
                         available();
                         var options = { silent: !!silent };
+                        if(!reconcile)await speechRound.assertCurrent(draft);
+                        available();
                         if (!silent && !reconcile) {
                             var captured = await speechRound.settings(workspaceId);
                             available();
                             if (captured.fingerprint !== draft.settingsFingerprint) {
-                                if (
-                                    !confirm(
-                                        '连接或声线已改变。使用当前配置继续可能重新生成已成功的片段。确认采用当前配置？',
-                                    )
-                                )
+                                if(approvedFingerprint!==captured.fingerprint){
+                                    approvedFingerprint=captured.fingerprint;
+                                    $('sr-resume').textContent='确认采用当前配置并继续';
+                                    $('sr-error').textContent='连接或声线已改变，部分片段可能重新计费。请再次点按钮确认。';
                                     return;
+                                }
+                                approvedFingerprint=null;
                                 options.adoptSettings = captured.fingerprint;
                             }
                         }
                         if (typeof closeGameSettings === 'function') closeGameSettings();
                         await pipeline.resumeRoundSpeech(draft.id, options);
                     } catch (error) {
-                        if (root.isConnected) $('sr-status').textContent = error.message;
-                        else if (typeof showModal === 'function')
+                        if (root.isConnected && root.getClientRects().length) {
+                            $('sr-error').textContent = error.message;
+                            $('sr-status').textContent = '本次未继续。';
+                        } else if (typeof showModal === 'function')
                             showModal(
                                 String(error.message || error)
                                     .replace(/&/g, '&amp;')
                                     .replace(/</g, '&lt;')
                                     .replace(/>/g, '&gt;'),
                             );
-                    }
+                    } finally { running=false; }
                 }
                 $('sr-resume').onclick = function () {
                     resume(false);
@@ -153,6 +168,7 @@ var speechRoundUI = (function () {
             node.querySelector('#srd-error').textContent = String(
                 (error && error.message) || error,
             );
+            if(error?.batchHash){node.querySelector('h3').textContent='本轮配音片段较多';node.querySelector('#srd-retry').textContent='确认准备本轮声音';}
             var finished = false;
             function close(choice) {
                 if (finished) return;
@@ -266,7 +282,7 @@ var speechSingleTest = (function () {
             '<p>生成当前正文中所选NPC的第一条已标注台词，使用主回复提供的归属与表现描述。</p>' +
             '<p><label><input id="sst-enabled" type="checkbox">让后续主回复附单句测试标记</label></p>' +
             '<p><label>测试角色 <select id="sst-npc"></select></label> <button type="button" id="sst-save">保存测试选择（不联网）</button></p>' +
-            '<p>连接与声线在“语音配置”保存。使用Fish Drama 3，简短表现描述随台词发送；本机录音可直接回放。</p>' +
+            '<p>连接与声线在“语音配置”保存。使用当前选择的 Fish 模型，简短表现描述随台词发送；本机录音可直接回放。</p>' +
             '<p>测试录音也占用最近10条本机缓存。停止不保证服务端取消或退款。</p>' +
             '<p id="sst-line"></p><p id="sst-emotion"></p><p id="sst-status" role="status">读取当前正文…</p>' +
             '<div class="modal-buttons"><button type="button" id="sst-generate" disabled>合成并播放这一句（可能计费）</button>' +
@@ -411,9 +427,12 @@ var speechSingleTest = (function () {
             if (!unit) throw new Error('本轮没有测试角色的明确台词。不会猜说话人或追加模型请求。');
             if (Array.from(unit.text).length > 240)
                 throw new Error('本小节只测试不超过240字的一条台词，不截断或拆成额外请求');
-            selection = { plan: plan, unit: unit, turnId: 'd3-m2a:' + record.id };
-            $('sst-line').textContent = npcs[unit.speakerId].name + '：' + unit.text;
-            var cost = speechDrama3.estimate(unit.text, unit.emotion || '');
+            const savedConfig = await speechService.getConfig(workspaceId);
+            current(true);
+            const model = savedConfig.provider.model ?? 'drama-3';
+            selection = { plan, unit, model, turnId: speechReplay.singleTurnId(record.id, model) };
+            $('sst-line').textContent = `${npcs[unit.speakerId].name}（${model}）：${unit.text}`;
+            var cost = speechDrama3.estimate(unit.text, unit.emotion || '', Date.now(), savedConfig.provider.model);
             $('sst-emotion').textContent =
                 '表现描述：' +
                 unit.emotion +
@@ -429,13 +448,14 @@ var speechSingleTest = (function () {
             status.textContent = !speechTransport.describe().configured
                 ? speechTransport.describe().message
                 : cached
-                  ? '本机已有Drama 3录音。'
-                  : '尚无本机录音。合成按钮会使用Drama 3连接与声线，按字节计费。';
+                  ? '本机已有录音。'
+                  : '尚无本机录音。合成按钮会使用已保存的 Fish 模型与声线，按字节计费。';
         }
         async function cachedSelection() {
             var hit = await speechReplay.resolve({
                 workspaceId: workspaceId,
                 record: record,
+                model: selection.model,
                 characters: chars(),
             });
             current(true);
@@ -470,7 +490,7 @@ var speechSingleTest = (function () {
                     throw new Error('原回合或语音仍在处理');
                 if (
                     !confirm(
-                        '使用当前Fish Drama 3配置合成此句及其表现描述并播放，将按UTF-8字节计费。继续？',
+                        '使用当前 Fish 模型配置合成此句及其表现描述并播放，将按UTF-8字节计费。继续？',
                     )
                 )
                     return;
@@ -482,6 +502,9 @@ var speechSingleTest = (function () {
                 status.textContent = '正在处理这一句，不会自动重试…';
                 var settings = await speechService.getConfig(workspaceId);
                 current(true);
+                if ((settings.provider.model ?? 'drama-3') !== selection.model) {
+                    throw new Error('配音模型已更改，请重新打开单句测试再试听。');
+                }
                 if (!settings.voices?.[selection.unit.speakerId]?.speakerId)
                     throw new Error('请先在语音配置中绑定该NPC的测试声线');
                 await speechService.prepare(
@@ -555,29 +578,32 @@ var speechUI = (function () {
             var settings = await speechService.getConfig(workspaceId),
                 cached = await speechStore.listTurns(workspaceId);
             current();
-            var quote = speechDrama3.estimate('示例', '', Date.now());
+            const modelOptions = speechDrama3.models.map(model => `<option value="${model}">${model}</option>`).join('');
             root.innerHTML =
                 '<style>#speech-panel-root form label{display:block;margin-bottom:6px}#speech-panel-root input:not([type=checkbox]),#speech-panel-root select,#speech-panel-root textarea{box-sizing:border-box;max-width:100%;width:100%}#speech-panel-root fieldset{min-width:0;margin:10px 0}#speech-panel-root .speech-voice-row{display:grid;grid-template-columns:minmax(0,1fr) 55px;gap:8px}#speech-panel-root p{overflow-wrap:anywhere}</style>' +
-                '<p class="gs-section-desc">Fish Drama 3：主回复同次提供台词归属与简短表现描述。整轮朗读默认关闭；连接与参考保存于本机，声音按相应按钮或开关生成。</p>' +
+                '<p class="gs-section-desc">Fish 配音：主回复同次提供台词归属与简短表现描述。整轮朗读默认关闭；连接与参考保存于本机，声音按相应按钮或开关生成。</p>' +
                 '<form id="speech-config-form" autocomplete="off"><label>Fish API Key <input name="apiKey" type="password" autocomplete="new-password"></label>' +
                 '<label>语速（0.5～2，默认1）<input name="speed" type="number" min="0.5" max="2" step="0.05"></label>' +
-                '<p>模型：drama-3；音频：MP3 / 44.1kHz。Fish Key保存在本机，合成使用当前玩家的账户。</p><p id="speech-connection-status" role="status"></p><p id="speech-price"></p>' +
+                `<label>配音模型<select name="model">${modelOptions}</select></label>` +
+                '<p>音频：MP3 / 44.1kHz。Fish Key保存在本机，合成使用当前玩家的账户。</p><p id="speech-connection-status" role="status"></p><p id="speech-price"></p>' +
                 '<h4>Fish声线 → 游戏角色</h4><p class="gs-section-desc">已预设14个公开声线ID，可按角色调整。留空取消该角色绑定；实际音色可用性以Fish返回为准。</p><div id="speech-voices"></div>' +
                 '<p><button type="submit" class="modal-btn">保存配置</button> <button type="button" id="speech-check" class="modal-btn">本地校验</button></p></form>' +
                 '<details><summary>高级：绑定本地参考音频</summary><p>可改用WAV/MP3/FLAC参考（≤10MiB），建议10～30秒干净语音，必须填写准确转录。仅本机保存；合成时才向Fish发送此参考。</p>' +
                 '<label>角色 <select id="speech-reference-npc"></select></label><label>参考音频 <input id="speech-reference-file" type="file" accept="audio/wav,audio/mpeg,audio/flac,.wav,.mp3,.flac"></label>' +
                 '<label>准确转录 <textarea id="speech-reference-text" rows="3"></textarea></label><button id="speech-reference-save" type="button" class="modal-btn">本机保存参考绑定</button></details>' +
                 '<p id="speech-status" role="status"></p><hr><p id="speech-cache-status"></p><button type="button" id="speech-clear" class="modal-btn">清除本机语音</button><hr><div id="speech-round-controls"></div>';
-            root.querySelector('#speech-price').textContent =
-                '按发送文本UTF-8字节计费（含表现指令）。当前官网估价 $' +
-                quote.usdPerMillionBytes +
-                '/百万字节；标准价 $50。' +
-                (quote.promotional ? '活动至2026-12-01 08:00 UTC。' : '') +
-                '此处不是账户账单或硬性消费上限。';
+            function showPrice() {
+                const quote = speechDrama3.estimate('示例', '', Date.now(), field('model').value);
+                root.querySelector('#speech-price').textContent = `台词及语气提示按 UTF-8 字节估算：$${quote.usdPerMillionBytes}/百万字节。` +
+                    (quote.promotional ? `活动至2026-12-01 08:00 UTC，之后标准价 $${quote.standardUsdPerMillionBytes}。` : '');
+            }
             var form = root.querySelector('form'),
                 field = function (name) {
                     return form.elements.namedItem(name);
                 };
+            field('model').value = settings.provider.model ?? speechDrama3.model;
+            field('model').onchange = showPrice;
+            showPrice();
             field('apiKey').value = settings.provider.apiKey || '';
             field('speed').value = String(settings.provider.speed || 1);
             var connection = speechTransport.describe();
@@ -622,6 +648,7 @@ var speechUI = (function () {
                         kind: 'fish-drama3',
                         apiKey: field('apiKey').value.trim(),
                         speed: Number(field('speed').value),
+                        model: field('model').value,
                     },
                     voices: {},
                 };
@@ -643,7 +670,7 @@ var speechUI = (function () {
                 try {
                     settings = await speechService.saveConfig(values(), workspaceId);
                     current();
-                    status.textContent = 'Drama 3配置已保存到本机；请在下方单独确认启用朗读。';
+                    status.textContent = '配音模型和声线配置已保存到本机；请在下方单独确认启用朗读。';
                 } catch (e) {
                     if (ticket === serial) status.textContent = e.message;
                 }

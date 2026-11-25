@@ -29,7 +29,7 @@ export function harness(){
             const turnKey=JSON.stringify([turn.workspaceId,turn.turnId]),clipKey=JSON.stringify([turn.workspaceId,turn.turnId,clip.unitId]);await checkpoint('putClip',clipKey);
             assert.equal(turn.workspaceId,'main');assert.ok(clip.blob instanceof Blob);assert.equal(clip.blob.type,'audio/mpeg');assert.ok(clip.blob.size);
             const prior=turns.get(turnKey);if(prior)for(const name of ['sourceHash','planHash','renderVersion','renderHash'])assert.equal(prior[name],turn[name],'storage identity invariant');
-            turns.set(turnKey,clone({id:turnKey,workspaceId:turn.workspaceId,turnId:turn.turnId,sourceHash:turn.sourceHash,planHash:turn.planHash,createdAt:turn.createdAt,renderVersion:turn.renderVersion,renderHash:turn.renderHash,
+            turns.set(turnKey,clone({id:turnKey,workspaceId:turn.workspaceId,turnId:turn.turnId,sourceHash:turn.sourceHash,planHash:turn.planHash,createdAt:turn.createdAt,renderVersion:turn.renderVersion,renderHash:turn.renderHash,model:turn.model,
                 units:turn.units.map(u=>({id:u.id,text:u.text,speakerId:u.speakerId,sourceLine:u.sourceLine,start:u.start,end:u.end}))}));
             clips.set(clipKey,clone({id:clipKey,turnKey,unitId:clip.unitId,cacheKey:clip.cacheKey,speakerId:clip.speakerId,blob:clip.blob,bytes:clip.blob.size}));writes.push(['clip',clipKey]);return{retained:true,removedTurnIds:[]};
         }

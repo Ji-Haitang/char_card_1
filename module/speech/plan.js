@@ -9,9 +9,11 @@ var speechPlan = (function () {
             })
             .join('');
     }
-    function renderHash(units) {
+    function renderHash(units, model = 'drama-3') {
         return hash(
             JSON.stringify([
+                // 保留旧 D3 指纹的字节布局；其他模型有独立的录音身份。
+                ...(model === 'drama-3' ? [] : [model]),
                 'direction-v1',
                 units.map(function (u) {
                     return [
@@ -79,7 +81,7 @@ var speechPlan = (function () {
                     /(^|[^\\])【[^【】]*[；;]/.test(spoken) ||
                     !spoken.trim() ||
                     !emotion ||
-                    !(ids.has(speaker) || ['USER', 'NARRATOR', 'UNKNOWN'].includes(speaker))
+                    !(ids.has(speaker) || ['USER', 'NARRATOR', 'UNKNOWN'].includes(speaker) || options?.roundProjection === true)
                 ) {
                     issues.push({ sourceLine: sourceLine, reason: 'invalid-segment' });
                     return line;
@@ -278,13 +280,13 @@ var speechRoundPlan = (function () {
         characters = structuredClone(characters);
         options = structuredClone(options || {});
         // Completion gates synthesis, not text cleanup: preserve the same clean projection on truncation.
-        var parsed = await speechPlan.fromMainText(rawSource, characters),
+        var parsed = await speechPlan.fromMainText(rawSource, characters, {roundProjection:true}),
             issues = parsed.issues.slice(),
             candidates = [];
         if (!['stop', 'STOP', 'end_turn', 'tool_calls'].includes(options.finishReason))
             issues.push({ reason: 'completion-not-confirmed' });
         var maxChars = options.maxChars === undefined ? 3000 : options.maxChars;
-        var maxClips = options.maxClips === undefined ? 24 : options.maxClips;
+        var maxClips = options.maxClips === undefined ? maxChars : options.maxClips;
         if (
             !Number.isSafeInteger(maxChars) ||
             maxChars < 0 ||
@@ -313,24 +315,16 @@ var speechRoundPlan = (function () {
             }),
         );
         var npcUnits = parsed.units.filter(function (unit) {
-            if (unit.kind === 'uncertain')
-                issues.push({ sourceLine: unit.sourceLine, reason: 'uncertain-speaker' });
             return unit.kind === 'speech' && unit.speakerId !== 'USER' && ids.has(unit.speakerId);
         });
-        // Inspect all NPCs before splitting/dispatch; no silent omission of an unbound voice.
-        if (options.voices !== undefined)
-            npcUnits.forEach(function (unit) {
-                var voice =
-                    options.voices &&
-                    Object.prototype.hasOwnProperty.call(options.voices, unit.speakerId) &&
-                    options.voices[unit.speakerId];
-                if (!voice || typeof voice.speakerId !== 'string' || !voice.speakerId.trim())
-                    issues.push({
-                        sourceLine: unit.sourceLine,
-                        speakerId: unit.speakerId,
-                        reason: 'unbound-npc',
-                    });
-            });
+        // Freeze which registered voices were missing for this publication. Replay must not
+        // depend on bindings edited after the recording was made.
+        const omitted = new Set(options.omittedVoices || []);
+        if (options.voices !== undefined) for (const unit of npcUnits) {
+            const voice=options.voices?.[unit.speakerId];
+            if (!voice?.speakerId?.trim()) omitted.add(unit.speakerId);
+        }
+        npcUnits=npcUnits.filter(u=>!omitted.has(u.speakerId));
         var blocks = speechPlan.documentFor(parsed.source).blocks,
             byLine = new Map(),
             bodyAt = 0;
@@ -365,6 +359,11 @@ var speechRoundPlan = (function () {
                 }
                 var first = block.start + unit.start - block.leading,
                     last = block.start + unit.end - block.leading;
+                if (options.dialogueScope === 'quoted-lead-v1') {
+                    // 已知 NPC 行偶尔混入冒号引出的动作旁白。只收窄本句录音，不改阅读帧或原文。
+                    const lead = /^[^「」\n]+[：:]\s*(?=「[^「」]+」$)/u.exec(unit.text);
+                    if (lead) first += lead[0].length;
+                }
                 ranges.forEach(function (range) {
                     var from = Math.max(first, range.start),
                         to = Math.min(last, range.end);
@@ -423,6 +422,8 @@ var speechRoundPlan = (function () {
             version: 'round-v1',
             rawSource: rawSource,
             source: parsed.source,
+            ...(options.dialogueScope ? { dialogueScope: options.dialogueScope } : {}),
+            ...(omitted.size ? {omittedVoices:[...omitted]} : {}),
             sourceHash: parsed.sourceHash,
             units: units,
             issues: issues,

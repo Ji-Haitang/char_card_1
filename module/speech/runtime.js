@@ -2,7 +2,8 @@
 var speechRound = (function () {
     'use strict';
     var MAX_CHARS = 3000,
-        MAX_CLIPS = 24,
+        MAX_CLIPS = MAX_CHARS, // each non-empty paid clip consumes at least one character
+        LARGE_BATCH = 64,
         leaseContext = null;
     // Synchronous user-entry gate. Existing isBusy keeps its actual in-flight meaning.
     var pendingCache = { ready: false, pending: false, id: null, phase: null },
@@ -198,6 +199,7 @@ var speechRound = (function () {
             workspaceId: ctx.workspaceId,
             createdAt: Date.now(),
             phase: 'draft',
+            fingerprintVersion: 2,
             baseFingerprint: baseline,
             settingsFingerprint: ctx.settingsFingerprint,
             finishReason: ctx.finishReason,
@@ -275,7 +277,7 @@ var speechRound = (function () {
         check(draft.workspaceId, signal);
         if (payloadHash !== draft.payloadHash)
             throw new Error('整轮待办内容已损坏，未提交游戏状态');
-        var baseline = await mediaContext.publicationFingerprint();
+        var baseline = await mediaContext.publicationFingerprint(draft.fingerprintVersion ?? 1);
         check(draft.workspaceId, signal);
         if (baseline !== draft.baseFingerprint)
             throw new Error('游戏进度已变化，不能将旧配音待办发布到当前状态');
@@ -294,6 +296,7 @@ var speechRound = (function () {
             check(draft.workspaceId, options.signal);
         }
         var plan = await speechRoundPlan.compile(draft.input.rawSource, characters(), {
+            dialogueScope: draft.plan.dialogueScope,
             finishReason: draft.finishReason,
             readingPlan: draft.readingPlan,
             voices: captured.settings.voices,
@@ -337,35 +340,55 @@ var speechRound = (function () {
         if (
             plan.source !== draft.input.mainText ||
             plan.sourceHash !== draft.plan.sourceHash ||
-            plan.planHash !== draft.plan.planHash
+            (!draft.plan.issues.length && !plan.omittedVoices?.length && plan.planHash !== draft.plan.planHash)
         )
             throw new Error('待办编排与原文身份不一致，未准备声音');
+        if(plan.units.length>LARGE_BATCH && options.approvedBatch!==plan.planHash){
+            const error=new Error(`本轮有 ${plan.units.length} 个配音片段。继续将按实际合成量计费。`);
+            error.batchHash=plan.planHash;
+            throw error;
+        }
+        plan.audioModel = captured.settings.provider.model ?? 'drama-3';
         draft = await update(draft, { phase: 'preparing', error: '' });
         check(draft.workspaceId, options.signal);
-        if (plan.units.length)
-            await speechService.prepare(
+        if (plan.units.length){
+            const prepared=await speechService.prepare(
                 {
                     workspaceId: draft.workspaceId,
-                    turnId: 'm3:' + draft.id,
+                    turnId: audioTurnId(draft.id, plan.audioModel),
                     sourceHash: plan.sourceHash,
                     createdAt: draft.createdAt,
                 },
                 plan,
                 {
                     settings: captured.settings,
+                    partialRound: true,
                     signal: options.signal,
                     onProgress: options.onProgress,
                 },
             );
+            if(prepared.unavailable?.length){
+                plan.availableClips=prepared.clips.map(c=>c.unitId);
+                plan.voiceFailures=prepared.unavailable;
+            }
+        }
         check(draft.workspaceId, options.signal);
-        return update(draft, { phase: 'ready', silent: !plan.units.length, plan: plan, error: '' });
+        return update(draft, { phase: 'ready', silent: !(plan.availableClips||plan.units).length, plan: plan, error: '' });
+    }
+    function audioTurnId(draftId, model = 'drama-3') {
+        // D3 已发布录音保留原键；暂停后明确换模型时不覆盖之前已付费的片段。
+        return model === 'drama-3' ? 'm3:' + draftId : 'm3:' + model + ':' + draftId;
     }
     function record(draft) {
         return {
             version: 'round-v1',
             draftId: draft.id,
-            audioTurnId: 'm3:' + draft.id,
+            audioTurnId: audioTurnId(draft.id, draft.plan.audioModel),
+            ...(draft.plan.audioModel ? { audioModel: draft.plan.audioModel } : {}),
             rawSource: draft.input.rawSource,
+            ...(draft.plan.dialogueScope ? { dialogueScope: draft.plan.dialogueScope } : {}),
+            ...(draft.plan.omittedVoices?.length ? {omittedVoices:draft.plan.omittedVoices} : {}),
+            ...(draft.plan.availableClips ? {availableClips:draft.plan.availableClips,voiceFailures:draft.plan.voiceFailures} : {}),
             sourceHash: draft.plan.sourceHash,
             planHash: draft.plan.planHash,
             finishReason: draft.finishReason,
@@ -390,11 +413,13 @@ var speechRound = (function () {
             saved.version !== 'round-v1' ||
             saved.renderVersion !== 'drama3-v1' ||
             saved.status !== 'ready' ||
-            saved.audioTurnId !== 'm3:' + saved.draftId
+            saved.audioTurnId !== audioTurnId(saved.draftId, saved.audioModel)
         )
             return null;
         var plan = await speechRoundPlan.compile(saved.rawSource, characters(), {
             finishReason: saved.finishReason,
+            dialogueScope: saved.dialogueScope,
+            omittedVoices: saved.omittedVoices,
             readingPlan: readingPlan,
             maxChars: MAX_CHARS,
             maxClips: MAX_CLIPS,
@@ -422,7 +447,8 @@ var speechRound = (function () {
             return null;
         if (
             turn.renderVersion !== 'drama3-v1' ||
-            turn.renderHash !== (await speechPlan.renderHash(plan.units))
+            (saved.audioModel ?? 'drama-3') !== (turn.model ?? 'drama-3') ||
+            turn.renderHash !== (await speechPlan.renderHash(plan.units, turn.model))
         )
             return null;
         check(workspaceId);
@@ -447,7 +473,8 @@ var speechRound = (function () {
             renderVersion: turn.renderVersion,
             renderHash: turn.renderHash,
             units: plan.units.filter(function (u) {
-                return index === null || u.readingIndex === index; // null requests this record’s entire verified playlist
+                return (index === null || u.readingIndex === index) &&
+                    (!saved.availableClips || saved.availableClips.includes(u.id+'/0'));
             }),
         };
     }
@@ -616,12 +643,15 @@ var speechTurn = (function () {
     }
     function instruction(ctx) {
         if (!ctx) return '';
-        return ctx.kind === 'round'
-            ? speechRoundPlan.instruction(speechRound.characters())
-            : speechPlan.singleInstruction({
-                  id: ctx.targetNpcId,
-                  name: npcs[ctx.targetNpcId].name,
-              });
+        // 这里只增补开配音时的表现指导，不改写常驻110格式或模型选择。
+        return [
+            '本轮准备配音：用1至24字中文短句说明角色怎样把这句话说给对方听。',
+            '日常交谈平实，试探、掩饰或情绪转折可写出一句内的变化，例如“问得很轻，最后一个字悬着等对方接话”。',
+            '感叹号不等于喊叫，不堆情绪词，不改写台词凑字数。',
+            '若剧情明确正在发生性交或性刺激，只给正在参与该行为并开口的NPC在表现描述开头写“性爱中，”，再按当句写气息、停顿或克制程度，例如“性爱中，微微气喘，仍尽量平静”；',
+            '暧昧、调情、裸露、单纯接吻或同场旁观不得这样标注，不根据第五字段判定。',
+            '归属沿用台本规则，不给世界书临时人物借用其他角色的声线。',
+        ].join('');
     }
     async function singlePlan(text, ctx) {
         var plan = await speechPlan.fromMainText(text, speechRound.characters());
@@ -673,6 +703,7 @@ var speechTurn = (function () {
                     draft = await speechRound.prepare(draft, {
                         signal: ctx.controller.signal,
                         adoptSettings: options.adoptSettings,
+                        approvedBatch: options.approvedBatch,
                         onProgress: function (done, total) {
                             if (status) status('声音准备 ' + done + ' / ' + total);
                         },
@@ -689,6 +720,7 @@ var speechTurn = (function () {
                     var choice = await speechRoundUI.decision(draft, error, ctx.controller.signal);
                     assertContext(ctx);
                     if (choice === 'pause') return false;
+                    if (choice === 'retry' && error.batchHash) options.approvedBatch=error.batchHash;
                     if (choice === 'silent') {
                         draft = await speechRound.update(draft, { silent: true, phase: 'ready' });
                         break;
@@ -746,13 +778,14 @@ var speechTurn = (function () {
             });
         }
         ctx.round.finishReason = ctx.finishReason;
-        var clean = await speechPlan.fromMainText(parsed.mainText, speechRound.characters());
+        var clean = await speechPlan.fromMainText(parsed.mainText, speechRound.characters(), {roundProjection:true});
         assertContext(ctx);
         var reading = presentationPlan.validate(
             clean.source,
             presentationPlan.captureCurrent(clean.source, 'committed', ''),
         );
         var plan = await speechRoundPlan.compile(parsed.mainText, speechRound.characters(), {
+            dialogueScope: 'quoted-lead-v1',
             finishReason: ctx.finishReason,
             readingPlan: reading,
             maxChars: ctx.round.maxChars,

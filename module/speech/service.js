@@ -13,8 +13,8 @@ var speechService = (function () {
     function saveConfig(value, workspaceId) {
         return speechConfig.save(value, workspaceId || owner());
     }
-    function renderHash(units) {
-        return speechPlan.renderHash(units);
+    function renderHash(units, model) {
+        return speechPlan.renderHash(units, model);
     }
     function stop() {
         generation++;
@@ -177,7 +177,8 @@ var speechService = (function () {
                 }
             }
             turn.renderVersion = 'drama3-v1';
-            turn.renderHash = await renderHash(plan.units);
+            turn.model = provider.model;
+            turn.renderHash = await renderHash(plan.units, provider.model);
             check();
             var existing = await speechStore.listTurns(turn.workspaceId);
             check();
@@ -207,15 +208,15 @@ var speechService = (function () {
                 JSON.stringify([speechDrama3.provider, endpoint, provider.apiKey]),
             );
             turn.units = units;
-            var result = [];
-            for (var unit of units) {
+            var result = [], unavailable=[], badVoices=new Set(), halted=false;
+            for (const [index,unit] of units.entries()) {
                 check();
                 var voice = settings.voices[unit.speakerId];
                 var spoken = speechDrama3.composeText(unit.text, unit.emotion || '');
                 var cacheKey = await speechPlan.hash(
                     JSON.stringify([
                         speechDrama3.provider,
-                        speechDrama3.model,
+                        provider.model,
                         account,
                         identities.get(unit.speakerId),
                         voice.version,
@@ -229,6 +230,7 @@ var speechService = (function () {
                 var cached = await speechStore.getClip(turn.workspaceId, turn.turnId, unit.id);
                 check();
                 if (!cached || cached.cacheKey !== cacheKey) {
+                    if(halted || badVoices.has(identities.get(unit.speakerId))) continue;
                     var pendingKey = JSON.stringify([
                         turn.workspaceId,
                         turn.turnId,
@@ -244,8 +246,16 @@ var speechService = (function () {
                                 voice: resolved.get(unit.speakerId),
                             },
                             { signal: controller.signal, fetch: transport },
-                        );
+                        ).catch(error => {
+                            if(error.status)error.message=`片段 ${index+1}/${units.length}（${/^[A-Z]{1,2}$/.test(unit.speakerId)?unit.speakerId:'NPC'}）：${error.message}`;
+                            if(!options.partialRound || !(error.status || ['network','timeout','stream'].includes(error.code)))throw error;
+                            if(error.missingReference)badVoices.add(identities.get(unit.speakerId));
+                            else halted=true;
+                            unavailable.push({piece:index+1,speakerId:unit.speakerId,reason:error.missingReference?'missing-reference':'provider-unavailable',status:error.status||0});
+                            return null;
+                        });
                         check();
+                        if(!audio)continue;
                         await (options.validateAudio || validateAudio)(audio.blob);
                         check();
                         unsaved = { key: pendingKey, audio: audio };
@@ -263,7 +273,7 @@ var speechService = (function () {
                 result.push({ unitId: unit.id, speakerId: unit.speakerId });
                 if (options.onProgress) options.onProgress(result.length, units.length);
             }
-            return { disabled: false, clips: result };
+            return { disabled: false, clips: result, unavailable };
         } finally {
             if (options.signal) options.signal.removeEventListener('abort', abort);
             if (active === job) active = null;

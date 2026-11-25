@@ -45,6 +45,8 @@ var speechDrama3 = (function () {
         }
         return true;
     }
+    const models = Object.freeze(['s2.1-pro', 'drama-3']);
+
     function normalizeConfig(config) {
         try {
             if (!config || config.kind !== PROVIDER || typeof config.apiKey !== 'string')
@@ -61,10 +63,13 @@ var speechDrama3 = (function () {
                 speed > 2
             )
                 throw fault('configuration');
+            // 未记录模型的旧配置沿用原 D3；新建配置在设置层明确选择 S2.1 Pro。
+            const model = config.model === undefined ? MODEL : config.model;
+            if (!models.includes(model)) throw fault('configuration');
             var fixed = {
                 provider: PROVIDER,
                 endpoint: ENDPOINT,
-                model: MODEL,
+                model,
                 format: FORMAT,
                 sampleRate: SAMPLE_RATE,
             };
@@ -79,7 +84,7 @@ var speechDrama3 = (function () {
                 provider: PROVIDER,
                 apiKey: key,
                 endpoint: ENDPOINT,
-                model: MODEL,
+                model,
                 format: FORMAT,
                 sampleRate: SAMPLE_RATE,
                 speed: speed,
@@ -172,19 +177,21 @@ var speechDrama3 = (function () {
     async function voiceIdentity(voice) {
         return verifyVoice(snapshotVoice(voice));
     }
-    function estimate(text, direction, now) {
+    function estimate(text, direction, now, model = MODEL) {
+        if (!models.includes(model)) throw fault('configuration');
         var sent = composeText(text, direction);
         var time = now === undefined ? Date.now() : new Date(now).getTime();
         if (!Number.isFinite(time)) throw fault('estimate');
         var bytes = utf8.encode(sent).length,
-            promotional = time < Date.parse(PROMOTION_END);
-        var rate = promotional ? 10 : 50;
+            promotional = model === MODEL && time < Date.parse(PROMOTION_END);
+        const standardRate = model === MODEL ? 50 : 15;
+        var rate = promotional ? 10 : standardRate;
         return {
             billableBytes: bytes,
             currency: 'USD',
             estimatedUsd: (bytes * rate) / 1000000,
             usdPerMillionBytes: rate,
-            standardUsdPerMillionBytes: 50,
+            standardUsdPerMillionBytes: standardRate,
             promotional: promotional,
             promotionEndsAt: PROMOTION_END,
             estimateOnly: true,
@@ -244,6 +251,25 @@ var speechDrama3 = (function () {
             third >> 4 < 15 &&
             (third & 12) !== 12
         );
+    }
+    // Classify only known error vocabulary. Neither raw messages nor rejected inputs leave this function.
+    async function safeHttpReason(response) {
+        const reader=response.body?.getReader?.(); if(!reader)return '';
+        const timer=setTimeout(()=>{reader.cancel().catch(()=>{});},1200);
+        try {
+            const chunks=[];let size=0;
+            for(;;){const {done,value}=await reader.read();if(done)break;size+=value.byteLength;if(size>8192)return '';chunks.push(value);}
+            const data=new Uint8Array(size);let at=0;for(const chunk of chunks){data.set(chunk,at);at+=chunk.byteLength;}
+            const raw=new TextDecoder().decode(data);let obj;try{obj=JSON.parse(raw);}catch{obj=raw;}
+            const detail=obj?.detail??obj?.error??obj?.message??obj;
+            const item=Array.isArray(detail)?detail[0]:detail;
+            const msg=typeof item==='string'?item:String(item?.msg??item?.message??'');
+            const names=['text','reference_id','model','format','sample_rate','latency','prosody','speed','body'];
+            const field=Array.isArray(item?.loc)?[...item.loc].reverse().find(x=>names.includes(x)):names.find(x=>new RegExp('\\b'+x+'\\b','i').test(msg));
+            const type=({missing:'缺少必填字段',string_type:'字段应为字符串',json_invalid:'JSON格式无效',model_attributes_type:'请求体应为对象'})[Object.hasOwn({missing:1,string_type:1,json_invalid:1,model_attributes_type:1},item?.type)?item.type:''];
+            const reason=type||(/not found|does not exist/i.test(msg)?'资源不存在':/invalid|validation|not valid|unsupported/i.test(msg)?'参数无效或不支持':/quota|balance/i.test(msg)?'额度不足':'');
+            return {label:[field,reason].filter(Boolean).join('：'),missingReference: /\breference(?:_id)?\b.{0,120}\bnot found\b/i.test(msg)};
+        }catch{return '';}finally{clearTimeout(timer);reader.cancel().catch(()=>{});}
     }
     async function synthesize(config, request, options) {
         var reader,
@@ -322,7 +348,7 @@ var speechDrama3 = (function () {
                     signal: signal,
                     headers: {
                         Authorization: 'Bearer ' + settings.apiKey,
-                        model: MODEL,
+                        model: settings.model,
                         'Content-Type': contentType,
                         Accept: 'audio/mpeg, audio/mp3',
                     },
@@ -349,6 +375,9 @@ var speechDrama3 = (function () {
                 ) {
                     error.status = response.status;
                     error.message += '（' + response.status + '）';
+                    const reason=response.status===400 && /json/i.test(response.headers.get('content-type')||'') && typeof setTimeout==='function' ? await wait(safeHttpReason(response)) : '';
+                    if(reason?.label)error.message+='：'+reason.label;
+                    if(reason?.missingReference)error.missingReference=true;
                 }
                 throw error;
             }
@@ -407,7 +436,7 @@ var speechDrama3 = (function () {
             return {
                 blob: blob,
                 provider: PROVIDER,
-                model: MODEL,
+                model: settings.model,
                 format: FORMAT,
                 sampleRate: SAMPLE_RATE,
                 billableBytes: billableBytes,
@@ -430,6 +459,7 @@ var speechDrama3 = (function () {
     }
     return Object.freeze({
         provider: PROVIDER,
+        models,
         model: MODEL,
         endpoint: ENDPOINT,
         format: FORMAT,
@@ -576,7 +606,7 @@ var speechTransport = (function () {
                 if (
                     url !== UPSTREAM ||
                     options.method !== 'POST' ||
-                    headers.get('model') !== 'drama-3'
+                    !speechDrama3.models.includes(headers.get('model'))
                 )
                     throw fault('target', '语音传输目标或模型不合法');
                 var forwarded = new Headers();
