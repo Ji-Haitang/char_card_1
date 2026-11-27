@@ -606,10 +606,11 @@ var pipeline = (function() {
             recalledEvents: recalledEvents
         });
 
-        if (_speechRequest) {
-            const requestUser = messages.slice().reverse().find(m => m.role === 'user');
-            if (requestUser) requestUser.content += '\n\n' + speechService.turnInstruction(_speechRequest);
-        }
+        // 已将发声表现说明浓缩整合进 110 <FormatGuide>，暂不在 user 消息尾部额外追加 TTS 提示词
+        // if (_speechRequest) {
+        //     const requestUser = messages.slice().reverse().find(m => m.role === 'user');
+        //     if (requestUser) requestUser.content += '\n\n' + speechService.turnInstruction(_speechRequest);
+        // }
         // === [DEBUG] 发起请求前：打印事件相关变量当前值 ===
         console.log('[Pipeline][DEBUG] 发起请求前变量状态:',
             'enamor=' + enamor,

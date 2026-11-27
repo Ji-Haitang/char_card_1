@@ -109,6 +109,13 @@ test('旧配置继续按 Drama 3 解释，新配置默认 S2.1 Pro，切换模�
     assert.equal(defaults.provider.model, 's2.1-pro');
     assert.equal(defaults.provider.apiKey, '');
     assert.equal(fresh.writes.length, 0);
+
+    // 即使尚未填写 API Key，保存非法模型也须立刻拒绝。
+    await assert.rejects(
+        fresh.get('speechConfig').save({ provider: { kind: 'fish-drama3', model: 'free' } }),
+        /仅支持S2\.1 Pro或Drama 3/,
+    );
+    assert.equal(fresh.writes.length, 0);
 });
 
 test('费用按实际 UTF-8 请求字节计算，模型价格和 D3 活动价保持既定合同', () => {

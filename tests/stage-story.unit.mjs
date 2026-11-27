@@ -41,17 +41,21 @@ test('PROMPT_CORE_110 renders GAL script rules, permanent 【ID；情绪】 mark
     ]){
         const rendered=ctx.templateEngine.renderPromptTemplate(ctx.PROMPT_CORE_110,{user:'少侠',gameData:gd});
         assert.ok(!rendered.includes('保持不变'),label);
-        assert.ok(rendered.includes('{{string: 叙述行或「」包裹的角色台词行。叙述行每行50-150字；台词行每行10-80字}}【{{enum: 说话人ID；情绪}}】'),label);
+        assert.ok(rendered.includes('{{string: 叙述行或「」包裹的角色台词行。叙述行每行50-150字；台词行每行10-80字}}【{{enum: 说话人ID；说话语气}}】'),label);
         assert.ok(rendered.includes('台词行只写「」包裹的角色口头台词，不能有旁白叙述'),label);
         assert.ok(rendered.includes('禁止输出类似"xx说："、"xx顿了一下，继续说，"、"xx心想"等承接或引导台词的语句'),label);
         assert.ok(rendered.includes('正文总计: 1500-2500字'),label);
         assert.ok(rendered.includes('台词行总字数占<MAIN_TEXT>正文总字数的比例大于50%'),label);
-        assert.ok(rendered.includes('标记顺序: 段落正文【ID；情绪】|场景名|时间|NPC名:表情;NPC名:表情|NSFW行为'),label);
+        assert.ok(rendered.includes('标记顺序: 段落正文【ID；说话语气】|场景名|时间|NPC名:表情;NPC名:表情|NSFW行为'),label);
+        assert.ok(rendered.includes('归属不明或不在列表的临时人物填UNKNOWN，勿借用他人ID'),label);
+        assert.ok(rendered.includes('说话语气取值: 1-24字中文短句，说明如何说出该句'),label);
+        assert.ok(rendered.includes('以"性爱中，"开头续写气息、停顿或克制程度'),label);
+        assert.ok(rendered.includes('暧昧、调情、裸露、单纯接吻、旁观禁用"性爱中，"作为开头，勿按{{NSFW行为}}字段判定是否明确发生性交/性刺激'),label);
         assert.ok(rendered.includes('用户输入中没有明确时间跨度描述时，默认本回合首段到末段的时间跨度不超过2小时'),label);
         assert.ok(rendered.includes('<SUMMARY>') && rendered.includes('<SIDE_NOTE>'),label);
     }
     const weekly=ctx.templateEngine.renderPromptTemplate(ctx.PROMPT_CORE_110,{user:'少侠',gameData:{GameMode:0,newWeek:1,randomEvent:0,battleEvent:0,haveEvent:0}});
-    assert.ok(!weekly.includes('【ID；情绪】'));
+    assert.ok(!weekly.includes('【ID；说话语气】'));
 });
 
 test('stripInlineSpeechMarkers strips line-end 【ID；情绪】 on non-TTS display without touching escaped or invalid shapes',async()=>{

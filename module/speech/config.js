@@ -147,6 +147,11 @@ var speechConfig = (function () {
                 throw new Error('仅支持注册NPC的音色绑定');
             next.voices[id] = voiceBinding(next.voices[id]);
         });
+        if (
+            next.provider.model !== undefined &&
+            !speechDrama3.models.includes(next.provider.model)
+        )
+            throw new Error('仅支持S2.1 Pro或Drama 3配音模型');
         if (next.enabled || next.provider.apiKey) speechDrama3.normalizeConfig(next.provider);
         verify();
         await speechStore.setSetting('config:' + id, next);

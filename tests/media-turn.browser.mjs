@@ -37,7 +37,7 @@ try{
     if(target==='https://api.fish.audio/v1/tts'){
      __mediaRun.voice.push({text:body.text,id:body.reference_id,model:headers.get('model'),keyOK:headers.get('Authorization')==='Bearer PUBLIC_FISH_KEY'});
      if(__mediaRun.voice.length===1)await new Promise(resolve=>__mediaRun.releaseVoice=resolve);
-     if(kind==='round-fail'&&__mediaRun.voice.length===2)return new Response('{"error":"public failure"}',{status:500,headers:{'Content-Type':'application/json'}});
+     if(kind==='round-fail'&&__mediaRun.voice.length===1)return new Response('{"error":"public failure"}',{status:500,headers:{'Content-Type':'application/json'}});
      __mediaRun.voiceReturned=true;
      return new Response(new Uint8Array(bytes),{headers:{'Content-Type':'audio/mpeg'}});
     }
@@ -81,10 +81,10 @@ try{
   assert.equal(await p.evaluate(()=>document.body.classList.contains('stage-turn-wait')),true);
   await p.evaluate(()=>__mediaRun.releaseSide());
   await p.waitForFunction(()=>!pipeline.isBusy()&&stageStory.reading());
-  const state=await p.evaluate(async()=>{const rows=storageService.loadUIConversation(),last=rows.filter(m=>m.role==='assistant').at(-1),draft=await speechRound.load(),promptText=String(__mediaRun.wireBody||'');return {nativeCalls:__mediaRun.nativeCalls||0,main:__mediaRun.main,mainKeyOK:__mediaRun.mainKeyOK,hasExtraInject:/\[整轮台词标记 round-v1|\[单句语音测试格式/.test(promptText),hasFormatRule:promptText.includes('标记顺序: 段落正文【ID；情绪】'),voice:__mediaRun.voice,side:__mediaRun.side,users:rows.filter(m=>m.role==='user').length,assistants:rows.filter(m=>m.role==='assistant').length,content:last.content,plan:!!last.presentationPlan,world:last.presentationPlan?.world.dayNightStatus,actualWorld:dayNightStatus,replayable:last.roundSpeech?.status==='ready'?!!(await speechRound.replay(last,last.presentationPlan,0)):null,single:last.singleSpeech?.renderVersion,round:last.roundSpeech?.status,finish:last.roundSpeech?.finishReason,draft:draft?.phase};});
+  const state=await p.evaluate(async()=>{const rows=storageService.loadUIConversation(),last=rows.filter(m=>m.role==='assistant').at(-1),draft=await speechRound.load(),promptText=String(__mediaRun.wireBody||'');return {nativeCalls:__mediaRun.nativeCalls||0,main:__mediaRun.main,mainKeyOK:__mediaRun.mainKeyOK,hasExtraInject:/本轮准备配音：|\[整轮台词标记 round-v1|\[单句语音测试格式/.test(promptText),hasFormatRule:promptText.includes('标记顺序: 段落正文【ID；说话语气】')&&promptText.includes('说话语气取值: 1-24字中文短句'),voice:__mediaRun.voice,side:__mediaRun.side,users:rows.filter(m=>m.role==='user').length,assistants:rows.filter(m=>m.role==='assistant').length,content:last.content,plan:!!last.presentationPlan,world:last.presentationPlan?.world.dayNightStatus,actualWorld:dayNightStatus,replayable:last.roundSpeech?.status==='ready'?!!(await speechRound.replay(last,last.presentationPlan,0)):null,single:last.singleSpeech?.renderVersion,round:last.roundSpeech?.status,finish:last.roundSpeech?.finishReason,draft:draft?.phase};});
   assert.equal(state.main,1);assert.equal(state.mainKeyOK,true);assert.equal(state.hasExtraInject,false);assert.equal(state.hasFormatRule,true);assert.equal(state.side,1);assert.equal(state.users,1);assert.equal(state.assistants,2);assert.equal(state.content,kind==='world-round'?legacyPlain:plain);assert.equal(state.plan,true);
   if(kind==='world-round'){assert.equal(state.world,'night');assert.equal(state.actualWorld,'night');assert.equal(state.replayable,true);assert.match(await p.$eval('.stage-story-layers .slg-scene-layer img',n=>n.getAttribute('src')),/演武场_夜\.webp/);}
-  if(kind.includes('round')){assert.deepEqual(state.voice,[{text:'[轻声] 第一句公开对白。',id:'voice-D',model:'drama-3',keyOK:true},{text:'[平静] 第二句公开对白。',id:'voice-M',model:'drama-3',keyOK:true}]);assert.equal(state.round,kind==='round-fail'?'silent':'ready');assert.equal(state.finish,kind==='tool-round'?'tool_calls':'stop');assert.equal(state.draft,'published');}
+  if(kind.includes('round')){const expectedVoice=kind==='round-fail'?[{text:'[轻声] 第一句公开对白。',id:'voice-D',model:'s2.1-pro',keyOK:true}]:[{text:'[轻声] 第一句公开对白。',id:'voice-D',model:'s2.1-pro',keyOK:true},{text:'[平静] 第二句公开对白。',id:'voice-M',model:'s2.1-pro',keyOK:true}];assert.deepEqual(state.voice,expectedVoice);assert.equal(state.round,kind==='round-fail'?'silent':'ready');assert.equal(state.finish,kind==='tool-round'?'tool_calls':'stop');assert.equal(state.draft,'published');}
   else assert.equal(state.voice.length,0);
   if(kind==='native-round')assert.equal(state.nativeCalls,2);
   if(kind==='single'){
@@ -95,8 +95,8 @@ try{
    await p.waitForFunction(()=>{const b=document.getElementById('sst-generate');return b&&!b.disabled&&!b.closest('[inert]');});
    await p.click('#sst-generate');await p.waitForFunction(()=>__mediaRun.voice.length===1);await p.evaluate(()=>__mediaRun.releaseVoice());
    await p.waitForFunction(()=>document.getElementById('sst-play')&&!document.getElementById('sst-play').disabled&&!document.getElementById('sst-generate').disabled);
-   const clip=await p.evaluate(async()=>{const msg=storageService.loadUIConversation().filter(m=>m.role==='assistant').at(-1),turn=await speechStore.getTurn('main','d3-m2a:'+msg.id);return {renderVersion:turn.renderVersion,units:turn.units.length,calls:__mediaRun.voice.length};});
-   assert.deepEqual(clip,{renderVersion:'drama3-v1',units:1,calls:1});
+   const clip=await p.evaluate(async()=>{const msg=storageService.loadUIConversation().filter(m=>m.role==='assistant').at(-1),turn=await speechStore.getTurn('main',speechReplay.singleTurnId(msg.id,'s2.1-pro'));return {renderVersion:turn.renderVersion,model:turn.model,units:turn.units.length,calls:__mediaRun.voice.length};});
+   assert.deepEqual(clip,{renderVersion:'drama3-v1',model:'s2.1-pro',units:1,calls:1});
    await p.click('#sst-play');assert.equal(await p.evaluate(()=>__mediaRun.voice.length),1);await p.click('#sst-close');
   }
   await p.screenshot({path:path.join(out,kind+'.png')});assertSessionSafe(session,server,'media-turn-'+kind);

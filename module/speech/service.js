@@ -208,7 +208,7 @@ var speechService = (function () {
                 JSON.stringify([speechDrama3.provider, endpoint, provider.apiKey]),
             );
             turn.units = units;
-            var result = [], unavailable=[], badVoices=new Set(), halted=false;
+            var result = [], unavailable=[], badVoices=new Set(), halted=false, firstError=null;
             for (const [index,unit] of units.entries()) {
                 check();
                 var voice = settings.voices[unit.speakerId];
@@ -249,6 +249,7 @@ var speechService = (function () {
                         ).catch(error => {
                             if(error.status)error.message=`片段 ${index+1}/${units.length}（${/^[A-Z]{1,2}$/.test(unit.speakerId)?unit.speakerId:'NPC'}）：${error.message}`;
                             if(!options.partialRound || !(error.status || ['network','timeout','stream'].includes(error.code)))throw error;
+                            if(!firstError)firstError=error;
                             if(error.missingReference)badVoices.add(identities.get(unit.speakerId));
                             else halted=true;
                             unavailable.push({piece:index+1,speakerId:unit.speakerId,reason:error.missingReference?'missing-reference':'provider-unavailable',status:error.status||0});
@@ -273,6 +274,8 @@ var speechService = (function () {
                 result.push({ unitId: unit.id, speakerId: unit.speakerId });
                 if (options.onProgress) options.onProgress(result.length, units.length);
             }
+            if (options.partialRound && !result.length && unavailable.length && firstError)
+                throw firstError;
             return { disabled: false, clips: result, unavailable };
         } finally {
             if (options.signal) options.signal.removeEventListener('abort', abort);

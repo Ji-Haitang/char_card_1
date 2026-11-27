@@ -83,8 +83,12 @@ try {
                         if (u.origin !== 'https://proxy.example') return real(url, opts);
                         if (u.searchParams.get('target')?.startsWith('https://model.example/')) {
                             __counts.main++;
-                            __counts.cue = JSON.parse(opts.body).messages.some((m) =>
+                            const reqMessages = JSON.parse(opts.body).messages;
+                            __counts.cue = reqMessages.some((m) =>
                                 m.content.includes('本轮准备配音：'),
+                            );
+                            __counts.formatCue = reqMessages.some((m) =>
+                                m.content.includes('说话语气取值: 1-24字中文短句') && m.content.includes('以"性爱中，"开头'),
                             );
                             return Response.json({
                                 choices: [
@@ -177,7 +181,8 @@ try {
                     guard: true,
                 });
             }
-            assert.equal(got.cue, name !== 'off');
+            assert.equal(got.cue, false);
+            assert.equal(got.formatCue, true);
             for (let i = 1; i <= ids.length; i++) assert.ok(got.allText.includes(`公开第${i}句。`));
             assert.ok(!got.allText.includes('【'));
             if (name !== 'off') assert.equal(got.stamp, expected ? 'ready' : 'silent');

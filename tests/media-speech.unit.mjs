@@ -122,3 +122,40 @@ for(const kind of ['epoch','reference'])test('store failure after '+kind+' resto
     const pending=h.get('speechTurn').begin(),rejected=assert.rejects(pending,e=>e.name==='AbortError');await gate.entered;h.restore(kind);gate.release();await rejected;
     assert.equal(h.requests.length,0);assert.equal(h.commits.length,0);assert.equal(h.get('speechTurn').active(),false);
 });
+
+test('all-failed round (0 clips succeeded) surfaces decision prompt instead of silently publishing',async()=>{
+    let decided=null;
+    const h=harness();
+    h.state.fetchHandler=async()=>new Response('{"message":"Unauthorized"}',{status:401,headers:{'content-type':'application/json'}});
+    h.sandbox.speechRoundUI={decision:async(draft,error)=>{decided={phase:draft.phase,message:error.message};return 'pause';}};
+    await h.configure(true);
+    const published=await h.finishTurn();
+    assert.equal(published,false);assert.equal(h.commits.length,0);assert.equal(h.requests.length,1);
+    assert.ok(decided && decided.phase==='paused' && /401|鉴权|密钥|API Key|授权/i.test(decided.message),JSON.stringify(decided));
+    assert.equal((await h.get('speechRound').load()).phase,'paused');
+});
+
+test('all-missing-reference round (0 clips succeeded) also surfaces decision prompt',async()=>{
+    let decided=null;
+    const h=harness();
+    h.state.fetchHandler=async()=>new Response('{"message":"Reference not found"}',{status:400,headers:{'content-type':'application/json'}});
+    h.sandbox.speechRoundUI={decision:async(draft,error)=>{decided={phase:draft.phase,message:error.message};return 'pause';}};
+    await h.configure(true);
+    const published=await h.finishTurn();
+    assert.equal(published,false);assert.equal(h.commits.length,0);assert.equal(h.requests.length,2);
+    assert.ok(decided && decided.phase==='paused' && /音色|参考|400/.test(decided.message),JSON.stringify(decided));
+    assert.equal((await h.get('speechRound').load()).phase,'paused');
+});
+
+test('partial-failed round (>=1 clip succeeded) still publishes available clips without blocking',async()=>{
+    let decided=0,calls=0;
+    const h=harness();
+    h.state.fetchHandler=async()=>{calls++;if(calls===2)return new Response('{"message":"Insufficient balance"}',{status:402,headers:{'content-type':'application/json'}});return audioResponse();};
+    h.sandbox.speechRoundUI={decision:async()=>{decided++;return 'pause';}};
+    await h.configure(true);
+    const published=await h.finishTurn();
+    assert.equal(published,true);assert.equal(decided,0);assert.equal(h.commits.length,1);
+    assert.equal(h.commits[0].media.roundSpeech.status,'ready');
+    assert.equal(h.commits[0].media.roundSpeech.availableClips.length,1);
+    assert.equal(h.commits[0].media.roundSpeech.voiceFailures.length,1);
+});

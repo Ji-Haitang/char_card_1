@@ -25,7 +25,7 @@ try{
     window.__pending={main:0,voices:0,side:0};const originalFetch=window.fetch;
     window.fetch=async function(url,options){const u=new URL(String(url),location.href);if(u.origin!=='https://proxy.example')return originalFetch.call(this,url,options);const target=u.searchParams.get('target');
       if(target==='https://model.example/v1/chat/completions'){__pending.main++;return new Response(JSON.stringify({choices:[{message:{content:reply},finish_reason:'stop'}],usage:{total_tokens:1}}),{headers:{'Content-Type':'application/json'}});}
-      if(target==='https://api.fish.audio/v1/tts'){__pending.voices++;if(__pending.voices===2)return new Response('{"error":"public failure"}',{status:500,headers:{'Content-Type':'application/json'}});return new Response(new Uint8Array(bytes),{headers:{'Content-Type':'audio/mpeg'}});}
+      if(target==='https://api.fish.audio/v1/tts'){__pending.voices++;if(__pending.voices===1)return new Response('{"error":"public failure"}',{status:500,headers:{'Content-Type':'application/json'}});return new Response(new Uint8Array(bytes),{headers:{'Content-Type':'audio/mpeg'}});}
       throw Error('Unexpected fixture target');};
     const after=sideQuestRunner.afterCommit;sideQuestRunner.afterCommit=function(...args){__pending.side++;return after.apply(this,args);};
    },{reply,bytes});

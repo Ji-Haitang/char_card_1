@@ -26,7 +26,7 @@ async function installBoundary(p,phase){
             }
             if(target==='https://api.fish.audio/v1/tts'){
                 __resumeNet.voice.push({text:body.text,voice:body.reference_id,model:headers.get('model'),keyOK:headers.get('Authorization')==='Bearer PUBLIC_RESUME_FISH_KEY'});
-                if(phase==='before'&&__resumeNet.voice.length===2)return new Response('{"error":"public second-clip failure"}',{status:500,headers:{'Content-Type':'application/json'}});
+                if(phase==='before'&&__resumeNet.voice.length===2){await new Promise(resolve=>window.__releaseSecondVoice=resolve);return new Response(new Uint8Array(bytes),{headers:{'Content-Type':'audio/mpeg'}});}
                 return new Response(new Uint8Array(bytes),{headers:{'Content-Type':'audio/mpeg'}});
             }
             throw Error('Unexpected resume fixture target');
@@ -37,9 +37,9 @@ async function installBoundary(p,phase){
     },{phase,bytes,reply});
 }
 async function probe(p){return p.evaluate(async()=>{
-    const draft=await speechRound.load(),turn=draft?await speechStore.getTurn('main','m3:'+draft.id):null,clips=[];
+    const draft=await speechRound.load(),config=await speechService.getConfig(),model=draft?.plan?.audioModel||config.provider.model||'drama-3',turnId=draft?(model==='drama-3'?'m3:'+draft.id:'m3:'+model+':'+draft.id):null,turn=turnId?await speechStore.getTurn('main',turnId):null,clips=[];
     if(turn)for(const unit of turn.units){const clip=await speechStore.getClip('main',turn.turnId,unit.id);if(clip)clips.push({unitId:clip.unitId,cacheKey:clip.cacheKey,bytes:clip.bytes,speakerId:clip.speakerId});}
-    const config=await speechService.getConfig();return{draft,turn,clips,gameData:structuredClone(gameData),history:storageService.loadUIConversation(),source:currentStoryText,
+    return{draft,turn,clips,gameData:structuredClone(gameData),history:storageService.loadUIConversation(),source:currentStoryText,
         fingerprint:await mediaContext.publicationFingerprint(),config:{keyOK:config.provider.apiKey==='PUBLIC_RESUME_FISH_KEY',D:config.voices.D?.speakerId,M:config.voices.M?.speakerId,round:(await speechRound.preferences()).enabled},
         net:window.__resumeNet||null,busy:pipeline.isBusy(),status:document.getElementById('sr-status')?.textContent||'',modal:document.getElementById('modal-text')?.textContent||''};
 });}
@@ -84,9 +84,9 @@ try{
             });
             baseline=await probe(p);await installBoundary(p,'before');
             await clickReady(p,'#stage-input');await p.type('#free-action-input','公开暂停后续配行动');await clickReady(p,'#free-action-send-btn');
-            await p.waitForSelector('#srd-pause',{visible:true});
-            assert.equal(await p.evaluate(()=>__resumeNet.voice.length),2);
-            await clickReady(p,'#srd-pause');await p.waitForFunction(()=>!pipeline.isBusy()&&!speechService.isBusy());
+            await p.waitForFunction(()=>__resumeNet.voice.length===2);
+            await clickReady(p,'#stream-stop-btn');await p.waitForFunction(()=>!pipeline.isBusy()&&!speechService.isBusy());
+            await p.evaluate(()=>window.__releaseSecondVoice&&window.__releaseSecondVoice());
             paused=await probe(p);
             assert.equal(paused.draft.phase,'paused');assert.equal(paused.clips.length,1);assert.equal(paused.clips[0].speakerId,'D');assert.equal(paused.clips[0].bytes,bytes.length);assert.equal(paused.net.main,1);assert.equal(paused.net.side,0);
             assert.equal(paused.source,baseline.source);assert.deepEqual(paused.history,baseline.history,'pausing cannot publish user/assistant history');
@@ -109,7 +109,7 @@ try{
             const assistant=completed.history.filter(m=>m.role==='assistant');assert.equal(assistant.length,baseline.history.filter(m=>m.role==='assistant').length+1);assert.equal(assistant.at(-1).content,plain);
             assert.equal(assistant.at(-1).roundSpeech.draftId,paused.draft.id);assert.equal(assistant.at(-1).roundSpeech.status,mode==='continue'?'ready':'silent');
             assert.equal(completed.clips.length,mode==='continue'?2:1);assert.equal(completed.net.voice.length,mode==='continue'?1:0);assert.equal(completed.clips.find(c=>c.speakerId==='D').cacheKey,paused.clips[0].cacheKey);
-            if(mode==='continue')assert.deepEqual(completed.net.voice,[{text:'[平静] 第二句公开续配对白。',voice:'public-resume-M',model:'drama-3',keyOK:true}]);
+            if(mode==='continue')assert.deepEqual(completed.net.voice,[{text:'[平静] 第二句公开续配对白。',voice:'public-resume-M',model:'s2.1-pro',keyOK:true}]);
             assertSessionSafe(session,server,channel);await p.screenshot({path:path.join(out,mode+'-published.png')});
             checks.push({mode,status:'PASS',mainRequests:paused.net.main+completed.net.main,voiceRequests:paused.net.voice.length+completed.net.voice.length,clips:completed.clips.length,afterCommitCalls:completed.net.side,phase:completed.draft.phase});
         }catch(error){
